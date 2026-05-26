@@ -1,6 +1,66 @@
 
 const tg = window.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
+// ===== Supabase Edge Function для проверки доступа =====
+const CHECK_ACCESS_URL = "https://soxtekhspohkddpdidvp.supabase.co/functions/v1/check-access";
+
+function loadingScreen() {
+  shell(`
+    <div class="card">
+      <h1>Проверяем доступ</h1>
+      <p>Система проверяет Telegram-профиль и доступ к закрытому каналу.</p>
+      <p class="small">Если проверка длится долго, открой приложение именно из Telegram-бота, а не по ссылке в браузере.</p>
+    </div>
+  `);
+}
+
+function accessDenied(reason = "NO_ACCESS") {
+  shell(`
+    <div class="card result-bad">
+      <h1>Доступ закрыт</h1>
+      <p>Приложение доступно только участникам закрытого Telegram-канала.</p>
+      <p>Причина проверки: <b>${reason}</b></p>
+      <p class="small">Если у тебя есть активная подписка, открой приложение из Telegram и проверь, что ты находишься в закрытом канале.</p>
+    </div>
+  `);
+}
+
+async function checkAccess() {
+  loadingScreen();
+
+  if (!tg || !tg.initData) {
+    accessDenied("OPEN_FROM_TELEGRAM_REQUIRED");
+    return;
+  }
+
+  try {
+    const response = await fetch(CHECK_ACCESS_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        initData: tg.initData
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.access) {
+      console.error("Access denied:", result);
+      accessDenied(result.reason || "ACCESS_DENIED");
+      return;
+    }
+
+    window.LEGO_USER = result.user;
+    window.LEGO_ACCESS_REASON = result.reason;
+
+    home();
+  } catch (error) {
+    console.error(error);
+    accessDenied("CHECK_ACCESS_ERROR");
+  }
+}
 const state = { slideIndex:0, currentQuestion:0, answers:{}, summaryIndex:0 };
 const slides = [
  {title:"Диагностика выручки в торговле", body:["От жалобы «нет продаж» — к точному управленческому диагнозу.","Цель: понять, где бизнес теряет деньги: в потоке, конверсии, чеке, марже, запасах, расходах или учёте."], formula:"Выручка — не финальный результат. Важно понять, что остаётся в деньгах."},
@@ -51,4 +111,4 @@ function prevBook(){ if(state.summaryIndex>0){state.summaryIndex--;renderBook();
 function homeworkIntro(){ shell(`<div class="card"><h1>Домашнее задание</h1><p>Открой шаблон Google Sheets, заполни данные и сформулируй главный провал бизнеса.</p><p>Если данных нет — не придумывай. Веди минимальный учёт 7 дней.</p><div class="grid"><a class="btn gold" href="#" onclick="alert('Здесь позже будет ссылка на Google Sheets-шаблон.');return false;">Открыть шаблон</a><button class="btn" onclick="submissionForm()">Сдать ДЗ</button></div></div>`); }
 function submissionForm(){ shell(`<div class="card"><h1>Сдача ДЗ</h1><p class="small">В MVP это пока форма-заглушка. Дальше подключим базу данных и сохранение ответов.</p><div class="list-line"><b>1. Ссылка на таблицу</b><p>Google Sheets ученика</p></div><div class="list-line"><b>2. Главный провал</b><p>Поток / конверсия / чек / маржа / запасы / расходы / учёт</p></div><div class="list-line"><b>3. Гипотеза на 7 дней</b><p>Что проверяем и какой результат ждём</p></div><div class="list-line"><b>4. Метрика проверки</b><p>По чему поймём, что стало лучше</p></div><button class="btn gold" onclick="finish()">Пока отметить как отправлено</button></div>`); }
 function finish(){ shell(`<div class="card"><h1>ДЗ отправлено</h1><p>Статус: на проверке.</p><p>Следующий модуль открывается автоматически через 7 дней или вручную после принятия ДЗ.</p><button class="btn gold" onclick="home()">На главный экран</button></div>`); }
-home();
+checkAccess();
