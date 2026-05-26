@@ -15,6 +15,9 @@ const state = {
   access: false,
   accessReason: null,
   user: null,
+  lesson: null,
+  progress: null,
+  lastQuizAttempt: null,
   slideIndex: 0,
   currentQuestion: 0,
   answers: {},
@@ -268,6 +271,33 @@ function accessDenied(reason = "NO_ACCESS") {
   `);
 }
 
+function getProgressLabel() {
+  const p = state.progress;
+
+  if (!p) return "Модуль ещё не начат.";
+  if (p.status === "homework_submitted") return "Домашнее задание отправлено на проверку.";
+  if (p.status === "completed") return "Модуль завершён.";
+
+  if (p.current_step === "presentation") return "Ты остановился на презентации.";
+  if (p.current_step === "quiz") return "Презентация завершена. Следующий шаг — тест.";
+  if (p.current_step === "books") return "Тест пройден. Следующий шаг — саммари книг.";
+  if (p.current_step === "homework") return "Саммари книг пройдено. Следующий шаг — домашнее задание.";
+  if (p.current_step === "review") return "Домашнее задание ожидает проверки.";
+
+  return "Модуль в процессе.";
+}
+
+function getMainButtonText() {
+  const p = state.progress;
+
+  if (!p) return "Начать модуль";
+  if (p.status === "homework_submitted") return "Посмотреть статус ДЗ";
+  if (p.status === "completed") return "Посмотреть модуль";
+  if (p.current_step) return "Продолжить";
+
+  return "Начать модуль";
+}
+
 async function checkAccess() {
   loadingScreen();
 
@@ -298,6 +328,16 @@ async function checkAccess() {
     state.access = true;
     state.accessReason = result.reason;
     state.user = result.user;
+    state.lesson = result.lesson || null;
+    state.progress = result.progress || null;
+    state.lastQuizAttempt = result.last_quiz_attempt || null;
+
+    if (state.progress) {
+      state.completed.presentation = Boolean(state.progress.presentation_completed);
+      state.completed.quiz = Boolean(state.progress.quiz_completed);
+      state.completed.books = Boolean(state.progress.books_completed);
+      state.completed.homework = Boolean(state.progress.homework_submitted);
+    }
 
     home();
   } catch (error) {
@@ -327,6 +367,15 @@ async function saveProgress(event, payload = {}) {
 
     if (!response.ok || !result.ok) {
       console.error("Progress save failed:", result);
+      return result;
+    }
+
+    if (result.progress) {
+      state.progress = result.progress;
+      state.completed.presentation = Boolean(result.progress.presentation_completed);
+      state.completed.quiz = Boolean(result.progress.quiz_completed);
+      state.completed.books = Boolean(result.progress.books_completed);
+      state.completed.homework = Boolean(result.progress.homework_submitted);
     }
 
     return result;
@@ -337,27 +386,77 @@ async function saveProgress(event, payload = {}) {
 
 function home() {
   const name = state.user?.first_name ? `, ${state.user.first_name}` : "";
+  const progressLabel = getProgressLabel();
+  const buttonText = getMainButtonText();
 
   shell(`
     <div class="card">
       <h1>Л.Е.Г.О Бизнес-система</h1>
       <p>Доступ подтверждён${name}.</p>
-      <p class="small">Статус: ${state.accessReason || "active"}</p>
+      <p class="small">Статус доступа: ${state.accessReason || "active"}</p>
       <div class="lesson-meta">
         <div class="meta-box"><b>Формат</b><span class="small">презентация внутри приложения</span></div>
         <div class="meta-box"><b>Результат</b><span class="small">диагноз + план на 7 дней</span></div>
       </div>
     </div>
+
     <div class="card">
       <h2>Диагностика выручки в торговле</h2>
       <p>Поймёшь, где бизнес теряет деньги: в потоке, конверсии, чеке, марже, запасах, расходах или учёте.</p>
-      <button class="btn gold" onclick="startLesson()">Начать модуль</button>
+      <p class="small">${progressLabel}</p>
+      ${state.lastQuizAttempt ? `<p class="small">Последний тест: ${state.lastQuizAttempt.score}/${state.lastQuizAttempt.total}</p>` : ""}
+      <button class="btn gold" onclick="continueLesson()">${buttonText}</button>
     </div>
+
     <div class="card locked">
       <h3>Следующий модуль</h3>
       <p>Откроется автоматически через 7 дней или вручную после проверки ДЗ.</p>
     </div>
   `);
+}
+
+async function continueLesson() {
+  const p = state.progress;
+
+  if (!p) {
+    await startLesson();
+    return;
+  }
+
+  if (p.status === "homework_submitted" || p.current_step === "review") {
+    homeworkSubmittedScreen();
+    return;
+  }
+
+  if (p.status === "completed") {
+    state.slideIndex = 0;
+    renderSlide();
+    return;
+  }
+
+  if (p.current_step === "presentation") {
+    const savedSlide = Number(p.last_slide_number || 1);
+    state.slideIndex = Math.min(Math.max(savedSlide - 1, 0), slides.length - 1);
+    renderSlide();
+    return;
+  }
+
+  if (p.current_step === "quiz") {
+    quizIntro();
+    return;
+  }
+
+  if (p.current_step === "books") {
+    startBooks();
+    return;
+  }
+
+  if (p.current_step === "homework") {
+    homeworkIntro();
+    return;
+  }
+
+  await startLesson();
 }
 
 async function startLesson() {
@@ -431,6 +530,7 @@ function quizIntro() {
       <p>12 вопросов. Проходной результат — 70%, то есть минимум 9 правильных ответов.</p>
       <p>Если результат ниже, нужно вернуться к презентации и повторить ключевую логику.</p>
       <button class="btn gold" onclick="startQuiz()">Начать тест</button>
+      <button class="btn secondary" onclick="home()" style="margin-top:10px;">На главный экран</button>
     </div>
   `);
 }
@@ -512,6 +612,7 @@ function quizResult() {
       <p>Результат: <b>${score} / ${quiz.length}</b></p>
       <p>${passed ? "Можно переходить к саммари книг." : "Пока рано переходить к ДЗ. Повтори презентацию и пройди тест ещё раз."}</p>
       <button class="btn gold" onclick="${passed ? "startBooks()" : "startLesson()"}">${passed ? "К саммари книг" : "Повторить презентацию"}</button>
+      <button class="btn secondary" onclick="home()" style="margin-top:10px;">На главный экран</button>
     </div>
   `);
 }
@@ -578,6 +679,7 @@ function homeworkIntro() {
       <div class="grid">
         <a class="btn gold" href="#" onclick="alert('Здесь позже будет ссылка на Google Sheets-шаблон.');return false;">Открыть шаблон</a>
         <button class="btn" onclick="submissionForm()">Сдать ДЗ</button>
+        <button class="btn secondary" onclick="home()">На главный экран</button>
       </div>
     </div>
   `);
@@ -593,6 +695,7 @@ function submissionForm() {
       <div class="list-line"><b>3. Гипотеза на 7 дней</b><p>Что проверяем и какой результат ждём</p></div>
       <div class="list-line"><b>4. Метрика проверки</b><p>По чему поймём, что стало лучше</p></div>
       <button class="btn gold" onclick="finish()">Пока отметить как отправлено</button>
+      <button class="btn secondary" onclick="home()" style="margin-top:10px;">На главный экран</button>
     </div>
   `);
 }
@@ -600,6 +703,10 @@ function submissionForm() {
 function finish() {
   saveProgress("homework_submitted");
 
+  homeworkSubmittedScreen();
+}
+
+function homeworkSubmittedScreen() {
   shell(`
     <div class="card">
       <h1>ДЗ отправлено</h1>
