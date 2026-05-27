@@ -522,12 +522,37 @@ async function quizResult() {
     answers: state.answers
   });
 
+  if (passed) {
+    shell(`
+      <div class="card result-ok">
+        <h1>Тест пройден</h1>
+        <p>Результат: <b>${score} / ${quiz.length}</b></p>
+        <p>Базовая логика диагностики усвоена. Теперь можно переходить к саммари книг.</p>
+
+        <button class="btn gold" onclick="startBooks()">К саммари книг</button>
+        <button class="btn secondary" onclick="home()" style="margin-top:10px;">На главный экран</button>
+      </div>
+    `);
+
+    return;
+  }
+
   shell(`
-    <div class="card ${passed ? "result-ok" : "result-bad"}">
-      <h1>${passed ? "Тест пройден" : "Тест не пройден"}</h1>
+    <div class="card result-bad">
+      <h1>Тест не пройден</h1>
       <p>Результат: <b>${score} / ${quiz.length}</b></p>
-      <p>${passed ? "Можно переходить к саммари книг." : "Пока рано переходить к саммари книг. Повтори презентацию и пройди тест ещё раз."}</p>
-      <button class="btn gold" onclick="${passed ? "startBooks()" : "quizIntro()"}">${passed ? "К саммари книг" : "Повторить тест"}</button>
+
+      <p>Пока рано переходить к саммари книг и домашнему заданию.</p>
+      <p>Вернись к презентации и повтори ключевые блоки.</p>
+
+      <div class="list-line"><b>1. Симптом и диагноз</b><p>Почему “нет продаж” — это не точная причина.</p></div>
+      <div class="list-line"><b>2. Формула выручки</b><p>Поток × конверсия × средний чек.</p></div>
+      <div class="list-line"><b>3. Конверсия и средний чек</b><p>Где бизнес теряет результат внутри продаж.</p></div>
+      <div class="list-line"><b>4. Маржа и деньги</b><p>Почему выручка не равна живым деньгам.</p></div>
+      <div class="list-line"><b>5. Главное ограничение</b><p>Почему нельзя улучшать всё подряд.</p></div>
+
+      <button class="btn gold" onclick="startLesson()">Вернуться к презентации</button>
+      <button class="btn secondary" onclick="quizIntro()" style="margin-top:10px;">Повторить тест</button>
       <button class="btn secondary" onclick="home()" style="margin-top:10px;">На главный экран</button>
     </div>
   `);
