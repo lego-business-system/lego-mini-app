@@ -10,6 +10,61 @@ const CHECK_ACCESS_URL = "https://soxtekhspohkddpdidvp.supabase.co/functions/v1/
 const SAVE_PROGRESS_URL = "https://soxtekhspohkddpdidvp.supabase.co/functions/v1/save-progress";
 const CURRENT_LESSON_CODE = "ENT-TR-01";
 
+// ===== Картинки урока =====
+const lessonSlides = [
+  "assets/lesson/slide_01.png",
+  "assets/lesson/slide_02.png",
+  "assets/lesson/slide_03.png",
+  "assets/lesson/slide_04.png",
+  "assets/lesson/slide_05.png",
+  "assets/lesson/slide_06.png",
+  "assets/lesson/slide_07.png",
+  "assets/lesson/slide_08.png",
+  "assets/lesson/slide_09.png",
+  "assets/lesson/slide_10.png",
+  "assets/lesson/slide_11.png",
+  "assets/lesson/slide_12.png",
+  "assets/lesson/slide_13.png",
+  "assets/lesson/slide_14.png",
+  "assets/lesson/slide_15.png",
+  "assets/lesson/slide_16.png"
+];
+
+// ===== Картинки саммари книг =====
+const bookSlides = [
+  "assets/books/book1/book1_01.png",
+  "assets/books/book1/book1_02.png",
+  "assets/books/book1/book1_03.png",
+  "assets/books/book1/book1_04.png",
+  "assets/books/book1/book1_05.png",
+
+  "assets/books/book2/book2_01.png",
+  "assets/books/book2/book2_02.png",
+  "assets/books/book2/book2_03.png",
+  "assets/books/book2/book2_04.png",
+  "assets/books/book2/book2_05.png",
+
+  "assets/books/book3/book3_01.png",
+  "assets/books/book3/book3_02.png",
+  "assets/books/book3/book3_03.png",
+  "assets/books/book3/book3_04.png",
+  "assets/books/book3/book3_05.png",
+
+  "assets/books/book4/book4_01.png",
+  "assets/books/book4/book4_02.png",
+  "assets/books/book4/book4_03.png",
+  "assets/books/book4/book4_04.png",
+  "assets/books/book4/book4_05.png",
+
+  "assets/books/book5/book5_01.png",
+  "assets/books/book5/book5_02.png",
+  "assets/books/book5/book5_03.png",
+  "assets/books/book5/book5_04.png",
+  "assets/books/book5/book5_05.png",
+
+  "assets/books/final_summary.png"
+];
+
 const state = {
   screen: "loading",
   access: false,
@@ -19,9 +74,9 @@ const state = {
   progress: null,
   lastQuizAttempt: null,
   slideIndex: 0,
+  bookSlideIndex: 0,
   currentQuestion: 0,
   answers: {},
-  summaryIndex: 0,
   completed: {
     presentation: false,
     quiz: false,
@@ -29,112 +84,6 @@ const state = {
     homework: false
   }
 };
-
-const slides = [
-  {
-    title: "Диагностика выручки в торговле",
-    body: [
-      "От жалобы «нет продаж» — к точному управленческому диагнозу.",
-      "Цель: понять, где бизнес теряет деньги: в потоке, конверсии, чеке, марже, запасах, расходах или учёте."
-    ],
-    formula: "Выручка — не финальный результат. Важно понять, что остаётся в деньгах."
-  },
-  {
-    title: "Симптом ≠ диагноз",
-    body: [
-      "«Нет продаж» — это симптом.",
-      "Нельзя лечить рекламой то, что вызвано конверсией, маржой или учётом.",
-      "Сначала считаем, потом действуем."
-    ],
-    formula: "Мнение → заменить данными. Догадку → заменить диагностикой."
-  },
-  {
-    title: "Торговля как система денег",
-    body: [
-      "Канал приводит клиента.",
-      "Клиент проходит путь покупки.",
-      "Покупка формирует чек.",
-      "Чек даёт маржу.",
-      "Маржа превращается в живые деньги только после расходов и запасов."
-    ],
-    formula: "Клиент → Покупка → Чек → Маржа → Касса"
-  },
-  {
-    title: "Главная формула",
-    body: [
-      "Поток показывает, сколько людей пришло.",
-      "Конверсия показывает, сколько купили.",
-      "Средний чек показывает, сколько оставил один покупатель."
-    ],
-    formula: "Выручка = Поток × Конверсия × Средний чек"
-  },
-  {
-    title: "Добавляем прибыльность",
-    body: [
-      "Выручка может расти, а денег может не быть.",
-      "Причины: низкая маржа, расходы, списания, склад, ошибки закупки."
-    ],
-    formula: "Живые деньги = Выручка − Себестоимость − Расходы − Потери − Деньги в товаре"
-  },
-  {
-    title: "Диагностическое дерево",
-    body: [
-      "Нет потока → проверяем каналы.",
-      "Поток есть, покупок мало → конверсия.",
-      "Покупки есть, чек низкий → структура покупки.",
-      "Выручка есть, прибыли нет → маржа.",
-      "Продажи есть, денег нет → запасы, расходы, касса."
-    ],
-    formula: "Один провал → один следующий модуль"
-  },
-  {
-    title: "Метрики, которые считаем",
-    body: [
-      "Поток / посетители / заявки.",
-      "Конверсия.",
-      "Средний чек.",
-      "Валовая маржа.",
-      "Операционный результат.",
-      "Товарные остатки."
-    ],
-    formula: "Главная задача — найти один главный ограничитель."
-  },
-  {
-    title: "Формулы",
-    body: [
-      "Конверсия = Покупатели / Посетители × 100%.",
-      "Средний чек = Выручка / Покупки.",
-      "Валовая маржа = Выручка − Себестоимость.",
-      "Маржинальность = Валовая маржа / Выручка × 100%."
-    ],
-    formula: "Формулы нужны не для отчёта, а для решения."
-  },
-  {
-    title: "План на 7 дней",
-    body: [
-      "Выбираем один главный провал.",
-      "Формулируем гипотезу.",
-      "Назначаем одно действие.",
-      "Выбираем одну метрику.",
-      "Через 7 дней сравниваем факт с ожиданием."
-    ],
-    formula: "Гипотеза → действие → данные → вывод"
-  },
-  {
-    title: "Что делать дальше",
-    body: [
-      "Поток слабый → привлечение клиентов.",
-      "Покупок мало → конверсия.",
-      "Товар не попадает → ассортимент.",
-      "Чек низкий → средний чек.",
-      "Маржа слабая → прибыльность.",
-      "Деньги в товаре → запасы.",
-      "Есть потери → учёт и контроль.",
-      "Касса проседает → деньги и расходы."
-    ],
-    formula: "Не проходить всё подряд. Идти туда, где найден провал."
-  }
-];
 
 const quiz = [
   {
@@ -199,39 +148,6 @@ const quiz = [
   }
 ];
 
-const books = [
-  {
-    title: "Business Model Generation",
-    author: "А. Остервальдер, И. Пинье",
-    idea: "Бизнес — это система: клиент, ценность, канал, доходы, расходы и процессы.",
-    use: "В ДЗ смотри не только цифры, но и слабый блок бизнес-модели."
-  },
-  {
-    title: "Marketing Management",
-    author: "Филип Котлер",
-    idea: "Маркетинг — это не только реклама. Это товар, цена, место и продвижение.",
-    use: "В ДЗ проверь 4P: что продаёшь, кому, где и по какой цене."
-  },
-  {
-    title: "Цель",
-    author: "Элияху Голдратт",
-    idea: "Рост начинается с поиска главного ограничения системы.",
-    use: "В ДЗ выбери один главный провал, а не список всего подряд."
-  },
-  {
-    title: "Бережливый стартап",
-    author: "Эрик Рис",
-    idea: "Улучшения проверяются короткими циклами: гипотеза → действие → данные → вывод.",
-    use: "План на 7 дней должен быть проверкой одной гипотезы."
-  },
-  {
-    title: "Сбалансированная система показателей",
-    author: "Р. Каплан, Д. Нортон",
-    idea: "Бизнесом нельзя управлять только по выручке.",
-    use: "В ДЗ смотри финансы, клиента, процессы и развитие управления."
-  }
-];
-
 function shell(content, footer = "") {
   document.getElementById("app").innerHTML = `
     <div class="app-shell">
@@ -247,6 +163,20 @@ function shell(content, footer = "") {
       <main class="content">${content}</main>
       ${footer}
     </div>
+  `;
+}
+
+function imageScreen(imageUrl, current, total, typeLabel) {
+  return `
+    <div class="progress"><div style="width:${Math.round((current / total) * 100)}%"></div></div>
+    <div class="card" style="padding:0; overflow:hidden;">
+      <img 
+        src="${imageUrl}" 
+        alt="${typeLabel} ${current}" 
+        style="width:100%; display:block; border-radius:22px;"
+      />
+    </div>
+    <p class="small" style="text-align:center;">${typeLabel}: ${current} / ${total}</p>
   `;
 }
 
@@ -279,9 +209,9 @@ function getProgressLabel() {
   if (p.status === "completed") return "Модуль завершён.";
 
   if (p.current_step === "presentation") return "Ты остановился на презентации.";
-  if (p.current_step === "quiz") return "Презентация завершена. Следующий шаг — тест.";
-  if (p.current_step === "books") return "Тест пройден. Следующий шаг — саммари книг.";
-  if (p.current_step === "homework") return "Саммари книг пройдено. Следующий шаг — домашнее задание.";
+  if (p.current_step === "quiz") return "Следующий шаг — тест.";
+  if (p.current_step === "books") return "Следующий шаг — саммари книг.";
+  if (p.current_step === "homework") return "Следующий шаг — домашнее задание.";
   if (p.current_step === "review") return "Домашнее задание ожидает проверки.";
 
   return "Модуль в процессе.";
@@ -430,14 +360,14 @@ async function continueLesson() {
 
   if (p.status === "completed") {
     state.slideIndex = 0;
-    renderSlide();
+    renderLessonSlide();
     return;
   }
 
   if (p.current_step === "presentation") {
     const savedSlide = Number(p.last_slide_number || 1);
-    state.slideIndex = Math.min(Math.max(savedSlide - 1, 0), slides.length - 1);
-    renderSlide();
+    state.slideIndex = Math.min(Math.max(savedSlide - 1, 0), lessonSlides.length - 1);
+    renderLessonSlide();
     return;
   }
 
@@ -463,60 +393,46 @@ async function startLesson() {
   state.screen = "slides";
   state.slideIndex = 0;
   await saveProgress("lesson_started");
-  renderSlide();
+  renderLessonSlide();
 }
 
-function renderSlide() {
-  const s = slides[state.slideIndex];
-  const pct = Math.round(((state.slideIndex + 1) / slides.length) * 100);
+function renderLessonSlide() {
+  const current = state.slideIndex + 1;
+  const total = lessonSlides.length;
 
-  shell(`
-    <div class="progress"><div style="width:${pct}%"></div></div>
-    <div class="slide">
-      <div>
-        <div class="slide-head">
-          <div class="slide-logo">Л.Е.Г.О</div>
-          <div class="slide-note">система внедрения управленческих изменений</div>
-        </div>
-        <div class="slide-number">Слайд ${state.slideIndex + 1} / ${slides.length}</div>
-        <div class="slide-title">${s.title}</div>
-        <div class="slide-body">
-          <ul>${s.body.map(x => `<li>${x}</li>`).join("")}</ul>
-          <div class="formula">${s.formula}</div>
-        </div>
+  shell(
+    imageScreen(lessonSlides[state.slideIndex], current, total, "Слайд"),
+    `
+      <div class="footer-nav">
+        <button class="btn secondary" onclick="prevLessonSlide()" ${state.slideIndex === 0 ? "disabled" : ""}>Назад</button>
+        <button class="btn gold" onclick="nextLessonSlide()">${state.slideIndex === lessonSlides.length - 1 ? "К тесту" : "Далее"}</button>
       </div>
-      <div class="slide-foot">Диагностика → действие → проверка результата</div>
-    </div>
-  `, `
-    <div class="footer-nav">
-      <button class="btn secondary" onclick="prevSlide()" ${state.slideIndex === 0 ? "disabled" : ""}>Назад</button>
-      <button class="btn gold" onclick="nextSlide()">${state.slideIndex === slides.length - 1 ? "К тесту" : "Далее"}</button>
-    </div>
-  `);
+    `
+  );
 }
 
-function prevSlide() {
+function prevLessonSlide() {
   if (state.slideIndex > 0) {
     state.slideIndex--;
-    renderSlide();
+    renderLessonSlide();
   }
 }
 
-async function nextSlide() {
-  if (state.slideIndex < slides.length - 1) {
+async function nextLessonSlide() {
+  if (state.slideIndex < lessonSlides.length - 1) {
     state.slideIndex++;
 
     await saveProgress("slide_viewed", {
       lastSlideNumber: state.slideIndex + 1
     });
 
-    renderSlide();
+    renderLessonSlide();
   } else {
     state.completed.presentation = true;
     state.screen = "quizIntro";
 
     await saveProgress("presentation_completed", {
-      lastSlideNumber: slides.length
+      lastSlideNumber: lessonSlides.length
     });
 
     quizIntro();
@@ -528,7 +444,7 @@ function quizIntro() {
     <div class="card">
       <h1>Тест на понимание</h1>
       <p>12 вопросов. Проходной результат — 70%, то есть минимум 9 правильных ответов.</p>
-      <p>Если результат ниже, нужно вернуться к презентации и повторить ключевую логику.</p>
+      <p>Если результат ниже, нужно вернуться к презентации и повторить ключевые слайды.</p>
       <button class="btn gold" onclick="startQuiz()">Начать тест</button>
       <button class="btn secondary" onclick="home()" style="margin-top:10px;">На главный экран</button>
     </div>
@@ -589,7 +505,7 @@ function nextQuestion() {
   }
 }
 
-function quizResult() {
+async function quizResult() {
   let score = 0;
 
   quiz.forEach((q, i) => {
@@ -599,7 +515,7 @@ function quizResult() {
   const passed = score >= 9;
   state.completed.quiz = passed;
 
-  saveProgress("quiz_completed", {
+  await saveProgress("quiz_completed", {
     score,
     total: quiz.length,
     passed,
@@ -610,55 +526,44 @@ function quizResult() {
     <div class="card ${passed ? "result-ok" : "result-bad"}">
       <h1>${passed ? "Тест пройден" : "Тест не пройден"}</h1>
       <p>Результат: <b>${score} / ${quiz.length}</b></p>
-      <p>${passed ? "Можно переходить к саммари книг." : "Пока рано переходить к ДЗ. Повтори презентацию и пройди тест ещё раз."}</p>
-      <button class="btn gold" onclick="${passed ? "startBooks()" : "startLesson()"}">${passed ? "К саммари книг" : "Повторить презентацию"}</button>
+      <p>${passed ? "Можно переходить к саммари книг." : "Пока рано переходить к саммари книг. Повтори презентацию и пройди тест ещё раз."}</p>
+      <button class="btn gold" onclick="${passed ? "startBooks()" : "quizIntro()"}">${passed ? "К саммари книг" : "Повторить тест"}</button>
       <button class="btn secondary" onclick="home()" style="margin-top:10px;">На главный экран</button>
     </div>
   `);
 }
 
 function startBooks() {
-  state.summaryIndex = 0;
-  renderBook();
+  state.bookSlideIndex = 0;
+  renderBookSlide();
 }
 
-function renderBook() {
-  const b = books[state.summaryIndex];
+function renderBookSlide() {
+  const current = state.bookSlideIndex + 1;
+  const total = bookSlides.length;
 
-  shell(`
-    <div class="progress"><div style="width:${Math.round(((state.summaryIndex + 1) / books.length) * 100)}%"></div></div>
-    <div class="card">
-      <p class="small">Книга ${state.summaryIndex + 1} / ${books.length}</p>
-      <h1>${b.title}</h1>
-      <p><b>${b.author}</b></p>
-      <h3>Главная идея</h3>
-      <p>${b.idea}</p>
-      <h3>Как применить в ДЗ</h3>
-      <p>${b.use}</p>
-    </div>
-    <div class="card">
-      <h3>Смысл блока</h3>
-      <p>Эти идеи могут казаться повторяющимися, но именно такие системы предприниматель должен постоянно держать в голове: клиент, ценность, канал, метрика, ограничение и действие.</p>
-    </div>
-  `, `
-    <div class="footer-nav">
-      <button class="btn secondary" onclick="prevBook()" ${state.summaryIndex === 0 ? "disabled" : ""}>Назад</button>
-      <button class="btn gold" onclick="nextBook()">${state.summaryIndex === books.length - 1 ? "К ДЗ" : "Далее"}</button>
-    </div>
-  `);
+  shell(
+    imageScreen(bookSlides[state.bookSlideIndex], current, total, "Саммари"),
+    `
+      <div class="footer-nav">
+        <button class="btn secondary" onclick="prevBookSlide()" ${state.bookSlideIndex === 0 ? "disabled" : ""}>Назад</button>
+        <button class="btn gold" onclick="nextBookSlide()">${state.bookSlideIndex === bookSlides.length - 1 ? "К ДЗ" : "Далее"}</button>
+      </div>
+    `
+  );
 }
 
-function prevBook() {
-  if (state.summaryIndex > 0) {
-    state.summaryIndex--;
-    renderBook();
+function prevBookSlide() {
+  if (state.bookSlideIndex > 0) {
+    state.bookSlideIndex--;
+    renderBookSlide();
   }
 }
 
-async function nextBook() {
-  if (state.summaryIndex < books.length - 1) {
-    state.summaryIndex++;
-    renderBook();
+async function nextBookSlide() {
+  if (state.bookSlideIndex < bookSlides.length - 1) {
+    state.bookSlideIndex++;
+    renderBookSlide();
   } else {
     state.completed.books = true;
 
@@ -689,7 +594,7 @@ function submissionForm() {
   shell(`
     <div class="card">
       <h1>Сдача ДЗ</h1>
-      <p class="small">Следующим шагом подключим сохранение этой формы в Supabase.</p>
+      <p class="small">Следующим шагом подключим сохранение формы ДЗ в Supabase.</p>
       <div class="list-line"><b>1. Ссылка на таблицу</b><p>Google Sheets ученика</p></div>
       <div class="list-line"><b>2. Главный провал</b><p>Поток / конверсия / чек / маржа / запасы / расходы / учёт</p></div>
       <div class="list-line"><b>3. Гипотеза на 7 дней</b><p>Что проверяем и какой результат ждём</p></div>
@@ -702,7 +607,6 @@ function submissionForm() {
 
 function finish() {
   saveProgress("homework_submitted");
-
   homeworkSubmittedScreen();
 }
 
