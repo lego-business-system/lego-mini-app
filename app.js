@@ -670,6 +670,92 @@ function reviewBooks() {
   renderBookSlide();
 }
 
+async function checkAccess() {
+  loadingScreen();
+
+  if (!tg || !tg.initData) {
+    accessDenied("OPEN_FROM_TELEGRAM_REQUIRED");
+    return;
+  }
+
+  try {
+    const response = await fetch(CHECK_ACCESS_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        initData: tg.initData
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.access) {
+      console.error("Access denied:", result);
+      accessDenied(result.reason || "ACCESS_DENIED");
+      return;
+    }
+
+    state.access = true;
+    state.accessReason = result.reason;
+    state.user = result.user;
+    state.lesson = result.lesson || null;
+    state.progress = result.progress || null;
+    state.lastQuizAttempt = result.last_quiz_attempt || null;
+
+    if (state.progress) {
+      state.completed.presentation = Boolean(state.progress.presentation_completed);
+      state.completed.quiz = Boolean(state.progress.quiz_completed);
+      state.completed.books = Boolean(state.progress.books_completed);
+      state.completed.homework = Boolean(state.progress.homework_submitted);
+    }
+
+    home();
+  } catch (error) {
+    console.error(error);
+    accessDenied("CHECK_ACCESS_ERROR");
+  }
+}
+
+async function saveProgress(event, payload = {}) {
+  if (!tg || !tg.initData) return;
+
+  try {
+    const response = await fetch(SAVE_PROGRESS_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        initData: tg.initData,
+        lessonCode: CURRENT_LESSON_CODE,
+        event,
+        payload
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.ok) {
+      console.error("Progress save failed:", result);
+      return result;
+    }
+
+    if (result.progress) {
+      state.progress = result.progress;
+      state.completed.presentation = Boolean(result.progress.presentation_completed);
+      state.completed.quiz = Boolean(result.progress.quiz_completed);
+      state.completed.books = Boolean(result.progress.books_completed);
+      state.completed.homework = Boolean(result.progress.homework_submitted);
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Progress save error:", error);
+  }
+}
+
 function home() {
   const name = state.user?.first_name ? `, ${state.user.first_name}` : "";
   const business = getBusinessInfo();
