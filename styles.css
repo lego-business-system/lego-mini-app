@@ -163,3 +163,276 @@ color: #111;
 flex: 1 1 100%;
 }
 }
+/* ===== FIX: mobile circle layout cleanup ===== */
+
+.content {
+  padding: 18px 14px 32px;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.card {
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.hero-card h1 {
+  font-size: 34px;
+  line-height: 1.12;
+  word-break: normal;
+}
+
+.btn,
+button,
+a.btn {
+  max-width: 100%;
+  box-sizing: border-box;
+  white-space: normal;
+  line-height: 1.25;
+}
+
+/* Общий блок кругов */
+.circle-wrap {
+  position: relative;
+  width: 100%;
+  min-height: auto;
+  height: auto;
+  margin: 18px 0 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  overflow: visible;
+}
+
+/* Убираем абсолютное поведение узлов */
+.circle-node {
+  position: static !important;
+  transform: none !important;
+  width: 100%;
+  min-height: 74px;
+  padding: 12px 10px;
+  border-radius: 16px;
+  background: #f3f3f3;
+  color: #111;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  font-size: 15px;
+  box-shadow: none;
+  border: 1px solid rgba(0,0,0,.06);
+}
+
+.circle-node b {
+  display: block;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.circle-node span {
+  display: block;
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 1.2;
+  opacity: .7;
+}
+
+/* Центр круга превращаем в верхнюю карточку */
+.circle-center {
+  position: static !important;
+  transform: none !important;
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 86px;
+  padding: 16px;
+  border-radius: 18px;
+  background: #0b1830;
+  color: #fff;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  text-align: left;
+}
+
+.circle-center b {
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.circle-center span {
+  margin-top: 6px;
+  font-size: 14px;
+  opacity: .85;
+}
+
+/* Активный вид деятельности */
+.circle-node.selected,
+.circle-node.available {
+  background: #ffb000;
+  color: #111;
+  border-color: rgba(0,0,0,.08);
+}
+
+/* Скоро / закрыто */
+.circle-node.soon,
+.circle-node.locked,
+.system-node.locked {
+  background: #f1f1f1;
+  color: #333;
+}
+
+/* Главный центр системы */
+.main-center {
+  background: #0b1830 !important;
+  color: #fff !important;
+}
+
+/* Круг торговли */
+.circle-wrap.large {
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* Узлы системы торговли */
+.system-node {
+  min-height: 86px;
+  background: #f7f4ec;
+}
+
+.system-node b {
+  font-size: 15px;
+}
+
+.system-node span {
+  font-size: 12px;
+}
+
+/* Описание под системой */
+.system-note {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #f7f4ec;
+  line-height: 1.55;
+}
+
+/* Список блоков */
+.block-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.block-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #f7f4ec;
+  border: 1px solid rgba(0,0,0,.06);
+}
+
+.block-row b {
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.block-row p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.block-row span {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #e8e8e8;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.block-row.available span {
+  background: #ffb000;
+  color: #111;
+}
+
+.block-row.locked span {
+  background: #e8e8e8;
+  color: #444;
+}
+
+/* Этапы текущего блока */
+.step-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.step-card {
+  padding: 12px 14px;
+  border-radius: 15px;
+  background: #f7f4ec;
+  border: 1px solid rgba(0,0,0,.06);
+}
+
+.step-card b {
+  display: block;
+  font-size: 16px;
+}
+
+.step-card span {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  opacity: .75;
+}
+
+.step-card.done {
+  background: #e9f7ef;
+}
+
+.step-card.active {
+  background: #fff3d1;
+}
+
+.step-card.locked {
+  background: #f0f0f0;
+  opacity: .7;
+}
+
+/* Помощь */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.grid .btn,
+.grid button,
+.grid a {
+  width: 100%;
+  text-align: center;
+}
+
+/* На очень маленьких экранах — всё в одну колонку */
+@media (max-width: 420px) {
+  .circle-wrap,
+  .circle-wrap.large {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-card h1 {
+    font-size: 30px;
+  }
+
+  .card {
+    border-radius: 22px;
+  }
+}
