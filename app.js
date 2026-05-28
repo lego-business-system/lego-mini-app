@@ -471,6 +471,16 @@ const quiz = [
   { q: "Результат модуля:", a: ["Мотивация", "Презентация без цифр", "Диагноз и план на 7 дней", "Список книг"], correct: 2 }
 ];
 function shell(content, footer = "") {
+ // ===== Внешние ссылки =====
+// Заменим эти ссылки на реальные Google Forms / Google Sheets после создания форм.
+const HOMEWORK_SHEET_URL = "#";
+const HOMEWORK_SUBMIT_FORM_URL = "#";
+const SUPPORT_FORM_URL = "#";
+const SUPPORT_TELEGRAM_URL = SUPPORT_URL;
+const TRADE_SYSTEM_MAP_URL = "assets/ui/trade_system_map.png";
+const MODULE_CYCLE_MAP_URL = "assets/ui/module_cycle.png";
+
+function shell(content, footer = "") {
   const root = document.getElementById("app");
 
   if (!root) {
@@ -480,13 +490,9 @@ function shell(content, footer = "") {
 
   root.innerHTML = `
     <div class="app-shell">
-      <div class="topbar">
-        <div class="brand">
-          <div>
-            <div class="logo">Л.Е.Г.О</div>
-            <div class="tagline">самое главное — не уйти только с теорией, а применить в практике</div>
-          </div>
-          <div class="badge">BETA</div>
+      <div class="topbar blue-topbar">
+        <div class="brand clean-brand">
+          <div class="tagline">самое главное — не уйти только с теорией, а применить в практике</div>
         </div>
       </div>
       <main class="content">${content}</main>
@@ -526,10 +532,10 @@ function imageScreen(imageUrl, current, total, typeLabel, descriptionHtml = "") 
 
 function loadingScreen() {
   shell(`
-    <div class="card">
+    <div class="card blue-card">
       <h1>Проверяем доступ</h1>
       <p>Система проверяет Telegram-профиль и доступ к закрытому каналу.</p>
-      <p class="small">Если проверка длится долго, открой приложение именно из Telegram-бота, а не по ссылке в браузере.</p>
+      <p class="small">Если проверка длится долго, откройте приложение именно из Telegram-бота, а не по ссылке в браузере.</p>
     </div>
   `);
 }
@@ -664,31 +670,11 @@ function renderModuleProgress() {
   const step = p.current_step || "not_started";
 
   const stages = [
-    {
-      title: "Презентация",
-      note: "Карта системы",
-      cls: stageClass(state.completed.presentation, step === "presentation" || step === "not_started")
-    },
-    {
-      title: "Тест",
-      note: "Проверка",
-      cls: stageClass(state.completed.quiz, step === "quiz", !state.completed.presentation)
-    },
-    {
-      title: "Саммари",
-      note: "5 книг",
-      cls: stageClass(state.completed.books, step === "books", !state.completed.quiz)
-    },
-    {
-      title: "ДЗ",
-      note: "Диагностика",
-      cls: stageClass(state.completed.homework, step === "homework", !state.completed.books)
-    },
-    {
-      title: "Проверка",
-      note: "Следующий блок",
-      cls: stageClass(p.status === "completed", step === "review" || p.status === "homework_submitted", !state.completed.homework)
-    }
+    { title: "Презентация", note: "Карта системы", cls: stageClass(state.completed.presentation, step === "presentation" || step === "not_started") },
+    { title: "Тест", note: "Проверка", cls: stageClass(state.completed.quiz, step === "quiz", !state.completed.presentation) },
+    { title: "Саммари", note: "5 книг", cls: stageClass(state.completed.books, step === "books", !state.completed.quiz) },
+    { title: "ДЗ", note: "Диагностика", cls: stageClass(state.completed.homework, step === "homework", !state.completed.books) },
+    { title: "Проверка", note: "Следующий блок", cls: stageClass(p.status === "completed", step === "review" || p.status === "homework_submitted", !state.completed.homework) }
   ];
 
   return `
@@ -703,21 +689,35 @@ function renderModuleProgress() {
   `;
 }
 
+function blockExtendedNote(block) {
+  const notes = {
+    start: "Текущий стартовый блок. Он даёт базовую карту всей системы и показывает, как искать главный провал по данным.",
+    traffic: "Откроется, если диагностика покажет проблему в привлечении: мало людей, слабый канал, слабый оффер или неработающая реклама.",
+    conversion: "Откроется, если поток есть, но покупок мало. Здесь разбирается путь клиента, доверие, предложение, продавец и точка покупки.",
+    assortment: "Откроется, если проблема в товарной матрице, наличии, неликвиде или несоответствии ассортимента спросу.",
+    average_check: "Откроется, если покупают, но на маленькие суммы. Здесь работа с комплектами, допродажами и структурой корзины.",
+    margin: "Откроется, если продажи есть, но прибыль слабая. Здесь разбираются цена, закупка, скидки и себестоимость.",
+    stock: "Откроется, если деньги застряли в товаре: остатки, оборачиваемость, неликвид и закупочная дисциплина.",
+    expenses: "Откроется, если выручку съедают расходы: аренда, зарплаты, логистика, списания и постоянные платежи.",
+    management_accounting: "Откроется, если нет фактических данных для решений: учёт, регулярность, таблицы, контроль и управленческие отчёты.",
+    cash: "Откроется, если прибыль не превращается в живые деньги: кассовый цикл, платежи, ликвидность и финансовый контроль."
+  };
+  return notes[block.key] || block.note;
+}
+
 function renderBlockMap() {
   const blocks = getBusinessBlocks();
-
   return `
     <div class="block-list">
       ${blocks.map(block => {
         const isCurrent = block.status === "current";
         const badge = isCurrent ? "Текущий" : "Закрыт";
         const cls = isCurrent ? "available" : "locked";
-
         return `
           <div class="block-row ${cls}">
             <div>
               <b>${block.title}</b>
-              <p>${block.note}</p>
+              <p>${blockExtendedNote(block)}</p>
             </div>
             <span>${badge}</span>
           </div>
@@ -727,63 +727,33 @@ function renderBlockMap() {
   `;
 }
 
-function circlePointStyle(angle, radius = 120) {
-  const rad = (angle * Math.PI) / 180;
-  const x = Math.cos(rad) * radius;
-  const y = Math.sin(rad) * radius;
-  return `transform: translate(${x}px, ${y}px);`;
-}
-
-function renderBusinessCircle() {
+function schemeImage(src, alt, fallbackText) {
   return `
-    <div class="circle-wrap">
-      <div class="circle-center">
-        <b>Л.Е.Г.О</b>
-        <span>вид деятельности</span>
+    <div class="scheme-box">
+      <img class="scheme-img" src="${src}" alt="${alt}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+      <div class="scheme-fallback" style="display:none;">
+        ${fallbackText}
       </div>
-
-      ${BUSINESS_CIRCLE.map(item => {
-        const isSelected = item.key === state.selectedBusinessType;
-        const cls = isSelected ? "selected" : item.status;
-        const onclick = item.status === "available" ? `onclick="selectBusinessType('${item.key}')"` : `onclick="soonInfo('${item.title}')"`;
-
-        return `
-          <button class="circle-node ${cls}" style="${circlePointStyle(item.angle, 118)}" ${onclick}>
-            <b>${item.title}</b>
-            <span>${item.status === "available" ? "доступно" : "скоро"}</span>
-          </button>
-        `;
-      }).join("")}
     </div>
   `;
 }
 
-function renderTradeSystemCircle() {
-  const business = getBusinessInfo();
-
+function renderBusinessTypeCards() {
+  const items = BUSINESS_CIRCLE;
   return `
-    <div class="system-circle-block">
-      <div class="circle-wrap large">
-        <button class="circle-center main-center" onclick="continueLesson()">
-          <b>${business.title}</b>
-          <span>Стартовая диагностика</span>
-        </button>
-
-        ${TRADE_SYSTEM_CIRCLE.map(item => {
-          const cls = item.status === "recommended" ? "recommended" : item.status;
-
-          return `
-            <button class="circle-node system-node ${cls}" style="${circlePointStyle(item.angle, 132)}" onclick="lockedBlockInfo('${item.title}', '${item.note}')">
-              <b>${item.title}</b>
-              <span>${item.status === "locked" ? "закрыт" : item.status}</span>
-            </button>
-          `;
-        }).join("")}
-      </div>
-
-      <p class="small system-note">
-        Это не линейный список уроков, а замкнутая система торговли: поток влияет на конверсию, конверсия — на выручку, чек и маржа — на прибыль, запасы и расходы — на деньги, а учёт связывает всё в управляемый цикл.
-      </p>
+    <div class="business-type-grid">
+      ${items.map(item => {
+        const isSelected = item.key === state.selectedBusinessType;
+        const cls = isSelected ? "selected" : item.status;
+        const label = item.status === "available" ? "доступно" : "скоро";
+        const onclick = item.status === "available" ? `onclick="selectBusinessType('${item.key}')"` : `onclick="soonInfo('${item.title}')"`;
+        return `
+          <button class="business-type-card ${cls}" ${onclick}>
+            <b>${item.title}</b>
+            <span>${label}</span>
+          </button>
+        `;
+      }).join("")}
     </div>
   `;
 }
@@ -796,23 +766,11 @@ function selectBusinessType(type) {
 
 function soonInfo(title) {
   shell(`
-    <div class="card">
+    <div class="card blue-card">
       <h1>${title}</h1>
       <p>Это направление будет подключено позже.</p>
-      <p class="small">Сейчас активна торговля. Остальные виды деятельности уже заложены в структуру, чтобы систему можно было расширять без полной переделки.</p>
+      <p>Сейчас активна торговля. Остальные виды деятельности уже заложены в структуру, чтобы систему можно было расширять без полной переделки.</p>
       <button class="btn gold" onclick="home()">Вернуться в кабинет</button>
-    </div>
-  `);
-}
-
-function lockedBlockInfo(title, note) {
-  shell(`
-    <div class="card">
-      <h1>${title}</h1>
-      <p>${note}</p>
-      <p>Этот блок пока закрыт. Сначала завершите стартовую диагностику, выполните практическое ДЗ и определите главный провал по данным.</p>
-      <p class="small">После диагностики нужный блок будет открыт на 7 дней.</p>
-      <button class="btn gold" onclick="home()">Вернуться в систему</button>
     </div>
   `);
 }
@@ -820,43 +778,23 @@ function lockedBlockInfo(title, note) {
 function renderSupportBlock() {
   return `
     <div class="grid">
-      <button class="btn secondary" onclick="showFAQ()">Как работает обучение</button>
-      <a class="btn secondary" href="${SUPPORT_URL}" target="_blank">Связаться с поддержкой</a>
+      <button class="btn secondary" onclick="showFAQ()">Как работает система</button>
+      <a class="btn secondary" href="${SUPPORT_FORM_URL}" target="_blank" onclick="if('${SUPPORT_FORM_URL}'==='#'){alert('Ссылка на Google Form поддержки будет добавлена после создания формы.'); return false;}">Задать вопрос через форму</a>
+      <a class="btn secondary" href="${SUPPORT_TELEGRAM_URL}" target="_blank">Написать в Telegram</a>
     </div>
-    <p class="small">Если доступ не работает: проверьте подписку на закрытый канал, откройте приложение через Telegram-бота и напишите в поддержку.</p>
+    <p class="small">Форма нужна для учёта вопросов: имя, Telegram, суть проблемы, ссылка или скриншот. Telegram остаётся для срочных ситуаций.</p>
   `;
 }
 
 function showFAQ() {
   shell(`
-    <div class="card">
-      <h1>Как работает обучение</h1>
-
-      <div class="list-line">
-        <b>1. Сначала стартовая диагностика</b>
-        <p>Вы проходите блок, который объясняет общую систему бизнеса и показывает, как искать главный провал.</p>
-      </div>
-
-      <div class="list-line">
-        <b>2. Затем проверка понимания</b>
-        <p>Тест не даёт перейти дальше, если базовая логика диагностики ещё не закреплена.</p>
-      </div>
-
-      <div class="list-line">
-        <b>3. Затем управленческое чтение</b>
-        <p>Саммари книг расширяют взгляд и помогают сильнее выполнить практическую диагностику.</p>
-      </div>
-
-      <div class="list-line">
-        <b>4. Затем практическое ДЗ</b>
-        <p>Вы заполняете таблицу, определяете главный провал и выбираете следующий блок по своему виду деятельности.</p>
-      </div>
-
-      <div class="list-line">
-        <b>Почему не открыты все блоки сразу?</b>
-        <p>Чтобы вы не проходили всё подряд, а работали с тем блоком, который сейчас реально ограничивает ваш бизнес.</p>
-      </div>
-
+    <div class="card blue-card">
+      <h1>Как работает система</h1>
+      <div class="list-line"><b>1. Стартовая диагностика</b><p>Сначала вы проходите базовый блок, который показывает всю систему бизнеса: поток, конверсию, чек, маржу, деньги и учёт.</p></div>
+      <div class="list-line"><b>2. Проверка понимания</b><p>Тест нужен, чтобы не перейти дальше формально. Если логика диагностики не закреплена, система возвращает к презентации.</p></div>
+      <div class="list-line"><b>3. Управленческое чтение</b><p>Саммари книг усиливают логику блока: бизнес-модель, 4P, ограничения, гипотезы и система показателей.</p></div>
+      <div class="list-line"><b>4. Практическая диагностика</b><p>Вы заполняете таблицу по своим данным и определяете главный провал бизнеса.</p></div>
+      <div class="list-line"><b>5. Следующий блок</b><p>Следующий блок открывается не “по порядку”, а по главному ограничению, которое показала диагностика.</p></div>
       <button class="btn gold" onclick="home()">Вернуться в кабинет</button>
     </div>
   `);
@@ -883,12 +821,8 @@ async function checkAccess() {
   try {
     const response = await fetch(CHECK_ACCESS_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        initData: tg.initData
-      })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ initData: tg.initData })
     });
 
     const result = await response.json();
@@ -926,9 +860,7 @@ async function saveProgress(event, payload = {}) {
   try {
     const response = await fetch(SAVE_PROGRESS_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         initData: tg.initData,
         lessonCode: CURRENT_LESSON_CODE,
@@ -967,13 +899,12 @@ function home() {
   const level = getLevelTitle(index);
 
   shell(`
-    <div class="card hero-card">
+    <div class="card hero-card blue-card">
       <div class="hero-top">
         <div>
-          <h1>Л.Е.Г.О Бизнес-система</h1>
+          <h1>Система внедрения управленческих изменений</h1>
           <p>Доступ подтверждён${name}.</p>
         </div>
-        <div class="badge">BETA</div>
       </div>
       <p class="small">Статус доступа: ${state.accessReason || "active"}</p>
       <div class="progress big"><div style="width:${percent}%"></div></div>
@@ -991,20 +922,29 @@ function home() {
 
     <div class="card">
       <h2>Выбор вида деятельности</h2>
-      <p class="small">Система Л.Е.Г.О строится под разные типы бизнеса. Сейчас активна торговля, остальные направления будут подключаться позже.</p>
-      ${renderBusinessCircle()}
+      <p>Система строится под разные типы бизнеса. Сейчас активна торговля, остальные направления будут подключаться позже.</p>
+      ${renderBusinessTypeCards()}
     </div>
 
     <div class="card">
       <h2>Система вашего бизнеса</h2>
       <p><b>${business.title}</b></p>
-      <p>${business.description}</p>
-      ${renderTradeSystemCircle()}
+      ${schemeImage(
+        TRADE_SYSTEM_MAP_URL,
+        "Система торговли",
+        "Поток → Конверсия → Средний чек → Маржа → Запасы и расходы → Деньги → Учёт → Новое решение"
+      )}
+      <p>В торговле деньги проходят цепочку: поток приводит людей, конверсия превращает их в покупателей, средний чек усиливает выручку, маржа показывает качество прибыли, запасы и расходы влияют на деньги, а учёт возвращает систему к новым решениям.</p>
     </div>
 
     <div class="card">
       <h2>Текущий блок</h2>
       <p><b>${business.currentModuleTitle}</b></p>
+      ${schemeImage(
+        MODULE_CYCLE_MAP_URL,
+        "Цикл прохождения блока",
+        "Презентация → Тест → Саммари → Практическая диагностика → Проверка → Следующий блок"
+      )}
       <p class="small">${getProgressLabel()}</p>
       ${state.lastQuizAttempt ? `<p class="small">Последний тест: ${state.lastQuizAttempt.score}/${state.lastQuizAttempt.total}</p>` : ""}
       ${renderModuleProgress()}
@@ -1012,37 +952,52 @@ function home() {
 
     <div class="card">
       <h2>Блоки внутри системы</h2>
-      <p class="small">Круг выше показывает взаимосвязь блоков. Ниже — те же блоки в удобном списке для телефона. После практической диагностики один из них станет рекомендованным и откроется на 7 дней.</p>
+      <p>Блоки открываются не линейно, а по результату диагностики. Сначала вы проходите стартовый блок, затем таблица показывает главное ограничение, и только нужный блок открывается на 7 дней.</p>
       ${renderBlockMap()}
     </div>
 
     <div class="card">
-      <h2>Помощь</h2>
+      <h2>Подробности и помощь</h2>
+      <p>Система построена так, чтобы вы не просто посмотрели материалы, а сделали управленческое действие: изучили логику, проверили понимание, разобрали книги, заполнили таблицу, нашли главный провал и выбрали следующий блок.</p>
       ${renderSupportBlock()}
     </div>
   `);
 }
-function renderLessonSlide() {
-  const slides = LESSON_SLIDES[state.selectedLesson] || [];
-  const index = state.slideIndex || 0;
-  if (!slides.length) {
-    emergencyScreen("NO_SLIDES_FOUND");
+
+async function continueLesson() {
+  const p = state.progress;
+  if (!p) { await startLesson(); return; }
+  if (p.status === "homework_submitted" || p.current_step === "review") { homeworkSubmittedScreen(); return; }
+  if (p.status === "completed") { state.slideIndex = 0; renderLessonSlide(); return; }
+  if (p.current_step === "presentation") {
+    const savedSlide = Number(p.last_slide_number || 1);
+    state.slideIndex = Math.min(Math.max(savedSlide - 1, 0), lessonSlides.length - 1);
+    renderLessonSlide();
     return;
   }
-
-  shell(imageScreen(slides[index].url, index + 1, slides.length, slides[index].title, slides[index].description));
+  if (p.current_step === "quiz") { quizIntro(); return; }
+  if (p.current_step === "books") { startBooks(); return; }
+  if (p.current_step === "homework") { homeworkIntro(); return; }
+  await startLesson();
 }
 
-function nextLessonSlide() {
-  const slides = LESSON_SLIDES[state.selectedLesson] || [];
-  if (!slides.length) return;
+async function startLesson() {
+  state.screen = "slides";
+  state.slideIndex = 0;
+  await saveProgress("lesson_started");
+  renderLessonSlide();
+}
 
-  if (state.slideIndex < slides.length - 1) {
-    state.slideIndex++;
-    renderLessonSlide();
-  } else {
-    startQuiz();
-  }
+function renderLessonSlide() {
+  const current = state.slideIndex + 1;
+  const total = lessonSlides.length;
+  shell(
+    imageScreen(lessonSlides[state.slideIndex], current, total, "Слайд", lessonDescriptions[state.slideIndex]),
+    `<div class="footer-nav">
+      <button class="btn secondary" onclick="prevLessonSlide()" ${state.slideIndex === 0 ? "disabled" : ""}>Назад</button>
+      <button class="btn gold" onclick="nextLessonSlide()">${state.slideIndex === lessonSlides.length - 1 ? "К тесту" : "Далее"}</button>
+    </div>`
+  );
 }
 
 function prevLessonSlide() {
@@ -1052,25 +1007,127 @@ function prevLessonSlide() {
   }
 }
 
-function renderBookSlide() {
-  const books = BOOK_SLIDES[state.selectedLesson] || [];
-  const index = state.bookSlideIndex || 0;
-  if (!books.length) {
-    emergencyScreen("NO_BOOK_SLIDES_FOUND");
+async function nextLessonSlide() {
+  if (state.slideIndex < lessonSlides.length - 1) {
+    state.slideIndex++;
+    await saveProgress("slide_viewed", { lastSlideNumber: state.slideIndex + 1 });
+    renderLessonSlide();
+  } else {
+    state.completed.presentation = true;
+    await saveProgress("presentation_completed", { lastSlideNumber: lessonSlides.length });
+    quizIntro();
+  }
+}
+
+function quizIntro() {
+  shell(`
+    <div class="card blue-card">
+      <h1>Тест на понимание</h1>
+      <p>12 вопросов. Проходной результат — 70%, то есть минимум 9 правильных ответов.</p>
+      <p>Если результат ниже, нужно вернуться к презентации и повторить ключевые слайды.</p>
+      <button class="btn gold" onclick="startQuiz()">Начать тест</button>
+      <button class="btn secondary" onclick="home()" style="margin-top:10px;">На главный экран</button>
+    </div>
+  `);
+}
+
+function startQuiz() {
+  state.currentQuestion = 0;
+  state.answers = {};
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = quiz[state.currentQuestion];
+  shell(`
+    <div class="progress"><div style="width:${Math.round(((state.currentQuestion + 1) / quiz.length) * 100)}%"></div></div>
+    <div class="card">
+      <p class="small">Вопрос ${state.currentQuestion + 1} / ${quiz.length}</p>
+      <h2>${q.q}</h2>
+      ${q.a.map((opt, i) => `<button class="option ${state.answers[state.currentQuestion] === i ? "selected" : ""}" onclick="selectAnswer(${i})">${String.fromCharCode(65 + i)}. ${opt}</button>`).join("")}
+    </div>
+  `, `<div class="footer-nav">
+      <button class="btn secondary" onclick="prevQuestion()" ${state.currentQuestion === 0 ? "disabled" : ""}>Назад</button>
+      <button class="btn gold" onclick="nextQuestion()">${state.currentQuestion === quiz.length - 1 ? "Завершить" : "Далее"}</button>
+    </div>`);
+}
+
+function selectAnswer(i) {
+  state.answers[state.currentQuestion] = i;
+  renderQuestion();
+}
+
+function prevQuestion() {
+  if (state.currentQuestion > 0) {
+    state.currentQuestion--;
+    renderQuestion();
+  }
+}
+
+function nextQuestion() {
+  if (state.answers[state.currentQuestion] === undefined) {
+    alert("Выберите вариант ответа.");
+    return;
+  }
+  if (state.currentQuestion < quiz.length - 1) {
+    state.currentQuestion++;
+    renderQuestion();
+  } else {
+    quizResult();
+  }
+}
+
+async function quizResult() {
+  let score = 0;
+  quiz.forEach((q, i) => { if (state.answers[i] === q.correct) score++; });
+  const passed = score >= 9;
+  state.completed.quiz = passed;
+  await saveProgress("quiz_completed", { score, total: quiz.length, passed, answers: state.answers });
+
+  if (passed) {
+    shell(`
+      <div class="card result-ok">
+        <h1>Тест пройден</h1>
+        <p>Результат: <b>${score} / ${quiz.length}</b></p>
+        <p>Базовая логика диагностики усвоена. Теперь можно переходить к саммари книг.</p>
+        <button class="btn gold" onclick="startBooks()">К саммари книг</button>
+        <button class="btn secondary" onclick="home()" style="margin-top:10px;">На главный экран</button>
+      </div>`);
     return;
   }
 
-  shell(imageScreen(books[index].url, index + 1, books.length, books[index].title, books[index].description));
+  shell(`
+    <div class="card result-bad">
+      <h1>Тест не пройден</h1>
+      <p>Результат: <b>${score} / ${quiz.length}</b></p>
+      <p>Пока рано переходить к саммари книг и домашнему заданию.</p>
+      <p>Вернитесь к презентации и повторите ключевые блоки.</p>
+      <div class="list-line"><b>1. Симптом и диагноз</b><p>Почему “нет продаж” — это не точная причина.</p></div>
+      <div class="list-line"><b>2. Формула выручки</b><p>Поток × конверсия × средний чек.</p></div>
+      <div class="list-line"><b>3. Конверсия и средний чек</b><p>Где бизнес теряет результат внутри продаж.</p></div>
+      <div class="list-line"><b>4. Маржа и деньги</b><p>Почему выручка не равна живым деньгам.</p></div>
+      <button class="btn gold" onclick="startLesson()">Вернуться к презентации</button>
+      <button class="btn secondary" onclick="quizIntro()" style="margin-top:10px;">Повторить тест</button>
+      <button class="btn secondary" onclick="home()" style="margin-top:10px;">На главный экран</button>
+    </div>`);
 }
 
-function nextBookSlide() {
-  const books = BOOK_SLIDES[state.selectedLesson] || [];
-  if (state.bookSlideIndex < books.length - 1) {
-    state.bookSlideIndex++;
-    renderBookSlide();
-  } else {
-    homeworkIntro();
-  }
+async function startBooks() {
+  state.bookSlideIndex = 0;
+  await saveProgress("books_started");
+  renderBookSlide();
+}
+
+function renderBookSlide() {
+  const current = state.bookSlideIndex + 1;
+  const total = bookSlides.length;
+  shell(
+    imageScreen(bookSlides[state.bookSlideIndex], current, total, "Саммари", bookDescriptions[state.bookSlideIndex]),
+    `<div class="footer-nav">
+      <button class="btn secondary" onclick="prevBookSlide()" ${state.bookSlideIndex === 0 ? "disabled" : ""}>Назад</button>
+      <button class="btn gold" onclick="nextBookSlide()">${state.bookSlideIndex === bookSlides.length - 1 ? "К ДЗ" : "Далее"}</button>
+    </div>`
+  );
 }
 
 function prevBookSlide() {
@@ -1080,118 +1137,87 @@ function prevBookSlide() {
   }
 }
 
-function startQuiz() {
-  shell(`
-    <div class="card">
-      <h1>Тест по модулю</h1>
-      <p>Пройдите тест, чтобы подтвердить понимание материала. Без успешного прохождения теста дальнейшие блоки заблокированы.</p>
-      <button class="btn gold" onclick="startQuizQuestions()">Начать тест</button>
-      <button class="btn secondary" onclick="reviewPresentation()">Повторить презентацию</button>
-    </div>
-  `);
-}
-
-function startQuizQuestions() {
-  state.quizIndex = 0;
-  renderQuizQuestion();
-}
-
-function renderQuizQuestion() {
-  const questions = QUIZ[state.selectedLesson] || [];
-  const qIndex = state.quizIndex || 0;
-
-  if (!questions.length) {
-    emergencyScreen("NO_QUIZ_QUESTIONS");
-    return;
-  }
-
-  const q = questions[qIndex];
-
-  shell(`
-    <div class="card">
-      <h2>${q.title}</h2>
-      <p>${q.question}</p>
-      <div class="quiz-options">
-        ${q.options.map((opt, i) => `
-          <button class="btn secondary" onclick="submitAnswer(${i})">${opt}</button>
-        `).join("")}
-      </div>
-      <p class="small">${qIndex + 1} / ${questions.length}</p>
-    </div>
-  `);
-}
-
-function submitAnswer(selected) {
-  const questions = QUIZ[state.selectedLesson] || [];
-  const qIndex = state.quizIndex || 0;
-  const q = questions[qIndex];
-
-  if (!q) return;
-
-  if (selected === q.correct) {
-    state.quizScore = (state.quizScore || 0) + 1;
-  }
-
-  if (qIndex < questions.length - 1) {
-    state.quizIndex++;
-    renderQuizQuestion();
+async function nextBookSlide() {
+  if (state.bookSlideIndex < bookSlides.length - 1) {
+    state.bookSlideIndex++;
+    renderBookSlide();
   } else {
-    finalizeQuiz();
+    state.completed.books = true;
+    await saveProgress("books_completed");
+    homeworkIntro();
   }
-}
-
-function finalizeQuiz() {
-  const questions = QUIZ[state.selectedLesson] || [];
-  const score = state.quizScore || 0;
-  const percent = Math.round((score / questions.length) * 100);
-
-  const nextStep = percent >= 70 ? "books" : "presentation";
-
-  shell(`
-    <div class="card">
-      <h1>Результат теста</h1>
-      <p>Вы набрали ${score} из ${questions.length} (${percent}%)</p>
-      <p>${percent >= 70 ? "Поздравляем! Вы прошли тест." : "К сожалению, результат ниже 70%. Рекомендуем повторно пройти презентацию."}</p>
-      <button class="btn gold" onclick="${percent >= 70 ? "startBooks()" : "reviewPresentation()"}">${percent >= 70 ? "Перейти к книгам" : "Вернуться к презентации"}</button>
-    </div>
-  `);
-
-  saveProgress("quiz_completed", { score, percent, nextStep });
 }
 
 function homeworkIntro() {
+  saveProgress("homework_started");
   shell(`
-    <div class="card">
+    <div class="card blue-card">
       <h1>Практическая диагностика</h1>
-      <p>Следующий шаг — выполнение домашнего задания. Вы анализируете данные, определяете главный провал и формулируете действия на 7 дней.</p>
-      <button class="btn gold" onclick="openHomework()">Открыть ДЗ</button>
-      <button class="btn secondary" onclick="reviewBooks()">Повторить саммари книг</button>
+      <p>Откройте шаблон Google Sheets, заполните данные и сформулируйте главный провал бизнеса.</p>
+      <p>Если данных нет — не придумывайте. Ведите минимальный управленческий учёт 7 дней.</p>
+      <div class="grid">
+        <a class="btn gold" href="${HOMEWORK_SHEET_URL}" target="_blank" onclick="if('${HOMEWORK_SHEET_URL}'==='#'){alert('Ссылка на Google Sheets-шаблон будет добавлена после создания таблицы.'); return false;}">Открыть шаблон</a>
+        <a class="btn secondary" href="${HOMEWORK_SUBMIT_FORM_URL}" target="_blank" onclick="if('${HOMEWORK_SUBMIT_FORM_URL}'==='#'){alert('Ссылка на форму сдачи ДЗ будет добавлена после создания Google Form.'); return false;}">Сдать через форму</a>
+        <button class="btn secondary" onclick="submissionForm()">Посмотреть требования к ДЗ</button>
+        <button class="btn secondary" onclick="home()">На главный экран</button>
+      </div>
     </div>
   `);
 }
 
-function openHomework() {
+function submissionForm() {
   shell(`
     <div class="card">
-      <h1>Домашнее задание</h1>
-      <iframe src="${HOMEWORK_URL}" style="width:100%; height:550px; border:none; border-radius:16px;"></iframe>
-      <p class="small">Все изменения сохраняются автоматически. После отправки ДЗ вы сможете открыть следующий блок через 7 дней.</p>
-      <button class="btn secondary" onclick="home()">Вернуться в кабинет</button>
+      <h1>Требования к ДЗ</h1>
+      <p>Практическая диагностика нужна не для отчётности, а для выбора следующего блока по реальным данным.</p>
+      <div class="list-line"><b>1. Ссылка на таблицу</b><p>Google Sheets с заполненными данными за 7–14 дней.</p></div>
+      <div class="list-line"><b>2. Главный провал</b><p>Поток / конверсия / чек / маржа / запасы / расходы / учёт / деньги.</p></div>
+      <div class="list-line"><b>3. Подтверждение цифрами</b><p>Какая метрика показала, что именно этот блок ограничивает результат.</p></div>
+      <div class="list-line"><b>4. Гипотеза на 7 дней</b><p>Что вы проверяете и какой результат ожидаете.</p></div>
+      <div class="list-line"><b>5. Метрика проверки</b><p>По чему станет понятно, что стало лучше.</p></div>
+      <button class="btn gold" onclick="finish()">Пока отметить как отправлено</button>
+      <button class="btn secondary" onclick="home()" style="margin-top:10px;">На главный экран</button>
     </div>
   `);
 }
 
-function finalizeHomework(submitted = true) {
-  state.completed.homework = submitted;
-  saveProgress("homework_submitted", { submitted });
-  home();
+function finish() {
+  saveProgress("homework_submitted");
+  homeworkSubmittedScreen();
 }
 
-window.addEventListener("load", () => {
+function homeworkSubmittedScreen() {
+  shell(`
+    <div class="card blue-card">
+      <h1>ДЗ отправлено</h1>
+      <p>Статус: на проверке.</p>
+      <p>После проверки или по правилам программы будет открыт следующий блок, который соответствует главному провалу бизнеса.</p>
+      <button class="btn gold" onclick="home()">На главный экран</button>
+    </div>
+  `);
+}
+
+function bootApp() {
   try {
     checkAccess();
-  } catch (e) {
-    emergencyScreen("LOAD_ERROR");
-    console.error(e);
+  } catch (error) {
+    console.error("BOOT_ERROR", error);
+    emergencyScreen(error?.message || "BOOT_ERROR");
   }
+}
+
+window.addEventListener("error", function (event) {
+  console.error("GLOBAL_ERROR", event.error || event.message);
+  emergencyScreen(event?.error?.message || event.message || "GLOBAL_ERROR");
 });
+
+window.addEventListener("unhandledrejection", function (event) {
+  console.error("UNHANDLED_REJECTION", event.reason);
+  emergencyScreen(event?.reason?.message || "UNHANDLED_REJECTION");
+});
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bootApp);
+} else {
+  bootApp();
+}
