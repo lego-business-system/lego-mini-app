@@ -755,7 +755,7 @@ function renderBusinessTypeCards() {
 function selectBusinessType(type) {
   if (!BUSINESS_TYPES[type]) return;
   state.selectedBusinessType = type;
-  entrepreneurHome();
+  activityHome(type);
 }
 
 function mainMenu() {
@@ -871,7 +871,7 @@ function showEmployee() {
 function showInDevelopment(title) {
   shell(`
     <div class="card blue-card"><h1>${title}</h1><p>Раздел будет подключён позже.</p></div>
-    <div class="card"><p>Сейчас активен маршрут торговли. Остальные виды деятельности заложены в структуру и будут подключаться без полной переделки системы.</p>${actionButton("Вернуться", "entrepreneurHome()", "gold")}</div>
+    <div class="card"><p>Сейчас активен маршрут торговли. Остальные виды деятельности заложены в структуру и будут подключаться без полной переделки системы.</p>${actionButton("Вернуться", "activityHome()", "gold")}</div>
   `);
 }
 
@@ -896,6 +896,36 @@ function supportScreen() {
 
 function entrepreneurHome() {
   const business = getBusinessInfo();
+  shell(`
+    <div class="card blue-card">
+      <h1>Я предприниматель</h1>
+      <p>Сначала выберите вид деятельности. Вся дальнейшая информация — система бизнеса, текущий модуль, презентация, тест, саммари, ДЗ, прогресс, блоки и поддержка — находится внутри выбранного вида деятельности.</p>
+    </div>
+
+    <div class="card">
+      <h2>Выбор вида деятельности</h2>
+      <p>Выбор фиксирует ваш стартовый маршрут. Сейчас доступна торговля. Остальные направления пока в разработке. После выбора вы входите внутрь вида деятельности, и обучение ведётся уже в его системе.</p>
+      ${renderBusinessTypeCards()}
+    </div>
+
+    <div class="card">
+      <h2>Ваш текущий маршрут</h2>
+      <p>Сейчас выбран вид деятельности: <b>${business.title}</b>.</p>
+      <p class="small">Новый внутренний модуль можно открывать не чаще одного раза в неделю и только после проверенного ДЗ. Материалы уже открытого модуля можно пересматривать всегда.</p>
+      <div class="grid">
+        ${actionButton("Войти в вид деятельности", "activityHome()", "gold")}
+        ${actionButton("На главный экран", "mainMenu()", "secondary")}
+      </div>
+    </div>
+  `);
+}
+
+function activityHome(type) {
+  if (type && BUSINESS_TYPES[type]) {
+    state.selectedBusinessType = type;
+  }
+
+  const business = getBusinessInfo();
   const moduleScore = getModuleScore();
   const modulePercent = getModuleProgressPercent();
   const completedModules = isHomeworkVerified() ? 1 : 0;
@@ -903,19 +933,13 @@ function entrepreneurHome() {
 
   shell(`
     <div class="card blue-card">
-      <h1>Я предприниматель</h1>
-      <p>Здесь начинается маршрут по системе бизнеса: вид деятельности, текущий модуль, карта блоков, ДЗ и следующий шаг.</p>
+      <h1>${business.title}</h1>
+      <p>Вся работа по этому направлению находится здесь: система бизнеса, прогресс, текущий модуль, блоки, ДЗ и форма вопросов.</p>
+      <p class="small">Раздел: Я предприниматель → ${business.title}</p>
     </div>
 
     <div class="card">
-      <h2>Выбор вида деятельности</h2>
-      <p>Выбор фиксирует стартовый маршрут. Сейчас доступна торговля. Новый внутренний модуль можно открывать не чаще одного раза в неделю и только после проверенного ДЗ.</p>
-      ${renderBusinessTypeCards()}
-    </div>
-
-    <div class="card">
-      <h2>Прогресс по виду деятельности</h2>
-      <p><b>${business.title}</b></p>
+      <h2>Прогресс внутри вида деятельности</h2>
       <p>Нишевый уровень: <b>${tradeRank}</b></p>
       <div class="progress big"><div style="width:${modulePercent}%"></div></div>
       <p>Баллы внутри текущего модуля: <b>${moduleScore} / 100</b></p>
@@ -929,7 +953,7 @@ function entrepreneurHome() {
     </div>
 
     <div class="card">
-      <h2>Текущий модуль</h2>
+      <h2>Текущий модуль внутри ${business.title}</h2>
       <p><b>${business.currentModuleTitle}</b></p>
       ${schemeImage(MODULE_CYCLE_MAP_URL, "Цикл прохождения модуля", "Презентация → Тест → Саммари → Практическая диагностика → Проверка → Следующий блок")}
       <p class="small">${getProgressLabel()}</p>
@@ -942,21 +966,24 @@ function entrepreneurHome() {
     </div>
 
     <div class="card">
-      <h2>Блоки внутри системы</h2>
+      <h2>Блоки внутри системы ${business.title}</h2>
       <p>Блоки открываются по результату диагностики. Сначала вы проходите стартовый блок, затем ДЗ показывает главное ограничение, и только нужный блок открывается на 7 дней.</p>
       ${renderBlockMap()}
     </div>
 
     <div class="card">
-      <h2>Как работает система</h2>
+      <h2>Как работает система внутри вида деятельности</h2>
       <div class="list-line"><b>1. Изучение</b><p>Сначала вы проходите презентацию и собираете общую карту бизнеса.</p></div>
       <div class="list-line"><b>2. Проверка</b><p>Тест показывает, понята ли логика диагностики.</p></div>
       <div class="list-line"><b>3. Усиление</b><p>Саммари книг закрепляют управленческую рамку.</p></div>
       <div class="list-line"><b>4. Практика</b><p>Вы делаете копию таблицы, заполняете реальные данные и сдаёте ссылку через форму.</p></div>
       <div class="list-line"><b>5. Проверка ДЗ</b><p>70 баллов начисляются только после проверки ДЗ, а не после факта отправки.</p></div>
       <div class="list-line"><b>6. Следующий модуль</b><p>Следующий блок открывается по главному провалу бизнеса и не чаще одного раза в неделю.</p></div>
-      ${externalFormButton("Задать вопрос через форму", SUPPORT_FORM_URL)}
-      ${actionButton("На главный экран", "mainMenu()", "secondary")}
+      <div class="grid">
+        ${externalFormButton("Задать вопрос по этому виду деятельности", SUPPORT_FORM_URL)}
+        ${actionButton("К выбору вида деятельности", "activityHome()", "secondary")}
+        ${actionButton("На главный экран", "mainMenu()", "secondary")}
+      </div>
     </div>
   `);
 }
@@ -1096,7 +1123,7 @@ function renderLessonSlide() {
     `<div class="footer-nav footer-nav-stack">
       <button class="btn secondary" onclick="prevLessonSlide()" ${state.slideIndex === 0 ? "disabled" : ""}>Назад</button>
       <button class="btn gold" onclick="nextLessonSlide()">${state.slideIndex === lessonSlides.length - 1 ? "К тесту" : "Далее"}</button>
-      <button class="btn secondary" onclick="entrepreneurHome()">На главный экран</button>
+      <button class="btn secondary" onclick="activityHome()">К виду деятельности</button>
     </div>`
   );
 }
@@ -1129,7 +1156,7 @@ function quizIntro() {
       <div class="grid">
         ${actionButton("Продолжить тест", "continueQuiz()", "gold")}
         ${actionButton("Начать тест заново", "startQuiz()", "secondary")}
-        ${actionButton("На главный экран", "entrepreneurHome()", "secondary")}
+        ${actionButton("На главный экран", "activityHome()", "secondary")}
       </div>
     </div>
   `);
@@ -1160,7 +1187,7 @@ function renderQuestion() {
   `, `<div class="footer-nav footer-nav-stack">
       <button class="btn secondary" onclick="prevQuestion()" ${state.currentQuestion === 0 ? "disabled" : ""}>Назад</button>
       <button class="btn gold" onclick="nextQuestion()">${state.currentQuestion === quiz.length - 1 ? "Завершить" : "Далее"}</button>
-      <button class="btn secondary" onclick="entrepreneurHome()">На главный экран</button>
+      <button class="btn secondary" onclick="activityHome()">К виду деятельности</button>
     </div>`);
 }
 
@@ -1203,7 +1230,7 @@ async function quizResult() {
         <p>Результат: <b>${score} / ${quiz.length}</b></p>
         <p>Начислено: <b>10 баллов</b>. Теперь можно переходить к саммари книг.</p>
         ${actionButton("К саммари книг", "startBooks()", "gold")}
-        ${actionButton("На главный экран", "entrepreneurHome()", "secondary")}
+        ${actionButton("На главный экран", "activityHome()", "secondary")}
       </div>`);
     return;
   }
@@ -1218,7 +1245,7 @@ async function quizResult() {
       <div class="list-line"><b>3. Маржа и деньги</b><p>Почему выручка не равна живым деньгам.</p></div>
       ${actionButton("Вернуться к презентации", "startLesson()", "gold")}
       ${actionButton("Повторить тест", "quizIntro()", "secondary")}
-      ${actionButton("На главный экран", "entrepreneurHome()", "secondary")}
+      ${actionButton("На главный экран", "activityHome()", "secondary")}
     </div>`);
 }
 
@@ -1236,7 +1263,7 @@ function renderBookSlide() {
     `<div class="footer-nav footer-nav-stack">
       <button class="btn secondary" onclick="prevBookSlide()" ${state.bookSlideIndex === 0 ? "disabled" : ""}>Назад</button>
       <button class="btn gold" onclick="nextBookSlide()">${state.bookSlideIndex === bookSlides.length - 1 ? "К ДЗ" : "Далее"}</button>
-      <button class="btn secondary" onclick="entrepreneurHome()">На главный экран</button>
+      <button class="btn secondary" onclick="activityHome()">К виду деятельности</button>
     </div>`
   );
 }
@@ -1279,7 +1306,7 @@ function homeworkIntro() {
         <a class="btn gold" href="${HOMEWORK_SHEET_URL}" target="_blank" onclick="if('${HOMEWORK_SHEET_URL}'==='#'){alert('Ссылка на Google Sheets-шаблон будет добавлена после создания таблицы.'); return false;}">Открыть шаблон таблицы</a>
         <a class="btn secondary" href="${HOMEWORK_SUBMIT_FORM_URL}" target="_blank" onclick="if('${HOMEWORK_SUBMIT_FORM_URL}'==='#'){alert('Ссылка на форму сдачи ДЗ будет добавлена после создания Google Form.'); return false;}">Открыть форму сдачи ДЗ</a>
         ${actionButton("Требования к ДЗ", "submissionForm()", "secondary")}
-        ${actionButton("На главный экран", "entrepreneurHome()", "secondary")}
+        ${actionButton("На главный экран", "activityHome()", "secondary")}
       </div>
     </div>
   `);
@@ -1302,7 +1329,7 @@ function submissionForm() {
       <p class="small">Кнопка “пока отметить как отправлено” убрана специально: она создавала ложное ощущение, что ДЗ уже реально ушло. Теперь сдача идёт только через форму.</p>
       <div class="grid">
         <a class="btn gold" href="${HOMEWORK_SUBMIT_FORM_URL}" target="_blank" onclick="if('${HOMEWORK_SUBMIT_FORM_URL}'==='#'){alert('Ссылка на форму сдачи ДЗ будет добавлена после создания Google Form.'); return false;}">Открыть форму сдачи ДЗ</a>
-        ${actionButton("На главный экран", "entrepreneurHome()", "secondary")}
+        ${actionButton("На главный экран", "activityHome()", "secondary")}
       </div>
     </div>
   `);
@@ -1318,7 +1345,7 @@ function homeworkSubmittedScreen() {
       <p>70 баллов за домашнее задание начисляются только после проверки. Если вы отправили форму, ожидайте обратную связь. Если форма ещё не отправлена — откройте форму сдачи ДЗ.</p>
       <div class="grid">
         <a class="btn gold" href="${HOMEWORK_SUBMIT_FORM_URL}" target="_blank" onclick="if('${HOMEWORK_SUBMIT_FORM_URL}'==='#'){alert('Ссылка на форму сдачи ДЗ будет добавлена после создания Google Form.'); return false;}">Открыть форму сдачи ДЗ</a>
-        ${actionButton("На главный экран", "entrepreneurHome()", "secondary")}
+        ${actionButton("На главный экран", "activityHome()", "secondary")}
       </div>
     </div>
   `);
