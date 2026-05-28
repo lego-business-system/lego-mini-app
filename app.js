@@ -456,6 +456,328 @@ const state = {
   }
 };
 
+
+// ===== Локальное сохранение прогресса между открытиями приложения =====
+// Это нужно, чтобы тест и саммари не начинались заново после закрытия Telegram WebApp.
+// Backend/Supabase остаётся главным источником доступа, а localStorage страхует текущую позицию ученика.
+const LOCAL_PROGRESS_KEY = "lego_progress_" + CURRENT_LESSON_CODE + "_" + CURRENT_BUSINESS_TYPE;
+
+state.localProgress = loadLocalProgress();
+
+function loadLocalProgress() {
+  try {
+    const raw = window.localStorage ? window.localStorage.getItem(LOCAL_PROGRESS_KEY) : null;
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    console.error("LOCAL_PROGRESS_LOAD_ERROR", error);
+    return {};
+  }
+}
+
+function saveLocalProgress() {
+  try {
+    if (!window.localStorage) return;
+    window.localStorage.setItem(LOCAL_PROGRESS_KEY, JSON.stringify(state.localProgress || {}));
+  } catch (error) {
+    console.error("LOCAL_PROGRESS_SAVE_ERROR", error);
+  }
+}
+
+function updateLocalProgress(fields) {
+  state.localProgress = state.localProgress || {};
+  Object.keys(fields || {}).forEach(function(key) {
+    state.localProgress[key] = fields[key];
+  });
+  saveLocalProgress();
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function firstFilled(values) {
+  for (let i = 0; i < values.length; i++) {
+    if (values[i] !== undefined && values[i] !== null && values[i] !== "") return values[i];
+  }
+  return null;
+}
+
+function formatProgressDate(value) {
+  if (!value) return "не зафиксировано";
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function getStoredProgressDate(kind) {
+  const p = state.progress || {};
+  const l = state.localProgress || {};
+
+  if (kind === "presentation") {
+    return firstFilled([
+      l.presentation_completed_at,
+      p.presentation_completed_at,
+      p.presentation_completed_date,
+      p.presentation_finished_at,
+      p.presentation_finished_date
+    ]);
+  }
+
+  if (kind === "quiz") {
+    return firstFilled([
+      l.quiz_completed_at,
+      p.quiz_completed_at,
+      p.quiz_completed_date,
+      p.quiz_finished_at,
+      p.quiz_finished_date
+    ]);
+  }
+
+  if (kind === "books") {
+    return firstFilled([
+      l.books_completed_at,
+      p.books_completed_at,
+      p.books_completed_date,
+      p.books_finished_at,
+      p.books_finished_date
+    ]);
+  }
+
+  if (kind === "homeworkSubmitted") {
+    return firstFilled([
+      l.homework_submitted_at,
+      p.homework_submitted_at,
+      p.homework_submitted_date,
+      p.submitted_at,
+      p.submitted_date
+    ]);
+  }
+
+  if (kind === "homeworkVerified") {
+    return firstFilled([
+      l.homework_verified_at,
+      p.homework_verified_at,
+      p.homework_verified_date,
+      p.homework_checked_at,
+      p.homework_checked_date,
+      p.checked_at,
+      p.checked_date,
+      p.completed_at,
+      p.completed_date
+    ]);
+  }
+
+  return null;
+}
+
+function applyStoredProgressToState() {
+  const l = state.localProgress || {};
+  const p = state.progress || {};
+
+  const savedSlide = Number(firstFilled([l.last_slide_number, p.last_slide_number]));
+  if (savedSlide && !isNaN(savedSlide)) {
+    state.slideIndex = Math.min(Math.max(savedSlide - 1, 0), lessonSlides.length - 1);
+  }
+
+  const savedBook = Number(firstFilled([l.last_book_slide_number, p.last_book_slide_number, p.book_slide_number]));
+  if (savedBook && !isNaN(savedBook)) {
+    state.bookSlideIndex = Math.min(Math.max(savedBook - 1, 0), bookSlides.length - 1);
+  }
+
+  const savedQuestion = Number(firstFilled([l.current_question, p.current_question, p.quiz_question_number]));
+  if (!isNaN(savedQuestion) && savedQuestion >= 0 && savedQuestion < quiz.length) {
+    state.currentQuestion = savedQuestion;
+  }
+
+  const savedAnswers = firstFilled([l.quiz_answers, p.quiz_answers]);
+  if (savedAnswers) {
+    if (typeof savedAnswers === "string") {
+      try {
+        state.answers = JSON.parse(savedAnswers) || {};
+      } catch (error) {
+        state.answers = {};
+      }
+    } else if (typeof savedAnswers === "object") {
+      state.answers = savedAnswers;
+    }
+  }
+
+  state.completed.presentation = Boolean(state.completed.presentation || l.presentation_completed_at || p.presentation_completed);
+  state.completed.quiz = Boolean(state.completed.quiz || l.quiz_completed_at || p.quiz_completed);
+  state.completed.books = Boolean(state.completed.books || l.books_completed_at || p.books_completed);
+  state.completed.homework = Boolean(
+    state.completed.homework ||
+    l.homework_submitted_at ||
+    p.homework_submitted ||
+    p.status === "homework_submitted" ||
+    p.status === "completed"
+  );
+
+  if (!state.progress) state.progress = {};
+  if (l.current_step && !state.progress.current_step) state.progress.current_step = l.current_step;
+  if (l.last_slide_number && !state.progress.last_slide_number) state.progress.last_slide_number = l.last_slide_number;
+}
+
+function applyLocalEvent(event, payload) {
+  const data = payload || {};
+
+  if (event === "lesson_started") {
+    updateLocalProgress({
+      current_step: "presentation",
+      presentation_started_at: state.localProgress.presentation_started_at || nowIso(),
+      last_slide_number: Math.max(1, (state.slideIndex || 0) + 1)
+    });
+    return;
+  }
+
+  if (event === "slide_viewed") {
+    updateLocalProgress({
+      current_step: "presentation",
+      last_slide_number: data.lastSlideNumber || (state.slideIndex + 1)
+    });
+    return;
+  }
+
+  if (event === "presentation_completed") {
+    updateLocalProgress({
+      current_step: "quiz",
+      presentation_completed_at: state.localProgress.presentation_completed_at || nowIso(),
+      last_slide_number: data.lastSlideNumber || lessonSlides.length
+    });
+    return;
+  }
+
+  if (event === "quiz_started" || event === "quiz_progress") {
+    updateLocalProgress({
+      current_step: "quiz",
+      quiz_started_at: state.localProgress.quiz_started_at || nowIso(),
+      current_question: state.currentQuestion || 0,
+      quiz_answers: state.answers || {}
+    });
+    return;
+  }
+
+  if (event === "quiz_completed") {
+    const passed = Boolean(data.passed);
+    updateLocalProgress({
+      current_step: passed ? "books" : "quiz",
+      quiz_completed_at: passed ? (state.localProgress.quiz_completed_at || nowIso()) : state.localProgress.quiz_completed_at,
+      quiz_failed_at: passed ? state.localProgress.quiz_failed_at : nowIso(),
+      quiz_score: data.score,
+      quiz_total: data.total,
+      quiz_answers: data.answers || state.answers || {},
+      current_question: state.currentQuestion || 0
+    });
+    return;
+  }
+
+  if (event === "books_started") {
+    updateLocalProgress({
+      current_step: "books",
+      books_started_at: state.localProgress.books_started_at || nowIso(),
+      last_book_slide_number: Math.max(1, (state.bookSlideIndex || 0) + 1)
+    });
+    return;
+  }
+
+  if (event === "book_slide_viewed") {
+    updateLocalProgress({
+      current_step: "books",
+      last_book_slide_number: data.lastBookSlideNumber || (state.bookSlideIndex + 1)
+    });
+    return;
+  }
+
+  if (event === "books_completed") {
+    updateLocalProgress({
+      current_step: "homework",
+      books_completed_at: state.localProgress.books_completed_at || nowIso(),
+      last_book_slide_number: data.lastBookSlideNumber || bookSlides.length
+    });
+    return;
+  }
+
+  if (event === "homework_started") {
+    updateLocalProgress({
+      current_step: "homework",
+      homework_started_at: state.localProgress.homework_started_at || nowIso()
+    });
+    return;
+  }
+
+  if (event === "homework_submitted") {
+    updateLocalProgress({
+      current_step: "review",
+      homework_submitted_at: state.localProgress.homework_submitted_at || nowIso()
+    });
+    return;
+  }
+
+  if (event === "homework_verified" || event === "homework_checked") {
+    updateLocalProgress({
+      current_step: "completed",
+      homework_verified_at: state.localProgress.homework_verified_at || nowIso()
+    });
+  }
+}
+
+function renderDetailedProgressHistory() {
+  const homeworkSubmitted = isHomeworkSubmitted();
+  const homeworkVerified = isHomeworkVerified();
+
+  const rows = [
+    {
+      title: "Презентация пройдена",
+      done: state.completed.presentation,
+      date: getStoredProgressDate("presentation")
+    },
+    {
+      title: "Тест пройден",
+      done: state.completed.quiz,
+      date: getStoredProgressDate("quiz")
+    },
+    {
+      title: "Саммари прочитано",
+      done: state.completed.books,
+      date: getStoredProgressDate("books")
+    },
+    {
+      title: "ДЗ отправлено",
+      done: homeworkSubmitted,
+      date: getStoredProgressDate("homeworkSubmitted")
+    },
+    {
+      title: "ДЗ проверено",
+      done: homeworkVerified,
+      date: getStoredProgressDate("homeworkVerified")
+    }
+  ];
+
+  return `
+    <div class="progress-history">
+      ${rows.map(function(row) {
+        return `
+          <div class="history-row ${row.done ? "done" : "locked"}">
+            <div>
+              <b>${row.title}</b>
+              <p>${row.done ? formatProgressDate(row.date) : "ещё не завершено"}</p>
+            </div>
+            <span>${row.done ? "✓" : "—"}</span>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
 const quiz = [
   { q: "Что считается главной ошибкой предпринимателя в модуле?", a: ["Считать выручку по дням", "Сразу нанимать продавцов", "Лечить симптом, не поставив диагноз", "Делать план продаж"], correct: 2 },
   { q: "Фраза «нет продаж» в управленческом смысле означает:", a: ["Нужно увеличить скидки", "Это симптом, а не точный диагноз", "Это всегда проблема рекламы", "Это всегда проблема продавца"], correct: 1 },
@@ -693,16 +1015,16 @@ function renderScorePanel() {
 
 function renderModuleProgress() {
   const p = state.progress || {};
-  const step = p.current_step || "not_started";
+  const step = p.current_step || (state.localProgress && state.localProgress.current_step) || "not_started";
   const homeworkSubmitted = isHomeworkSubmitted();
   const homeworkVerified = isHomeworkVerified();
 
   const stages = [
-    { title: "Презентация", note: "10 баллов", cls: stageClass(state.completed.presentation, step === "presentation" || step === "not_started") },
-    { title: "Тест", note: "10 баллов", cls: stageClass(state.completed.quiz, step === "quiz", !state.completed.presentation) },
-    { title: "Саммари", note: "10 баллов", cls: stageClass(state.completed.books, step === "books", !state.completed.quiz) },
-    { title: "ДЗ отправлено", note: "0 баллов до проверки", cls: stageClass(homeworkSubmitted, step === "homework", !state.completed.books) },
-    { title: "ДЗ проверено", note: "70 баллов", cls: stageClass(homeworkVerified, step === "review" || homeworkSubmitted, !homeworkSubmitted) }
+    { title: "Презентация", note: state.completed.presentation ? "пройдена" : "10 баллов", cls: stageClass(state.completed.presentation, step === "presentation" || step === "not_started") },
+    { title: "Тест", note: state.completed.quiz ? "пройден" : "10 баллов", cls: stageClass(state.completed.quiz, step === "quiz", !state.completed.presentation) },
+    { title: "Саммари", note: state.completed.books ? "прочитано" : "10 баллов", cls: stageClass(state.completed.books, step === "books", !state.completed.quiz) },
+    { title: "ДЗ отправлено", note: homeworkSubmitted ? "на проверке" : "0 баллов до проверки", cls: stageClass(homeworkSubmitted, step === "homework", !state.completed.books) },
+    { title: "ДЗ проверено", note: homeworkVerified ? "70 баллов начислено" : "70 баллов после проверки", cls: stageClass(homeworkVerified, step === "review" || homeworkSubmitted, !homeworkSubmitted) }
   ];
 
   return `
@@ -950,6 +1272,8 @@ function activityHome(type) {
       <div class="progress big"><div style="width:${modulePercent}%"></div></div>
       <p>Баллы внутри текущего модуля: <b>${moduleScore} / 100</b></p>
       ${renderScorePanel()}
+      <h3>История прохождения</h3>
+      ${renderDetailedProgressHistory()}
     </div>
 
     <div class="card">
@@ -1009,11 +1333,13 @@ function imageScreen(imageUrl, current, total, typeLabel, descriptionHtml) {
 
 function reviewPresentation() {
   state.slideIndex = 0;
+  updateLocalProgress({ current_step: "presentation", last_slide_number: 1 });
   renderLessonSlide();
 }
 
 function reviewBooks() {
   state.bookSlideIndex = 0;
+  updateLocalProgress({ current_step: "books", last_book_slide_number: 1 });
   renderBookSlide();
 }
 
@@ -1021,6 +1347,7 @@ async function checkAccess() {
   loadingScreen();
 
   if (!tg || !tg.initData) {
+    applyStoredProgressToState();
     accessDenied("OPEN_FROM_TELEGRAM_REQUIRED");
     return;
   }
@@ -1054,6 +1381,7 @@ async function checkAccess() {
       state.completed.homework = Boolean(state.progress.homework_submitted || state.progress.status === "homework_submitted" || state.progress.status === "completed");
     }
 
+    applyStoredProgressToState();
     mainMenu();
   } catch (error) {
     console.error(error);
@@ -1062,7 +1390,11 @@ async function checkAccess() {
 }
 
 async function saveProgress(event, payload) {
-  if (!tg || !tg.initData) return;
+  applyLocalEvent(event, payload || {});
+
+  if (!tg || !tg.initData) {
+    return { ok: true, local: true };
+  }
 
   try {
     const response = await fetch(SAVE_PROGRESS_URL, {
@@ -1085,15 +1417,17 @@ async function saveProgress(event, payload) {
 
     if (result.progress) {
       state.progress = result.progress;
-      state.completed.presentation = Boolean(result.progress.presentation_completed);
-      state.completed.quiz = Boolean(result.progress.quiz_completed);
-      state.completed.books = Boolean(result.progress.books_completed);
-      state.completed.homework = Boolean(result.progress.homework_submitted || result.progress.status === "homework_submitted" || result.progress.status === "completed");
+      state.completed.presentation = Boolean(result.progress.presentation_completed || state.localProgress.presentation_completed_at);
+      state.completed.quiz = Boolean(result.progress.quiz_completed || state.localProgress.quiz_completed_at);
+      state.completed.books = Boolean(result.progress.books_completed || state.localProgress.books_completed_at);
+      state.completed.homework = Boolean(result.progress.homework_submitted || result.progress.status === "homework_submitted" || result.progress.status === "completed" || state.localProgress.homework_submitted_at);
+      applyStoredProgressToState();
     }
 
     return result;
   } catch (error) {
     console.error("Progress save error:", error);
+    return { ok: true, local: true, error: "REMOTE_SAVE_FAILED" };
   }
 }
 
@@ -1116,27 +1450,40 @@ async function continueLesson() {
 
 async function startLesson() {
   state.screen = "slides";
-  state.slideIndex = 0;
-  await saveProgress("lesson_started");
+  const savedSlide = Number(firstFilled([
+    state.localProgress && state.localProgress.last_slide_number,
+    state.progress && state.progress.last_slide_number,
+    1
+  ]));
+  state.slideIndex = Math.min(Math.max((savedSlide || 1) - 1, 0), lessonSlides.length - 1);
+  await saveProgress("lesson_started", { lastSlideNumber: state.slideIndex + 1 });
   renderLessonSlide();
 }
 
 function renderLessonSlide() {
   const current = state.slideIndex + 1;
   const total = lessonSlides.length;
+  const topNav = `
+    <div class="card nav-card">
+      <div class="inline-nav">
+        <button class="btn secondary" onclick="prevLessonSlide()" ${state.slideIndex === 0 ? "disabled" : ""}>Назад</button>
+        <button class="btn gold" onclick="nextLessonSlide()">${state.slideIndex === lessonSlides.length - 1 ? "К тесту" : "Далее"}</button>
+      </div>
+    </div>
+  `;
+
   shell(
-    imageScreen(lessonSlides[state.slideIndex], current, total, "Слайд", lessonDescriptions[state.slideIndex]),
+    topNav + imageScreen(lessonSlides[state.slideIndex], current, total, "Слайд", lessonDescriptions[state.slideIndex]),
     `<div class="footer-nav footer-nav-stack">
-      <button class="btn secondary" onclick="prevLessonSlide()" ${state.slideIndex === 0 ? "disabled" : ""}>Назад</button>
-      <button class="btn gold" onclick="nextLessonSlide()">${state.slideIndex === lessonSlides.length - 1 ? "К тесту" : "Далее"}</button>
       <button class="btn secondary" onclick="activityHome()">К виду деятельности</button>
     </div>`
   );
 }
 
-function prevLessonSlide() {
+async function prevLessonSlide() {
   if (state.slideIndex > 0) {
     state.slideIndex--;
+    await saveProgress("slide_viewed", { lastSlideNumber: state.slideIndex + 1 });
     renderLessonSlide();
   }
 }
@@ -1154,11 +1501,12 @@ async function nextLessonSlide() {
 }
 
 function quizIntro() {
+  applyStoredProgressToState();
   shell(`
     <div class="card blue-card">
       <h1>Тест на понимание</h1>
       <p>12 вопросов. Проходной результат — 70%, то есть минимум 9 правильных ответов.</p>
-      <p>Если вы вернётесь на главный экран в середине теста, система сохранит текущий вопрос в этой сессии.</p>
+      <p>Если вы выйдете из теста и закроете приложение, система сохранит текущий вопрос и ваши ответы на этом устройстве.</p>
       <div class="grid">
         ${actionButton("Продолжить тест", "continueQuiz()", "gold")}
         ${actionButton("Начать тест заново", "startQuiz()", "secondary")}
@@ -1168,21 +1516,35 @@ function quizIntro() {
   `);
 }
 
-function continueQuiz() {
+async function continueQuiz() {
+  applyStoredProgressToState();
   if (state.currentQuestion < 0 || state.currentQuestion >= quiz.length) state.currentQuestion = 0;
+  await saveProgress("quiz_progress", { currentQuestion: state.currentQuestion, answers: state.answers });
   renderQuestion();
 }
 
-function startQuiz() {
+async function startQuiz() {
   state.currentQuestion = 0;
   state.answers = {};
+  updateLocalProgress({ current_step: "quiz", current_question: 0, quiz_answers: {} });
+  await saveProgress("quiz_started", { currentQuestion: 0, answers: {} });
   renderQuestion();
 }
 
 function renderQuestion() {
   const q = quiz[state.currentQuestion];
+  const topNav = `
+    <div class="card nav-card">
+      <div class="inline-nav">
+        <button class="btn secondary" onclick="prevQuestion()" ${state.currentQuestion === 0 ? "disabled" : ""}>Назад</button>
+        <button class="btn gold" onclick="nextQuestion()">${state.currentQuestion === quiz.length - 1 ? "Завершить" : "Далее"}</button>
+      </div>
+    </div>
+  `;
+
   shell(`
     <div class="progress"><div style="width:${Math.round(((state.currentQuestion + 1) / quiz.length) * 100)}%"></div></div>
+    ${topNav}
     <div class="card">
       <p class="small">Вопрос ${state.currentQuestion + 1} / ${quiz.length}</p>
       <h2>${q.q}</h2>
@@ -1191,31 +1553,37 @@ function renderQuestion() {
       }).join("")}
     </div>
   `, `<div class="footer-nav footer-nav-stack">
-      <button class="btn secondary" onclick="prevQuestion()" ${state.currentQuestion === 0 ? "disabled" : ""}>Назад</button>
-      <button class="btn gold" onclick="nextQuestion()">${state.currentQuestion === quiz.length - 1 ? "Завершить" : "Далее"}</button>
       <button class="btn secondary" onclick="activityHome()">К виду деятельности</button>
     </div>`);
 }
 
-function selectAnswer(i) {
+async function selectAnswer(i) {
   state.answers[state.currentQuestion] = i;
+  updateLocalProgress({
+    current_step: "quiz",
+    current_question: state.currentQuestion,
+    quiz_answers: state.answers
+  });
+  await saveProgress("quiz_progress", { currentQuestion: state.currentQuestion, answers: state.answers });
   renderQuestion();
 }
 
-function prevQuestion() {
+async function prevQuestion() {
   if (state.currentQuestion > 0) {
     state.currentQuestion--;
+    await saveProgress("quiz_progress", { currentQuestion: state.currentQuestion, answers: state.answers });
     renderQuestion();
   }
 }
 
-function nextQuestion() {
+async function nextQuestion() {
   if (state.answers[state.currentQuestion] === undefined) {
     alert("Выберите вариант ответа.");
     return;
   }
   if (state.currentQuestion < quiz.length - 1) {
     state.currentQuestion++;
+    await saveProgress("quiz_progress", { currentQuestion: state.currentQuestion, answers: state.answers });
     renderQuestion();
   } else {
     quizResult();
@@ -1256,27 +1624,36 @@ async function quizResult() {
 }
 
 async function startBooks() {
+  applyStoredProgressToState();
   state.bookSlideIndex = Math.max(0, Math.min(state.bookSlideIndex || 0, bookSlides.length - 1));
-  await saveProgress("books_started");
+  await saveProgress("books_started", { lastBookSlideNumber: state.bookSlideIndex + 1 });
   renderBookSlide();
 }
 
 function renderBookSlide() {
   const current = state.bookSlideIndex + 1;
   const total = bookSlides.length;
+  const topNav = `
+    <div class="card nav-card">
+      <div class="inline-nav">
+        <button class="btn secondary" onclick="prevBookSlide()" ${state.bookSlideIndex === 0 ? "disabled" : ""}>Назад</button>
+        <button class="btn gold" onclick="nextBookSlide()">${state.bookSlideIndex === bookSlides.length - 1 ? "К ДЗ" : "Далее"}</button>
+      </div>
+    </div>
+  `;
+
   shell(
-    imageScreen(bookSlides[state.bookSlideIndex], current, total, "Саммари", bookDescriptions[state.bookSlideIndex]),
+    topNav + imageScreen(bookSlides[state.bookSlideIndex], current, total, "Саммари", bookDescriptions[state.bookSlideIndex]),
     `<div class="footer-nav footer-nav-stack">
-      <button class="btn secondary" onclick="prevBookSlide()" ${state.bookSlideIndex === 0 ? "disabled" : ""}>Назад</button>
-      <button class="btn gold" onclick="nextBookSlide()">${state.bookSlideIndex === bookSlides.length - 1 ? "К ДЗ" : "Далее"}</button>
       <button class="btn secondary" onclick="activityHome()">К виду деятельности</button>
     </div>`
   );
 }
 
-function prevBookSlide() {
+async function prevBookSlide() {
   if (state.bookSlideIndex > 0) {
     state.bookSlideIndex--;
+    await saveProgress("book_slide_viewed", { lastBookSlideNumber: state.bookSlideIndex + 1 });
     renderBookSlide();
   }
 }
@@ -1284,10 +1661,11 @@ function prevBookSlide() {
 async function nextBookSlide() {
   if (state.bookSlideIndex < bookSlides.length - 1) {
     state.bookSlideIndex++;
+    await saveProgress("book_slide_viewed", { lastBookSlideNumber: state.bookSlideIndex + 1 });
     renderBookSlide();
   } else {
     state.completed.books = true;
-    await saveProgress("books_completed");
+    await saveProgress("books_completed", { lastBookSlideNumber: bookSlides.length });
     homeworkIntro();
   }
 }
@@ -1332,7 +1710,6 @@ function submissionForm() {
       <div class="list-line"><b>5. Гипотеза на 7 дней</b><p>Сформулируйте: если мы сделаем X, то метрика Y изменится на Z за 7 дней.</p></div>
       <div class="list-line"><b>6. Метрика проверки</b><p>Заранее определите, по чему будет понятно, что действие сработало.</p></div>
       <div class="list-line"><b>7. Форма сдачи</b><p>В Google Form вставьте ссылку на таблицу, Telegram username, вид деятельности, главный провал и короткий комментарий.</p></div>
-      <p class="small">Кнопка “пока отметить как отправлено” убрана специально: она создавала ложное ощущение, что ДЗ уже реально ушло. Теперь сдача идёт только через форму.</p>
       <div class="grid">
         <a class="btn gold" href="${HOMEWORK_SUBMIT_FORM_URL}" target="_blank" onclick="if('${HOMEWORK_SUBMIT_FORM_URL}'==='#'){alert('Ссылка на форму сдачи ДЗ будет добавлена после создания Google Form.'); return false;}">Открыть форму сдачи ДЗ</a>
         ${actionButton("На главный экран", "activityHome()", "secondary")}
@@ -1356,6 +1733,25 @@ function homeworkSubmittedScreen() {
     </div>
   `);
 }
+
+
+(function injectRuntimeStyles() {
+  if (document.getElementById("lego-runtime-styles")) return;
+  const style = document.createElement("style");
+  style.id = "lego-runtime-styles";
+  style.textContent = `
+    .nav-card { padding: 12px !important; margin-bottom: 12px; }
+    .inline-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .progress-history { display: grid; gap: 10px; margin-top: 12px; }
+    .history-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px; border-radius: 14px; border: 1px solid rgba(0,0,0,.08); background: #f7f8fb; }
+    .history-row.done { background: #eef8f1; }
+    .history-row.locked { background: #f5f5f5; opacity: .9; }
+    .history-row b { display: block; margin-bottom: 4px; }
+    .history-row p { margin: 0; font-size: 13px; opacity: .75; }
+    .history-row span { font-weight: 800; font-size: 18px; }
+  `;
+  document.head.appendChild(style);
+})();
 
 function bootApp() {
   try {
