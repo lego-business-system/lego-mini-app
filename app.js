@@ -1,4 +1,4 @@
-const tg = window.Telegram?.WebApp;
+const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
 
 if (tg) {
   tg.ready();
@@ -891,7 +891,7 @@ async function saveProgress(event, payload = {}) {
 }
 
 function home() {
-  const name = state.user?.first_name ? `, ${state.user.first_name}` : "";
+  const name = state.user && state.user.first_name ? `, ${state.user.first_name}` : "";
   const business = getBusinessInfo();
   const next = getNextAction();
   const index = getImplementationIndex();
@@ -1202,18 +1202,32 @@ function bootApp() {
     checkAccess();
   } catch (error) {
     console.error("BOOT_ERROR", error);
-    emergencyScreen(error?.message || "BOOT_ERROR");
+    emergencyScreen(error && error.message ? error.message : "BOOT_ERROR");
   }
 }
 
 window.addEventListener("error", function (event) {
-  console.error("GLOBAL_ERROR", event.error || event.message);
-  emergencyScreen(event?.error?.message || event.message || "GLOBAL_ERROR");
+  var message = "GLOBAL_ERROR";
+
+  if (event && event.error && event.error.message) {
+    message = event.error.message;
+  } else if (event && event.message) {
+    message = event.message;
+  }
+
+  console.error("GLOBAL_ERROR", event && (event.error || event.message));
+  emergencyScreen(message);
 });
 
 window.addEventListener("unhandledrejection", function (event) {
-  console.error("UNHANDLED_REJECTION", event.reason);
-  emergencyScreen(event?.reason?.message || "UNHANDLED_REJECTION");
+  var message = "UNHANDLED_REJECTION";
+
+  if (event && event.reason && event.reason.message) {
+    message = event.reason.message;
+  }
+
+  console.error("UNHANDLED_REJECTION", event && event.reason);
+  emergencyScreen(message);
 });
 
 if (document.readyState === "loading") {
