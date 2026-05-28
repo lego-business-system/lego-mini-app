@@ -471,18 +471,32 @@ const quiz = [
   { q: "Результат модуля:", a: ["Мотивация", "Презентация без цифр", "Диагноз и план на 7 дней", "Список книг"], correct: 2 }
 ];
 
- // ===== Внешние ссылки =====
-// Заменим эти ссылки на реальные Google Forms / Google Sheets после создания форм.
+// ===== Внешние ссылки =====
+// После создания реальных Google Form / Google Sheets замените # на настоящие ссылки.
 const HOMEWORK_SHEET_URL = "#";
 const HOMEWORK_SUBMIT_FORM_URL = "#";
 const SUPPORT_FORM_URL = "#";
-const SUPPORT_TELEGRAM_URL = SUPPORT_URL;
+const IDEA_FORM_URL = "#";
+const CONSULTATION_FORM_URL = "#";
 const TRADE_SYSTEM_MAP_URL = "assets/ui/trade_system_map.png";
 const MODULE_CYCLE_MAP_URL = "assets/ui/module_cycle.png";
 
-function shell(content, footer = "") {
-  const root = document.getElementById("app");
+const MODULE_SCORE_RULES = {
+  presentation: 10,
+  quiz: 10,
+  books: 10,
+  homeworkVerified: 70
+};
 
+const CONSULTATION_SCORE_TARGET = 1500;
+const MODULE_TOTAL_SCORE = 100;
+
+function safeText(value, fallback) {
+  return value === undefined || value === null || value === "" ? fallback : value;
+}
+
+function shell(content, footer) {
+  const root = document.getElementById("app");
   if (!root) {
     console.error("ROOT_APP_NOT_FOUND");
     return;
@@ -496,7 +510,7 @@ function shell(content, footer = "") {
         </div>
       </div>
       <main class="content">${content}</main>
-      ${footer}
+      ${footer || ""}
     </div>
   `;
 }
@@ -511,21 +525,25 @@ function emergencyScreen(message) {
         <h1 style="margin-top:0; font-size:22px;">Ошибка запуска</h1>
         <p>Приложение не смогло загрузиться корректно.</p>
         <p style="font-size:13px; opacity:.75;"><b>Код:</b> ${message}</p>
-        <p style="font-size:13px; opacity:.75;">Откройте приложение из Telegram-бота. Если ошибка повторяется, отправьте скрин в поддержку.</p>
+        <p style="font-size:13px; opacity:.75;">Сделайте скрин этого экрана и отправьте через форму поддержки.</p>
       </div>
     </div>
   `;
 }
 
-function imageScreen(imageUrl, current, total, typeLabel, descriptionHtml = "") {
+function actionButton(label, action, type) {
+  return `<button class="btn ${type || "secondary"}" onclick="${action}">${label}</button>`;
+}
+
+function externalFormButton(label, url) {
+  return `<a class="btn secondary" href="${url}" target="_blank" onclick="if('${url}'==='#'){alert('Ссылка будет добавлена после создания Google Form.'); return false;}">${label}</a>`;
+}
+
+function schemeImage(src, alt, fallbackText) {
   return `
-    <div class="progress"><div style="width:${Math.round((current / total) * 100)}%"></div></div>
-    <div class="card" style="padding:0; overflow:hidden;">
-      <img src="${imageUrl}" alt="${typeLabel} ${current}" style="width:100%; display:block; border-radius:22px;" />
-    </div>
-    <p class="small" style="text-align:center;">${typeLabel}: ${current} / ${total}</p>
-    <div class="card slide-description">
-      ${descriptionHtml || `<p>Описание к этому слайду будет добавлено позже.</p>`}
+    <div class="scheme-box">
+      <img class="scheme-img" src="${src}" alt="${alt}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+      <div class="scheme-fallback" style="display:none;">${fallbackText}</div>
     </div>
   `;
 }
@@ -535,33 +553,93 @@ function loadingScreen() {
     <div class="card blue-card">
       <h1>Проверяем доступ</h1>
       <p>Система проверяет Telegram-профиль и доступ к закрытому каналу.</p>
-      <p class="small">Если проверка длится долго, откройте приложение именно из Telegram-бота, а не по ссылке в браузере.</p>
+      <p class="small">Открывайте приложение именно из Telegram-бота.</p>
     </div>
   `);
 }
 
-function accessDenied(reason = "NO_ACCESS") {
+function accessDenied(reason) {
   shell(`
     <div class="card result-bad">
       <h1>Доступ закрыт</h1>
       <p>Приложение доступно только участникам закрытого Telegram-канала.</p>
-      <p>Причина проверки: <b>${reason}</b></p>
-      <p class="small">Если у вас есть активная подписка, откройте приложение из Telegram и проверьте, что вы находитесь в закрытом канале.</p>
+      <p>Причина проверки: <b>${reason || "NO_ACCESS"}</b></p>
+      <p class="small">Если у вас есть активная подписка, проверьте, что вы вошли в закрытый канал и открыли приложение через Telegram.</p>
     </div>
   `);
 }
 
-function getProgressLabel() {
-  const p = state.progress;
-  if (!p) return "Блок ещё не начат.";
-  if (p.status === "homework_submitted") return "Практическая диагностика отправлена на проверку.";
-  if (p.status === "completed") return "Блок завершён.";
-  if (p.current_step === "presentation") return "Вы остановились на презентации.";
-  if (p.current_step === "quiz") return "Следующий шаг — проверка понимания.";
-  if (p.current_step === "books") return "Следующий шаг — управленческое чтение.";
-  if (p.current_step === "homework") return "Следующий шаг — практическая диагностика.";
-  if (p.current_step === "review") return "Практическая диагностика ожидает проверки.";
-  return "Блок в процессе.";
+function isHomeworkVerified() {
+  const p = state.progress || {};
+  return Boolean(
+    p.homework_verified ||
+    p.homework_checked ||
+    p.homework_approved ||
+    p.status === "completed"
+  );
+}
+
+function isHomeworkSubmitted() {
+  const p = state.progress || {};
+  return Boolean(
+    state.completed.homework ||
+    p.homework_submitted ||
+    p.status === "homework_submitted" ||
+    p.current_step === "review"
+  );
+}
+
+function getModuleScore() {
+  let score = 0;
+  if (state.completed.presentation) score += MODULE_SCORE_RULES.presentation;
+  if (state.completed.quiz) score += MODULE_SCORE_RULES.quiz;
+  if (state.completed.books) score += MODULE_SCORE_RULES.books;
+  if (isHomeworkVerified()) score += MODULE_SCORE_RULES.homeworkVerified;
+  return score;
+}
+
+function getTotalScore() {
+  return getModuleScore();
+}
+
+function getModuleProgressPercent() {
+  return Math.round((getModuleScore() / MODULE_TOTAL_SCORE) * 100);
+}
+
+function getGeneralProgressPercent() {
+  return Math.min(100, Math.round((getTotalScore() / CONSULTATION_SCORE_TARGET) * 100));
+}
+
+function getGeneralRank(percent) {
+  if (percent >= 100) return "Мастер управленческой системы";
+  if (percent >= 90) return "Системный предприниматель";
+  if (percent >= 80) return "Стратег внедрения";
+  if (percent >= 70) return "Интегратор изменений";
+  if (percent >= 60) return "Архитектор решений";
+  if (percent >= 50) return "Управленец процесса";
+  if (percent >= 40) return "Координатор системы";
+  if (percent >= 30) return "Оператор изменений";
+  if (percent >= 20) return "Практик диагностики";
+  if (percent >= 10) return "Участник внедрения";
+  return "Наблюдатель системы";
+}
+
+function getTradeRank(completedModules) {
+  const ranks = [
+    "Старт торговли",
+    "Диагностика торговли",
+    "Контроль потока",
+    "Контроль продаж",
+    "Контроль ассортимента",
+    "Контроль среднего чека",
+    "Контроль маржи",
+    "Контроль запасов",
+    "Контроль расходов",
+    "Контроль учёта",
+    "Система торговли собрана"
+  ];
+  const index = Math.max(0, Math.min(completedModules || 0, ranks.length - 1));
+  return ranks[index];
 }
 
 function getBusinessInfo() {
@@ -572,119 +650,60 @@ function getBusinessBlocks() {
   return BUSINESS_BLOCKS[state.selectedBusinessType] || BUSINESS_BLOCKS.trade;
 }
 
-function getImplementationIndex() {
-  let points = 0;
-  if (state.completed.presentation) points += 20;
-  if (state.completed.quiz) points += 20;
-  if (state.completed.books) points += 20;
-  if (state.completed.homework) points += 20;
-  return points;
-}
-
-function getOverallProgressPercent() {
-  return Math.round((getImplementationIndex() / 80) * 100);
-}
-
-function getLevelTitle(points) {
-  if (points >= 80) return "Диагностика завершена";
-  if (points >= 60) return "Практика";
-  if (points >= 40) return "Закрепление";
-  if (points >= 20) return "Изучение";
-  return "Старт";
-}
-
-function getNextAction() {
+function getProgressLabel() {
   const p = state.progress;
-
-  if (!p) {
-    return {
-      title: "Начать стартовую диагностику",
-      description: "Начните с презентации. Она объясняет всю цепочку: поток → конверсия → чек → маржа → деньги.",
-      button: "Начать блок",
-      action: "startLesson()"
-    };
-  }
-
-  if (p.status === "homework_submitted" || p.current_step === "review") {
-    return {
-      title: "Практическая диагностика отправлена",
-      description: "ДЗ находится на проверке. Материалы блока можно открыть повторно в любой момент.",
-      button: "Посмотреть статус",
-      action: "homeworkSubmittedScreen()"
-    };
-  }
-
-  if (p.current_step === "presentation") {
-    return {
-      title: "Продолжить презентацию",
-      description: "Вернитесь к тому месту, где остановились, и завершите базовую карту диагностики.",
-      button: "Продолжить презентацию",
-      action: "continueLesson()"
-    };
-  }
-
-  if (p.current_step === "quiz") {
-    return {
-      title: "Пройти проверку понимания",
-      description: "Тест проверяет, понята ли логика диагностики. Без него переход к саммари и ДЗ закрыт.",
-      button: "Пройти тест",
-      action: "quizIntro()"
-    };
-  }
-
-  if (p.current_step === "books") {
-    return {
-      title: "Изучить управленческое чтение",
-      description: "Саммари книг усиливают логику блока и помогают точнее выполнить практическую диагностику.",
-      button: "Открыть саммари",
-      action: "startBooks()"
-    };
-  }
-
-  if (p.current_step === "homework") {
-    return {
-      title: "Выполнить практическую диагностику",
-      description: "Заполните таблицу, определите главный провал и сформулируйте действие на 7 дней.",
-      button: "Открыть ДЗ",
-      action: "homeworkIntro()"
-    };
-  }
-
-  return {
-    title: "Продолжить обучение",
-    description: "Система сохранит ваш прогресс и вернёт к нужному этапу.",
-    button: "Продолжить",
-    action: "continueLesson()"
-  };
+  if (!p) return "Блок ещё не начат.";
+  if (isHomeworkVerified()) return "Домашнее задание проверено. Модуль закрыт на 100 баллов.";
+  if (isHomeworkSubmitted()) return "Домашнее задание отправлено на проверку. Баллы за ДЗ начисляются только после проверки.";
+  if (p.current_step === "presentation") return "Вы остановились на презентации.";
+  if (p.current_step === "quiz") return "Следующий шаг — проверка понимания.";
+  if (p.current_step === "books") return "Следующий шаг — управленческое чтение.";
+  if (p.current_step === "homework") return "Следующий шаг — практическая диагностика.";
+  return "Блок в процессе.";
 }
 
-function stageClass(done, active, locked = false) {
+function stageClass(done, active, locked) {
   if (done) return "done";
   if (active) return "active";
   if (locked) return "locked";
   return "";
 }
 
+function renderScorePanel() {
+  const score = getModuleScore();
+  const homeworkSubmitted = isHomeworkSubmitted();
+  const homeworkVerified = isHomeworkVerified();
+  return `
+    <div class="step-grid">
+      <div class="step-card ${state.completed.presentation ? "done" : "active"}"><b>Презентация</b><span>${state.completed.presentation ? "10 / 10" : "0 / 10"}</span></div>
+      <div class="step-card ${state.completed.quiz ? "done" : "locked"}"><b>Тест</b><span>${state.completed.quiz ? "10 / 10" : "0 / 10"}</span></div>
+      <div class="step-card ${state.completed.books ? "done" : "locked"}"><b>Саммари</b><span>${state.completed.books ? "10 / 10" : "0 / 10"}</span></div>
+      <div class="step-card ${homeworkVerified ? "done" : (homeworkSubmitted ? "active" : "locked")}"><b>Проверенное ДЗ</b><span>${homeworkVerified ? "70 / 70" : (homeworkSubmitted ? "отправлено, 0 / 70" : "0 / 70")}</span></div>
+    </div>
+    <div class="progress big"><div style="width:${Math.round(score)}%"></div></div>
+    <p class="small">Баллы за текущий модуль: <b>${score} / 100</b></p>
+  `;
+}
+
 function renderModuleProgress() {
   const p = state.progress || {};
   const step = p.current_step || "not_started";
+  const homeworkSubmitted = isHomeworkSubmitted();
+  const homeworkVerified = isHomeworkVerified();
 
   const stages = [
-    { title: "Презентация", note: "Карта системы", cls: stageClass(state.completed.presentation, step === "presentation" || step === "not_started") },
-    { title: "Тест", note: "Проверка", cls: stageClass(state.completed.quiz, step === "quiz", !state.completed.presentation) },
-    { title: "Саммари", note: "5 книг", cls: stageClass(state.completed.books, step === "books", !state.completed.quiz) },
-    { title: "ДЗ", note: "Диагностика", cls: stageClass(state.completed.homework, step === "homework", !state.completed.books) },
-    { title: "Проверка", note: "Следующий блок", cls: stageClass(p.status === "completed", step === "review" || p.status === "homework_submitted", !state.completed.homework) }
+    { title: "Презентация", note: "10 баллов", cls: stageClass(state.completed.presentation, step === "presentation" || step === "not_started") },
+    { title: "Тест", note: "10 баллов", cls: stageClass(state.completed.quiz, step === "quiz", !state.completed.presentation) },
+    { title: "Саммари", note: "10 баллов", cls: stageClass(state.completed.books, step === "books", !state.completed.quiz) },
+    { title: "ДЗ отправлено", note: "0 баллов до проверки", cls: stageClass(homeworkSubmitted, step === "homework", !state.completed.books) },
+    { title: "ДЗ проверено", note: "70 баллов", cls: stageClass(homeworkVerified, step === "review" || homeworkSubmitted, !homeworkSubmitted) }
   ];
 
   return `
     <div class="step-grid">
-      ${stages.map(s => `
-        <div class="step-card ${s.cls}">
-          <b>${s.title}</b>
-          <span>${s.note}</span>
-        </div>
-      `).join("")}
+      ${stages.map(function(s) {
+        return `<div class="step-card ${s.cls}"><b>${s.title}</b><span>${s.note}</span></div>`;
+      }).join("")}
     </div>
   `;
 }
@@ -709,50 +728,25 @@ function renderBlockMap() {
   const blocks = getBusinessBlocks();
   return `
     <div class="block-list">
-      ${blocks.map(block => {
+      ${blocks.map(function(block) {
         const isCurrent = block.status === "current";
         const badge = isCurrent ? "Текущий" : "Закрыт";
         const cls = isCurrent ? "available" : "locked";
-        return `
-          <div class="block-row ${cls}">
-            <div>
-              <b>${block.title}</b>
-              <p>${blockExtendedNote(block)}</p>
-            </div>
-            <span>${badge}</span>
-          </div>
-        `;
+        return `<div class="block-row ${cls}"><div><b>${block.title}</b><p>${blockExtendedNote(block)}</p></div><span>${badge}</span></div>`;
       }).join("")}
     </div>
   `;
 }
 
-function schemeImage(src, alt, fallbackText) {
-  return `
-    <div class="scheme-box">
-      <img class="scheme-img" src="${src}" alt="${alt}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
-      <div class="scheme-fallback" style="display:none;">
-        ${fallbackText}
-      </div>
-    </div>
-  `;
-}
-
 function renderBusinessTypeCards() {
-  const items = BUSINESS_CIRCLE;
   return `
     <div class="business-type-grid">
-      ${items.map(item => {
+      ${BUSINESS_CIRCLE.map(function(item) {
         const isSelected = item.key === state.selectedBusinessType;
         const cls = isSelected ? "selected" : item.status;
         const label = item.status === "available" ? "доступно" : "скоро";
-        const onclick = item.status === "available" ? `onclick="selectBusinessType('${item.key}')"` : `onclick="soonInfo('${item.title}')"`;
-        return `
-          <button class="business-type-card ${cls}" ${onclick}>
-            <b>${item.title}</b>
-            <span>${label}</span>
-          </button>
-        `;
+        const onclick = item.status === "available" ? `selectBusinessType('${item.key}')` : `showInDevelopment('${item.title}')`;
+        return `<button class="business-type-card ${cls}" onclick="${onclick}"><b>${item.title}</b><span>${label}</span></button>`;
       }).join("")}
     </div>
   `;
@@ -761,43 +755,223 @@ function renderBusinessTypeCards() {
 function selectBusinessType(type) {
   if (!BUSINESS_TYPES[type]) return;
   state.selectedBusinessType = type;
-  home();
+  entrepreneurHome();
 }
 
-function soonInfo(title) {
+function mainMenu() {
+  const name = state.user && state.user.first_name ? `, ${state.user.first_name}` : "";
+  const total = getTotalScore();
+  const generalPercent = getGeneralProgressPercent();
+  const generalRank = getGeneralRank(generalPercent);
+  const consultationLeft = Math.max(0, CONSULTATION_SCORE_TARGET - total);
+
   shell(`
-    <div class="card blue-card">
-      <h1>${title}</h1>
-      <p>Это направление будет подключено позже.</p>
-      <p>Сейчас активна торговля. Остальные виды деятельности уже заложены в структуру, чтобы систему можно было расширять без полной переделки.</p>
-      <button class="btn gold" onclick="home()">Вернуться в кабинет</button>
+    <div class="card blue-card hero-card">
+      <h1>Л.Е.Г.О</h1>
+      <h2>Система внедрения управленческих изменений</h2>
+      <p>Доступ подтверждён${name}.</p>
+      <p class="small">Статус доступа: ${state.accessReason || "active"}</p>
+    </div>
+
+    <div class="card">
+      <h2>Личный кабинет</h2>
+      <p>Здесь собраны доступ, прогресс, баллы, пройденные материалы и формы обратной связи.</p>
+      <div class="progress big"><div style="width:${generalPercent}%"></div></div>
+      <p><b>${total} / ${CONSULTATION_SCORE_TARGET}</b> баллов до права запросить личную консультацию.</p>
+      <p class="small">Общий ранг: <b>${generalRank}</b>${consultationLeft > 0 ? `. До консультации осталось ${consultationLeft} баллов.` : ". Доступна заявка на консультацию."}</p>
+      ${actionButton("Открыть личный профиль", "showProfile()", "gold")}
+    </div>
+
+    <div class="card">
+      <h2>Выберите большой блок</h2>
+      <div class="grid">
+        ${actionButton("Нет своего дела — в разработке", "showNoBusiness()", "secondary")}
+        ${actionButton("Я предприниматель", "entrepreneurHome()", "gold")}
+        ${actionButton("Я сотрудник — в разработке", "showEmployee()", "secondary")}
+        ${actionButton("Поддержка", "supportScreen()", "secondary")}
+      </div>
     </div>
   `);
 }
 
-function renderSupportBlock() {
+function home() {
+  mainMenu();
+}
+
+function showProfile() {
+  const total = getTotalScore();
+  const generalPercent = getGeneralProgressPercent();
+  const generalRank = getGeneralRank(generalPercent);
+  const modulePercent = getModuleProgressPercent();
+  const consultationLeft = Math.max(0, CONSULTATION_SCORE_TARGET - total);
+
+  shell(`
+    <div class="card blue-card">
+      <h1>Личный профиль</h1>
+      <p>Ваш центр контроля: доступ, прогресс, баллы, материалы и формы обратной связи.</p>
+    </div>
+
+    <div class="card">
+      <h2>Доступ</h2>
+      <p>Доступ: <b>${state.access ? "активен" : "не подтверждён"}</b></p>
+      <p>Статус доступа: <b>${state.accessReason || "active"}</b></p>
+    </div>
+
+    <div class="card">
+      <h2>Общий прогресс</h2>
+      <div class="list-line"><b>Нет своего дела</b><p>0% — раздел в разработке.</p></div>
+      <div class="list-line"><b>Я предприниматель</b><p>${modulePercent}% — текущий активный маршрут.</p></div>
+      <div class="list-line"><b>Я сотрудник</b><p>0% — раздел в разработке.</p></div>
+      <p>Общий ранг: <b>${generalRank}</b></p>
+      <p>Суммарно баллов: <b>${total}</b></p>
+      <p class="small">${consultationLeft > 0 ? `До заявки на личную консультацию осталось ${consultationLeft} баллов.` : "Вы можете запросить личную консультацию."}</p>
+      ${total >= CONSULTATION_SCORE_TARGET ? externalFormButton("Запросить личную консультацию", CONSULTATION_FORM_URL) : ""}
+    </div>
+
+    <div class="card">
+      <h2>Пройденные и доступные материалы</h2>
+      <p>Материалы, которые уже открывались, можно пересматривать в любой момент.</p>
+      <div class="grid">
+        ${actionButton("Повторить презентацию", "reviewPresentation()", "secondary")}
+        ${state.completed.quiz ? actionButton("Повторить тест", "quizIntro()", "secondary") : ""}
+        ${state.completed.books ? actionButton("Повторить саммари", "reviewBooks()", "secondary") : ""}
+        ${actionButton("Требования к ДЗ", "submissionForm()", "secondary")}
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Формы</h2>
+      <div class="grid">
+        ${externalFormButton("Задать вопрос", SUPPORT_FORM_URL)}
+        ${externalFormButton("Предложить идею", IDEA_FORM_URL)}
+        ${externalFormButton("Сообщить об ошибке", SUPPORT_FORM_URL)}
+      </div>
+    </div>
+
+    <div class="card">
+      ${actionButton("На главный экран", "mainMenu()", "gold")}
+    </div>
+  `);
+}
+
+function showNoBusiness() {
+  shell(`
+    <div class="card blue-card"><h1>Нет своего дела</h1><p>Раздел в разработке.</p></div>
+    <div class="card"><p>Здесь будет маршрут для выбора ниши, проверки идеи, расчёта стартовой модели и подготовки к запуску.</p>${actionButton("На главный экран", "mainMenu()", "gold")}</div>
+  `);
+}
+
+function showEmployee() {
+  shell(`
+    <div class="card blue-card"><h1>Я сотрудник</h1><p>Раздел в разработке.</p></div>
+    <div class="card"><p>Здесь будет маршрут для сотрудников, руководителей направлений и управленцев внутри компании.</p>${actionButton("На главный экран", "mainMenu()", "gold")}</div>
+  `);
+}
+
+function showInDevelopment(title) {
+  shell(`
+    <div class="card blue-card"><h1>${title}</h1><p>Раздел будет подключён позже.</p></div>
+    <div class="card"><p>Сейчас активен маршрут торговли. Остальные виды деятельности заложены в структуру и будут подключаться без полной переделки системы.</p>${actionButton("Вернуться", "entrepreneurHome()", "gold")}</div>
+  `);
+}
+
+function supportScreen() {
+  shell(`
+    <div class="card blue-card">
+      <h1>Поддержка</h1>
+      <p>Вся коммуникация сейчас идёт через формы. Так вопросы не теряются и их проще обрабатывать.</p>
+    </div>
+    <div class="card">
+      <h2>Выберите тип обращения</h2>
+      <div class="grid">
+        ${externalFormButton("Задать вопрос", SUPPORT_FORM_URL)}
+        ${externalFormButton("Предложить идею", IDEA_FORM_URL)}
+        ${externalFormButton("Сообщить об ошибке", SUPPORT_FORM_URL)}
+      </div>
+      <p class="small">В форме укажите имя, Telegram username, тип проблемы, вопрос и при необходимости ссылку или скриншот.</p>
+      ${actionButton("На главный экран", "mainMenu()", "gold")}
+    </div>
+  `);
+}
+
+function entrepreneurHome() {
+  const business = getBusinessInfo();
+  const moduleScore = getModuleScore();
+  const modulePercent = getModuleProgressPercent();
+  const completedModules = isHomeworkVerified() ? 1 : 0;
+  const tradeRank = getTradeRank(completedModules);
+
+  shell(`
+    <div class="card blue-card">
+      <h1>Я предприниматель</h1>
+      <p>Здесь начинается маршрут по системе бизнеса: вид деятельности, текущий модуль, карта блоков, ДЗ и следующий шаг.</p>
+    </div>
+
+    <div class="card">
+      <h2>Выбор вида деятельности</h2>
+      <p>Выбор фиксирует стартовый маршрут. Сейчас доступна торговля. Новый внутренний модуль можно открывать не чаще одного раза в неделю и только после проверенного ДЗ.</p>
+      ${renderBusinessTypeCards()}
+    </div>
+
+    <div class="card">
+      <h2>Прогресс по виду деятельности</h2>
+      <p><b>${business.title}</b></p>
+      <p>Нишевый уровень: <b>${tradeRank}</b></p>
+      <div class="progress big"><div style="width:${modulePercent}%"></div></div>
+      <p>Баллы внутри текущего модуля: <b>${moduleScore} / 100</b></p>
+      ${renderScorePanel()}
+    </div>
+
+    <div class="card">
+      <h2>Система вашего бизнеса</h2>
+      ${schemeImage(TRADE_SYSTEM_MAP_URL, "Система торговли", "Поток → Конверсия → Средний чек → Маржа → Запасы и расходы → Деньги → Учёт → Новое решение")}
+      <p>В торговле деньги проходят цепочку: поток приводит людей, конверсия превращает их в покупателей, средний чек усиливает выручку, маржа показывает качество прибыли, запасы и расходы влияют на деньги, а учёт возвращает систему к новым решениям.</p>
+    </div>
+
+    <div class="card">
+      <h2>Текущий модуль</h2>
+      <p><b>${business.currentModuleTitle}</b></p>
+      ${schemeImage(MODULE_CYCLE_MAP_URL, "Цикл прохождения модуля", "Презентация → Тест → Саммари → Практическая диагностика → Проверка → Следующий блок")}
+      <p class="small">${getProgressLabel()}</p>
+      ${renderModuleProgress()}
+      <div class="grid">
+        ${actionButton("Продолжить текущий шаг", "continueLesson()", "gold")}
+        ${actionButton("Повторить презентацию", "reviewPresentation()", "secondary")}
+        ${state.completed.books ? actionButton("Повторить саммари", "reviewBooks()", "secondary") : ""}
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Блоки внутри системы</h2>
+      <p>Блоки открываются по результату диагностики. Сначала вы проходите стартовый блок, затем ДЗ показывает главное ограничение, и только нужный блок открывается на 7 дней.</p>
+      ${renderBlockMap()}
+    </div>
+
+    <div class="card">
+      <h2>Как работает система</h2>
+      <div class="list-line"><b>1. Изучение</b><p>Сначала вы проходите презентацию и собираете общую карту бизнеса.</p></div>
+      <div class="list-line"><b>2. Проверка</b><p>Тест показывает, понята ли логика диагностики.</p></div>
+      <div class="list-line"><b>3. Усиление</b><p>Саммари книг закрепляют управленческую рамку.</p></div>
+      <div class="list-line"><b>4. Практика</b><p>Вы делаете копию таблицы, заполняете реальные данные и сдаёте ссылку через форму.</p></div>
+      <div class="list-line"><b>5. Проверка ДЗ</b><p>70 баллов начисляются только после проверки ДЗ, а не после факта отправки.</p></div>
+      <div class="list-line"><b>6. Следующий модуль</b><p>Следующий блок открывается по главному провалу бизнеса и не чаще одного раза в неделю.</p></div>
+      ${externalFormButton("Задать вопрос через форму", SUPPORT_FORM_URL)}
+      ${actionButton("На главный экран", "mainMenu()", "secondary")}
+    </div>
+  `);
+}
+
+function imageScreen(imageUrl, current, total, typeLabel, descriptionHtml) {
   return `
-    <div class="grid">
-      <button class="btn secondary" onclick="showFAQ()">Как работает система</button>
-      <a class="btn secondary" href="${SUPPORT_FORM_URL}" target="_blank" onclick="if('${SUPPORT_FORM_URL}'==='#'){alert('Ссылка на Google Form поддержки будет добавлена после создания формы.'); return false;}">Задать вопрос через форму</a>
-      <a class="btn secondary" href="${SUPPORT_TELEGRAM_URL}" target="_blank">Написать в Telegram</a>
+    <div class="progress"><div style="width:${Math.round((current / total) * 100)}%"></div></div>
+    <div class="card" style="padding:0; overflow:hidden;">
+      <img src="${imageUrl}" alt="${typeLabel} ${current}" style="width:100%; display:block; border-radius:22px;" />
     </div>
-    <p class="small">Форма нужна для учёта вопросов: имя, Telegram, суть проблемы, ссылка или скриншот. Telegram остаётся для срочных ситуаций.</p>
+    <p class="small" style="text-align:center;">${typeLabel}: ${current} / ${total}</p>
+    <div class="card slide-description">
+      ${descriptionHtml || `<p>Описание к этому слайду будет добавлено позже. Используйте изображение как основную схему, а этот блок — как пояснение к применению в практике.</p>`}
+    </div>
   `;
-}
-
-function showFAQ() {
-  shell(`
-    <div class="card blue-card">
-      <h1>Как работает система</h1>
-      <div class="list-line"><b>1. Стартовая диагностика</b><p>Сначала вы проходите базовый блок, который показывает всю систему бизнеса: поток, конверсию, чек, маржу, деньги и учёт.</p></div>
-      <div class="list-line"><b>2. Проверка понимания</b><p>Тест нужен, чтобы не перейти дальше формально. Если логика диагностики не закреплена, система возвращает к презентации.</p></div>
-      <div class="list-line"><b>3. Управленческое чтение</b><p>Саммари книг усиливают логику блока: бизнес-модель, 4P, ограничения, гипотезы и система показателей.</p></div>
-      <div class="list-line"><b>4. Практическая диагностика</b><p>Вы заполняете таблицу по своим данным и определяете главный провал бизнеса.</p></div>
-      <div class="list-line"><b>5. Следующий блок</b><p>Следующий блок открывается не “по порядку”, а по главному ограничению, которое показала диагностика.</p></div>
-      <button class="btn gold" onclick="home()">Вернуться в кабинет</button>
-    </div>
-  `);
 }
 
 function reviewPresentation() {
@@ -844,17 +1018,17 @@ async function checkAccess() {
       state.completed.presentation = Boolean(state.progress.presentation_completed);
       state.completed.quiz = Boolean(state.progress.quiz_completed);
       state.completed.books = Boolean(state.progress.books_completed);
-      state.completed.homework = Boolean(state.progress.homework_submitted);
+      state.completed.homework = Boolean(state.progress.homework_submitted || state.progress.status === "homework_submitted" || state.progress.status === "completed");
     }
 
-    home();
+    mainMenu();
   } catch (error) {
     console.error(error);
     accessDenied("CHECK_ACCESS_ERROR");
   }
 }
 
-async function saveProgress(event, payload = {}) {
+async function saveProgress(event, payload) {
   if (!tg || !tg.initData) return;
 
   try {
@@ -864,8 +1038,8 @@ async function saveProgress(event, payload = {}) {
       body: JSON.stringify({
         initData: tg.initData,
         lessonCode: CURRENT_LESSON_CODE,
-        event,
-        payload
+        event: event,
+        payload: payload || {}
       })
     });
 
@@ -881,7 +1055,7 @@ async function saveProgress(event, payload = {}) {
       state.completed.presentation = Boolean(result.progress.presentation_completed);
       state.completed.quiz = Boolean(result.progress.quiz_completed);
       state.completed.books = Boolean(result.progress.books_completed);
-      state.completed.homework = Boolean(result.progress.homework_submitted);
+      state.completed.homework = Boolean(result.progress.homework_submitted || result.progress.status === "homework_submitted" || result.progress.status === "completed");
     }
 
     return result;
@@ -890,85 +1064,11 @@ async function saveProgress(event, payload = {}) {
   }
 }
 
-function home() {
-  const name = state.user && state.user.first_name ? `, ${state.user.first_name}` : "";
-  const business = getBusinessInfo();
-  const next = getNextAction();
-  const index = getImplementationIndex();
-  const percent = getOverallProgressPercent();
-  const level = getLevelTitle(index);
-
-  shell(`
-    <div class="card hero-card blue-card">
-      <div class="hero-top">
-        <div>
-          <h1>Система внедрения управленческих изменений</h1>
-          <p>Доступ подтверждён${name}.</p>
-        </div>
-      </div>
-      <p class="small">Статус доступа: ${state.accessReason || "active"}</p>
-      <div class="progress big"><div style="width:${percent}%"></div></div>
-      <p class="small">Индекс внедрения: <b>${index} / 80</b> · Уровень: <b>${level}</b></p>
-    </div>
-
-    <div class="card">
-      <h2>Следующий шаг</h2>
-      <p><b>${next.title}</b></p>
-      <p>${next.description}</p>
-      <button class="btn gold" onclick="${next.action}">${next.button}</button>
-      ${state.completed.presentation ? `<button class="btn secondary" onclick="reviewPresentation()" style="margin-top:10px;">Повторить презентацию</button>` : ""}
-      ${state.completed.books ? `<button class="btn secondary" onclick="reviewBooks()" style="margin-top:10px;">Повторить саммари</button>` : ""}
-    </div>
-
-    <div class="card">
-      <h2>Выбор вида деятельности</h2>
-      <p>Система строится под разные типы бизнеса. Сейчас активна торговля, остальные направления будут подключаться позже.</p>
-      ${renderBusinessTypeCards()}
-    </div>
-
-    <div class="card">
-      <h2>Система вашего бизнеса</h2>
-      <p><b>${business.title}</b></p>
-      ${schemeImage(
-        TRADE_SYSTEM_MAP_URL,
-        "Система торговли",
-        "Поток → Конверсия → Средний чек → Маржа → Запасы и расходы → Деньги → Учёт → Новое решение"
-      )}
-      <p>В торговле деньги проходят цепочку: поток приводит людей, конверсия превращает их в покупателей, средний чек усиливает выручку, маржа показывает качество прибыли, запасы и расходы влияют на деньги, а учёт возвращает систему к новым решениям.</p>
-    </div>
-
-    <div class="card">
-      <h2>Текущий блок</h2>
-      <p><b>${business.currentModuleTitle}</b></p>
-      ${schemeImage(
-        MODULE_CYCLE_MAP_URL,
-        "Цикл прохождения блока",
-        "Презентация → Тест → Саммари → Практическая диагностика → Проверка → Следующий блок"
-      )}
-      <p class="small">${getProgressLabel()}</p>
-      ${state.lastQuizAttempt ? `<p class="small">Последний тест: ${state.lastQuizAttempt.score}/${state.lastQuizAttempt.total}</p>` : ""}
-      ${renderModuleProgress()}
-    </div>
-
-    <div class="card">
-      <h2>Блоки внутри системы</h2>
-      <p>Блоки открываются не линейно, а по результату диагностики. Сначала вы проходите стартовый блок, затем таблица показывает главное ограничение, и только нужный блок открывается на 7 дней.</p>
-      ${renderBlockMap()}
-    </div>
-
-    <div class="card">
-      <h2>Подробности и помощь</h2>
-      <p>Система построена так, чтобы вы не просто посмотрели материалы, а сделали управленческое действие: изучили логику, проверили понимание, разобрали книги, заполнили таблицу, нашли главный провал и выбрали следующий блок.</p>
-      ${renderSupportBlock()}
-    </div>
-  `);
-}
-
 async function continueLesson() {
   const p = state.progress;
   if (!p) { await startLesson(); return; }
-  if (p.status === "homework_submitted" || p.current_step === "review") { homeworkSubmittedScreen(); return; }
-  if (p.status === "completed") { state.slideIndex = 0; renderLessonSlide(); return; }
+  if (isHomeworkSubmitted() && !isHomeworkVerified()) { homeworkSubmittedScreen(); return; }
+  if (isHomeworkVerified()) { entrepreneurHome(); return; }
   if (p.current_step === "presentation") {
     const savedSlide = Number(p.last_slide_number || 1);
     state.slideIndex = Math.min(Math.max(savedSlide - 1, 0), lessonSlides.length - 1);
@@ -993,9 +1093,10 @@ function renderLessonSlide() {
   const total = lessonSlides.length;
   shell(
     imageScreen(lessonSlides[state.slideIndex], current, total, "Слайд", lessonDescriptions[state.slideIndex]),
-    `<div class="footer-nav">
+    `<div class="footer-nav footer-nav-stack">
       <button class="btn secondary" onclick="prevLessonSlide()" ${state.slideIndex === 0 ? "disabled" : ""}>Назад</button>
       <button class="btn gold" onclick="nextLessonSlide()">${state.slideIndex === lessonSlides.length - 1 ? "К тесту" : "Далее"}</button>
+      <button class="btn secondary" onclick="entrepreneurHome()">На главный экран</button>
     </div>`
   );
 }
@@ -1024,11 +1125,19 @@ function quizIntro() {
     <div class="card blue-card">
       <h1>Тест на понимание</h1>
       <p>12 вопросов. Проходной результат — 70%, то есть минимум 9 правильных ответов.</p>
-      <p>Если результат ниже, нужно вернуться к презентации и повторить ключевые слайды.</p>
-      <button class="btn gold" onclick="startQuiz()">Начать тест</button>
-      <button class="btn secondary" onclick="home()" style="margin-top:10px;">На главный экран</button>
+      <p>Если вы вернётесь на главный экран в середине теста, система сохранит текущий вопрос в этой сессии.</p>
+      <div class="grid">
+        ${actionButton("Продолжить тест", "continueQuiz()", "gold")}
+        ${actionButton("Начать тест заново", "startQuiz()", "secondary")}
+        ${actionButton("На главный экран", "entrepreneurHome()", "secondary")}
+      </div>
     </div>
   `);
+}
+
+function continueQuiz() {
+  if (state.currentQuestion < 0 || state.currentQuestion >= quiz.length) state.currentQuestion = 0;
+  renderQuestion();
 }
 
 function startQuiz() {
@@ -1044,11 +1153,14 @@ function renderQuestion() {
     <div class="card">
       <p class="small">Вопрос ${state.currentQuestion + 1} / ${quiz.length}</p>
       <h2>${q.q}</h2>
-      ${q.a.map((opt, i) => `<button class="option ${state.answers[state.currentQuestion] === i ? "selected" : ""}" onclick="selectAnswer(${i})">${String.fromCharCode(65 + i)}. ${opt}</button>`).join("")}
+      ${q.a.map(function(opt, i) {
+        return `<button class="option ${state.answers[state.currentQuestion] === i ? "selected" : ""}" onclick="selectAnswer(${i})">${String.fromCharCode(65 + i)}. ${opt}</button>`;
+      }).join("")}
     </div>
-  `, `<div class="footer-nav">
+  `, `<div class="footer-nav footer-nav-stack">
       <button class="btn secondary" onclick="prevQuestion()" ${state.currentQuestion === 0 ? "disabled" : ""}>Назад</button>
       <button class="btn gold" onclick="nextQuestion()">${state.currentQuestion === quiz.length - 1 ? "Завершить" : "Далее"}</button>
+      <button class="btn secondary" onclick="entrepreneurHome()">На главный экран</button>
     </div>`);
 }
 
@@ -1079,19 +1191,19 @@ function nextQuestion() {
 
 async function quizResult() {
   let score = 0;
-  quiz.forEach((q, i) => { if (state.answers[i] === q.correct) score++; });
+  quiz.forEach(function(q, i) { if (state.answers[i] === q.correct) score++; });
   const passed = score >= 9;
   state.completed.quiz = passed;
-  await saveProgress("quiz_completed", { score, total: quiz.length, passed, answers: state.answers });
+  await saveProgress("quiz_completed", { score: score, total: quiz.length, passed: passed, answers: state.answers });
 
   if (passed) {
     shell(`
       <div class="card result-ok">
         <h1>Тест пройден</h1>
         <p>Результат: <b>${score} / ${quiz.length}</b></p>
-        <p>Базовая логика диагностики усвоена. Теперь можно переходить к саммари книг.</p>
-        <button class="btn gold" onclick="startBooks()">К саммари книг</button>
-        <button class="btn secondary" onclick="home()" style="margin-top:10px;">На главный экран</button>
+        <p>Начислено: <b>10 баллов</b>. Теперь можно переходить к саммари книг.</p>
+        ${actionButton("К саммари книг", "startBooks()", "gold")}
+        ${actionButton("На главный экран", "entrepreneurHome()", "secondary")}
       </div>`);
     return;
   }
@@ -1101,19 +1213,17 @@ async function quizResult() {
       <h1>Тест не пройден</h1>
       <p>Результат: <b>${score} / ${quiz.length}</b></p>
       <p>Пока рано переходить к саммари книг и домашнему заданию.</p>
-      <p>Вернитесь к презентации и повторите ключевые блоки.</p>
-      <div class="list-line"><b>1. Симптом и диагноз</b><p>Почему “нет продаж” — это не точная причина.</p></div>
+      <div class="list-line"><b>1. Симптом и диагноз</b><p>Повторите, почему “нет продаж” — это не точная причина.</p></div>
       <div class="list-line"><b>2. Формула выручки</b><p>Поток × конверсия × средний чек.</p></div>
-      <div class="list-line"><b>3. Конверсия и средний чек</b><p>Где бизнес теряет результат внутри продаж.</p></div>
-      <div class="list-line"><b>4. Маржа и деньги</b><p>Почему выручка не равна живым деньгам.</p></div>
-      <button class="btn gold" onclick="startLesson()">Вернуться к презентации</button>
-      <button class="btn secondary" onclick="quizIntro()" style="margin-top:10px;">Повторить тест</button>
-      <button class="btn secondary" onclick="home()" style="margin-top:10px;">На главный экран</button>
+      <div class="list-line"><b>3. Маржа и деньги</b><p>Почему выручка не равна живым деньгам.</p></div>
+      ${actionButton("Вернуться к презентации", "startLesson()", "gold")}
+      ${actionButton("Повторить тест", "quizIntro()", "secondary")}
+      ${actionButton("На главный экран", "entrepreneurHome()", "secondary")}
     </div>`);
 }
 
 async function startBooks() {
-  state.bookSlideIndex = 0;
+  state.bookSlideIndex = Math.max(0, Math.min(state.bookSlideIndex || 0, bookSlides.length - 1));
   await saveProgress("books_started");
   renderBookSlide();
 }
@@ -1123,9 +1233,10 @@ function renderBookSlide() {
   const total = bookSlides.length;
   shell(
     imageScreen(bookSlides[state.bookSlideIndex], current, total, "Саммари", bookDescriptions[state.bookSlideIndex]),
-    `<div class="footer-nav">
+    `<div class="footer-nav footer-nav-stack">
       <button class="btn secondary" onclick="prevBookSlide()" ${state.bookSlideIndex === 0 ? "disabled" : ""}>Назад</button>
       <button class="btn gold" onclick="nextBookSlide()">${state.bookSlideIndex === bookSlides.length - 1 ? "К ДЗ" : "Далее"}</button>
+      <button class="btn secondary" onclick="entrepreneurHome()">На главный экран</button>
     </div>`
   );
 }
@@ -1153,13 +1264,22 @@ function homeworkIntro() {
   shell(`
     <div class="card blue-card">
       <h1>Практическая диагностика</h1>
-      <p>Откройте шаблон Google Sheets, заполните данные и сформулируйте главный провал бизнеса.</p>
-      <p>Если данных нет — не придумывайте. Ведите минимальный управленческий учёт 7 дней.</p>
+      <p>ДЗ не засчитывается автоматически. 70 баллов начисляются только после проверки.</p>
+    </div>
+    <div class="card">
+      <h2>Как сдать ДЗ через Google Таблицу</h2>
+      <div class="list-line"><b>1. Откройте шаблон</b><p>Нажмите кнопку “Открыть шаблон таблицы”.</p></div>
+      <div class="list-line"><b>2. Создайте копию</b><p>В Google Таблице нажмите: Файл → Создать копию. Заполнять нужно свою копию, а не исходный шаблон.</p></div>
+      <div class="list-line"><b>3. Заполните данные</b><p>Внесите факты за 7–14 дней: поток, покупки, выручку, себестоимость, расходы, остатки и выводы.</p></div>
+      <div class="list-line"><b>4. Определите главный провал</b><p>Поток, конверсия, средний чек, маржа, запасы, расходы, учёт или деньги.</p></div>
+      <div class="list-line"><b>5. Откройте доступ</b><p>Нажмите “Поделиться” → “Все, у кого есть ссылка” → доступ “Просмотр” или “Комментатор”.</p></div>
+      <div class="list-line"><b>6. Отправьте ссылку</b><p>Откройте форму сдачи ДЗ и вставьте ссылку на вашу Google Таблицу.</p></div>
+      <div class="list-line"><b>7. Дождитесь проверки</b><p>Статус “отправлено” не равен “проверено”. Баллы за ДЗ начисляются только после проверки.</p></div>
       <div class="grid">
-        <a class="btn gold" href="${HOMEWORK_SHEET_URL}" target="_blank" onclick="if('${HOMEWORK_SHEET_URL}'==='#'){alert('Ссылка на Google Sheets-шаблон будет добавлена после создания таблицы.'); return false;}">Открыть шаблон</a>
-        <a class="btn secondary" href="${HOMEWORK_SUBMIT_FORM_URL}" target="_blank" onclick="if('${HOMEWORK_SUBMIT_FORM_URL}'==='#'){alert('Ссылка на форму сдачи ДЗ будет добавлена после создания Google Form.'); return false;}">Сдать через форму</a>
-        <button class="btn secondary" onclick="submissionForm()">Посмотреть требования к ДЗ</button>
-        <button class="btn secondary" onclick="home()">На главный экран</button>
+        <a class="btn gold" href="${HOMEWORK_SHEET_URL}" target="_blank" onclick="if('${HOMEWORK_SHEET_URL}'==='#'){alert('Ссылка на Google Sheets-шаблон будет добавлена после создания таблицы.'); return false;}">Открыть шаблон таблицы</a>
+        <a class="btn secondary" href="${HOMEWORK_SUBMIT_FORM_URL}" target="_blank" onclick="if('${HOMEWORK_SUBMIT_FORM_URL}'==='#'){alert('Ссылка на форму сдачи ДЗ будет добавлена после создания Google Form.'); return false;}">Открыть форму сдачи ДЗ</a>
+        ${actionButton("Требования к ДЗ", "submissionForm()", "secondary")}
+        ${actionButton("На главный экран", "entrepreneurHome()", "secondary")}
       </div>
     </div>
   `);
@@ -1167,32 +1287,39 @@ function homeworkIntro() {
 
 function submissionForm() {
   shell(`
-    <div class="card">
+    <div class="card blue-card">
       <h1>Требования к ДЗ</h1>
-      <p>Практическая диагностика нужна не для отчётности, а для выбора следующего блока по реальным данным.</p>
-      <div class="list-line"><b>1. Ссылка на таблицу</b><p>Google Sheets с заполненными данными за 7–14 дней.</p></div>
-      <div class="list-line"><b>2. Главный провал</b><p>Поток / конверсия / чек / маржа / запасы / расходы / учёт / деньги.</p></div>
-      <div class="list-line"><b>3. Подтверждение цифрами</b><p>Какая метрика показала, что именно этот блок ограничивает результат.</p></div>
-      <div class="list-line"><b>4. Гипотеза на 7 дней</b><p>Что вы проверяете и какой результат ожидаете.</p></div>
-      <div class="list-line"><b>5. Метрика проверки</b><p>По чему станет понятно, что стало лучше.</p></div>
-      <button class="btn gold" onclick="finish()">Пока отметить как отправлено</button>
-      <button class="btn secondary" onclick="home()" style="margin-top:10px;">На главный экран</button>
+      <p>ДЗ нужно для выбора следующего блока по фактам, а не по ощущениям.</p>
+    </div>
+    <div class="card">
+      <div class="list-line"><b>1. Заполненная копия таблицы</b><p>Не исходный шаблон, а ваша копия Google Sheets с данными за 7–14 дней.</p></div>
+      <div class="list-line"><b>2. Открытый доступ</b><p>В таблице должен быть включён доступ “Все, у кого есть ссылка”. Без этого проверяющий не увидит вашу работу.</p></div>
+      <div class="list-line"><b>3. Главный провал</b><p>Укажите один главный провал: поток, конверсия, чек, маржа, запасы, расходы, учёт или деньги.</p></div>
+      <div class="list-line"><b>4. Подтверждение цифрами</b><p>Напишите, какая метрика показывает, что именно этот блок ограничивает результат.</p></div>
+      <div class="list-line"><b>5. Гипотеза на 7 дней</b><p>Сформулируйте: если мы сделаем X, то метрика Y изменится на Z за 7 дней.</p></div>
+      <div class="list-line"><b>6. Метрика проверки</b><p>Заранее определите, по чему будет понятно, что действие сработало.</p></div>
+      <div class="list-line"><b>7. Форма сдачи</b><p>В Google Form вставьте ссылку на таблицу, Telegram username, вид деятельности, главный провал и короткий комментарий.</p></div>
+      <p class="small">Кнопка “пока отметить как отправлено” убрана специально: она создавала ложное ощущение, что ДЗ уже реально ушло. Теперь сдача идёт только через форму.</p>
+      <div class="grid">
+        <a class="btn gold" href="${HOMEWORK_SUBMIT_FORM_URL}" target="_blank" onclick="if('${HOMEWORK_SUBMIT_FORM_URL}'==='#'){alert('Ссылка на форму сдачи ДЗ будет добавлена после создания Google Form.'); return false;}">Открыть форму сдачи ДЗ</a>
+        ${actionButton("На главный экран", "entrepreneurHome()", "secondary")}
+      </div>
     </div>
   `);
-}
-
-function finish() {
-  saveProgress("homework_submitted");
-  homeworkSubmittedScreen();
 }
 
 function homeworkSubmittedScreen() {
   shell(`
     <div class="card blue-card">
-      <h1>ДЗ отправлено</h1>
-      <p>Статус: на проверке.</p>
-      <p>После проверки или по правилам программы будет открыт следующий блок, который соответствует главному провалу бизнеса.</p>
-      <button class="btn gold" onclick="home()">На главный экран</button>
+      <h1>ДЗ на проверке</h1>
+      <p>Статус: отправлено или ожидает проверки.</p>
+    </div>
+    <div class="card">
+      <p>70 баллов за домашнее задание начисляются только после проверки. Если вы отправили форму, ожидайте обратную связь. Если форма ещё не отправлена — откройте форму сдачи ДЗ.</p>
+      <div class="grid">
+        <a class="btn gold" href="${HOMEWORK_SUBMIT_FORM_URL}" target="_blank" onclick="if('${HOMEWORK_SUBMIT_FORM_URL}'==='#'){alert('Ссылка на форму сдачи ДЗ будет добавлена после создания Google Form.'); return false;}">Открыть форму сдачи ДЗ</a>
+        ${actionButton("На главный экран", "entrepreneurHome()", "secondary")}
+      </div>
     </div>
   `);
 }
@@ -1208,24 +1335,20 @@ function bootApp() {
 
 window.addEventListener("error", function (event) {
   var message = "GLOBAL_ERROR";
-
   if (event && event.error && event.error.message) {
     message = event.error.message;
   } else if (event && event.message) {
     message = event.message;
   }
-
   console.error("GLOBAL_ERROR", event && (event.error || event.message));
   emergencyScreen(message);
 });
 
 window.addEventListener("unhandledrejection", function (event) {
   var message = "UNHANDLED_REJECTION";
-
   if (event && event.reason && event.reason.message) {
     message = event.reason.message;
   }
-
   console.error("UNHANDLED_REJECTION", event && event.reason);
   emergencyScreen(message);
 });
