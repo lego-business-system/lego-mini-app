@@ -539,10 +539,16 @@ function externalFormButton(label, url) {
   return `<a class="btn secondary" href="${url}" target="_blank" onclick="if('${url}'==='#'){alert('Ссылка будет добавлена после создания Google Form.'); return false;}">${label}</a>`;
 }
 
+
+function withAssetVersion(src) {
+  if (!src || src === "#") return src;
+  return src.indexOf("?") >= 0 ? src + "&v=3" : src + "?v=3";
+}
+
 function schemeImage(src, alt, fallbackText) {
   return `
     <div class="scheme-box">
-      <img class="scheme-img" src="${src}" alt="${alt}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+      <img class="scheme-img" src="${withAssetVersion(src)}" alt="${alt}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
       <div class="scheme-fallback" style="display:none;">${fallbackText}</div>
     </div>
   `;
