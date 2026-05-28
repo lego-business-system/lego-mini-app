@@ -425,7 +425,14 @@ const quiz = [
 ];
 
 function shell(content, footer = "") {
-  document.getElementById("app").innerHTML = `
+  const root = document.getElementById("app");
+
+  if (!root) {
+    console.error("ROOT_APP_NOT_FOUND");
+    return;
+  }
+
+  root.innerHTML = `
     <div class="app-shell">
       <div class="topbar">
         <div class="brand">
@@ -438,6 +445,22 @@ function shell(content, footer = "") {
       </div>
       <main class="content">${content}</main>
       ${footer}
+    </div>
+  `;
+}
+
+function emergencyScreen(message) {
+  const root = document.getElementById("app");
+  if (!root) return;
+
+  root.innerHTML = `
+    <div style="padding:20px; color:#111; background:#f7f4ec; min-height:100vh; font-family:Arial, sans-serif;">
+      <div style="background:#fff; border-radius:18px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,.08);">
+        <h1 style="margin-top:0; font-size:22px;">Ошибка запуска</h1>
+        <p>Приложение не смогло загрузиться корректно.</p>
+        <p style="font-size:13px; opacity:.75;"><b>Код:</b> ${message}</p>
+        <p style="font-size:13px; opacity:.75;">Откройте приложение из Telegram-бота. Если ошибка повторяется, отправьте скрин в поддержку.</p>
+      </div>
     </div>
   `;
 }
@@ -1045,4 +1068,27 @@ function homeworkSubmittedScreen() {
   `);
 }
 
-checkAccess();
+function bootApp() {
+  try {
+    checkAccess();
+  } catch (error) {
+    console.error("BOOT_ERROR", error);
+    emergencyScreen(error?.message || "BOOT_ERROR");
+  }
+}
+
+window.addEventListener("error", function (event) {
+  console.error("GLOBAL_ERROR", event.error || event.message);
+  emergencyScreen(event?.error?.message || event.message || "GLOBAL_ERROR");
+});
+
+window.addEventListener("unhandledrejection", function (event) {
+  console.error("UNHANDLED_REJECTION", event.reason);
+  emergencyScreen(event?.reason?.message || "UNHANDLED_REJECTION");
+});
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bootApp);
+} else {
+  bootApp();
+}
