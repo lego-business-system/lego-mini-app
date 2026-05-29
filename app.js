@@ -830,41 +830,99 @@ function safeText(value, fallback) {
   return value === undefined || value === null || value === "" ? fallback : value;
 }
 
+
 function getTelegramUser() {
   return tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : {};
 }
 
+function normalizeTelegramId(value) {
+  if (value === undefined || value === null || value === "") return "";
+  return String(value).trim();
+}
+
+function normalizeTelegramUsername(value) {
+  if (value === undefined || value === null || value === "") return "";
+  return String(value).replace("@", "").trim().toLowerCase();
+}
+
+function getPossibleTelegramIds() {
+  const tgUser = getTelegramUser();
+  const appUser = state && state.user ? state.user : {};
+  const progress = state && state.progress ? state.progress : {};
+
+  return [
+    tgUser.id,
+    appUser.id,
+    appUser.telegram_id,
+    appUser.telegram_user_id,
+    appUser.user_id,
+    progress.telegram_user_id,
+    progress.telegram_id,
+    progress.user_id
+  ]
+    .map(normalizeTelegramId)
+    .filter(Boolean);
+}
+
+function getPossibleTelegramUsernames() {
+  const tgUser = getTelegramUser();
+  const appUser = state && state.user ? state.user : {};
+  const progress = state && state.progress ? state.progress : {};
+
+  return [
+    tgUser.username,
+    appUser.username,
+    appUser.telegram_username,
+    appUser.telegram_user_name,
+    progress.username,
+    progress.telegram_username
+  ]
+    .map(normalizeTelegramUsername)
+    .filter(Boolean);
+}
+
 function getTelegramUserId() {
-  const user = getTelegramUser();
-  return user && user.id !== undefined && user.id !== null ? String(user.id) : "";
+  const ids = getPossibleTelegramIds();
+  return ids.length ? ids[0] : "";
 }
 
 function getTelegramUsername() {
-  const user = getTelegramUser();
-  return user && user.username ? String(user.username).replace("@", "").toLowerCase() : "";
+  const usernames = getPossibleTelegramUsernames();
+  return usernames.length ? usernames[0] : "";
 }
 
 function isAdminUser() {
-  const id = getTelegramUserId();
-  const username = getTelegramUsername();
+  const possibleIds = getPossibleTelegramIds();
+  const possibleUsernames = getPossibleTelegramUsernames();
 
   const allowedIds = (ADMIN_TELEGRAM_IDS || [])
-    .map(function(v) { return String(v).trim(); })
+    .map(normalizeTelegramId)
     .filter(function(v) { return v && v !== "PASTE_YOUR_TELEGRAM_ID_HERE"; });
 
   const allowedUsernames = (ADMIN_TELEGRAM_USERNAMES || [])
-    .map(function(v) { return String(v).replace("@", "").trim().toLowerCase(); })
+    .map(normalizeTelegramUsername)
     .filter(Boolean);
 
-  return Boolean(
-    (id && allowedIds.indexOf(id) !== -1) ||
-    (username && allowedUsernames.indexOf(username) !== -1)
-  );
+  const idAllowed = possibleIds.some(function(id) {
+    return allowedIds.indexOf(id) !== -1;
+  });
+
+  const usernameAllowed = possibleUsernames.some(function(username) {
+    return allowedUsernames.indexOf(username) !== -1;
+  });
+
+  return Boolean(idAllowed || usernameAllowed);
+}
+
+function getAdminDebugLine() {
+  return "ID: " + (getPossibleTelegramIds().join(", ") || "не определён") +
+    " | username: " + (getPossibleTelegramUsernames().join(", ") || "не определён");
 }
 
 function adminButton() {
   return isAdminUser() ? actionButton("Админ-панель", "openAdminPanel()", "secondary") : "";
 }
+
 
 function shell(content, footer) {
   const root = document.getElementById("app");
@@ -1166,6 +1224,7 @@ function mainMenu() {
         ${actionButton("Я предприниматель", "entrepreneurHome()", "gold")}
         ${actionButton("Я сотрудник — в разработке", "showEmployee()", "secondary")}
         ${actionButton("Поддержка", "supportScreen()", "secondary")}
+        ${adminButton()}
       </div>
     </div>
   `);
@@ -1887,7 +1946,7 @@ function adminPanel() {
 
 function openAdminPanel() {
   if (!isAdminUser()) {
-    alert("Админ-панель доступна только владельцу профиля.");
+    alert("Админ-панель доступна только владельцу профиля.\nОпределено приложением: " + getAdminDebugLine());
     return;
   }
 
