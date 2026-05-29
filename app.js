@@ -795,7 +795,7 @@ const quiz = [
 
 // ===== Внешние ссылки =====
 // После создания реальных Google Form / Google Sheets замените # на настоящие ссылки.
-const HOMEWORK_SHEET_URL = "https://docs.google.com/spreadsheets/d/16Wx84kifn8b4SUUfThUnYhkv7s9CYblc/edit?gid=1062688825#gid=1062688825";
+const HOMEWORK_SHEET_URL = "https://docs.google.com/spreadsheets/d/1tAz3Zqp3yyVS3PKabj7kLfo-cOwsVER8/edit?gid=383657173#gid=383657173";
 const HOMEWORK_SUBMIT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeDEqVX_kgkGtcKusCcMDd7dE5hzvnzaUZKDTVRqRcpAdPJ0g/viewform?usp=publish-editor";
 const SUPPORT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeobmGwtLOcsLxxNB50wMBaO_8-jMIwxHuee-3G9QHcK-ceMg/viewform?usp=publish-editor";
 const IDEA_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSe5A8MVuzqBcr8SGsuVK1K83BzboQZjfXf1g1MqwAjrX52VzA/viewform?usp=publish-editor";
