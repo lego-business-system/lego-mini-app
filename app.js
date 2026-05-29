@@ -1900,22 +1900,13 @@ function adminPanel() {
   shell(`
     <div class="card blue-card">
       <h1>Админ-панель проверки ДЗ</h1>
-      <p>Панель скрыта для всех, кроме разрешённых Telegram ID / username.</p>
+      <p>Рабочая панель для проверки домашних заданий учеников.</p>
       <p class="small">Текущий админ: ${currentLabel}</p>
     </div>
 
     <div class="card">
-      <h2>1. Принять ДЗ текущего открытого пользователя</h2>
-      <p>Этот режим подходит для проверки вашего тестового аккаунта. Он меняет статус только у того пользователя, который сейчас открыл приложение.</p>
-      <div class="admin-form">
-        <button class="btn gold" onclick="adminApproveCurrentUser()">Принять ДЗ текущего пользователя</button>
-        <button class="btn secondary" onclick="activityHome()">Вернуться в вид деятельности</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>2. Принять ДЗ конкретного ученика</h2>
-      <p>Этот режим принимает ДЗ ученика по Telegram ID или username. Для него нужна Supabase Edge Function <b>admin-review-homework</b>.</p>
+      <h2>Проверка ДЗ ученика</h2>
+      <p>Введите Telegram ID или username ученика, добавьте комментарий и выберите решение.</p>
 
       <div class="admin-form">
         <label class="admin-label" for="admin-target-user">Telegram ID или username ученика</label>
@@ -1924,22 +1915,82 @@ function adminPanel() {
         <label class="admin-label" for="admin-review-comment">Комментарий проверяющего</label>
         <textarea id="admin-review-comment" class="admin-input" rows="5" placeholder="Например: ДЗ принято. Главный вывод подтверждён цифрами, гипотеза на 7 дней сформулирована корректно."></textarea>
 
-        <button class="btn gold" onclick="adminApproveTargetUser()">Принять ДЗ ученика</button>
+        <div class="grid">
+          <button class="btn gold" onclick="adminApproveTargetUser()">Принять ДЗ</button>
+          <button class="btn secondary" onclick="adminRejectTargetUser()">Отправить на доработку</button>
+        </div>
+
         <button class="btn secondary" onclick="mainMenu()">На главный экран</button>
       </div>
 
-      <p class="small">Если функция <b>admin-review-homework</b> ещё не создана в Supabase, кнопка покажет ошибку. Это нормально: чужой прогресс нельзя безопасно менять только из браузера.</p>
+      <p class="small">
+        Решение сохраняется через Supabase Edge Function <b>admin-review-homework</b>.
+        Принятое ДЗ закрывает модуль и начисляет 70 баллов. ДЗ на доработку возвращает ученика к исправлению.
+      </p>
     </div>
 
     <div class="card">
-      <h2>Чек-лист проверки ДЗ</h2>
-      <div class="list-line"><b>1. Таблица скопирована</b><p>Ученик отправил свою копию, а не исходный шаблон.</p></div>
-      <div class="list-line"><b>2. Доступ открыт</b><p>Проверяющий может открыть таблицу по ссылке.</p></div>
-      <div class="list-line"><b>3. Примеры удалены</b><p>Три строки примера не остались как реальные данные.</p></div>
-      <div class="list-line"><b>4. Данные заполнены</b><p>Есть факты минимум за 7 дней или ученик честно указал, что данных пока нет.</p></div>
-      <div class="list-line"><b>5. Выручка без НДС</b><p>Ученик не смешал суммы с НДС и без НДС.</p></div>
-      <div class="list-line"><b>6. Вывод по цифрам</b><p>Главный провал подтверждён метрикой, а не ощущением.</p></div>
-      <div class="list-line"><b>7. Есть гипотеза</b><p>На 7 дней выбрано одно действие и одна метрика проверки.</p></div>
+      <h2>Универсальный чек-лист проверки ДЗ</h2>
+
+      <div class="list-line">
+        <b>1. Ученик отправил свою копию</b>
+        <p>Проверяем, что это не исходный шаблон, а рабочая копия ученика.</p>
+      </div>
+
+      <div class="list-line">
+        <b>2. Доступ по ссылке открыт</b>
+        <p>Проверяющий может открыть таблицу без запроса доступа.</p>
+      </div>
+
+      <div class="list-line">
+        <b>3. Примеры удалены или заменены</b>
+        <p>В таблице не остались демонстрационные строки вместо реальных данных.</p>
+      </div>
+
+      <div class="list-line">
+        <b>4. Данные заполнены за нужный период</b>
+        <p>Есть факты минимум за 7 дней или честно указано, что данных пока нет.</p>
+      </div>
+
+      <div class="list-line">
+        <b>5. Ключевые цифры заполнены</b>
+        <p>Выручка, покупки, расходы, маржа, остатки или другие главные показатели не пропущены.</p>
+      </div>
+
+      <div class="list-line">
+        <b>6. Выручка указана без НДС</b>
+        <p>Ученик не смешал суммы с НДС и без НДС, чтобы диагностика была достоверной.</p>
+      </div>
+
+      <div class="list-line">
+        <b>7. Вывод основан на цифре</b>
+        <p>Главный вывод подтверждён метрикой, а не ощущением.</p>
+      </div>
+
+      <div class="list-line">
+        <b>8. Выбрано одно ограничение</b>
+        <p>Ученик не распыляется на десять проблем, а выбирает главное слабое место.</p>
+      </div>
+
+      <div class="list-line">
+        <b>9. Есть гипотеза на короткий срок</b>
+        <p>Гипотеза проверяется за 7 дней, а не является общей идеей “надо улучшить продажи”.</p>
+      </div>
+
+      <div class="list-line">
+        <b>10. Указана метрика проверки</b>
+        <p>Понятно, по какому показателю ученик поймёт, сработало действие или нет.</p>
+      </div>
+
+      <div class="list-line">
+        <b>11. Следующее действие конкретное</b>
+        <p>Есть понятное действие: что сделать, где, когда и по какому показателю проверить.</p>
+      </div>
+
+      <div class="list-line">
+        <b>Решение</b>
+        <p>Если критерии выполнены — принять ДЗ. Если есть существенный пробел — отправить на доработку с коротким комментарием.</p>
+      </div>
     </div>
   `);
 }
@@ -2052,6 +2103,71 @@ async function adminApproveTargetUser() {
   }
 }
 
+
+async function adminRejectTargetUser() {
+  if (!isAdminUser()) {
+    alert("Нет прав администратора.");
+    return;
+  }
+
+  const targetInput = document.getElementById("admin-target-user");
+  const commentInput = document.getElementById("admin-review-comment");
+
+  const target = targetInput ? targetInput.value.trim() : "";
+  const comment = commentInput ? commentInput.value.trim() : "";
+
+  if (!target) {
+    alert("Укажите Telegram ID или username ученика.");
+    return;
+  }
+
+  if (!comment) {
+    alert("Для доработки обязательно напишите комментарий: что именно исправить.");
+    return;
+  }
+
+  if (!tg || !tg.initData) {
+    alert("Проверка конкретного ученика доступна только внутри Telegram WebApp.");
+    return;
+  }
+
+  if (!confirm("Отправить ДЗ ученика " + target + " на доработку?")) return;
+
+  try {
+    const response = await fetch(ADMIN_REVIEW_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        initData: tg.initData,
+        lessonCode: CURRENT_LESSON_CODE,
+        businessType: CURRENT_BUSINESS_TYPE,
+        targetUser: target,
+        action: "reject_homework",
+        comment: comment,
+        checkedAt: nowIso()
+      })
+    });
+
+    let result = {};
+    try { result = await response.json(); } catch (error) {}
+
+    if (!response.ok || !result.ok) {
+      console.error("ADMIN_REVIEW_REJECT_FAILED", result);
+      alert(
+        (result && (result.reason || result.error))
+          ? (result.reason || result.error)
+          : "Supabase не принял отправку на доработку. Проверьте Edge Function admin-review-homework."
+      );
+      return;
+    }
+
+    alert("ДЗ отправлено на доработку. Статус обновлён в Supabase.");
+    adminPanel();
+  } catch (error) {
+    console.error("ADMIN_REVIEW_REJECT_ERROR", error);
+    alert("Не удалось отправить ДЗ на доработку. Проверьте Edge Function admin-review-homework.");
+  }
+}
 
 (function injectRuntimeStyles() {
   if (document.getElementById("lego-runtime-styles")) return;
