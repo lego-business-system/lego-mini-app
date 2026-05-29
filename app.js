@@ -214,24 +214,21 @@ const lessonDescriptions = [
   `,
   `
     <h3>Как работать с домашним заданием</h3>
-    <p>Домашнее задание начинается не с заполнения, а с правильной подготовки рабочей копии. Таблица в приложении — это шаблон. В исходном шаблоне работать не нужно: сначала откройте его, затем создайте свою копию через меню Google Таблиц: <b>Файл → Создать копию</b>. Уже в этой копии вы будете вести свои данные, делать выводы и отправлять ссылку на проверку.</p>
-    <p>Работа идёт по порядку. Сначала прочитайте лист <b>00_Как пользоваться</b>, затем на листе <b>01_Панель</b> поставьте период анализа. После этого откройте <b>02_Ввод данных</b>, удалите или замените 3 строки примера и внесите реальные показатели: дату, канал, посетителей, покупателей, выручку без НДС, себестоимость без НДС, рекламу, постоянные расходы, остаток товара, деньги в кассе и комментарий.</p>
-    <p>После заполнения не делайте вывод на глаз. Сначала посмотрите <b>03_Метрики</b>, затем <b>04_Дашборд</b> и <b>05_Диагностика</b>. Только после этого переходите к <b>06_ДЗ_Стартовая</b>: там нужно записать главный вывод, цифру-доказательство, гипотезу на 7 дней, действие и метрику проверки. Лист <b>07_Отчёт на проверку</b> нужен для итоговой сдачи.</p>
-    <p><b>Практический вывод:</b> сильное ДЗ — это не просто заполненная таблица. Это путь от фактов к решению: данные → расчёт → диагностика → гипотеза → действие на 7 дней.</p>
+    <p>Домашнее задание построено как управленческий процесс. Вы не просто заполняете таблицу, а проходите путь от фактов к решению. Сначала откройте инструкцию, потом внесите фактические показатели за 7–14 дней, затем перейдите к расчёту метрик и посмотрите, что показывает система.</p>
+    <p>Нельзя сначала решить «у нас проблема в рекламе», а потом подгонять цифры. Правильный порядок обратный: сначала данные, потом расчёт, потом диагноз, потом действие.</p>
+    <p><b>Практический вывод:</b> финальный план на 7 дней должен содержать гипотезу, действие, метрику и срок.</p>
   `,
   `
     <h3>Где что находится в таблице</h3>
-    <p>Таблица разделена на обязательные листы и дополнительные материалы. Обязательная часть нужна для сдачи первого ДЗ. Дополнительные листы по книгам можно заполнять по желанию, если хотите сделать более глубокий внутренний аудит своего дела. Их не нужно заполнять все сразу, если вы только проходите первый модуль.</p>
-    <p>Обязательная часть идёт по логике диагностики. <b>00_Как пользоваться</b> объясняет порядок работы. <b>01_Панель</b> задаёт период и показывает главные показатели. <b>02_Ввод данных</b> — место для ежедневных фактов. <b>03_Метрики</b> автоматически считает поток, покупателей, выручку, средний чек, конверсию, маржинальность, ROAS, нагрузку расходов и деньги. <b>04_Дашборд</b> показывает общую картину. <b>05_Диагностика</b> помогает понять, какой следующий модуль будет самым полезным.</p>
-    <p>Дальше идёт практическая часть. <b>06_ДЗ_Стартовая</b> — место, где вы формулируете управленческий вывод. <b>07_Отчёт на проверку</b> — итоговый лист, который удобно отправлять на проверку. Остальные листы с инструментами из книг — BMC, 4P, TOC, HADI и BSC — помогают глубже оцифровать бизнес: модель, предложение, ограничение, гипотезу и показатели контроля.</p>
-    <p><b>Практический вывод:</b> сначала заполните обязательный маршрут ДЗ, потом при необходимости используйте дополнительные листы для более детального аудита. Не смешивайте обязательное задание и расширенные инструменты.</p>
+    <p>Таблица устроена не случайно. Каждый блок ведёт вас от сырой информации к управленческому выводу. Инструкция объясняет порядок работы. Ввод данных фиксирует фактические ежедневные показатели. Расчёт метрик автоматически показывает конверсию, средний чек, маржу и операционный результат.</p>
+    <p>В блоке диагностики определите главное узкое место. В плане на 7 дней зафиксируйте гипотезу, действие и метрику. В итоговом блоке подготовьте короткий управленческий вывод для проверки.</p>
+    <p><b>Практический вывод:</b> вам нужно понимать, какие поля вы заполняете сами, а какие выводы формируются через расчёт.</p>
   `,
   `
     <h3>Как заполнять домашнее задание правильно</h3>
-    <p>Заполняйте только белые ячейки. Жёлтые строки в начале таблицы — это примеры, их нужно удалить или заменить своими данными. Голубые ячейки содержат формулы, их трогать нельзя: через них считаются метрики, дашборд, диагностика и отчёт на проверку. Если изменить формулу, таблица может начать показывать неправильный результат.</p>
-    <p>Главное правило по деньгам: <b>выручку и себестоимость в первом модуле вводим без НДС</b>. НДС не является вашей управленческой выручкой, поэтому смешивание сумм с НДС и без НДС искажает маржу, средний чек и операционный результат. Налоги, кредиты, полноценный P&L, ОДДС и баланс будут разбираться в отдельных финансовых модулях, а не в стартовой диагностике.</p>
-    <p>Не заполняйте таблицу «примерно» или «по памяти». Внесите факты: дату, канал или источник, посетителей, покупателей или чеки, выручку без НДС, себестоимость без НДС, рекламу, постоянные расходы, остаток товара, деньги в кассе и комментарий. После ввода данных смотрите не только на выручку, а на связку: поток → конверсия → средний чек → маржинальность → операционный результат → деньги.</p>
-    <p><b>Практический вывод:</b> результат ДЗ — это не таблица ради таблицы. Это управленческий вывод, подтверждённый цифрой, и одно действие на 7 дней с понятной метрикой проверки.</p>
+    <p>Правильное заполнение домашнего задания начинается с дисциплины данных. Нельзя заполнять таблицу «примерно» или «по памяти», если цель — поставить диагноз. Внесите факты: дату, канал или источник, количество посетителей или заявок, покупателей, выручку, себестоимость, расходы и товарный остаток.</p>
+    <p>После ввода данных прочитайте результат. Поток показывает, хватает ли людей. Конверсия показывает, покупают ли эти люди. Средний чек показывает силу корзины. Маржа показывает качество экономики. Операционный результат показывает, остаются ли деньги после основных расходов.</p>
+    <p><b>Практический вывод:</b> сильное ДЗ — это ваши факты, расчёты, диагноз и конкретный план на 7 дней.</p>
   `,
   `
     <h3>Как проходит тест по модулю</h3>
@@ -804,9 +801,17 @@ const SUPPORT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeobmGwtLOcsL
 const IDEA_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSe5A8MVuzqBcr8SGsuVK1K83BzboQZjfXf1g1MqwAjrX52VzA/viewform?usp=publish-editor";
 const CONSULTATION_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeRSsxQa4eLWMPHYTREx82RSGdft6Mo4ZOZiL2MyvbrOdjcqw/viewform?usp=publish-editor";
 
+// ===== Админ-доступ =====
+// ВАЖНО: админ-панель будет видна только пользователям из этих списков.
+// Лучше всего указать Telegram ID. Username оставлен запасным вариантом.
 const ADMIN_REVIEW_URL = "https://soxtekhspohkddpdidvp.supabase.co/functions/v1/admin-review-homework";
-// Временный вход в админ-панель внутри приложения. Перед публичным запуском лучше заменить на Supabase Edge Function с проверкой Telegram ID администратора.
 const ADMIN_PANEL_PIN = "2405";
+const ADMIN_TELEGRAM_IDS = [
+  "1762603232"
+];
+const ADMIN_TELEGRAM_USERNAMES = [
+  "prosvewenie2000"
+];
 
 const TRADE_SYSTEM_MAP_URL = "assets/ui/trade_system_map.png";
 const MODULE_CYCLE_MAP_URL = "assets/ui/module_cycle.png";
@@ -823,6 +828,42 @@ const MODULE_TOTAL_SCORE = 100;
 
 function safeText(value, fallback) {
   return value === undefined || value === null || value === "" ? fallback : value;
+}
+
+function getTelegramUser() {
+  return tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : {};
+}
+
+function getTelegramUserId() {
+  const user = getTelegramUser();
+  return user && user.id !== undefined && user.id !== null ? String(user.id) : "";
+}
+
+function getTelegramUsername() {
+  const user = getTelegramUser();
+  return user && user.username ? String(user.username).replace("@", "").toLowerCase() : "";
+}
+
+function isAdminUser() {
+  const id = getTelegramUserId();
+  const username = getTelegramUsername();
+
+  const allowedIds = (ADMIN_TELEGRAM_IDS || [])
+    .map(function(v) { return String(v).trim(); })
+    .filter(function(v) { return v && v !== "1762603232"; });
+
+  const allowedUsernames = (ADMIN_TELEGRAM_USERNAMES || [])
+    .map(function(v) { return String(v).replace("@", "").trim().toLowerCase(); })
+    .filter(Boolean);
+
+  return Boolean(
+    (id && allowedIds.indexOf(id) !== -1) ||
+    (username && allowedUsernames.indexOf(username) !== -1)
+  );
+}
+
+function adminButton() {
+  return isAdminUser() ? actionButton("Админ-панель", "openAdminPanel()", "secondary") : "";
 }
 
 function shell(content, footer) {
@@ -907,29 +948,21 @@ function accessDenied(reason) {
 
 function isHomeworkVerified() {
   const p = state.progress || {};
-  const l = state.localProgress || {};
   return Boolean(
-    l.homework_verified_at ||
     p.homework_verified ||
     p.homework_checked ||
     p.homework_approved ||
-    p.homework_verified_at ||
-    p.homework_checked_at ||
     p.status === "completed"
   );
 }
 
 function isHomeworkSubmitted() {
   const p = state.progress || {};
-  const l = state.localProgress || {};
   return Boolean(
     state.completed.homework ||
-    l.homework_submitted_at ||
     p.homework_submitted ||
-    p.homework_submitted_at ||
     p.status === "homework_submitted" ||
-    p.current_step === "review" ||
-    p.status === "completed"
+    p.current_step === "review"
   );
 }
 
@@ -1189,7 +1222,7 @@ function showProfile() {
         ${externalFormButton("Задать вопрос", SUPPORT_FORM_URL)}
         ${externalFormButton("Предложить идею", IDEA_FORM_URL)}
         ${externalFormButton("Сообщить об ошибке", SUPPORT_FORM_URL)}
-        ${actionButton("Админ-панель", "openAdminPanel()", "secondary")}
+        ${adminButton()}
       </div>
     </div>
 
@@ -1232,6 +1265,7 @@ function supportScreen() {
         ${externalFormButton("Задать вопрос", SUPPORT_FORM_URL)}
         ${externalFormButton("Предложить идею", IDEA_FORM_URL)}
         ${externalFormButton("Сообщить об ошибке", SUPPORT_FORM_URL)}
+        ${adminButton()}
       </div>
       <p class="small">В форме укажите имя, Telegram username, тип проблемы, вопрос и при необходимости ссылку или скриншот.</p>
       ${actionButton("На главный экран", "mainMenu()", "gold")}
@@ -1694,21 +1728,18 @@ function homeworkIntro() {
       <h1>Практическая диагностика</h1>
       <p>ДЗ не засчитывается автоматически. 70 баллов начисляются только после проверки.</p>
     </div>
-
     <div class="card">
       <h2>Как сдать ДЗ через Google Таблицу</h2>
-      <p>Работа идёт через одну общую таблицу. Внутри неё есть обязательные листы для первого ДЗ и дополнительные листы по книгам для более детального внутреннего аудита.</p>
-
-      <div class="list-line"><b>1. Откройте шаблон</b><p>Нажмите кнопку “Открыть шаблон таблицы”. Это исходный файл, в нём работать не нужно.</p></div>
-      <div class="list-line"><b>2. Создайте свою копию</b><p>В Google Таблице нажмите: <b>Файл → Создать копию</b>. Заполнять нужно свою копию, а не шаблон.</p></div>
-      <div class="list-line"><b>3. Удалите или замените примеры</b><p>В таблице есть 3 строки примера. Они нужны только для понимания формата. Перед сдачей замените их своими данными или удалите.</p></div>
-      <div class="list-line"><b>4. Заполните обязательную часть</b><p>Минимальный маршрут первого ДЗ: 01_Панель → 02_Ввод_данных → 03_Метрики → 04_Дашборд → 05_Диагностика → 06_ДЗ_Стартовая → 07_Отчет_на_проверку.</p></div>
-      <div class="list-line"><b>5. Учитывайте НДС правильно</b><p>Выручку и себестоимость в этом модуле вносите <b>без НДС</b>. НДС, налоги, кредиты, P&L, ОДДС и баланс будут отдельными финансовыми модулями.</p></div>
-      <div class="list-line"><b>6. Дополнительные листы — по желанию</b><p>BMC, 4P, TOC, HADI и BSC можно заполнить для более глубокого аудита. Они помогают лучше понять бизнес, но не заменяют обязательный отчёт на проверку.</p></div>
-      <div class="list-line"><b>7. Откройте доступ</b><p>В своей копии нажмите “Поделиться” → “Все, у кого есть ссылка” → доступ “Просмотр” или “Комментатор”. Без этого проверяющий не увидит вашу работу.</p></div>
+      <p>Работа идёт через одну общую Google-таблицу. В ней есть обязательная часть первого ДЗ и дополнительные листы по 5 книгам для более глубокого внутреннего аудита.</p>
+      <div class="list-line"><b>1. Откройте шаблон</b><p>Нажмите “Открыть шаблон таблицы”. Это исходный файл, в нём работать нельзя.</p></div>
+      <div class="list-line"><b>2. Создайте копию</b><p>В Google Таблице нажмите: Файл → Создать копию. Заполнять нужно свою копию, а не исходный шаблон.</p></div>
+      <div class="list-line"><b>3. Удалите примеры</b><p>В таблице есть 3 строки примера. Их нужно удалить или заменить своими реальными данными.</p></div>
+      <div class="list-line"><b>4. Заполните обязательные листы</b><p>Минимальный маршрут первого ДЗ: 01_Панель → 02_Ввод_данных → 03_Метрики → 04_Дашборд → 05_Диагностика → 06_ДЗ_Стартовая → 07_Отчет_на_проверку.</p></div>
+      <div class="list-line"><b>5. Учитывайте НДС правильно</b><p>Выручку и себестоимость в первом модуле вводите без НДС. НДС, налоги, кредиты, полный P&L, ОДДС и баланс будут отдельными финансовыми модулями.</p></div>
+      <div class="list-line"><b>6. Дополнительные листы — по желанию</b><p>Листы по BMC, 4P, TOC, HADI и BSC помогают глубже разобрать бизнес, но не являются обязательными для принятия первого ДЗ.</p></div>
+      <div class="list-line"><b>7. Откройте доступ</b><p>Нажмите “Поделиться” → “Все, у кого есть ссылка” → доступ “Просмотр” или “Комментатор”. Без доступа проверяющий не увидит таблицу.</p></div>
       <div class="list-line"><b>8. Отправьте ссылку через форму</b><p>Откройте форму сдачи ДЗ, вставьте ссылку на вашу копию таблицы и заполните поля по главному выводу, гипотезе и действию на 7 дней.</p></div>
       <div class="list-line"><b>9. Зафиксируйте отправку в приложении</b><p>После отправки Google Form вернитесь сюда и нажмите “Я отправил форму ДЗ”. Тогда в прогрессе появится статус “ДЗ отправлено”.</p></div>
-
       <div class="grid">
         <a class="btn gold" href="${HOMEWORK_SHEET_URL}" target="_blank" onclick="if('${HOMEWORK_SHEET_URL}'==='#'){alert('Ссылка на Google Sheets-шаблон будет добавлена после создания таблицы.'); return false;}">Открыть шаблон таблицы</a>
         <a class="btn secondary" href="${HOMEWORK_SUBMIT_FORM_URL}" target="_blank" onclick="if('${HOMEWORK_SUBMIT_FORM_URL}'==='#'){alert('Ссылка на форму сдачи ДЗ будет добавлена после создания Google Form.'); return false;}">Открыть форму сдачи ДЗ</a>
@@ -1728,15 +1759,13 @@ function submissionForm() {
       <p>ДЗ нужно для выбора следующего блока по фактам, а не по ощущениям.</p>
     </div>
     <div class="card">
-      <div class="list-line"><b>1. Ваша копия таблицы</b><p>На проверку отправляется не исходный шаблон, а ваша копия Google Sheets.</p></div>
-      <div class="list-line"><b>2. Открытый доступ</b><p>В таблице должен быть включён доступ “Все, у кого есть ссылка”. Режим: просмотр или комментирование.</p></div>
-      <div class="list-line"><b>3. Обязательная часть заполнена</b><p>Панель, ввод данных, метрики, дашборд, диагностика, ДЗ стартовая и отчёт на проверку должны быть заполнены.</p></div>
-      <div class="list-line"><b>4. Примеры удалены или заменены</b><p>Три строки примера не должны остаться как будто это ваши реальные данные.</p></div>
-      <div class="list-line"><b>5. Выручка и себестоимость без НДС</b><p>Для достоверной управленческой картины суммы в первом модуле вносятся без НДС.</p></div>
-      <div class="list-line"><b>6. Один главный вывод</b><p>Укажите один главный провал: поток, конверсия, чек, маржа, запасы, расходы, учёт или деньги.</p></div>
-      <div class="list-line"><b>7. Подтверждение цифрой</b><p>Напишите, какая метрика показывает, что именно этот блок ограничивает результат.</p></div>
-      <div class="list-line"><b>8. Гипотеза на 7 дней</b><p>Сформулируйте: если мы сделаем X, то метрика Y изменится на Z за 7 дней.</p></div>
-      <div class="list-line"><b>9. Дополнительные листы по книгам</b><p>Их можно заполнить по желанию для глубокого аудита. Они полезны, но не обязательны для принятия первого ДЗ.</p></div>
+      <div class="list-line"><b>1. Заполненная копия таблицы</b><p>Не исходный шаблон, а ваша копия Google Sheets с данными за 7–14 дней.</p></div>
+      <div class="list-line"><b>2. Открытый доступ</b><p>В таблице должен быть включён доступ “Все, у кого есть ссылка”. Без этого проверяющий не увидит вашу работу.</p></div>
+      <div class="list-line"><b>3. Главный провал</b><p>Укажите один главный провал: поток, конверсия, чек, маржа, запасы, расходы, учёт или деньги.</p></div>
+      <div class="list-line"><b>4. Подтверждение цифрами</b><p>Напишите, какая метрика показывает, что именно этот блок ограничивает результат.</p></div>
+      <div class="list-line"><b>5. Гипотеза на 7 дней</b><p>Сформулируйте: если мы сделаем X, то метрика Y изменится на Z за 7 дней.</p></div>
+      <div class="list-line"><b>6. Метрика проверки</b><p>Заранее определите, по чему будет понятно, что действие сработало.</p></div>
+      <div class="list-line"><b>7. Форма сдачи</b><p>В Google Form вставьте ссылку на таблицу, Telegram username, вид деятельности, главный провал и короткий комментарий.</p></div>
       <div class="grid">
         <a class="btn gold" href="${HOMEWORK_SUBMIT_FORM_URL}" target="_blank" onclick="if('${HOMEWORK_SUBMIT_FORM_URL}'==='#'){alert('Ссылка на форму сдачи ДЗ будет добавлена после создания Google Form.'); return false;}">Открыть форму сдачи ДЗ</a>
         ${actionButton("Я отправил форму ДЗ", "markHomeworkSubmitted()", "gold")}
@@ -1747,13 +1776,12 @@ function submissionForm() {
   `);
 }
 
-async function markHomeworkSubmitted() {
-  if (!confirm("Вы уже отправили Google Form со ссылкой на вашу копию таблицы?")) {
-    return;
-  }
 
-  state.completed.homework = true;
+async function markHomeworkSubmitted() {
+  if (!confirm("Вы уже отправили Google Form со ссылкой на вашу копию таблицы?")) return;
+
   if (!state.progress) state.progress = {};
+  state.completed.homework = true;
   state.progress.homework_submitted = true;
   state.progress.status = "homework_submitted";
   state.progress.current_step = "review";
@@ -1783,41 +1811,65 @@ function homeworkSubmittedScreen() {
       <p class="small">Если вы случайно нажали кнопку, но форму ещё не отправили — откройте форму и отправьте ссылку на вашу копию таблицы.</p>
       <div class="grid">
         <a class="btn gold" href="${HOMEWORK_SUBMIT_FORM_URL}" target="_blank" onclick="if('${HOMEWORK_SUBMIT_FORM_URL}'==='#'){alert('Ссылка на форму сдачи ДЗ будет добавлена после создания Google Form.'); return false;}">Открыть форму сдачи ДЗ</a>
-        ${actionButton("Посмотреть прогресс", "activityHome()", "secondary")}
-        ${actionButton("На главный экран", "mainMenu()", "secondary")}
+        ${actionButton("На главный экран", "activityHome()", "secondary")}
       </div>
     </div>
   `);
 }
 
+
+
 function adminPanel() {
+  if (!isAdminUser()) {
+    shell(`
+      <div class="card blue-card">
+        <h1>Доступ запрещён</h1>
+        <p>Админ-панель доступна только владельцу профиля.</p>
+      </div>
+      <div class="card">
+        ${actionButton("На главный экран", "mainMenu()", "gold")}
+      </div>
+    `);
+    return;
+  }
+
+  const currentUser = getTelegramUser();
+  const currentLabel = currentUser && currentUser.id
+    ? `${currentUser.first_name || ""} ${currentUser.last_name || ""} / ID: ${currentUser.id}${currentUser.username ? " / @" + currentUser.username : ""}`
+    : "Пользователь не определён";
+
   shell(`
     <div class="card blue-card">
       <h1>Админ-панель проверки ДЗ</h1>
-      <p>Здесь можно вручную закрывать проверку ДЗ. Полная проверка чужих учеников требует отдельной Supabase Edge Function.</p>
+      <p>Панель скрыта для всех, кроме разрешённых Telegram ID / username.</p>
+      <p class="small">Текущий админ: ${currentLabel}</p>
     </div>
 
     <div class="card">
-      <h2>1. Проверка текущего тестового пользователя</h2>
-      <p>Эта кнопка помечает ДЗ проверенным для текущего открытого пользователя. Подходит для теста и ручной проверки своего аккаунта.</p>
-      <div class="grid">
-        ${actionButton("Принять ДЗ текущего пользователя", "adminApproveCurrentUser()", "gold")}
-        ${actionButton("Вернуться", "supportScreen()", "secondary")}
+      <h2>1. Принять ДЗ текущего открытого пользователя</h2>
+      <p>Этот режим подходит для проверки вашего тестового аккаунта. Он меняет статус только у того пользователя, который сейчас открыл приложение.</p>
+      <div class="admin-form">
+        <button class="btn gold" onclick="adminApproveCurrentUser()">Принять ДЗ текущего пользователя</button>
+        <button class="btn secondary" onclick="activityHome()">Вернуться в вид деятельности</button>
       </div>
     </div>
 
     <div class="card">
-      <h2>2. Проверка конкретного ученика</h2>
-      <p>Введите Telegram ID или username ученика. Кнопка ниже отправит запрос в Edge Function <b>admin-review-homework</b>. Если такой функции нет в Supabase, приложение покажет ошибку — тогда нужно будет создать backend-функцию.</p>
-      <label class="field-label">Telegram ID или username ученика</label>
-      <input id="admin-target-user" class="admin-input" placeholder="например: 123456789 или @username">
-      <label class="field-label">Комментарий проверяющего</label>
-      <textarea id="admin-review-comment" class="admin-input" rows="4" placeholder="Например: ДЗ принято, главный вывод подтверждён цифрами."></textarea>
-      <div class="grid">
-        ${actionButton("Принять ДЗ ученика", "adminApproveTargetUser()", "gold")}
-        ${actionButton("На главный экран", "mainMenu()", "secondary")}
+      <h2>2. Принять ДЗ конкретного ученика</h2>
+      <p>Этот режим принимает ДЗ ученика по Telegram ID или username. Для него нужна Supabase Edge Function <b>admin-review-homework</b>.</p>
+
+      <div class="admin-form">
+        <label class="admin-label" for="admin-target-user">Telegram ID или username ученика</label>
+        <input id="admin-target-user" class="admin-input" type="text" placeholder="например: 123456789 или @username">
+
+        <label class="admin-label" for="admin-review-comment">Комментарий проверяющего</label>
+        <textarea id="admin-review-comment" class="admin-input" rows="5" placeholder="Например: ДЗ принято. Главный вывод подтверждён цифрами, гипотеза на 7 дней сформулирована корректно."></textarea>
+
+        <button class="btn gold" onclick="adminApproveTargetUser()">Принять ДЗ ученика</button>
+        <button class="btn secondary" onclick="mainMenu()">На главный экран</button>
       </div>
-      <p class="small">Без отдельной backend-функции браузер не может безопасно менять статусы других пользователей в Supabase. Это защита данных.</p>
+
+      <p class="small">Если функция <b>admin-review-homework</b> ещё не создана в Supabase, кнопка покажет ошибку. Это нормально: чужой прогресс нельзя безопасно менять только из браузера.</p>
     </div>
 
     <div class="card">
@@ -1825,7 +1877,7 @@ function adminPanel() {
       <div class="list-line"><b>1. Таблица скопирована</b><p>Ученик отправил свою копию, а не исходный шаблон.</p></div>
       <div class="list-line"><b>2. Доступ открыт</b><p>Проверяющий может открыть таблицу по ссылке.</p></div>
       <div class="list-line"><b>3. Примеры удалены</b><p>Три строки примера не остались как реальные данные.</p></div>
-      <div class="list-line"><b>4. Данные заполнены</b><p>Есть факты минимум за 7 дней или честно указано, что данных пока нет.</p></div>
+      <div class="list-line"><b>4. Данные заполнены</b><p>Есть факты минимум за 7 дней или ученик честно указал, что данных пока нет.</p></div>
       <div class="list-line"><b>5. Выручка без НДС</b><p>Ученик не смешал суммы с НДС и без НДС.</p></div>
       <div class="list-line"><b>6. Вывод по цифрам</b><p>Главный провал подтверждён метрикой, а не ощущением.</p></div>
       <div class="list-line"><b>7. Есть гипотеза</b><p>На 7 дней выбрано одно действие и одна метрика проверки.</p></div>
@@ -1834,36 +1886,67 @@ function adminPanel() {
 }
 
 function openAdminPanel() {
+  if (!isAdminUser()) {
+    alert("Админ-панель доступна только владельцу профиля.");
+    return;
+  }
+
   const pin = prompt("Введите PIN администратора");
   if (pin !== ADMIN_PANEL_PIN) {
     alert("Неверный PIN.");
     return;
   }
+
   adminPanel();
 }
 
 async function adminApproveCurrentUser() {
+  if (!isAdminUser()) {
+    alert("Нет прав администратора.");
+    return;
+  }
+
   if (!confirm("Принять ДЗ текущего пользователя и начислить 70 баллов?")) return;
 
   if (!state.progress) state.progress = {};
   state.progress.homework_verified = true;
   state.progress.homework_checked = true;
+  state.progress.homework_submitted = true;
   state.progress.status = "completed";
   state.progress.current_step = "completed";
+  state.progress.homework_submitted_at = state.progress.homework_submitted_at || nowIso();
   state.progress.homework_verified_at = state.progress.homework_verified_at || nowIso();
 
-  await saveProgress("homework_verified", {
-    source: "admin_panel_current_user",
-    checkedAt: state.progress.homework_verified_at
+  updateLocalProgress({
+    current_step: "completed",
+    homework_submitted_at: state.progress.homework_submitted_at,
+    homework_verified_at: state.progress.homework_verified_at
   });
+
+  const result = await saveProgress("homework_verified", {
+    source: "admin_panel_current_user",
+    checkedAt: state.progress.homework_verified_at,
+    homeworkScore: MODULE_SCORE_RULES.homeworkVerified
+  });
+
+  if (result && result.progress) {
+    state.progress = result.progress;
+  }
 
   alert("ДЗ текущего пользователя отмечено как проверенное.");
   activityHome();
 }
 
 async function adminApproveTargetUser() {
-  const target = document.getElementById("admin-target-user") ? document.getElementById("admin-target-user").value.trim() : "";
-  const comment = document.getElementById("admin-review-comment") ? document.getElementById("admin-review-comment").value.trim() : "";
+  if (!isAdminUser()) {
+    alert("Нет прав администратора.");
+    return;
+  }
+
+  const targetInput = document.getElementById("admin-target-user");
+  const commentInput = document.getElementById("admin-review-comment");
+  const target = targetInput ? targetInput.value.trim() : "";
+  const comment = commentInput ? commentInput.value.trim() : "";
 
   if (!target) {
     alert("Укажите Telegram ID или username ученика.");
@@ -1871,9 +1954,11 @@ async function adminApproveTargetUser() {
   }
 
   if (!tg || !tg.initData) {
-    alert("Админ-проверка конкретного ученика доступна только внутри Telegram WebApp.");
+    alert("Проверка конкретного ученика доступна только внутри Telegram WebApp.");
     return;
   }
+
+  if (!confirm("Принять ДЗ ученика " + target + " и начислить 70 баллов?")) return;
 
   try {
     const response = await fetch(ADMIN_REVIEW_URL, {
@@ -1886,24 +1971,25 @@ async function adminApproveTargetUser() {
         targetUser: target,
         action: "approve_homework",
         comment: comment,
-        checkedAt: nowIso()
+        checkedAt: nowIso(),
+        homeworkScore: MODULE_SCORE_RULES.homeworkVerified
       })
     });
 
     let result = {};
-    try { result = await response.json(); } catch (e) {}
+    try { result = await response.json(); } catch (error) {}
 
     if (!response.ok || !result.ok) {
       console.error("ADMIN_REVIEW_FAILED", result);
-      alert("Supabase пока не принял админ-проверку. Вероятно, нужно создать Edge Function admin-review-homework.");
+      alert((result && result.error) ? result.error : "Supabase не принял админ-проверку. Проверьте Edge Function admin-review-homework.");
       return;
     }
 
-    alert("ДЗ ученика принято. Статус должен обновиться в Supabase.");
+    alert("ДЗ ученика принято. Статус обновлён в Supabase.");
     adminPanel();
   } catch (error) {
     console.error("ADMIN_REVIEW_ERROR", error);
-    alert("Не удалось выполнить админ-проверку. Нужна backend-функция admin-review-homework.");
+    alert("Не удалось выполнить админ-проверку. Нужна рабочая Supabase Edge Function admin-review-homework.");
   }
 }
 
@@ -1922,6 +2008,10 @@ async function adminApproveTargetUser() {
     .history-row b { display: block; margin-bottom: 4px; }
     .history-row p { margin: 0; font-size: 13px; opacity: .75; }
     .history-row span { font-weight: 800; font-size: 18px; }
+    .admin-form { display: grid; gap: 12px; margin-top: 12px; }
+    .admin-label { display: block; font-weight: 800; margin-top: 4px; }
+    .admin-input { width: 100%; box-sizing: border-box; border: 1px solid rgba(0,0,0,.16); border-radius: 14px; padding: 13px 14px; font: inherit; background: #fff; outline: none; }
+    .admin-input:focus { border-color: #f2a900; box-shadow: 0 0 0 3px rgba(242,169,0,.18); }
   `;
   document.head.appendChild(style);
 })();
@@ -1960,56 +2050,3 @@ if (document.readyState === "loading") {
 } else {
   bootApp();
 }
-
-
-// Slide 11 — как работать с домашним заданием
-slide_texts[11] = `
-Домашнее задание построено как полноценный управленческий процесс. Оно включает последовательные шаги: сбор фактических данных, расчёт метрик, выявление узких мест и формулировка управленческого решения.
-
-1. Откройте инструкцию и таблицу. Здесь вы увидите пример заполнения данных за первые 3 дня. Эти примеры нужно удалить перед тем, как начнёте заполнять свои показатели.
-2. Заполнение данных. Введите фактические показатели за выбранный период: даты, каналы продаж, количество посетителей, конверсии, покупателей, выручку без НДС, себестоимость, расходы, остатки товара.
-3. Расчёт метрик. После ввода данных система автоматически рассчитывает:
-   - конверсию,
-   - средний чек,
-   - маржинальность,
-   - операционный результат.
-4. Анализ и диагностика. Сначала смотрите на показатели, выявляйте узкие места в продажах или работе с товаром. Никогда не корректируйте данные, чтобы «подогнать» результат.
-5. План действий. На основе диагностики формулируйте гипотезу, действие и метрику для контроля за 7 дней.
-
-Практический вывод: сильное ДЗ — это не просто заполнение таблицы, а последовательный путь от фактов к решению. Ваш результат должен включать фактические данные, расчёты, выявленные проблемы и конкретный управленческий план.
-`;
-
-// Slide 12 — где что находится в таблице
-slide_texts[12] = `
-Таблица устроена так, чтобы вести вас от фактической информации к управленческому выводу и действию.
-
-1. Лист «Инструкция». Содержит пошаговые пояснения о том, что вводить и как использовать данные для расчётов.
-2. Лист «Данные» / «Журнал дней». Вносите ежедневные показатели, включая количество посетителей, покупателей, выручку без НДС, расходы, остатки и каналы.
-3. Лист «Метрики». Система автоматически рассчитывает:
-   - конверсию,
-   - средний чек,
-   - маржинальность,
-   - операционный результат.
-4. Лист «Диагностика». Здесь выявляются узкие места, основные риски и потенциальные точки роста. Смотрите, что влияет на продажи, какие блоки работают неэффективно, и на какие показатели стоит обратить внимание.
-5. Лист «План на 7 дней». Здесь фиксируйте: гипотезу, действие, метрику, срок. Именно здесь формируется управленческий вывод для проверки.
-
-Практический вывод: важно понимать, какие блоки вы заполняете вручную, а какие формируются автоматически. Все листы взаимосвязаны и позволяют увидеть полную картину бизнеса за выбранный период.
-`;
-
-// Slide 13 — как заполнять домашнее задание правильно
-slide_texts[13] = `
-Правильное заполнение домашнего задания начинается с точности данных. Только достоверные факты позволят системе корректно выявить проблемы и построить управленческий вывод.
-
-1. Дисциплина данных. Не заполняйте «примерно» или «по памяти». Все показатели должны отражать фактическое состояние бизнеса: даты, каналы, посетители, покупатели, выручка без НДС, себестоимость, расходы, остатки товаров.
-2. Рассчёт и анализ. После ввода данных смотрите на результаты:
-   - поток покупателей и конверсии показывает эффективность каналов,
-   - средний чек отражает ценовую политику,
-   - маржа показывает прибыльность,
-   - операционный результат — оставшиеся деньги после основных расходов.
-3. Формирование вывода. На основе анализа формулируйте:
-   - выявленную проблему,
-   - гипотезу и действие на 7 дней,
-   - метрику для контроля результата.
-
-Практический вывод: результат ДЗ — это ваш путь от фактов через расчёт и анализ к конкретному управленческому решению, которое можно сразу применять.
-`;
