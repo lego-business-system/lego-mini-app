@@ -850,7 +850,7 @@ function isAdminUser() {
 
   const allowedIds = (ADMIN_TELEGRAM_IDS || [])
     .map(function(v) { return String(v).trim(); })
-    .filter(function(v) { return v && v !== "1762603232"; });
+    .filter(function(v) { return v && v !== "PASTE_YOUR_TELEGRAM_ID_HERE"; });
 
   const allowedUsernames = (ADMIN_TELEGRAM_USERNAMES || [])
     .map(function(v) { return String(v).replace("@", "").trim().toLowerCase(); })
