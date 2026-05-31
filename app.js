@@ -158,7 +158,7 @@ function localPatchForEvent(event, payload) {
 
 async function loadCatalog() {
   if (state.catalog) return state.catalog;
-  const response = await fetch(CATALOG_URL + "?v=2");
+  const response = await fetch(CATALOG_URL + "?v=4");
   if (!response.ok) throw new Error("CATALOG_LOAD_FAILED");
   state.catalog = await response.json();
   return state.catalog;
@@ -167,7 +167,7 @@ async function loadLesson(code) {
   if (state.lessonCache[code]) return state.lessonCache[code];
   const lesson = state.catalog.lessons.find(l => l.code === code);
   if (!lesson) throw new Error("LESSON_NOT_FOUND: " + code);
-  const response = await fetch(lesson.contentUrl + "?v=2");
+  const response = await fetch(lesson.contentUrl + "?v=4");
   if (!response.ok) throw new Error("LESSON_CONTENT_LOAD_FAILED: " + code);
   const data = await response.json();
   state.lessonCache[code] = data;
@@ -200,7 +200,7 @@ function shell(content, activeTab) {
   const root = $("app");
   if (!root) return;
   const modeButton = isAdminUser()
-    ? `<button class="mode-pill ${isAdminMode() ? "admin" : "student-preview"}" onclick="renderProfile()">${isAdminMode() ? "Админ" : "Тест ученика"}</button>`
+    ? `<button class="mode-pill ${isAdminMode() ? "admin" : "student-preview"}" onclick="renderProfile()">${isAdminMode() ? "Админ" : "Режим ученика"}</button>`
     : "";
   root.innerHTML = `
     <div class="app-shell-v2">
@@ -255,7 +255,7 @@ function lessonProgressMini(code) {
 function lessonOverviewCard(lesson) {
   const img = lesson.overviewImage || `assets/lesson_overview/${lesson.code}.png`;
   return `<section class="lesson-overview-card">
-    <img src="${img}?v=2" alt="Карта урока" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+    <img src="${img}?v=4" alt="Карта урока" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
     <div class="lesson-overview-placeholder">
       <b>Карта урока будет добавлена позже</b>
       <p>На этом месте будет одно изображение: что находится внутри урока — презентация, тест, саммари, ДЗ и практический результат. Словесное дублирование этапов здесь убрано.</p>
@@ -390,11 +390,11 @@ function renderHome() {
       </div>
     `)}
 
-    ${card('', `<h2>Основные блоки</h2><p>Выберите крупный маршрут. Направления бизнеса открываются внутри блока «Я предприниматель».</p>
+    ${card('', `<h2>Основные блоки</h2><p>Выберите крупный маршрут.</p>
       <div class="top-track-grid">
-        <button class="track-card disabled"><b>Нет своего бизнеса</b><p>Запуск, выбор ниши, проверка идеи. Раздел будет подключён позже.</p></button>
+        <button class="track-card disabled"><b>Нет своего бизнеса</b><p>В разработке.</p></button>
         <button class="track-card active" onclick="renderLearning()"><b>Я предприниматель</b><p>Диагностика, уроки, ДЗ, проверка и управленческие действия.</p></button>
-        <button class="track-card disabled"><b>Я сотрудник</b><p>Маршрут для руководителей, директоров и управленцев внутри компании.</p></button>
+        <button class="track-card disabled"><b>Я сотрудник</b><p>В разработке.</p></button>
       </div>`)}
   `;
   shell(html, 'home');
@@ -438,12 +438,31 @@ function renderLessonRow(l) {
     <span>${locked?'🔒':(score===100?'✓':'→')}</span>
   </button>`;
 }
+function cleanLessonDescription(lesson) {
+  let text = String(lesson.description || '').trim();
+  const title = String(lesson.title || '').trim();
+  const activity = String(lesson.activityTitle || '').trim();
+  const num = String(lesson.number || '').padStart(2,'0');
+  const patterns = [
+    `${activity}. Урок ${num}. ${title}.`,
+    `${activity}. Урок ${Number(lesson.number || 0)}. ${title}.`,
+    `${activity}, урок ${num}. ${title}.`,
+    title
+  ];
+  patterns.forEach(function(pattern){
+    if (!pattern) return;
+    text = text.replace(pattern, '').trim();
+  });
+  text = text.replace(/^\.+/, '').trim();
+  if (!text) return 'Методология урока и управленческая логика закрепляются через презентацию, тест, саммари и ДЗ.';
+  return text;
+}
 async function renderLessonHub() {
   const lesson = await loadLesson(state.selectedLessonCode);
   const meta = getLessonMeta(state.selectedLessonCode);
   const adminService = isAdminMode() && lesson.passportText ? `<details class="admin-details"><summary>Служебное описание урока</summary><pre class="text-pre">${esc(lesson.passportText || '')}</pre></details>` : "";
   const html = `
-    ${card('blue-card-v2 lesson-head-card', `<p class="eyebrow">${esc(lesson.activityTitle)} · урок ${String(lesson.number).padStart(2,'0')}</p><h1>${esc(lesson.title)}</h1><p>${esc(lesson.description)}</p>${lessonProgressMini(meta.code)}`)}
+    ${card('blue-card-v2 lesson-head-card', `<p class="eyebrow">${esc(lesson.activityTitle)} · урок ${String(lesson.number).padStart(2,'0')}</p><h1>${esc(lesson.title)}</h1><div class="lesson-meta-chips"><span>${esc(lesson.activityTitle)}</span><span>Урок ${String(lesson.number).padStart(2,'0')}</span></div><p>${esc(cleanLessonDescription(lesson))}</p>${lessonProgressMini(meta.code)}`)}
     ${lessonOverviewCard(lesson)}
     <div class="stage-grid-v2">
       ${stageCard('presentation','Презентация','основные слайды и мини-лекции',isStageDone(meta.code,'presentation'),'startSlides()')}
@@ -462,7 +481,7 @@ function topLessonNav(prev,next,prevDisabled,nextLabel){ return `<div class="nav
 function mediaScreen(image,label,current,total,html){
   const legacy = legacyTradeImage(label, current);
   const src = legacy || image || "";
-  return `<div class="media-counter">${label}: ${current}/${total}</div><div class="media-box-v2"><img src="${src}?v=8" data-label="${label}" data-index="${current}" onerror="handleImageError(this)"><div class="image-missing-v2" style="display:none"><b>${label} ${current}</b><p>Иллюстрация в подготовке.</p></div></div><section class="slide-text-v2">${cleanStudentHtml(html)}</section>`;
+  return `<div class="media-counter">${label}: ${current}/${total}</div><div class="media-box-v2"><img src="${src}?v=10" data-label="${label}" data-index="${current}" onerror="handleImageError(this)"><div class="image-missing-v2" style="display:none"><b>${label} ${current}</b><p>Иллюстрация в подготовке.</p></div></div><section class="slide-text-v2">${cleanStudentHtml(html)}</section>`;
 }
 async function prevSlide(){ if(state.slideIndex>0){ state.slideIndex--; await remoteSave('slide_viewed',{lastSlideNumber:state.slideIndex+1}); renderSlide(); } }
 async function nextSlide(){ const lesson=await loadLesson(state.selectedLessonCode); if(state.slideIndex<lesson.slides.length-1){ state.slideIndex++; await remoteSave('slide_viewed',{lastSlideNumber:state.slideIndex+1}); renderSlide(); } else { await remoteSave('presentation_completed',{lastSlideNumber:lesson.slides.length}); startQuiz(false); } }
