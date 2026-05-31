@@ -183,7 +183,7 @@ function canOpenLesson(meta) {
   const prev = activityLessons(meta.activityKey).find(l => l.number === meta.number - 1);
   return prev ? isStageDone(prev.code, "homeworkVerified") : false;
 }
-function setSelectedActivity(key) { state.selectedActivityKey = key; localStorage.setItem("lego_selected_activity", key); renderLearning(); }
+function setSelectedActivity(key) { state.selectedActivityKey = key; localStorage.setItem("lego_selected_activity", key); renderActivityLessons(key); }
 async function openLesson(code) {
   const meta = getLessonMeta(code);
   if (!meta) return;
@@ -227,8 +227,49 @@ function bottomNav(active) {
 function card(cls, html) { return `<section class="card-v2 ${cls||''}">${html}</section>`; }
 function progressRing(percent, label, sub) {
   const p = safePercent(percent);
-  return `<div class="ring-wrap"><div class="ring" style="--p:${p}%"><div class="ring-inner"><b>${p}%</b><span>${label||'прогресс'}</span></div></div>${sub?`<p class="ring-sub">${sub}</p>`:''}</div>`;
+  const r = 38;
+  const c = Math.round(2 * Math.PI * r);
+  const offset = Math.round(c * (1 - p / 100));
+  return `<div class="ring-wrap clean-progress-widget">
+    <div class="ring-svg-box">
+      <svg class="ring-svg" viewBox="0 0 96 96" aria-label="${p}%">
+        <circle class="ring-track" cx="48" cy="48" r="${r}"></circle>
+        <circle class="ring-value" cx="48" cy="48" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${offset}"></circle>
+      </svg>
+      <div class="ring-center-text"><b>${p}%</b><span>${label||'прогресс'}</span></div>
+    </div>
+    ${sub?`<p class="ring-sub">${sub}</p>`:''}
+  </div>`;
 }
+
+function lessonProgressMini(code) {
+  const score = lessonScore(code);
+  const percent = safePercent(score);
+  return `<div class="lesson-progress-mini">
+    <div class="lesson-progress-top"><span>Прогресс урока</span><b>${percent}%</b></div>
+    <div class="lesson-progress-bar"><div style="width:${percent}%"></div></div>
+    <div class="lesson-progress-bottom"><span>Баллы</span><b>${score} / 100</b></div>
+  </div>`;
+}
+
+function lessonOverviewCard(lesson) {
+  const img = lesson.overviewImage || `assets/lesson_overview/${lesson.code}.png`;
+  return `<section class="lesson-overview-card">
+    <img src="${img}?v=2" alt="Карта урока" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+    <div class="lesson-overview-placeholder">
+      <b>Карта урока будет добавлена позже</b>
+      <p>На этом месте будет одно изображение: что находится внутри урока — презентация, тест, саммари, ДЗ и практический результат. Словесное дублирование этапов здесь убрано.</p>
+    </div>
+  </section>`;
+}
+
+function getActivityProgressInfo(key) {
+  const lessons = activityLessons(key);
+  const openCount = lessons.filter(canOpenLesson).length;
+  const doneCount = lessons.filter(l => lessonScore(l.code) >= 100).length;
+  return { lessons, openCount, doneCount };
+}
+
 
 function cleanStudentHtml(html) {
   let out = String(html || "");
@@ -237,6 +278,46 @@ function cleanStudentHtml(html) {
   out = out.replace(/<p><b>Текст на изображении:[\s\S]*?<\/p>\s*/g, "");
   out = out.replace(/<p><b>Визуальная идея:[\s\S]*?<\/p>\s*/g, "");
   return out.trim() || "<p>Текст к этому блоку будет добавлен после редакторской проверки.</p>";
+}
+
+
+function stripTags(html) {
+  return String(html || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+function sentenceCount(text) {
+  const m = String(text || "").match(/[.!?…]+/g);
+  return m ? m.length : 0;
+}
+function paragraphCount(html) {
+  return (String(html || "").match(/<p[\s>]/g) || []).length;
+}
+function needsLectureExpansion(html) {
+  const plain = stripTags(html);
+  return paragraphCount(html) < 4 || sentenceCount(plain) < 12 || plain.split(/\s+/).length < 230;
+}
+function extractMetaText(html, label) {
+  const re = new RegExp(label + ":<\\/b><p>([\\s\\S]*?)<\\/p>", "i");
+  const m = String(html || "").match(re);
+  return m ? stripTags(m[1]) : "";
+}
+function renderDisplayText(item, kind) {
+  const raw = item && item.descriptionHtml ? item.descriptionHtml : "";
+  const cleaned = cleanStudentHtml(raw);
+  if (kind !== "slide") return cleaned;
+  if (!needsLectureExpansion(cleaned)) return cleaned;
+  const title = stripTags((item && item.title) || "Слайд");
+  const imageText = extractMetaText(raw, "Текст на изображении");
+  const base = stripTags(cleaned).replace(title, "").trim();
+  const topic = imageText || base || title;
+  return `
+    <h3>${esc(title)}</h3>
+    <div class="mini-lecture-note">Мини-лекция к слайду</div>
+    <p>${esc(topic)} Эта часть урока рассматривается как отдельный управленческий узел, а не как короткая подпись к изображению. Важно видеть не только термин, но и связь элемента с общей системой: вход, решение клиента, экономика, ресурс, деньги и следующий шаг.</p>
+    <p>${esc(base || topic)} В практической логике Л.Е.Г.О каждый слайд помогает поставить диагноз точнее. Поэтому материал читается через вопрос: какой факт нужно собрать, какая метрика подтверждает ситуацию и какое действие нельзя делать преждевременно. Такая структура защищает от ошибки — реагировать на симптом быстрее, чем найдена причина.</p>
+    <p>Для предпринимательской практики этот блок работает как фильтр решений. Если показатель просел, сначала определяется место разрыва в цепочке, затем проверяется причина и только после этого выбирается действие. Без такой последовательности даже правильный инструмент может быть применён не туда и усилить слабое место системы.</p>
+    <p>Итоговая польза слайда — перевести общую тему в конкретное управленческое наблюдение. После изучения блока должна остаться рабочая связка: что измеряется, где возможна потеря, какое решение кажется очевидным, но может быть ошибочным, и какая проверка на 7 дней даст более точный вывод. Именно так презентация становится не просмотром, а подготовкой к ДЗ.</p>
+    ${cleaned.includes('practice-box') ? '' : '<div class="practice-box"><b>Мини-действие:</b><p>Зафиксировать один факт из собственного бизнеса, который относится к этому слайду.</p></div>'}
+  `;
 }
 
 function legacyTradeImage(label, current) {
@@ -305,36 +386,51 @@ function renderHome() {
           <p>${esc(act.title)} · урок ${String(meta.number).padStart(2,'0')} · ${esc(meta.title)}</p>
           <button class="btn primary" onclick="openLesson('${meta.code}')">Продолжить</button>
         </div>
-        ${progressRing(score, 'урок', 'Баллы текущего урока')}
+        ${progressRing(score, 'урок', 'текущий модуль')}
       </div>
     `)}
 
-    ${card('', `<h2>Основные блоки</h2><p>Выберите маршрут. Активный блок сейчас — предпринимательская система.</p>
+    ${card('', `<h2>Основные блоки</h2><p>Выберите крупный маршрут. Направления бизнеса открываются внутри блока «Я предприниматель».</p>
       <div class="top-track-grid">
         <button class="track-card disabled"><b>Нет своего бизнеса</b><p>Запуск, выбор ниши, проверка идеи. Раздел будет подключён позже.</p></button>
         <button class="track-card active" onclick="renderLearning()"><b>Я предприниматель</b><p>Диагностика, уроки, ДЗ, проверка и управленческие действия.</p></button>
         <button class="track-card disabled"><b>Я сотрудник</b><p>Маршрут для руководителей, директоров и управленцев внутри компании.</p></button>
       </div>`)}
-
-    ${card('', `<h2>Направления предпринимателя</h2><p>Первые уроки доступны во всех направлениях. Следующий урок в каждом направлении открывается после приёмки ДЗ по предыдущему уроку.</p>
-      <div class="activity-mini-grid">
-        ${state.catalog.activities.map(a=>`<button class="activity-mini" onclick="setSelectedActivity('${a.key}')"><span>${a.icon}</span><b>${esc(a.title)}</b></button>`).join('')}
-      </div>`)}
   `;
   shell(html, 'home');
 }
 function renderLearning() {
-  const act = getActivity(state.selectedActivityKey) || state.catalog.activities[0];
-  const adminNote = isAdminMode() ? `<p class="small admin-note">Режим администратора: все уроки открыты для проверки и предпросмотра.</p>` : "";
   const html = `
-    ${card('blue-card-v2', `<h1>Обучение</h1><p>Выбор направления и урока. Первый урок в каждом направлении доступен сразу. Дальше уроки открываются после приёмки ДЗ.</p>${adminNote}`)}
+    ${card('blue-card-v2', `<h1>Я предприниматель</h1><p>Сначала выбирается вид деятельности. После выбора откроется маршрут из 10 уроков внутри конкретного направления.</p>${isAdminMode() ? '<p class="small admin-note">Режим администратора: после выбора направления будут доступны все уроки.</p>' : ''}`)}
     <div class="activity-grid-v2">
-      ${state.catalog.activities.map(a=>`<button class="activity-card-v2 ${a.key===state.selectedActivityKey?'active':''}" onclick="setSelectedActivity('${a.key}')"><span>${a.icon}</span><b>${esc(a.title)}</b><small>${esc(a.chain)}</small></button>`).join('')}
+      ${state.catalog.activities.map(a=>{
+        const info = getActivityProgressInfo(a.key);
+        return `<button class="activity-card-v2 ${a.key===state.selectedActivityKey?'active':''}" onclick="renderActivityLessons('${a.key}')">
+          <span>${a.icon}</span>
+          <b>${esc(a.title)}</b>
+          <small>${esc(a.chain)}</small>
+          <em>${info.openCount} из ${info.lessons.length} уроков доступно</em>
+        </button>`;
+      }).join('')}
     </div>
-    ${card('', `<h2>${esc(act.title)}</h2><p>${esc(act.chain)}</p><div class="lesson-list-v2">${activityLessons(act.key).map(renderLessonRow).join('')}</div>`)}
   `;
   shell(html, 'learning');
 }
+
+function renderActivityLessons(key) {
+  if (key && getActivity(key)) {
+    state.selectedActivityKey = key;
+    localStorage.setItem("lego_selected_activity", key);
+  }
+  const act = getActivity(state.selectedActivityKey) || state.catalog.activities[0];
+  const info = getActivityProgressInfo(act.key);
+  const html = `
+    ${card('blue-card-v2', `<p class="eyebrow">Я предприниматель</p><h1>${esc(act.title)}</h1><p>${esc(act.chain)}</p><p class="small">Первый урок доступен сразу. Следующий урок открывается после приёмки ДЗ предыдущего урока.</p>`)}
+    ${card('', `<div class="activity-toolbar"><button class="btn secondary" onclick="renderLearning()">К видам деятельности</button></div><h2>Уроки направления</h2><p>Доступно: <b>${info.openCount} из ${info.lessons.length}</b>. Пройдено: <b>${info.doneCount}</b>.</p><div class="lesson-list-v2">${info.lessons.map(renderLessonRow).join('')}</div>`)}
+  `;
+  shell(html, 'learning');
+}
+
 function renderLessonRow(l) {
   const score=lessonScore(l.code); const locked=!canOpenLesson(l);
   return `<button class="lesson-row-v2 ${locked?'locked':''}" onclick="openLesson('${l.code}')">
@@ -345,13 +441,12 @@ function renderLessonRow(l) {
 async function renderLessonHub() {
   const lesson = await loadLesson(state.selectedLessonCode);
   const meta = getLessonMeta(state.selectedLessonCode);
-  const score=lessonScore(meta.code);
   const adminService = isAdminMode() && lesson.passportText ? `<details class="admin-details"><summary>Служебное описание урока</summary><pre class="text-pre">${esc(lesson.passportText || '')}</pre></details>` : "";
   const html = `
-    ${card('blue-card-v2', `<p class="eyebrow">${esc(lesson.activityTitle)} · урок ${String(lesson.number).padStart(2,'0')}</p><h1>${esc(lesson.title)}</h1><p>${esc(lesson.description)}</p>${progressRing(score,'урок')}`)}
-    ${card('', `<h2>Что внутри урока</h2><div class="lesson-inside-grid"><div><b>Презентация</b><p>Основная логика урока и практические разборы.</p></div><div><b>Тест</b><p>Проверка понимания на ситуационных вопросах.</p></div><div><b>Саммари</b><p>5 книг, которые усиливают тему урока.</p></div><div><b>ДЗ</b><p>Таблица, вывод, действие и проверка.</p></div></div>`)}
+    ${card('blue-card-v2 lesson-head-card', `<p class="eyebrow">${esc(lesson.activityTitle)} · урок ${String(lesson.number).padStart(2,'0')}</p><h1>${esc(lesson.title)}</h1><p>${esc(lesson.description)}</p>${lessonProgressMini(meta.code)}`)}
+    ${lessonOverviewCard(lesson)}
     <div class="stage-grid-v2">
-      ${stageCard('presentation','Презентация','основные слайды и текст',isStageDone(meta.code,'presentation'),'startSlides()')}
+      ${stageCard('presentation','Презентация','основные слайды и мини-лекции',isStageDone(meta.code,'presentation'),'startSlides()')}
       ${stageCard('quiz','Тест','25 ситуационных вопросов',isStageDone(meta.code,'quiz'),'startQuiz(false)',!isStageDone(meta.code,'presentation') && !isAdminMode())}
       ${stageCard('books','Саммари','5 книг × 5 экранов + финал',isStageDone(meta.code,'books'),'startBooks()',!isStageDone(meta.code,'quiz') && !isAdminMode())}
       ${stageCard('homework','ДЗ','таблица, вывод и проверка',isStageDone(meta.code,'homeworkSubmitted'),'renderHomework()',!isStageDone(meta.code,'books') && !isAdminMode())}
@@ -362,12 +457,12 @@ async function renderLessonHub() {
 }
 function stageCard(key,title,note,done,action,locked){ return `<button class="stage-card-v2 ${done?'done':''} ${locked?'locked':''}" onclick="${locked?'alert(\'Этап пока закрыт.\')':action}"><b>${title}</b><p>${note}</p><span>${done?'✓':(locked?'🔒':'→')}</span></button>`; }
 async function startSlides(){ const p=getProgress(state.selectedLessonCode); state.slideIndex = Math.max(0, Number(p.last_slide_number || 1)-1); await remoteSave('lesson_started',{lastSlideNumber:state.slideIndex+1}); renderSlide(); }
-async function renderSlide(){ const lesson=await loadLesson(state.selectedLessonCode); const slide=lesson.slides[state.slideIndex]; shell(`${topLessonNav('prevSlide()','nextSlide()',state.slideIndex===0,state.slideIndex===lesson.slides.length-1?'К тесту':'Далее')} ${mediaScreen(slide.image,'Слайд',state.slideIndex+1,lesson.slides.length,slide.descriptionHtml)}`,'learning'); }
+async function renderSlide(){ const lesson=await loadLesson(state.selectedLessonCode); const slide=lesson.slides[state.slideIndex]; shell(`${topLessonNav('prevSlide()','nextSlide()',state.slideIndex===0,state.slideIndex===lesson.slides.length-1?'К тесту':'Далее')} ${mediaScreen(slide.image,'Слайд',state.slideIndex+1,lesson.slides.length,renderDisplayText(slide,'slide'))}`,'learning'); }
 function topLessonNav(prev,next,prevDisabled,nextLabel){ return `<div class="nav-panel-v2 nav-panel-v2-three"><button class="btn secondary" onclick="renderLessonHub()">К уроку</button><button class="btn secondary" ${prevDisabled?'disabled':''} onclick="${prev}">Назад</button><button class="btn primary" onclick="${next}">${nextLabel}</button></div>`; }
 function mediaScreen(image,label,current,total,html){
   const legacy = legacyTradeImage(label, current);
   const src = legacy || image || "";
-  return `<div class="media-counter">${label}: ${current}/${total}</div><div class="media-box-v2"><img src="${src}?v=7" data-label="${label}" data-index="${current}" onerror="handleImageError(this)"><div class="image-missing-v2" style="display:none"><b>${label} ${current}</b><p>Иллюстрация в подготовке.</p></div></div><section class="slide-text-v2">${cleanStudentHtml(html)}</section>`;
+  return `<div class="media-counter">${label}: ${current}/${total}</div><div class="media-box-v2"><img src="${src}?v=8" data-label="${label}" data-index="${current}" onerror="handleImageError(this)"><div class="image-missing-v2" style="display:none"><b>${label} ${current}</b><p>Иллюстрация в подготовке.</p></div></div><section class="slide-text-v2">${cleanStudentHtml(html)}</section>`;
 }
 async function prevSlide(){ if(state.slideIndex>0){ state.slideIndex--; await remoteSave('slide_viewed',{lastSlideNumber:state.slideIndex+1}); renderSlide(); } }
 async function nextSlide(){ const lesson=await loadLesson(state.selectedLessonCode); if(state.slideIndex<lesson.slides.length-1){ state.slideIndex++; await remoteSave('slide_viewed',{lastSlideNumber:state.slideIndex+1}); renderSlide(); } else { await remoteSave('presentation_completed',{lastSlideNumber:lesson.slides.length}); startQuiz(false); } }
@@ -378,18 +473,30 @@ async function prevQuestion(){ if(state.questionIndex>0){state.questionIndex--; 
 async function nextQuestion(){ const lesson=await loadLesson(state.selectedLessonCode); if(state.answers[state.questionIndex]===undefined){ alert('Выберите вариант ответа.'); return; } if(state.questionIndex<lesson.quiz.length-1){ state.questionIndex++; await remoteSave('quiz_progress',{currentQuestion:state.questionIndex,answers:state.answers}); renderQuestion(); } else { finishQuiz(); } }
 async function finishQuiz(){ const lesson=await loadLesson(state.selectedLessonCode); let score=0; lesson.quiz.forEach((q,i)=>{ if(state.answers[i]===q.correct) score++; }); const passed=score>=(lesson.passScore||19); await remoteSave('quiz_completed',{score,total:lesson.quiz.length,passed,answers:state.answers}); shell(card(passed?'result-ok-v2':'result-bad-v2', `<h1>${passed?'Тест пройден':'Тест не пройден'}</h1><p>Результат: <b>${score}/${lesson.quiz.length}</b>.</p><p>${passed?'Открыт блок саммари книг.':'Стоит вернуться к презентации и повторить логику урока.'}</p>${passed?actionButton('К саммари','startBooks()','primary'):actionButton('Вернуться к презентации','startSlides()','primary')}${actionButton('К уроку','renderLessonHub()','secondary')}`),'learning'); }
 async function startBooks(){ const p=getProgress(state.selectedLessonCode); state.bookIndex=Math.max(0,Number(p.last_book_slide_number||1)-1); await remoteSave('books_started',{lastBookSlideNumber:state.bookIndex+1}); renderBook(); }
-async function renderBook(){ const lesson=await loadLesson(state.selectedLessonCode); const scr=lesson.bookScreens[state.bookIndex]; shell(`${topLessonNav('prevBook()','nextBook()',state.bookIndex===0,state.bookIndex===lesson.bookScreens.length-1?'К ДЗ':'Далее')} ${mediaScreen(scr.image,'Саммари',state.bookIndex+1,lesson.bookScreens.length,scr.descriptionHtml)}`,'learning'); }
+async function renderBook(){ const lesson=await loadLesson(state.selectedLessonCode); const scr=lesson.bookScreens[state.bookIndex]; shell(`${topLessonNav('prevBook()','nextBook()',state.bookIndex===0,state.bookIndex===lesson.bookScreens.length-1?'К ДЗ':'Далее')} ${mediaScreen(scr.image,'Саммари',state.bookIndex+1,lesson.bookScreens.length,renderDisplayText(scr,'book'))}`,'learning'); }
 async function prevBook(){ if(state.bookIndex>0){ state.bookIndex--; await remoteSave('book_slide_viewed',{lastBookSlideNumber:state.bookIndex+1}); renderBook(); } }
 async function nextBook(){ const lesson=await loadLesson(state.selectedLessonCode); if(state.bookIndex<lesson.bookScreens.length-1){ state.bookIndex++; await remoteSave('book_slide_viewed',{lastBookSlideNumber:state.bookIndex+1}); renderBook(); } else { await remoteSave('books_completed',{lastBookSlideNumber:lesson.bookScreens.length}); renderHomework(); } }
 async function renderHomework(){
   const lesson=await loadLesson(state.selectedLessonCode);
+  const code = state.selectedLessonCode;
+  if (!isAdminMode() && !isStageDone(code, 'books')) {
+    shell(`${card('blue-card-v2', `<h1>ДЗ пока закрыто</h1><p>Домашнее задание открывается после презентации, теста и саммари. Так сохраняется порядок обучения и проверки.</p>`)}${card('', `${actionButton('К уроку','renderLessonHub()','primary')}`)}`,'homework');
+    return;
+  }
   await remoteSave('homework_started',{});
   const hw=lesson.homework||{};
   shell(`${card('blue-card-v2', `<h1>${esc(hw.title || 'Домашнее задание')}</h1><p>ДЗ закрепляет урок через управленческий вывод, действие на 7 дней и метрику проверки.</p>`)}${card('', `<h2>Порядок сдачи</h2><div class="list-clean"><div><b>1. Открыть таблицу</b><p>Сделать копию файла и заполнить данные по своему бизнесу.</p></div><div><b>2. Получить вывод</b><p>Сформулировать главный диагноз, следующий фокус и действие на 7 дней.</p></div><div><b>3. Отправить ссылку</b><p>Открыть доступ к таблице и отправить ссылку через форму сдачи ДЗ.</p></div><div><b>4. Дождаться проверки</b><p>Следующий урок откроется после приёмки ДЗ администратором.</p></div></div><div class="grid-v2">${externalButton('Открыть таблицу ДЗ',hw.sheetUrl||'#','primary')}${externalButton('Открыть форму сдачи',hw.submitFormUrl||'#','secondary')}${actionButton('Я отправил ДЗ','markHomeworkSubmitted()','primary')}</div>`)}${isAdminMode()?card('', `<details class="admin-details"><summary>Служебное ТЗ таблицы и критерии</summary><h3>ТЗ таблицы</h3><pre class="text-pre">${esc(hw.tableTzText || 'ТЗ таблицы будет добавлено позже.')}</pre><h3>Критерии</h3><pre class="text-pre">${esc(hw.gradingText || '')}</pre></details>`):''}`,'homework');
 }
 async function markHomeworkSubmitted(){ if(!confirm('Форма со ссылкой на ДЗ уже отправлена?')) return; await remoteSave('homework_submitted',{submittedAt:nowIso()}); renderHomeworkStatus(); }
 function renderHomeworkStatus(){ const code=state.selectedLessonCode; shell(`${card('blue-card-v2', `<h1>Статус ДЗ</h1><p>${isStageDone(code,'homeworkVerified')?'ДЗ проверено. Модуль закрыт.':(isStageDone(code,'homeworkSubmitted')?'ДЗ отправлено на проверку.':'ДЗ пока не отправлено.')}</p>`)}${actionButton('К уроку','renderLessonHub()','primary')}`,'homework'); }
-function renderHomeworkCenter(){ const lessons = state.catalog.lessons.filter(l=>isStageDone(l.code,'homeworkSubmitted') || canOpenLesson(l)).slice(0,20); shell(`${card('blue-card-v2', `<h1>Домашние задания</h1><p>Здесь собраны текущие ДЗ и статусы проверки.</p>`)}${card('', `<div class="lesson-list-v2">${lessons.map(l=>`<button class="lesson-row-v2" onclick="openLesson('${l.code}').then(()=>renderHomework())"><div><b>${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${isStageDone(l.code,'homeworkVerified')?'проверено':(isStageDone(l.code,'homeworkSubmitted')?'на проверке':'можно открыть')}</p></div><span>→</span></button>`).join('')}</div>`)}`,'homework'); }
+function renderHomeworkCenter(){
+  const visibleLessons = state.catalog.lessons.filter(l=>canOpenLesson(l) || isStageDone(l.code,'homeworkSubmitted')).slice(0,30);
+  shell(`${card('blue-card-v2', `<h1>Домашние задания</h1><p>Здесь отображаются ДЗ по открытым урокам. Если этап ДЗ ещё не открыт, сначала нужно пройти презентацию, тест и саммари.</p>`)}${card('', `<div class="lesson-list-v2">${visibleLessons.map(l=>{
+    const ready = isAdminMode() || isStageDone(l.code,'books');
+    const status = isStageDone(l.code,'homeworkVerified') ? 'проверено' : (isStageDone(l.code,'homeworkSubmitted') ? 'на проверке' : (ready ? 'можно сдавать' : 'закрыто до саммари'));
+    return `<button class="lesson-row-v2 ${ready?'':'locked'}" onclick="openLesson('${l.code}').then(()=>${ready?'renderHomework()':'renderLessonHub()'})"><div><b>${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${status}</p></div><span>${ready?'→':'🔒'}</span></button>`;
+  }).join('')}</div>`)}`,'homework');
+}
 
 function loadGrowthMetrics(){ try { return JSON.parse(localStorage.getItem('lego_growth_metrics')||'[]'); } catch(e){ return []; } }
 function saveGrowthMetrics(){ localStorage.setItem('lego_growth_metrics', JSON.stringify(state.growthMetrics||[])); }
@@ -399,10 +506,13 @@ function renderDashboard(){ const rows=state.growthMetrics||[]; shell(`${card('b
 function metricRow(r,i){ const diff=Number(r.after)-Number(r.before); const pct=r.before?Math.round(diff/Number(r.before)*100):0; return `<div class="metric-row"><div><b>${esc(r.name)}</b><p>${r.before} → ${r.after} · ${diff>=0?'+':''}${diff} ${r.before?`(${pct>=0?'+':''}${pct}%)`:''}</p></div><button onclick="removeMetric(${i})">×</button></div>`; }
 function renderProfile(){
   const total = totalProgressPercent();
+  const totalScore = (state.catalog.lessons || []).reduce((acc,l)=>acc+lessonScore(l.code),0);
+  const activeMeta = getLessonMeta(state.selectedLessonCode) || nextLessonMeta();
+  const activeScore = activeMeta ? lessonScore(activeMeta.code) : 0;
   const adminBlock = isAdminUser()
-    ? `${card('', `<h2>Режим работы</h2><p>Переключатель виден только администратору. У обычного ученика этот блок не отображается.</p><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Тест как ученик</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Админ</button></div>`)}`
+    ? card('', `<h2>Режим работы</h2><p>Этот блок виден только администратору. У обычного участника переключателя режима и админ-панели нет.</p><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Просмотр как ученик</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Админ</button></div><p class="small">Проверка администратора идёт по Telegram ID / username и роли, которую возвращает проверка доступа.</p>`)
     : '';
-  shell(`${card('blue-card-v2', `<h1>Профиль</h1><p>${esc(state.user?.first_name || 'Пользователь')} · ${isAdminUser()?'администратор':'участник'}</p>`)}${card('', `<h2>Общий прогресс</h2><p>Общий прогресс хранится здесь, чтобы не дублировать его внутри каждого направления.</p>${progressRing(total,'общий','по всем урокам')}`)}${adminBlock}${card('', `<h2>Поддержка</h2>${externalButton('Задать вопрос',SUPPORT_FORM_URL,'secondary')}${externalButton('Предложить идею',IDEA_FORM_URL,'secondary')}${isAdminUser()?actionButton('Админ-панель','renderAdmin()','primary'):''}`)}`,'profile');
+  shell(`${card('blue-card-v2', `<h1>Профиль</h1><p>${esc(state.user?.first_name || 'Пользователь')} · ${isAdminUser()?'администратор':'участник'}</p>`)}${card('', `<h2>Баллы и общий прогресс</h2><p>Общие баллы и общий прогресс хранятся здесь, чтобы не дублировать их внутри каждого направления.</p>${progressRing(total,'общий','по всем урокам')}<div class="profile-score-grid"><div><span>Всего баллов</span><b>${totalScore}</b></div><div><span>Текущий урок</span><b>${activeScore} / 100</b></div></div>`)}${adminBlock}${card('', `<h2>Поддержка</h2>${externalButton('Задать вопрос',SUPPORT_FORM_URL,'secondary')}${externalButton('Предложить идею',IDEA_FORM_URL,'secondary')}${isAdminUser()?actionButton('Админ-панель','renderAdmin()','primary'):''}`)}`,'profile');
 }
 function renderAdmin(){ if(!isAdminUser()){alert('Нет прав администратора.'); return;} shell(`${card('blue-card-v2', `<h1>Админ-панель</h1><p>Полный доступ ко всем урокам, предпросмотр контента и проверка ДЗ.</p>`)}${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${state.catalog.lessons.map(l=>`<button class="lesson-row-v2" onclick="openLesson('${l.code}')"><div><b>${esc(l.code)} · ${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${l.slidesCount} слайдов · ${l.quizCount} вопросов · ${l.bookScreensCount} саммари</p></div><span>→</span></button>`).join('')}</div>`)}${card('', `<h2>Проверка ДЗ</h2><input id="admin-target-user" placeholder="Telegram ID или username ученика"><textarea id="admin-review-comment" placeholder="Комментарий проверяющего"></textarea><button class="btn primary" onclick="adminApproveTargetUser()">Принять ДЗ</button><button class="btn secondary" onclick="adminRejectTargetUser()">Отправить на доработку</button>`)}`,'profile'); }
 async function adminReview(action){ const target=$('admin-target-user')?.value.trim(); const comment=$('admin-review-comment')?.value.trim(); if(!target){alert('Укажите ученика.'); return;} if(action==='reject_homework'&&!comment){alert('Для доработки нужен комментарий.'); return;} if(!tg||!tg.initData){alert('Админ-проверка работает внутри Telegram WebApp.'); return;} const res=await fetch(ADMIN_REVIEW_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData,lessonCode:state.selectedLessonCode,targetUser:target,action,comment,checkedAt:nowIso(),homeworkScore:70})}); const out=await res.json().catch(()=>({})); alert(out.ok?'Готово. Статус обновлён.':('Ошибка: '+(out.reason||out.error||'неизвестно'))); }
@@ -420,6 +530,7 @@ async function checkAccess(){
     const result=await response.json().catch(()=>({}));
     if(!response.ok || !result.access){ accessDenied(result.reason||'ACCESS_DENIED'); return; }
     state.access=true; state.accessReason=result.reason; state.user=result.user || null; state.role=result.user?.role || 'student';
+    if (!isAdminUser()) { state.appMode = 'student'; localStorage.setItem('lego_app_mode','student'); }
     state.remoteProgressByLesson = result.progress_by_lesson || result.progressByLesson || {};
     if(result.progress && result.lesson && result.lesson.code) state.remoteProgressByLesson[result.lesson.code]=result.progress;
     if(isAdminUser() && !localStorage.getItem('lego_app_mode')) state.appMode='admin';
