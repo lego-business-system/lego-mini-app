@@ -1407,3 +1407,309 @@ function renderAdmin(){
   if(!isAdminUser()){ alert('Нет прав Босса Л.Е.Г.О.'); return; }
   shell(`${card('blue-card-v2', `<h1>Панель Босса Л.Е.Г.О</h1><p>Полный доступ ко всем урокам, предпросмотр контента и проверка ДЗ.</p>`)}${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${state.catalog.lessons.map(l=>`<button class="lesson-row-v2" onclick="openLesson('${l.code}')"><div><b>${esc(l.code)} · ${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${l.slidesCount} слайдов · ${l.quizCount} вопросов · ${l.bookScreensCount} саммари</p></div><span>→</span></button>`).join('')}</div>`)}${card('', `<h2>Проверка ДЗ</h2><input id="admin-target-user" placeholder="Telegram ID или username ученика"><textarea id="admin-review-comment" placeholder="Комментарий проверяющего"></textarea><button class="btn primary" onclick="adminApproveTargetUser()">Принять ДЗ</button><button class="btn secondary" onclick="adminRejectTargetUser()">Отправить на доработку</button>`)}`,'profile');
 }
+
+
+/* =====================================================
+   v15 overrides — achievement, compact dashboard, lesson notes sharing, dates, My Business
+   ===================================================== */
+
+const SAVE_INSIGHT_URL = "https://soxtekhspohkddpdidvp.supabase.co/functions/v1/save-insight";
+
+function progressBarHtml(percent, cls) {
+  const p = safePercent(percent);
+  return `<div class="progress-line ${cls || ''}"><div style="width:${p}%"></div></div>`;
+}
+
+function stageCompletedDate(code, stage) {
+  const p = getProgress(code);
+  if (stage === 'presentation') return p.presentation_completed_at || p.presentation_started_at || null;
+  if (stage === 'quiz') return p.quiz_completed_at || p.quiz_started_at || null;
+  if (stage === 'books') return p.books_completed_at || p.books_started_at || null;
+  if (stage === 'homeworkSubmitted') return p.homework_submitted_at || p.homework_started_at || null;
+  if (stage === 'homeworkVerified') return p.homework_verified_at || p.homework_checked_at || p.completed_at || null;
+  return null;
+}
+function stageStatusText(code, stage) {
+  if (stage === 'homeworkVerified') return isStageDone(code,'homeworkVerified') ? 'принято' : (isStageDone(code,'homeworkSubmitted') ? 'на проверке' : 'ожидает ДЗ');
+  if (stage === 'homeworkSubmitted') return isStageDone(code,'homeworkSubmitted') ? 'отправлено' : 'не отправлено';
+  return isStageDone(code, stage) ? 'пройдено' : 'не пройдено';
+}
+function lessonTimelineHtml(code) {
+  const rows = [
+    ['presentation','Презентация'],
+    ['quiz','Тест'],
+    ['books','Саммари'],
+    ['homeworkSubmitted','ДЗ отправлено'],
+    ['homeworkVerified','ДЗ принято']
+  ];
+  return card('lesson-timeline-card', `<h2>История прохождения</h2><div class="timeline-grid">${rows.map(([stage,label])=>{
+    const status = stageStatusText(code, stage);
+    const date = stageCompletedDate(code, stage);
+    const done = status === 'пройдено' || status === 'отправлено' || status === 'принято';
+    const review = status === 'на проверке';
+    return `<div class="timeline-row ${done?'done':''} ${review?'review':''}"><span>${esc(label)}</span><b>${esc(status)}</b><em>${date ? shortDate(date) : '—'}</em></div>`;
+  }).join('')}</div>`);
+}
+function homeworkReviewNoticeHtml(code) {
+  if (isStageDone(code,'homeworkSubmitted') && !isStageDone(code,'homeworkVerified')) {
+    return `<div class="homework-review-notice"><b>Домашнее задание на проверке</b><p>Работа отправлена ${shortDate(stageCompletedDate(code,'homeworkSubmitted'))}. После проверки Босс Л.Е.Г.О примет ДЗ или вернёт его на доработку.</p></div>`;
+  }
+  if (isStageDone(code,'homeworkVerified')) {
+    return `<div class="homework-review-notice accepted"><b>Домашнее задание принято</b><p>Проверка завершена ${shortDate(stageCompletedDate(code,'homeworkVerified'))}. Урок засчитан.</p></div>`;
+  }
+  return '';
+}
+
+function lessonProgressMini(code) {
+  const info = lessonStageProgressInfo(code);
+  return `<div class="lesson-progress-mini stage-progress-mini">
+    <div class="lesson-progress-top"><span>Прогресс урока</span><b>${info.percent}%</b></div>
+    <div class="lesson-progress-bar"><div style="width:${info.percent}%"></div></div>
+  </div>`;
+}
+
+function titleHelpHtml() {
+  const rows = LEGO_LEVELS.map(row => `<div><b>${row.level}. ${esc(row.title)}</b><span>${row.level === 25 ? '1000+ учебных единиц' : `${row.min}–${row.max} учебных единиц`}</span></div>`).join('');
+  return `<div id="title-help-panel" class="title-help-panel" style="display:none">
+    <div class="title-help-head"><b>Как работает уровень</b><button onclick="toggleTitleHelp(false)" aria-label="Закрыть">×</button></div>
+    <p>Уровень показывает накопленный учебный опыт. Учебные единицы начисляются за полностью закрытые уроки, книги челленджа после мини-теста, дополнительные материалы и специальные задания.</p>
+    <p>В челлендже одна книга после пройденного теста даёт +1 учебную единицу. Баллы начисляются отдельно и могут тратиться на возможности внутри системы.</p>
+    <p>Достижение «Мастер Л.Е.Г.О» открывается после 1000 учебных единиц. На последнем уровне будет доступен суперсекретный бонус.</p>
+    <div class="level-help-list">${rows}</div>
+  </div>`;
+}
+function titleCardHtml() {
+  const info = studentTitleInfo();
+  return card('title-card-v12', `<div class="title-card-head"><div><p class="eyebrow">уровень ученика</p><h2>${esc(info.current.title)}</h2></div><button class="help-dot" onclick="toggleTitleHelp()" aria-label="Как работают уровни">?</button></div>${titleHelpHtml()}<div class="title-stat-row"><div><span>Уровень</span><b>${info.current.level} / 25</b></div><div><span>Учебные единицы</span><b>${formatPoints(info.units)}</b></div></div>${levelBarHtml(info)}<p class="small title-note">${info.secretUnlocked ? 'Суперсекретный бонус открыт.' : `До следующего уровня: ${formatPoints(info.left)} учебных единиц.`}</p>`);
+}
+function achievementInlineHtml() {
+  const info = studentTitleInfo();
+  return `<div class="achievement-inline"><div class="achievement-head"><div><span>Достижение</span><b>${esc(info.current.title)}</b></div><button class="help-dot" onclick="toggleTitleHelp()" aria-label="Как работают уровни">?</button></div>${titleHelpHtml()}${levelBarHtml(info)}</div>`;
+}
+
+function renderMainBlockCard(title, text, status, action, cls) {
+  const clickable = Boolean(action);
+  return `<button class="track-card ${cls || ''} ${clickable ? '' : 'disabled'}" ${clickable ? `onclick="${action}"` : 'disabled'}>
+    <b>${esc(title)}</b><p>${esc(text)}</p><em>${esc(status)}</em>
+  </button>`;
+}
+function renderHome() {
+  const gp = globalStageProgress();
+  const points = totalPoints();
+  const html = `
+    ${card('hero-dashboard main-dashboard-card merged-dashboard-card', `
+      <div class="merged-dashboard-top">
+        <div>
+          <p class="eyebrow">общая система</p>
+          <h1>Ваш прогресс</h1>
+          <p>Прогресс считается по пройденным этапам готовых уроков: презентация, тест, саммари и принятое домашнее задание.</p>
+        </div>
+        ${progressRing(gp.percent, 'общий', `${gp.done} из ${gp.total || 0}`)}
+      </div>
+      <div class="dashboard-mini-grid dashboard-mini-grid-compact">
+        <div><span>Баллы</span><b>${formatPoints(points)}</b></div>
+        <div><span>Достижение</span><b>${esc(studentTitleInfo().current.title)}</b></div>
+      </div>
+      ${achievementInlineHtml()}
+    `)}
+    ${activeChallengeCardHtml()}
+    ${card('', `<h2>Выбрать блок</h2><p>Выберите направление работы внутри платформы.</p>
+      <div class="top-track-grid top-track-grid-six">
+        ${renderMainBlockCard('Нет своего бизнеса','Базовый маршрут для подготовки к предпринимательскому мышлению и запуску.','скоро','','disabled')}
+        ${renderMainBlockCard('Я предприниматель','Диагностика, уроки, ДЗ, проверка и управленческие действия.','доступно','renderLearning()','active')}
+        ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','','disabled')}
+        ${renderMainBlockCard('100 книг за 100 дней','Ежедневный челлендж: одна книга, 24 часа, мини-тест, +1 учебная единица и баллы серии.','скоро','','disabled')}
+        ${renderMainBlockCard('Дополнительные материалы','Отдельные уроки, разборы и материалы, которые дополняют основной маршрут.','скоро','','disabled')}
+        ${renderMainBlockCard('VIP уровень','Расширенный уровень участия, закрытые форматы, персональные разборы и дополнительные возможности.','в разработке','','disabled')}
+      </div>`)}
+  `;
+  shell(html, 'home');
+}
+
+function entrepreneurCurrentStepCard() {
+  const meta = nextLessonMeta();
+  if (!meta) return '';
+  const act = getActivity(meta.activityKey);
+  const info = lessonStageProgressInfo(meta.code);
+  const p = getProgress(meta.code);
+  const place = p.last_book_slide_number ? `Саммари ${p.last_book_slide_number}` : (p.last_slide_number ? `Слайд ${p.last_slide_number}` : 'Начало урока');
+  return card('blue-card-v2 current-step-card', `<p class="eyebrow">ваш текущий шаг</p><h1>${esc(lessonStageLabel(meta.code))}</h1><p>${esc(act?.title || '')} · урок ${String(meta.number).padStart(2,'0')} · ${esc(meta.title)}</p><div class="step-progress-block"><div class="step-summary-line"><span>Прогресс урока</span><b>${info.percent}%</b></div>${progressBarHtml(info.percent,'on-dark')}</div><div class="step-summary-line"><span>Последнее место</span><b>${esc(place)}</b></div><button class="btn primary" onclick="continueLessonFromProgress('${meta.code}')">Продолжить с последнего места</button>`);
+}
+function renderActivityLessons(key) {
+  if (key && getActivity(key)) {
+    state.selectedActivityKey = key;
+    localStorage.setItem("lego_selected_activity", key);
+  }
+  const act = getActivity(state.selectedActivityKey) || state.catalog.activities[0];
+  const info = getActivityProgressInfo(act.key);
+  const readyNote = info.readyCount ? 'Первый готовый урок доступен сразу. Следующий урок открывается после приёмки ДЗ предыдущего урока.' : 'Материалы направления временно закрыты: уроки откроются после оформления изображений, тестов и проверки логики.';
+  const html = `
+    ${card('blue-card-v2 activity-progress-head', `<p class="eyebrow">Я предприниматель</p><h1>${esc(act.title)}</h1><p>${esc(activityIntroText(act))}</p><p class="small">${readyNote}</p><div class="step-progress-block"><div class="step-summary-line"><span>Прогресс направления</span><b>${info.routePercent}%</b></div>${progressBarHtml(info.routePercent,'on-dark')}</div>`)}
+    ${card('', `<div class="activity-toolbar"><button class="btn secondary" onclick="renderLearning()">К видам деятельности</button></div><h2>Уроки направления</h2><p>Доступно сейчас: <b>${info.openCount} из ${info.lessons.length}</b>. Готово к выдаче: <b>${info.readyCount}</b>.</p><div class="lesson-list-v2">${info.lessons.map(renderLessonRow).join('')}</div>`)}
+  `;
+  shell(html, 'learning');
+}
+
+function saveSharedInsightDraft(entry) {
+  const key = insightsKey() + '_shared';
+  let list = [];
+  try { list = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) { list = []; }
+  list.unshift(entry);
+  localStorage.setItem(key, JSON.stringify(list.slice(0, 100)));
+}
+async function sendInsightToBoss(entry) {
+  if (!entry.shared) return { ok: true, skipped: true };
+  if (!tg || !tg.initData) return { ok: false, localOnly: true, reason: 'TELEGRAM_ONLY' };
+  try {
+    const res = await fetch(SAVE_INSIGHT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: tg.initData, lessonCode: entry.lessonCode, text: entry.text, shared: true, createdAt: entry.createdAt })
+    });
+    const out = await res.json().catch(()=>({}));
+    return out && out.ok ? out : { ok: false, reason: out.reason || out.error || 'SAVE_INSIGHT_FAILED' };
+  } catch(e) {
+    return { ok: false, reason: 'SAVE_INSIGHT_UNAVAILABLE' };
+  }
+}
+async function saveLessonInsight() {
+  const input = $('lesson-insight-input');
+  const checkbox = $('lesson-insight-share');
+  const text = String(input?.value || '').trim();
+  if (!text) { alert('Запишите вывод или заметку одной-двумя фразами.'); return; }
+  const meta = getLessonMeta(state.selectedLessonCode);
+  const entry = {
+    id: Date.now(),
+    lessonCode: state.selectedLessonCode,
+    lessonTitle: meta?.title || '',
+    activityTitle: meta?.activityTitle || '',
+    text,
+    shared: Boolean(checkbox && checkbox.checked),
+    createdAt: nowIso()
+  };
+  const list = loadInsights();
+  list.unshift(entry);
+  saveInsights(list.slice(0, 100));
+  if (entry.shared) {
+    saveSharedInsightDraft(entry);
+    const result = await sendInsightToBoss(entry);
+    if (!result.ok) {
+      console.warn('INSIGHT_SHARE_LOCAL_ONLY', result);
+      alert('Вывод сохранён и отмечен для передачи Боссу Л.Е.Г.О. Для автоматической передачи нужно подключить функцию save-insight в Supabase.');
+    }
+  }
+  if (input) input.value = '';
+  renderLessonHub();
+}
+function lessonInsightCard() {
+  const list = loadInsights().filter(x => x.lessonCode === state.selectedLessonCode).slice(0,3);
+  return card('insight-card', `<h2>Мой вывод по уроку</h2><p>Сохраняйте здесь главный вывод или короткие заметки по уроку. Это поможет вернуться к мысли перед ДЗ и следующим действием.</p><textarea id="lesson-insight-input" rows="3" placeholder="Например: главное ограничение сейчас не в потоке, а в переходе заявки в оплату..."></textarea><label class="share-insight-check"><input type="checkbox" id="lesson-insight-share"><span>Поделиться этим выводом с Боссом Л.Е.Г.О</span></label><button class="btn primary" onclick="saveLessonInsight()">Сохранить вывод</button>${list.length ? `<div class="insight-list-mini">${list.map(x=>`<div><b>${shortDate(x.createdAt)}${x.shared ? ' · отправить Боссу' : ''}</b><p>${esc(x.text)}</p></div>`).join('')}</div>` : ''}`);
+}
+
+function renderLessonHub() {
+  loadLesson(state.selectedLessonCode).then(lesson => {
+    const meta = getLessonMeta(state.selectedLessonCode);
+    const activityKey = meta ? meta.activityKey : (lesson.activityKey || state.selectedActivityKey);
+    const adminService = isAdminMode() && lesson.passportText ? `<details class="admin-details"><summary>Служебное описание урока</summary><pre class="text-pre">${esc(lesson.passportText || '')}</pre></details>` : "";
+    const html = `
+      ${card('blue-card-v2 lesson-head-card', `<p class="eyebrow">${esc(lesson.activityTitle)} · урок ${String(lesson.number).padStart(2,'0')}</p><h1>${esc(lesson.title)}</h1><div class="lesson-meta-chips"><span>${esc(lesson.activityTitle)}</span><span>Урок ${String(lesson.number).padStart(2,'0')}</span></div><p>${esc(cleanLessonDescription(lesson))}</p>${lessonProgressMini(meta.code)}${homeworkReviewNoticeHtml(meta.code)}<button class="btn primary" onclick="continueLessonFromProgress('${meta.code}')">Продолжить с последнего места</button>`)}
+      ${lessonOverviewCard(lesson)}
+      <div class="stage-grid-v2">
+        ${stageCard('presentation','Презентация','Информационная часть урока',isStageDone(meta.code,'presentation'),'startSlides()')}
+        ${stageCard('quiz','Тест','Проверка понимания материала',isStageDone(meta.code,'quiz'),'startQuiz(false)',!isStageDone(meta.code,'presentation') && !isAdminMode())}
+        ${stageCard('books','Саммари','Информация о полезных книгах',isStageDone(meta.code,'books'),'startBooks()',!isStageDone(meta.code,'quiz') && !isAdminMode())}
+        ${stageCard('homework','Домашнее задание','Практическая часть урока',isStageDone(meta.code,'homeworkSubmitted'),'renderHomework()',!isStageDone(meta.code,'books') && !isAdminMode())}
+      </div>
+      ${lessonTimelineHtml(meta.code)}
+      ${lessonInsightCard()}
+      ${card('', `<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">← К выбору уроков</button>`)}
+      ${adminService}
+    `;
+    shell(html, 'learning');
+  }).catch(e => emergencyScreen(e.message || 'LESSON_HUB_ERROR'));
+}
+
+function renderHomeworkStatus(){
+  const code = state.selectedLessonCode;
+  const meta = getLessonMeta(code);
+  const activityKey = meta ? meta.activityKey : state.selectedActivityKey;
+  const statusText = isStageDone(code,'homeworkVerified') ? 'Домашнее задание принято' : (isStageDone(code,'homeworkSubmitted') ? 'Домашнее задание на проверке' : 'Домашнее задание пока не отправлено');
+  const detail = isStageDone(code,'homeworkVerified')
+    ? `Проверка завершена ${shortDate(stageCompletedDate(code,'homeworkVerified'))}. Урок засчитан.`
+    : (isStageDone(code,'homeworkSubmitted') ? `Работа отправлена ${shortDate(stageCompletedDate(code,'homeworkSubmitted'))}. После проверки откроется следующий шаг или появится доработка.` : 'Откройте домашнее задание, заполните шаблон и отправьте форму на проверку.');
+  shell(`${card('blue-card-v2', `<h1>${esc(statusText)}</h1><p>${esc(detail)}</p>`)}${lessonTimelineHtml(code)}${card('', `${actionButton('К уроку','renderLessonHub()','primary')}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button>`)}`,'homework');
+}
+
+function consultationCardsHtml(points) {
+  const missing = Math.max(0, CONSULTATION_COST - Number(points || 0));
+  const canRequest = missing <= 0;
+  return card('consultation-card', `<h2>Консультации</h2><div class="consult-grid"><div><b>Консультация за баллы</b><p>Стоимость: ${consultationCostText()}.</p><p>${canRequest ? 'Баллов достаточно. Можно отправить заявку на консультацию за баллы.' : `Недостаточно баллов. Нужно ещё: ${formatPoints(missing)}.`}</p>${canRequest ? externalButton('Запросить консультацию за баллы', CONSULTATION_FORM_URL, 'primary') : '<button class="btn secondary" disabled>Недостаточно баллов</button>'}</div><div><b>Индивидуальная консультация</b><p>Можно оставить заявку на разбор бизнеса, управленческого вопроса или конкретной ситуации. Условия консультации согласовываются отдельно.</p>${externalButton('Подать заявку на индивидуальную консультацию', CONSULTATION_FORM_URL, 'secondary')}</div></div><h3>Что можно будет получать за баллы</h3><p class="small">В разработке.</p>`);
+}
+function insightsProfileHtml() {
+  const list = loadInsights().slice(0, 8);
+  return card('insight-card', `<h2>Мои выводы</h2><p>Короткие управленческие выводы и заметки, которые вы сохранили внутри уроков.</p>${list.length ? `<div class="insight-list">${list.map(x=>`<div><div><b>${esc(x.activityTitle || '')} · ${esc(x.lessonTitle || x.lessonCode)}</b><span>${shortDate(x.createdAt)}${x.shared ? ' · отмечено для Босса Л.Е.Г.О' : ''}</span><p>${esc(x.text)}</p></div><button onclick="deleteInsight('${x.id}')">×</button></div>`).join('')}</div>` : '<p class="small">Пока выводов нет. Откройте урок и сохраните первый вывод после презентации или саммари.</p>'}`);
+}
+
+function businessEntriesKey(){
+  const ids = possibleIds();
+  const suffix = ids[0] || normalizeUsername(state.user?.username || getTelegramUser().username) || 'local';
+  return 'lego_my_business_entries_v1_' + suffix;
+}
+function loadBusinessEntries(){ try { return JSON.parse(localStorage.getItem(businessEntriesKey()) || '[]'); } catch(e){ return []; } }
+function saveBusinessEntries(list){ localStorage.setItem(businessEntriesKey(), JSON.stringify(Array.isArray(list) ? list.slice(0, 400) : [])); }
+function addBusinessEntry(){
+  const date = $('biz-date')?.value || new Date().toISOString().slice(0,10);
+  const revenue = Number($('biz-revenue')?.value || 0);
+  const expenses = Number($('biz-expenses')?.value || 0);
+  const cash = Number($('biz-cash')?.value || 0);
+  const leads = Number($('biz-leads')?.value || 0);
+  const sales = Number($('biz-sales')?.value || 0);
+  const note = String($('biz-note')?.value || '').trim();
+  const list = loadBusinessEntries();
+  list.unshift({ id: Date.now(), date, revenue, expenses, cash, leads, sales, note, createdAt: nowIso() });
+  saveBusinessEntries(list);
+  renderMyBusiness();
+}
+function deleteBusinessEntry(id){ saveBusinessEntries(loadBusinessEntries().filter(x => String(x.id) !== String(id))); renderMyBusiness(); }
+function businessSummary(days){
+  const cutoff = Date.now() - days * 86400000;
+  const rows = loadBusinessEntries().filter(x => new Date(x.date).getTime() >= cutoff);
+  const sum = (k) => rows.reduce((a,x)=>a+Number(x[k]||0),0);
+  const revenue = sum('revenue');
+  const expenses = sum('expenses');
+  const leads = sum('leads');
+  const sales = sum('sales');
+  const profit = revenue - expenses;
+  const conversion = leads ? safePercent(sales / leads * 100) : 0;
+  const avgCheck = sales ? Math.round(revenue / sales) : 0;
+  const cash = rows.length ? Number(rows[0].cash || 0) : 0;
+  return { rows, revenue, expenses, profit, leads, sales, conversion, avgCheck, cash };
+}
+function businessDiagnosticText(s){
+  if (!s.rows.length) return 'Добавьте первые ежедневные факты. После 3–7 дней появится первичный управленческий вывод.';
+  if (s.revenue <= 0) return 'Пока нет выручки за выбранный период. Первый фокус — входящие обращения, предложение и переход к оплате.';
+  if (s.expenses / Math.max(1,s.revenue) > 0.85) return 'Расходы забирают большую часть выручки. Проверьте прямые затраты, постоянные расходы и маржу результата.';
+  if (s.leads > 0 && s.conversion < 15) return 'Входящие есть, но переход в покупку слабый. Фокус — конверсия, доверие, скорость ответа и понятность предложения.';
+  if (s.cash < 0) return 'Денежный остаток отрицательный. Фокус — обязательства, ближайшие платежи и свободные деньги.';
+  return 'Картина управляемая: продолжайте вести ежедневные факты и сравнивайте выручку, расходы, конверсию и свободные деньги.';
+}
+function renderMyBusiness(){
+  const s7 = businessSummary(7);
+  const s30 = businessSummary(30);
+  const rows = loadBusinessEntries().slice(0,14);
+  shell(`${card('blue-card-v2 my-business-hero', `<p class="eyebrow">мой бизнес</p><h1>Внутренняя аналитика</h1><p>Здесь можно фиксировать ежедневные факты: выручку, расходы, деньги, входящие и продажи. Блок помогает увидеть не ощущения, а управленческую картину по дням.</p>`)}${card('', `<h2>Добавить день</h2><div class="business-form"><input id="biz-date" type="date" value="${new Date().toISOString().slice(0,10)}"><input id="biz-revenue" type="number" placeholder="Выручка за день"><input id="biz-expenses" type="number" placeholder="Расходы за день"><input id="biz-cash" type="number" placeholder="Деньги на конец дня"><input id="biz-leads" type="number" placeholder="Входящие / заявки"><input id="biz-sales" type="number" placeholder="Продажи / оплаты"><textarea id="biz-note" placeholder="Короткий комментарий: что повлияло на день"></textarea><button class="btn primary" onclick="addBusinessEntry()">Сохранить день</button></div>`)}${card('business-analytics-card', `<h2>Аналитика за 7 дней</h2><div class="business-kpi-grid"><div><span>Выручка</span><b>${formatPoints(s7.revenue)}</b></div><div><span>Расходы</span><b>${formatPoints(s7.expenses)}</b></div><div><span>Разница</span><b>${formatPoints(s7.profit)}</b></div><div><span>Конверсия</span><b>${s7.conversion}%</b></div><div><span>Средний чек</span><b>${formatPoints(s7.avgCheck)}</b></div><div><span>Деньги</span><b>${formatPoints(s7.cash)}</b></div></div><div class="business-diagnosis"><b>Предварительный вывод</b><p>${esc(businessDiagnosticText(s7))}</p></div>`)}${card('', `<h2>Сравнение 30 дней</h2><p>Выручка: <b>${formatPoints(s30.revenue)}</b> · Расходы: <b>${formatPoints(s30.expenses)}</b> · Разница: <b>${formatPoints(s30.profit)}</b> · Конверсия: <b>${s30.conversion}%</b></p>`)}${card('', `<h2>Последние записи</h2>${rows.length ? `<div class="business-entry-list">${rows.map(x=>`<div><div><b>${shortDate(x.date)}</b><p>Выручка ${formatPoints(x.revenue)} · расходы ${formatPoints(x.expenses)} · продажи ${formatPoints(x.sales)}${x.note ? ` · ${esc(x.note)}` : ''}</p></div><button onclick="deleteBusinessEntry('${x.id}')">×</button></div>`).join('')}</div>` : '<p class="small">Пока нет записей.</p>'}<button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`,'profile');
+}
+function myBusinessCardHtml(){
+  return card('my-business-card', `<p class="eyebrow">мой бизнес</p><h2>Внутренняя аналитика</h2><p>Фиксируйте ежедневную выручку, расходы, деньги, входящие и продажи. Система соберёт первичный вывод по 7 и 30 дням.</p><button class="btn primary" onclick="renderMyBusiness()">Открыть аналитику бизнеса</button>`);
+}
+function renderProfile(){
+  const gp = globalStageProgress();
+  const points = totalPoints();
+  const activeMeta = getLessonMeta(state.selectedLessonCode) || nextLessonMeta();
+  const lp = activeMeta ? lessonStageProgressInfo(activeMeta.code) : {done:0,total:0,percent:0};
+  const titleInfo = studentTitleInfo();
+  const adminBlock = isAdminUser()
+    ? card('boss-panel-card', `<h2>Панель Босса Л.Е.Г.О</h2><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Просмотр как ученик</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Режим Босса</button></div><p class="small">Панель управления, проверка ДЗ и полный предпросмотр уроков доступны только владельцу системы.</p>${actionButton('Открыть панель Босса','renderAdmin()','primary')}`)
+    : '';
+  shell(`${card('blue-card-v2 profile-head-card', `<h1>Профиль</h1><p class="profile-name-line">${esc(state.user?.first_name || 'Пользователь')} · ${studentRoleLabel()}</p>`)}${titleCardHtml()}${card('', `<h2>Прогресс и баллы</h2>${progressRing(gp.percent,'общий',`${gp.done} из ${gp.total || 0}`)}<div class="profile-score-grid"><div><span>Всего баллов</span><b>${formatPoints(points)}</b></div><div><span>Текущий урок</span><b>${lp.percent}%</b></div><div><span>Учебные единицы</span><b>${formatPoints(titleInfo.units)}</b></div><div><span>Готовые уроки</span><b>${readyCoreLessons().length}</b></div></div>`)}${doneSummaryHtml()}${insightsProfileHtml()}${adminBlock}${consultationCardsHtml(points)}${card('', `<h2>Поддержка</h2>${externalButton('Задать вопрос',SUPPORT_FORM_URL,'secondary')}${externalButton('Предложить идею',IDEA_FORM_URL,'secondary')}`)}${myBusinessCardHtml()}`,'profile');
+}
