@@ -1,0 +1,57 @@
+{
+  "challengeCode": "BOOKS100",
+  "title": "100 книг за 100 дней",
+  "status": "draft_content_ready",
+  "currentAppStatus": "closed_for_students",
+  "rules": {
+    "dailyWindowHours": 24,
+    "unitRewardPerPassedBook": 1,
+    "basePoints": 50,
+    "streakIncrement": 2,
+    "day100PointsIfNoMisses": 250,
+    "onMiss": "current book closes, next book opens, streak points reset to 50",
+    "passedBookAccess": "book remains available in personal library"
+  },
+  "books": [
+    {
+      "id": "BOOK100-001",
+      "day": 1,
+      "title": "The Personal MBA / Сам себе MBA",
+      "author": "Josh Kaufman",
+      "contentUrl": "content/challenges/books100/book_001.json",
+      "coverImage": "assets/challenges/books100/001/screen_01.png"
+    },
+    {
+      "id": "BOOK100-002",
+      "day": 2,
+      "title": "The E-Myth Revisited / Миф о предпринимательстве",
+      "author": "Michael E. Gerber",
+      "contentUrl": "content/challenges/books100/book_002.json",
+      "coverImage": "assets/challenges/books100/002/screen_01.png"
+    },
+    {
+      "id": "BOOK100-003",
+      "day": 3,
+      "title": "Rework / Переделка",
+      "author": "Jason Fried, David Heinemeier Hansson",
+      "contentUrl": "content/challenges/books100/book_003.json",
+      "coverImage": "assets/challenges/books100/003/screen_01.png"
+    },
+    {
+      "id": "BOOK100-004",
+      "day": 4,
+      "title": "Zero to One / От нуля к единице",
+      "author": "Peter Thiel",
+      "contentUrl": "content/challenges/books100/book_004.json",
+      "coverImage": "assets/challenges/books100/004/screen_01.png"
+    },
+    {
+      "id": "BOOK100-005",
+      "day": 5,
+      "title": "The Lean Startup / Бизнес с нуля",
+      "author": "Eric Ries",
+      "contentUrl": "content/challenges/books100/book_005.json",
+      "coverImage": "assets/challenges/books100/005/screen_01.png"
+    }
+  ]
+}
