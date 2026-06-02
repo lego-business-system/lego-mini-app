@@ -685,7 +685,7 @@ async function checkAccess(){
 async function boot(){ try{ await checkAccess(); }catch(e){ console.error(e); emergencyScreen(e.message||'BOOT_ERROR'); } }
 window.addEventListener('error', e=>{ console.error(e.error||e.message); emergencyScreen(e.message||'GLOBAL_ERROR'); });
 window.addEventListener('unhandledrejection', e=>{ console.error(e.reason); emergencyScreen(e.reason?.message||'UNHANDLED_REJECTION'); });
-if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+// v18 boot moved to end of file
 
 /* =====================================================
    v11 overrides — dashboard, ready lessons, stage progress, services media fallback
@@ -2225,3 +2225,230 @@ function renderAdmin(){
   if(!isAdminUser()){ alert('Нет прав Босса Л.Е.Г.О.'); return; }
   shell(`${card('blue-card-v2', `<h1>Панель Босса Л.Е.Г.О</h1><p>Полный доступ ко всем урокам, предпросмотр контента, книги челленджа и проверка ДЗ.</p>`)}${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${state.catalog.lessons.map(l=>`<button class="lesson-row-v2" onclick="openLesson('${l.code}')"><div><b>${esc(l.code)} · ${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${l.slidesCount} слайдов · ${l.quizCount} вопросов · ${l.bookScreensCount} саммари</p></div><span>→</span></button>`).join('')}</div>`)}${card('', `<h2>Книги челленджа</h2><p>В режиме Босса все загруженные книги доступны для просмотра без таймера и без начисления баллов.</p><button class="btn primary" onclick="renderBookChallenge()">Открыть книги челленджа</button>`)}${card('', `<h2>Проверка ДЗ</h2><input id="admin-target-user" placeholder="Telegram ID или username ученика"><textarea id="admin-review-comment" placeholder="Комментарий проверяющего"></textarea><button class="btn primary" onclick="adminApproveTargetUser()">Принять ДЗ</button><button class="btn secondary" onclick="adminRejectTargetUser()">Отправить на доработку</button>`)}`,'profile');
 }
+
+
+/* =====================================================
+   v18 — Books100 Supabase timer and reading overrides
+   ===================================================== */
+const BOOKS100_PROGRESS_URL_V18 = "https://soxtekhspohkddpdidvp.supabase.co/functions/v1/books100-progress";
+const BOOKS100_CACHE_VERSION_V18 = "v18-books100-supabase-20260603";
+state.books100ServerState = null;
+
+function books100BookPayloadV18(book){
+  if (!book) return null;
+  return { bookId: book.id, bookDay: Number(book.day||0), bookTitle: book.title||"", bookAuthor: book.author||"" };
+}
+function books100BooksPayloadV18(index){ return ((index && index.books) || []).map(books100BookPayloadV18).filter(Boolean); }
+function books100DefaultMergedV18(){ try { return Object.assign(books100DefaultState(), JSON.parse(localStorage.getItem(BOOKS100_STORAGE_KEY)||"{}")); } catch(e){ return books100DefaultState(); } }
+function books100ApplyServerStateV18(data){
+  if (!data) return books100DefaultMergedV18();
+  const p = data.progress || data.state || data;
+  const statuses = data.statuses || [];
+  const statusByBookId = {};
+  statuses.forEach(s => { if (s && s.book_id) statusByBookId[s.book_id] = s; });
+  const next = Object.assign(books100DefaultState(), {
+    started: Boolean(p.started || p.started_at || p.startedAt),
+    startedAt: p.started_at || p.startedAt || null,
+    currentIndex: Number(p.current_index ?? p.currentIndex ?? 0),
+    currentDay: Number(p.current_day ?? p.currentDay ?? 1),
+    dayStartedAt: p.day_started_at || p.dayStartedAt || null,
+    currentBookId: p.current_book_id || p.currentBookId || null,
+    currentBookTitle: p.current_book_title || p.currentBookTitle || null,
+    todayStage: p.today_stage || p.todayStage || "саммари не открыто",
+    streak: Number(p.streak || 0),
+    pointsEarned: Number(p.points_earned ?? p.pointsEarned ?? 0),
+    unitsEarned: Number(p.units_earned ?? p.unitsEarned ?? 0),
+    passedBooks: Number(p.passed_books ?? p.passedBooks ?? 0),
+    missedBooks: Number(p.missed_books ?? p.missedBooks ?? 0),
+    statusByBookId,
+    passedBookIds: statuses.filter(s=>s.status==="passed").map(s=>s.book_id),
+    missedBookIds: statuses.filter(s=>s.status==="missed").map(s=>s.book_id),
+    updatedAt: p.updated_at || p.updatedAt || books100Iso()
+  });
+  state.books100ServerState = next;
+  localStorage.setItem(BOOKS100_STORAGE_KEY, JSON.stringify(next));
+  return next;
+}
+function getBooks100RawState(){ return state.books100ServerState || books100DefaultMergedV18(); }
+function getChallengeState(){ return getBooks100RawState(); }
+function saveBooks100State(data){ state.books100ServerState = Object.assign(books100DefaultState(), data||{}, {updatedAt:books100Iso()}); localStorage.setItem(BOOKS100_STORAGE_KEY, JSON.stringify(state.books100ServerState)); return state.books100ServerState; }
+function challengeUnits(ch){ return Number((ch || getBooks100RawState()).unitsEarned || 0); }
+function challengePoints(ch){ return Number((ch || getBooks100RawState()).pointsEarned || 0); }
+function currentChallengeReward(ch){ return books100RewardForCurrent(ch || getBooks100RawState()); }
+
+async function books100ApiV18(action, payload){
+  if (!tg || !tg.initData) throw new Error("BOOKS100_TELEGRAM_REQUIRED");
+  const response = await fetch(BOOKS100_PROGRESS_URL_V18, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ initData: tg.initData, action, payload: payload || {} })
+  });
+  const data = await response.json().catch(()=>({}));
+  if (!response.ok || data.ok === false) throw new Error(data.reason || data.error || "BOOKS100_PROGRESS_ERROR");
+  if (data.progress || data.state) books100ApplyServerStateV18(data);
+  return data;
+}
+async function getBooks100StateNormalized(){
+  const index = await loadBooks100Index();
+  try { return books100ApplyServerStateV18(await books100ApiV18("get_state", { books: books100BooksPayloadV18(index) })); }
+  catch(e){ console.error("BOOKS100_SYNC_ERROR", e); return getBooks100RawState(); }
+}
+async function startBookChallenge(){
+  const index = await loadBooks100Index();
+  const first = books100ByIndex(index, 0);
+  try { books100ApplyServerStateV18(await books100ApiV18("start", { currentBook: books100BookPayloadV18(first), books: books100BooksPayloadV18(index) })); }
+  catch(e){ console.error(e); alert("Не удалось запустить челлендж. Проверьте Supabase Edge Function books100-progress."); }
+  renderBookChallenge();
+}
+async function resetBooks100Challenge(){
+  if (!isAdminMode()) return alert("Сброс доступен только Боссу Л.Е.Г.О.");
+  if (!confirm("Сбросить своё тестовое состояние челленджа?")) return;
+  try { await books100ApiV18("reset", {}); } catch(e){ console.error(e); }
+  state.books100ServerState = null; localStorage.removeItem(BOOKS100_STORAGE_KEY); renderBookChallenge();
+}
+async function forceBooks100Miss(){
+  if (!isAdminMode()) return alert("Тест пропуска доступен только Боссу Л.Е.Г.О.");
+  const index = await loadBooks100Index();
+  try { await books100ApiV18("force_miss", { books: books100BooksPayloadV18(index) }); } catch(e){ console.error(e); alert("Не удалось сымитировать пропуск."); }
+  renderBookChallenge();
+}
+function books100StatusForBook(bookMeta, ch){
+  const row = ((ch && ch.statusByBookId) || {})[bookMeta.id];
+  if (row && row.status === "passed") return "зачтено";
+  if (row && row.status === "missed") return "пропущено";
+  if (bookMeta.id === (ch && ch.currentBookId)) return "открыто сегодня";
+  return "закрыто";
+}
+function books100Card(bookMeta, ch, admin){
+  const status = admin ? "доступно Боссу" : books100StatusForBook(bookMeta, ch);
+  const open = admin || status === "зачтено" || status === "открыто сегодня";
+  const img = bookMeta.coverImage || `assets/challenges/books100/${String(bookMeta.day).padStart(3,"0")}/screen_01.png`;
+  return `<button class="books100-book-card ${open?'':'locked'} ${status==='зачтено'?'passed':''} ${status==='пропущено'?'missed':''}" ${open?`onclick="openBooks100Book(${Number(bookMeta.day)}, ${admin?'true':'false'})"`:'disabled'}>
+    <div class="books100-cover"><img src="${img}?v=${BOOKS100_CACHE_VERSION_V18}" alt="${esc(bookMeta.title)}" onerror="this.style.display='none';"></div>
+    <div><b>${esc(bookMeta.title)}</b><p>${esc(bookMeta.author||'')}</p><span>${esc(status)}</span></div>
+  </button>`;
+}
+function books100CurrentStateCardV18(ch, currentBook, ms){
+  const row = currentBook ? ((ch.statusByBookId || {})[currentBook.id]) : null;
+  const passed = row && row.status === "passed";
+  const note = passed
+    ? `Книга зачтена. Следующая книга откроется после окончания таймера: <b>${books100TimeLeftText(ms)}</b>.`
+    : `На прохождение текущей книги осталось: <b>${books100TimeLeftText(ms)}</b>.`;
+  const btn = currentBook ? (passed
+    ? `<button class="btn secondary" onclick="openBooks100Book(${Number(currentBook.day)}, false)">Открыть зачтённую книгу</button>`
+    : `<button class="btn primary" onclick="openBooks100Book(${Number(currentBook.day)}, false)">Открыть книгу дня</button>`) : "";
+  return `<div class="books100-current"><div><p class="eyebrow">книга дня</p><h2>${esc(currentBook ? currentBook.title : 'Следующие книги готовятся')}</h2><p>${esc(currentBook ? (currentBook.author||'') : 'Добавьте следующие книги в content/challenges/books100/.')}</p><p class="small">${note}</p></div>${btn}</div>`;
+}
+async function renderBookChallenge(){
+  try{
+    const index = await loadBooks100Index();
+    if (isAdminMode()){
+      const ch = await getBooks100StateNormalized();
+      shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">режим Босса</p><h1>100 книг за 100 дней</h1><p>Все загруженные книги открыты для просмотра без таймера, блокировок и начисления баллов.</p>`)}
+        ${card('', `<h2>Загруженные книги</h2><p class="small">Подключено: ${index.books.length}. Здесь проверяется текст, картинки и мини-тесты.</p><div class="books100-list">${index.books.map(b=>books100Card(b,ch,true)).join('')}</div><div class="grid-v2"><button class="btn secondary" onclick="resetBooks100Challenge()">Сбросить своё тестовое состояние</button><button class="btn secondary" onclick="forceBooks100Miss()">Сымитировать пропуск суток</button></div>`)}
+        ${card('', `<button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
+      return;
+    }
+    const ch = await getBooks100StateNormalized();
+    if (!ch.started){
+      shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">ежедневный челлендж</p><h1>100 книг за 100 дней</h1><p>При первом запуске открывается первая книга и начинается окно на 24 часа. Зачёт книги даёт +1 учебную единицу и баллы серии. Следующая книга открывается только после окончания текущего таймера.</p>`)}
+        ${card('', `<h2>Правила</h2><div class="list-clean"><div><b>1 книга — 24 часа</b><p>Если мини-тест пройден, книга сохраняется в личной библиотеке.</p></div><div><b>Баллы серии</b><p>Первый зачёт — 50 баллов. Каждый следующий зачёт подряд добавляет +2 балла к награде дня.</p></div><div><b>Пропуск</b><p>Если книга не пройдена за 24 часа, она закрывается, серия сбрасывается, следующая награда снова равна 50 баллам.</p></div></div><button class="btn primary" onclick="startBookChallenge()">Начать челлендж</button><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
+      return;
+    }
+    const currentBook = books100ByIndex(index, Number(ch.currentIndex||0));
+    const ms = books100RemainingMs(ch);
+    const reward = books100RewardForCurrent(ch);
+    shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">100 книг за 100 дней</p><h1>День ${Number(ch.currentDay||1)} / 100</h1><p>Награда за зачёт текущей книги: <b>${formatPoints(reward)} баллов</b> и <b>+1 учебная единица</b>. Новая книга не открывается сразу после теста — она ждёт окончания 24-часового окна.</p>${progressBarHtml(Math.min(100, Number(ch.passedBooks||0)), 'on-dark')}`)}
+      ${card('books100-status-card', `<div class="challenge-grid"><div><span>Осталось</span><b>${books100TimeLeftText(ms)}</b></div><div><span>Серия</span><b>${Number(ch.streak||0)}</b></div><div><span>Зачтено</span><b>${Number(ch.passedBooks||0)}</b></div><div><span>Баллы</span><b>${formatPoints(Number(ch.pointsEarned||0))}</b></div></div>${books100CurrentStateCardV18(ch,currentBook,ms)}`)}
+      ${card('', `<h2>Личная библиотека</h2><p class="small">Зачтённые книги остаются доступными. Пропущенные книги закрываются.</p><div class="books100-list">${index.books.map(b=>books100Card(b,ch,false)).join('')}</div><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
+  }catch(e){
+    console.error(e);
+    shell(`${card('result-bad-v2', `<h1>Книги не загрузились</h1><p>Проверьте файлы в <b>content/challenges/books100/</b> и функцию <b>books100-progress</b> в Supabase.</p><p class="small">${esc(e.message||e)}</p><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
+  }
+}
+async function openBooks100Book(day, adminPreview){
+  const index = await loadBooks100Index();
+  const bookMeta = books100ByDay(index, day);
+  if (!bookMeta) return alert("Книга не найдена.");
+  if (!adminPreview){
+    const ch = await getBooks100StateNormalized();
+    const status = books100StatusForBook(bookMeta, ch);
+    if (status !== "открыто сегодня" && status !== "зачтено"){
+      alert(status === "пропущено" ? "Эта книга была пропущена и закрыта." : "Эта книга пока закрыта. Следующая книга откроется после окончания текущего таймера.");
+      return;
+    }
+    try { await books100ApiV18("open_book", { book: books100BookPayloadV18(bookMeta), books: books100BooksPayloadV18(index) }); } catch(e){ console.error(e); }
+  }
+  state.books100ActiveBookDay = Number(day); state.books100ScreenIndex = 0; state.books100QuestionIndex = 0; state.books100Answers = {}; state.books100AdminPreview = Boolean(adminPreview);
+  renderBooks100Reading();
+}
+function books100ScreenTextHtml(book, screen){
+  const body = screen?.textHtml || (screen?.text ? `<p>${esc(screen.text)}</p>` : "<p>Текст слайда будет добавлен после редакторской проверки.</p>");
+  const assignment = book.practicalAssignment || {};
+  const summary = state.books100ScreenIndex >= (book.screens||[]).length-1 ? `<div class="books100-full-summary"><h3>Практика дня</h3><p><b>${esc(assignment.title||'Практическое задание')}</b></p><p>${esc(assignment.result||'')}</p></div>` : "";
+  return `<section class="slide-text-v2 books100-text"><p class="eyebrow">Книга: ${esc(book.title)}</p><h3>Слайд ${Number(screen?.number || state.books100ScreenIndex+1)}. ${esc(screen?.title||'')}</h3>${body}${summary}</section>`;
+}
+async function renderBooks100Reading(){
+  const index = await loadBooks100Index();
+  const bookMeta = books100ByDay(index, state.books100ActiveBookDay);
+  const book = await loadBooks100Book(bookMeta);
+  const screens = book.screens || [];
+  const i = Math.max(0, Math.min(state.books100ScreenIndex, screens.length-1));
+  state.books100ScreenIndex = i;
+  const screen = screens[i] || {};
+  const total = screens.length || 1;
+  const image = screen.image || `assets/challenges/books100/${String(book.day).padStart(3,'0')}/screen_${String(i+1).padStart(2,'0')}.png`;
+  const nav = `<div class="nav-panel-v2 nav-panel-v2-three"><button class="btn secondary" onclick="renderBookChallenge()">К челленджу</button><button class="btn secondary" ${i===0?'disabled':''} onclick="prevBooks100Screen()">Назад</button><button class="btn primary" onclick="nextBooks100Screen()">${i===total-1?'К мини-тесту':'Далее'}</button></div>`;
+  shell(`${nav}<div class="media-counter">Книга: ${esc(book.title)} · слайд ${i+1}/${total}</div><div class="media-box-v2"><img src="${image}?v=${BOOKS100_CACHE_VERSION_V18}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><div class="image-missing-v2" style="display:none"><b>Слайд ${i+1}</b><p>Иллюстрация в подготовке.</p></div></div>${books100ScreenTextHtml(book,screen)}`,'home');
+}
+async function startBooks100Quiz(){
+  state.books100QuestionIndex = 0; state.books100Answers = {};
+  if (!state.books100AdminPreview){ const index = await loadBooks100Index(); const bookMeta = books100ByDay(index, state.books100ActiveBookDay); try{ await books100ApiV18("quiz_started", { book: books100BookPayloadV18(bookMeta), books: books100BooksPayloadV18(index) }); }catch(e){console.error(e);} }
+  renderBooks100QuizQuestion();
+}
+async function renderBooks100QuizQuestion(){
+  const index = await loadBooks100Index();
+  const bookMeta = books100ByDay(index, state.books100ActiveBookDay);
+  const book = await loadBooks100Book(bookMeta);
+  const quiz = book.quiz || [];
+  if (!quiz.length) return alert("В этой книге нет мини-теста.");
+  const i = Math.max(0, Math.min(state.books100QuestionIndex, quiz.length-1));
+  state.books100QuestionIndex = i;
+  const q = quiz[i]; const selected = state.books100Answers[i];
+  const nav = `<div class="nav-panel-v2 nav-panel-v2-three"><button class="btn secondary" onclick="renderBookChallenge()">К челленджу</button><button class="btn secondary" ${i===0?'disabled':''} onclick="prevBooks100Question()">Назад</button><button class="btn secondary" onclick="renderBooks100Reading()">К саммари</button></div>`;
+  shell(`${nav}<div class="quiz-card-v2 books100-quiz-card"><p class="eyebrow">Мини-тест · вопрос ${i+1}/${quiz.length}</p><h2>${esc(q.q)}</h2><p class="small">Выберите управленчески точный вариант. Ответы близкие по смыслу: тест проверяет применение книги.</p>${(q.a||[]).map((a,idx)=>`<button class="option-v2 ${Number(selected)===idx?'selected':''}" onclick="selectBooks100Answer(${idx})">${quizOptionLabel(idx)}. ${esc(a)}</button>`).join('')}</div>`,'home');
+}
+function selectBooks100Answer(i){
+  state.books100Answers[state.books100QuestionIndex]=i;
+  loadBooks100Index().then(index=>loadBooks100Book(books100ByDay(index,state.books100ActiveBookDay))).then(book=>{
+    if (state.books100QuestionIndex < (book.quiz||[]).length-1){ state.books100QuestionIndex++; renderBooks100QuizQuestion(); } else finishBooks100Quiz();
+  });
+}
+async function finishBooks100Quiz(){
+  const index = await loadBooks100Index();
+  const bookMeta = books100ByDay(index,state.books100ActiveBookDay);
+  const book = await loadBooks100Book(bookMeta);
+  const quiz = book.quiz || [];
+  let score=0; quiz.forEach((q,i)=>{ if(Number(state.books100Answers[i])===Number(q.correct||0)) score++; });
+  const passScore = Number(book.passScore || Math.ceil(quiz.length*.8));
+  const passed = score >= passScore;
+  let resultNotice = "";
+  if (state.books100AdminPreview){ resultNotice = `<p>Это режим Босса Л.Е.Г.О. Баллы, серия и учебные единицы не изменяются.</p>`; }
+  else {
+    try{
+      const data = await books100ApiV18("quiz_completed", { book: books100BookPayloadV18(bookMeta), books: books100BooksPayloadV18(index), score, total: quiz.length, passed, answers: state.books100Answers });
+      const ch = books100ApplyServerStateV18(data);
+      if (passed){ const row = (ch.statusByBookId||{})[bookMeta.id] || {}; const pts = row.points_awarded || data.pointsAwarded || 0; resultNotice = `<p>Начислено: <b>${formatPoints(pts)} баллов</b> и <b>+1 учебная единица</b>. Книга остаётся в личной библиотеке. Следующая книга откроется после окончания 24-часового окна.</p>`; }
+    }catch(e){ console.error(e); resultNotice = `<p class="small">Не удалось сохранить результат в Supabase: ${esc(e.message||e)}.</p>`; }
+  }
+  const msg = passed ? `<h1>Книга зачтена</h1><p>Результат: <b>${score}/${quiz.length}</b>. Проходной уровень: <b>${passScore}/${quiz.length}</b>.</p>${resultNotice}` : `<h1>Мини-тест не пройден</h1><p>Результат: <b>${score}/${quiz.length}</b>. Проходной уровень: <b>${passScore}/${quiz.length}</b>.</p><p>Лучше спокойно вернуться к саммари, перечитать ключевые слайды и пройти тест повторно до окончания 24 часов.</p>${resultNotice}`;
+  shell(`${card(passed?'result-ok-v2':'result-bad-v2', `${msg}<div class="grid-v2">${passed?'<button class="btn primary" onclick="renderBookChallenge()">К челленджу</button>':'<button class="btn primary" onclick="renderBooks100Reading()">Вернуться к саммари</button><button class="btn secondary" onclick="startBooks100Quiz()">Пройти тест заново</button>'}<button class="btn secondary" onclick="renderHome()">На главную</button></div>`)}${card('',books100QuizReviewHtml(book))}`,'home');
+}
+function activeChallengeCardHtml(){
+  const ch = getBooks100RawState();
+  if (!ch || !ch.started) return "";
+  const ms = books100RemainingMs(ch); const reward = books100RewardForCurrent(ch);
+  return card('challenge-active-card', `<p class="eyebrow">ежедневная задача</p><h2>100 книг за 100 дней</h2><div class="challenge-grid"><div><span>День</span><b>${Number(ch.currentDay||1)} / 100</b></div><div><span>Осталось</span><b>${books100TimeLeftText(ms)}</b></div><div><span>Серия</span><b>${Number(ch.streak||0)} подряд</b></div><div><span>Награда</span><b>${formatPoints(reward)} баллов</b></div></div><p><b>Книга:</b> ${esc(ch.currentBookTitle||'книга дня')}</p><p><b>Этап:</b> ${esc(ch.todayStage||'саммари не открыто')}</p><button class="btn primary" onclick="renderBookChallenge()">Продолжить челлендж</button>`);
+}
+
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
