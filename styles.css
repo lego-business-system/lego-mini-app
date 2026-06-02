@@ -591,3 +591,10 @@
   .books100-book-card b{font-size:13px;}
 }
 @media(max-width:350px){.challenge-grid{grid-template-columns:1fr}.books100-book-card{grid-template-columns:1fr}.books100-cover{width:100%;}}
+
+/* =====================================================
+   v18 вЂ” Books100 Supabase UI and rich text
+   ===================================================== */
+.books100-current{display:grid;grid-template-columns:1fr;gap:12px;padding:14px;border-radius:20px;background:#f6f8fb;border:1px solid rgba(7,27,56,.07)}
+.books100-current h2{margin-bottom:6px}.books100-book-card.passed{border-color:rgba(22,168,154,.45);background:#edf8f6}.books100-book-card.missed{border-color:rgba(217,74,74,.25);background:#fff3f3}.books100-book-card.locked{opacity:.52}.books100-text h3{font-size:22px;line-height:1.2;margin:0 0 12px;color:#071b38}.books100-text p{font-size:16px;line-height:1.68;color:#263852;margin:0 0 14px}.books100-text .eyebrow{display:inline-block;margin-bottom:10px}.books100-full-summary{padding:14px;border-radius:18px;background:#fff8e6;border:1px solid rgba(217,154,26,.28);margin-top:14px}.books100-quiz-card .option-v2{line-height:1.35}.quiz-review-v2{display:grid;gap:10px}.review-row{padding:14px;border-radius:18px;background:#f6f8fb;border:1px solid rgba(7,27,56,.07)}.review-row.ok{background:#edf8f6;border-color:rgba(22,168,154,.35)}.review-row.bad{background:#fff3f3;border-color:rgba(217,74,74,.25)}.review-row h3{font-size:17px;margin:0 0 8px}.review-row p{margin:6px 0;font-size:14px;line-height:1.5}.challenge-active-card{border-color:rgba(217,154,26,.28)}
+@media(min-width:640px){.books100-current{grid-template-columns:1fr 220px;align-items:center}.books100-current .btn{margin-top:0}}
