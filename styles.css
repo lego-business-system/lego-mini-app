@@ -145,3 +145,96 @@
     line-height: 1.1;
   }
 }
+/* =====================================================
+   v14 — увеличение логотипа в верхней шапке
+   ===================================================== */
+
+.app-header-v2 {
+  min-height: 124px !important;
+  padding: 18px 14px 20px !important;
+  gap: 12px !important;
+  align-items: center !important;
+}
+
+/* Левая зона с логотипом */
+.brand-image-button {
+  flex: 1 1 auto !important;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  display: flex !important;
+}
+
+/* Светлая плашка под логотип */
+.brand-logo-plate {
+  width: 100% !important;
+  min-height: 104px !important;
+  padding: 8px 10px !important;
+  border-radius: 26px !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  border: 1px solid rgba(255, 255, 255, 0.86) !important;
+  box-shadow: 0 12px 28px rgba(7, 27, 56, 0.22) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+}
+
+/* Сам PNG-логотип */
+.brand-logo-img {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: 88px !important;
+  max-height: 88px !important;
+  object-fit: contain !important;
+  transform: scale(1.14) !important;
+  transform-origin: center center !important;
+}
+
+/* Кнопка справа, чтобы логотипу осталось больше места */
+.mode-pill {
+  flex: 0 0 144px !important;
+  min-height: 82px !important;
+  padding: 0 14px !important;
+  border-radius: 999px !important;
+  font-size: 17px !important;
+  line-height: 1.15 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+/* Мобильная корректировка */
+@media (max-width: 420px) {
+  .app-header-v2 {
+    min-height: 124px !important;
+    padding: 18px 10px 20px !important;
+    gap: 10px !important;
+  }
+
+  .brand-image-button {
+    flex: 1 1 calc(100% - 154px) !important;
+    min-width: 0 !important;
+  }
+
+  .brand-logo-plate {
+    min-height: 102px !important;
+    padding: 8px 8px !important;
+    border-radius: 26px !important;
+  }
+
+  .brand-logo-img {
+    height: 86px !important;
+    max-height: 86px !important;
+    transform: scale(1.16) !important;
+  }
+
+  .mode-pill {
+    flex: 0 0 142px !important;
+    min-height: 82px !important;
+    padding: 0 12px !important;
+    font-size: 17px !important;
+  }
+}
