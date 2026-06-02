@@ -1,8 +1,8 @@
 {
   "challengeCode": "BOOKS100",
   "title": "100 книг за 100 дней",
-  "status": "draft_content_ready",
-  "currentAppStatus": "closed_for_students",
+  "status": "active_supabase_v18",
+  "currentAppStatus": "open_for_students_supabase_timer",
   "rules": {
     "dailyWindowHours": 24,
     "unitRewardPerPassedBook": 1,
@@ -10,7 +10,10 @@
     "streakIncrement": 2,
     "day100PointsIfNoMisses": 250,
     "onMiss": "current book closes, next book opens, streak points reset to 50",
-    "passedBookAccess": "book remains available in personal library"
+    "passedBookAccess": "book remains available in personal library",
+    "studentStatus": "active: one daily book opens for 24 hours; loaded books 001-005 available by sequence",
+    "onPass": "book remains available; next book opens only after 24-hour window ends",
+    "stateStorage": "Supabase: books100_progress, books100_book_statuses, books100_quiz_attempts, books100_events"
   },
   "books": [
     {
