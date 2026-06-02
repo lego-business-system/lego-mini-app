@@ -29,9 +29,9 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v11-dashboard-ready-20260602";
+const APP_CACHE_VERSION = "v12-levels-challenge-insights-20260602";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
-const CONSULTATION_COST = 15000;
+const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01"];
 
 const state = {
@@ -791,7 +791,7 @@ function canOpenLesson(meta) {
   const prev = activityLessons(meta.activityKey).find(l => Number(l.number) === Number(meta.number) - 1);
   return prev ? isStageDone(prev.code, "homeworkVerified") : false;
 }
-function openLesson(code) {
+async function openLesson(code) {
   const meta = getLessonMeta(code);
   if (!meta) return;
   if (!canOpenLesson(meta)) {
@@ -805,7 +805,8 @@ function openLesson(code) {
   state.selectedActivityKey = meta.activityKey;
   localStorage.setItem("lego_selected_lesson", code);
   localStorage.setItem("lego_selected_activity", meta.activityKey);
-  loadLesson(code).then(renderLessonHub).catch(e => emergencyScreen(e.message || "LESSON_LOAD_ERROR"));
+  await loadLesson(code);
+  renderLessonHub();
 }
 function getActivityProgressInfo(key) {
   const lessons = activityLessons(key);
@@ -850,9 +851,9 @@ function renderHome() {
     `)}
     ${card('', `<h2>Выбрать блок</h2><p>Выберите направление работы внутри платформы.</p>
       <div class="top-track-grid top-track-grid-five">
-        ${renderMainBlockCard('Нет своего бизнеса','Базовый маршрут для подготовки к предпринимательскому мышлению и запуску.','скоро','#','disabled')}
+        ${renderMainBlockCard('Нет своего бизнеса','Базовый маршрут для подготовки к предпринимательскому мышлению и запуску.','скоро','','disabled')}
         ${renderMainBlockCard('Я предприниматель','Диагностика, уроки, ДЗ, проверка и управленческие действия.','доступно','renderLearning()','active')}
-        ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','#','disabled')}
+        ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','','disabled')}
         ${renderMainBlockCard('100 книг за 100 дней','Ежедневный челлендж: саммари, мини-тест, баллы и личная библиотека.','каркас готов','renderBookChallenge()','')}
         ${renderMainBlockCard('Дополнительные материалы','Дополнительные уроки и материалы вне основного маршрута.','каркас готов','renderAdditionalMaterials()','')}
       </div>`)}
@@ -1008,4 +1009,397 @@ function renderProfile(){
     ? card('', `<h2>Режим работы</h2><p>Этот блок виден только администратору. У обычного участника переключателя режима и админ-панели нет.</p><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Просмотр как ученик</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Админ</button></div><p class="small">Проверка администратора идёт по Telegram ID / username и роли, которую возвращает проверка доступа.</p>`)
     : '';
   shell(`${card('blue-card-v2', `<h1>Профиль</h1><p>${esc(state.user?.first_name || 'Пользователь')} · ${isAdminUser()?'администратор':'участник'}</p>`)}${card('', `<h2>Прогресс и баллы</h2><p>Прогресс считается по этапам доступных уроков. Баллы используются отдельно как мотивационная система.</p>${progressRing(gp.percent,'общий',`${gp.done} из ${gp.total || 0} этапов`)}<div class="profile-score-grid"><div><span>Всего баллов</span><b>${formatPoints(totalScore)}</b></div><div><span>Текущий урок</span><b>${lp.done} / ${lp.total}</b></div><div><span>Консультация</span><b>${consultationCostText()}</b></div><div><span>Готовые уроки</span><b>${readyCoreLessons().length}</b></div></div>`)}${adminBlock}${card('', `<h2>Поддержка</h2>${externalButton('Задать вопрос',SUPPORT_FORM_URL,'secondary')}${externalButton('Предложить идею',IDEA_FORM_URL,'secondary')}${externalButton('Получить консультацию — '+consultationCostText(),CONSULTATION_FORM_URL,'primary')}${isAdminUser()?actionButton('Админ-панель','renderAdmin()','primary'):''}`)}`,'profile');
+}
+
+
+/* =====================================================
+   v12 overrides — levels, titles, challenge card, insights, last place, clean admin UI
+   ===================================================== */
+
+const LEGO_LEVELS = [
+  { level: 1, min: 0, max: 39, title: "Наблюдатель системы" },
+  { level: 2, min: 40, max: 79, title: "Сборщик фактов" },
+  { level: 3, min: 80, max: 119, title: "Ученик операционного цикла" },
+  { level: 4, min: 120, max: 159, title: "Разборщик процессов" },
+  { level: 5, min: 160, max: 199, title: "Практик диагностики" },
+  { level: 6, min: 200, max: 239, title: "Исследователь причин" },
+  { level: 7, min: 240, max: 279, title: "Настройщик фокуса" },
+  { level: 8, min: 280, max: 319, title: "Аналитик ограничений" },
+  { level: 9, min: 320, max: 359, title: "Проверяющий гипотез" },
+  { level: 10, min: 360, max: 399, title: "Держатель метрик" },
+  { level: 11, min: 400, max: 439, title: "Архитектор решений" },
+  { level: 12, min: 440, max: 479, title: "Системный практик" },
+  { level: 13, min: 480, max: 519, title: "Навигатор роста" },
+  { level: 14, min: 520, max: 559, title: "Мастер управленческого вывода" },
+  { level: 15, min: 560, max: 599, title: "Проектировщик изменений" },
+  { level: 16, min: 600, max: 639, title: "Инженер операционной системы" },
+  { level: 17, min: 640, max: 679, title: "Управленческий стратег" },
+  { level: 18, min: 680, max: 719, title: "Архитектор бизнес-модели" },
+  { level: 19, min: 720, max: 759, title: "Куратор внедрения" },
+  { level: 20, min: 760, max: 799, title: "Мастер системного контроля" },
+  { level: 21, min: 800, max: 839, title: "Строитель управляемого бизнеса" },
+  { level: 22, min: 840, max: 879, title: "Директор операционного мышления" },
+  { level: 23, min: 880, max: 919, title: "Эксперт управленческой архитектуры" },
+  { level: 24, min: 920, max: 999, title: "Наставник системного роста" },
+  { level: 25, min: 1000, max: Infinity, title: "Мастер Л.Е.Г.О" }
+];
+
+function adminLabel() { return "Босс Л.Е.Г.О"; }
+function studentRoleLabel() { return isAdminUser() ? adminLabel() : "Ученик Л.Е.Г.О"; }
+function consultationCostText() { return formatPoints(CONSULTATION_COST) + " баллов"; }
+function isLessonFullyCompleted(meta) {
+  if (!meta) return false;
+  const total = lessonAvailableStages(meta).length;
+  if (!total) return false;
+  return lessonCompletedStageCount(meta.code, meta) >= total;
+}
+function completedCoreLessonsCount() {
+  return readyCoreLessons().filter(isLessonFullyCompleted).length;
+}
+function challengeStateKey() { return "lego_book_challenge_v2"; }
+function getChallengeState(){
+  try {
+    const v2 = JSON.parse(localStorage.getItem(challengeStateKey()) || "{}");
+    if (v2 && Object.keys(v2).length) return v2;
+    const old = JSON.parse(localStorage.getItem('lego_book_challenge_v1') || "{}");
+    if (old && Object.keys(old).length) {
+      return {
+        startedAt: old.startedAt || nowIso(),
+        active: Boolean(old.startedAt),
+        currentDay: Number(old.currentDay || 1),
+        streak: Number(old.passedBooks || 0),
+        passedBooks: Number(old.passedBooks || 0),
+        missedBooks: Number(old.missedBooks || 0),
+        pointsEarned: estimateChallengePoints(Number(old.passedBooks || 0)),
+        currentBookTitle: old.currentBookTitle || "книга дня",
+        todayStage: old.todayStage || "саммари не открыто"
+      };
+    }
+    return {};
+  } catch(e) { return {}; }
+}
+function saveChallengeState(data){ localStorage.setItem(challengeStateKey(), JSON.stringify(data || {})); }
+function estimateChallengePoints(count) {
+  let total = 0;
+  for (let i = 1; i <= Number(count || 0); i++) total += challengeRewardForDay(i);
+  return total;
+}
+function challengeRewardForDay(dayNumber) {
+  const d = Math.max(1, Math.min(100, Number(dayNumber || 1)));
+  if (d >= 100) return 250;
+  return 50 + (d - 1) * 2;
+}
+function currentChallengeDay(ch) {
+  return Math.max(1, Math.min(100, Number(ch.currentDay || (Number(ch.streak || 0) + 1) || 1)));
+}
+function currentChallengeReward(ch) {
+  return challengeRewardForDay(currentChallengeDay(ch));
+}
+function challengeUnits(ch) { return Number(ch.passedBooks || 0); }
+function challengePoints(ch) {
+  const explicit = Number(ch.pointsEarned || 0);
+  if (explicit > 0) return explicit;
+  return estimateChallengePoints(Number(ch.passedBooks || 0));
+}
+function completedLearningUnits() {
+  const challenge = getChallengeState();
+  const extraUnits = Number(localStorage.getItem('lego_extra_units_v1') || 0);
+  return completedCoreLessonsCount() + challengeUnits(challenge) + extraUnits;
+}
+function totalPoints() {
+  const lessonPoints = (state.catalog?.lessons || []).reduce((acc,l)=>acc+lessonScore(l.code),0);
+  return lessonPoints + challengePoints(getChallengeState());
+}
+function studentTitleInfo() {
+  const units = Math.max(0, Number(completedLearningUnits() || 0));
+  let current = LEGO_LEVELS[0];
+  for (const row of LEGO_LEVELS) {
+    if (units >= row.min && units <= row.max) { current = row; break; }
+    if (units >= row.min) current = row;
+  }
+  const next = LEGO_LEVELS.find(row => row.level === current.level + 1) || null;
+  const start = current.min;
+  const endExclusive = next ? next.min : 1000;
+  const span = Math.max(1, endExclusive - start);
+  const inside = current.level >= 25 ? span : Math.max(0, Math.min(span, units - start));
+  const percent = current.level >= 25 ? 100 : safePercent(inside / span * 100);
+  const left = current.level >= 25 ? 0 : Math.max(0, endExclusive - units);
+  return { units, current, next, inside, span, percent, left, secretUnlocked: units >= 1000 };
+}
+function levelBarHtml(info) {
+  const segments = 10;
+  const active = Math.max(0, Math.min(segments, Math.round(info.percent / 10)));
+  const cells = Array.from({length: segments}, (_,i)=>`<span class="${i < active ? 'active' : ''}"></span>`).join('');
+  return `<div class="level-bar-wrap"><div class="level-bar-segments">${cells}</div><div class="level-bar-caption"><span>${info.current.level >= 25 ? 'Финальный уровень открыт' : `${info.inside} / ${info.span} внутри уровня`}</span><b>${info.current.level}/25</b></div></div>`;
+}
+function titleHelpHtml() {
+  const rows = LEGO_LEVELS.map(row => `<div><b>${row.level}. ${esc(row.title)}</b><span>${row.level === 25 ? '1000+ единиц' : `${row.min}–${row.max} единиц`}</span></div>`).join('');
+  return `<div id="title-help-panel" class="title-help-panel" style="display:none">
+    <div class="title-help-head"><b>Как работает уровень</b><button onclick="toggleTitleHelp(false)">×</button></div>
+    <p>Уровень показывает накопленный учебный опыт. Учебные единицы начисляются за полностью закрытые уроки, книги челленджа после мини-теста, дополнительные материалы и специальные задания.</p>
+    <p>В челлендже одна книга после пройденного теста даёт +1 учебную единицу. Баллы начисляются отдельно и могут тратиться на возможности внутри системы.</p>
+    <p>Финальный титул «Мастер Л.Е.Г.О» открывается после 1000 учебных единиц. На последнем уровне будет доступен суперсекретный бонус.</p>
+    <div class="level-help-list">${rows}</div>
+  </div>`;
+}
+function toggleTitleHelp(force) {
+  const el = $('title-help-panel');
+  if (!el) return;
+  const next = force === undefined ? el.style.display === 'none' : Boolean(force);
+  el.style.display = next ? 'block' : 'none';
+  if (next) el.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function titleCardHtml() {
+  const info = studentTitleInfo();
+  return card('title-card-v12', `<div class="title-card-head"><div><p class="eyebrow">уровень ученика</p><h2>${esc(info.current.title)}</h2></div><button class="help-dot" onclick="toggleTitleHelp()" aria-label="Как работают уровни">?</button></div>${titleHelpHtml()}<div class="title-stat-row"><div><span>Уровень</span><b>${info.current.level} / 25</b></div><div><span>Учебные единицы</span><b>${formatPoints(info.units)}</b></div></div>${levelBarHtml(info)}<p class="small title-note">${info.secretUnlocked ? 'Суперсекретный бонус открыт.' : `До следующего уровня: ${formatPoints(info.left)} учебных единиц.`}</p>`);
+}
+function activeChallengeCardHtml() {
+  const ch = getChallengeState();
+  if (!ch || !ch.active) return '';
+  const day = currentChallengeDay(ch);
+  const reward = currentChallengeReward(ch);
+  const started = ch.dayStartedAt || ch.startedAt;
+  const startedTime = started ? new Date(started).getTime() : Date.now();
+  const expires = startedTime + 24 * 60 * 60 * 1000;
+  const leftMs = Math.max(0, expires - Date.now());
+  const hours = Math.floor(leftMs / 3600000);
+  const minutes = Math.floor((leftMs % 3600000) / 60000);
+  return card('challenge-active-card', `<p class="eyebrow">ежедневная задача</p><h2>100 книг за 100 дней</h2><div class="challenge-grid"><div><span>День</span><b>${day} / 100</b></div><div><span>Осталось</span><b>${hours} ч ${minutes} мин</b></div><div><span>Серия</span><b>${Number(ch.streak || 0)} подряд</b></div><div><span>Награда сегодня</span><b>${formatPoints(reward)} баллов</b></div></div><p><b>Книга:</b> ${esc(ch.currentBookTitle || 'книга дня')}</p><p><b>Этап:</b> ${esc(ch.todayStage || 'саммари не открыто')}</p><p class="small">Зачёт книги даёт +1 учебную единицу. Если день пропущен, серия и награда следующего дня возвращаются к 50 баллам.</p>`);
+}
+function brandLogoHtml(compact) {
+  const logo = compact ? "assets/brand/lego-mark.svg" : "assets/brand/lego-logo.svg";
+  return `<div class="brand-lockup ${compact ? 'compact' : ''}">
+    <img src="${logo}?v=${APP_CACHE_VERSION}" alt="Л.Е.Г.О" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+    <div class="brand-fallback" style="display:none"><b>Л.Е.Г.О.</b><span>система внедрения управленческих изменений</span></div>
+  </div>`;
+}
+function shell(content, activeTab) {
+  const root = $("app");
+  if (!root) return;
+  const modeButton = isAdminUser()
+    ? `<button class="mode-pill ${isAdminMode() ? "admin" : "student-preview"}" onclick="renderProfile()">${isAdminMode() ? "Босс" : "Режим ученика"}</button>`
+    : "";
+  root.innerHTML = `
+    <div class="app-shell-v2">
+      <header class="app-header-v2">
+        ${brandLogoHtml(false)}
+        ${modeButton}
+      </header>
+      <main class="content-v2">${content}</main>
+      ${bottomNav(activeTab || "home")}
+    </div>`;
+}
+function renderMainBlockCard(title, text, status, action, cls) {
+  const clickable = Boolean(action);
+  return `<button class="track-card ${cls || ''} ${clickable ? '' : 'disabled'}" ${clickable ? `onclick="${action}"` : 'disabled'}>
+    <b>${esc(title)}</b><p>${esc(text)}</p><em>${esc(status)}</em>
+  </button>`;
+}
+function renderHome() {
+  const gp = globalStageProgress();
+  const points = totalPoints();
+  const titleInfo = studentTitleInfo();
+  const html = `
+    ${card('hero-dashboard main-dashboard-card', `
+      <div class="hero-layout">
+        <div>
+          <p class="eyebrow">общая система</p>
+          <h1>Ваш прогресс в Л.Е.Г.О.</h1>
+          <p>Прогресс считается по пройденным этапам готовых уроков: презентация, тест, саммари и принятое домашнее задание.</p>
+          <div class="dashboard-mini-grid"><div><span>Баллы</span><b>${formatPoints(points)}</b></div><div><span>Титул</span><b>${esc(titleInfo.current.title)}</b></div></div>
+        </div>
+        ${progressRing(gp.percent, 'общий', `${gp.done} из ${gp.total || 0} этапов`)}
+      </div>
+    `)}
+    ${titleCardHtml()}
+    ${activeChallengeCardHtml()}
+    ${card('', `<h2>Выбрать блок</h2><p>Выберите направление работы внутри платформы.</p>
+      <div class="top-track-grid top-track-grid-five">
+        ${renderMainBlockCard('Нет своего бизнеса','Базовый маршрут для подготовки к предпринимательскому мышлению и запуску.','скоро','','disabled')}
+        ${renderMainBlockCard('Я предприниматель','Диагностика, уроки, ДЗ, проверка и управленческие действия.','доступно','renderLearning()','active')}
+        ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','','disabled')}
+        ${renderMainBlockCard('100 книг за 100 дней','Ежедневный челлендж: 1 книга за 24 часа. После мини-теста книга даёт +1 единицу и баллы серии: 50 в первый день, дальше +2 за каждый зачёт подряд.','скоро','','disabled')}
+        ${renderMainBlockCard('Дополнительные материалы','Отдельные уроки, разборы и материалы, которые дополняют основной маршрут.','скоро','','disabled')}
+      </div>`)}
+  `;
+  shell(html, 'home');
+}
+async function continueLessonFromProgress(code) {
+  const meta = getLessonMeta(code);
+  if (!meta) return;
+  if (!canOpenLesson(meta)) { alert("Урок пока закрыт."); return; }
+  state.selectedLessonCode = code;
+  state.selectedActivityKey = meta.activityKey;
+  localStorage.setItem("lego_selected_lesson", code);
+  localStorage.setItem("lego_selected_activity", meta.activityKey);
+  await loadLesson(code);
+  if (isStageDone(code,"homeworkSubmitted") && !isStageDone(code,"homeworkVerified")) return renderHomeworkStatus();
+  if (isStageDone(code,"books")) return renderHomework();
+  if (isStageDone(code,"quiz")) return startBooks();
+  if (isStageDone(code,"presentation")) return startQuiz(false);
+  return startSlides();
+}
+function entrepreneurCurrentStepCard() {
+  const meta = nextLessonMeta();
+  if (!meta) return '';
+  const act = getActivity(meta.activityKey);
+  const info = lessonStageProgressInfo(meta.code);
+  const p = getProgress(meta.code);
+  const place = p.last_book_slide_number ? `Саммари ${p.last_book_slide_number}` : (p.last_slide_number ? `Слайд ${p.last_slide_number}` : 'Начало урока');
+  return card('blue-card-v2 current-step-card', `<p class="eyebrow">ваш текущий шаг</p><h1>${esc(lessonStageLabel(meta.code))}</h1><p>${esc(act?.title || '')} · урок ${String(meta.number).padStart(2,'0')} · ${esc(meta.title)}</p><div class="step-summary-line"><span>Прогресс урока</span><b>${info.done}/${info.total} · ${info.percent}%</b></div><div class="step-summary-line"><span>Последнее место</span><b>${esc(place)}</b></div><button class="btn primary" onclick="continueLessonFromProgress('${meta.code}')">Продолжить с последнего места</button>`);
+}
+function currentActivityProgress() {
+  const lessons = activityLessons(state.selectedActivityKey);
+  const plannedTotal = Math.max(lessons.length, 10) * 4;
+  let done = 0;
+  lessons.forEach(meta => { done += lessonCompletedStageCount(meta.code, meta); });
+  return plannedTotal ? safePercent(done / plannedTotal * 100) : 0;
+}
+function getActivityProgressInfo(key) {
+  const lessons = activityLessons(key);
+  const openCount = lessons.filter(canOpenLesson).length;
+  const readyCount = lessons.filter(isLessonPrepared).length;
+  const doneCount = lessons.filter(isLessonFullyCompleted).length;
+  const routeTotal = Math.max(lessons.length, 10) * 4;
+  const stageDone = lessons.reduce((sum,l)=>sum + lessonCompletedStageCount(l.code,l),0);
+  return { lessons, openCount, doneCount, readyCount, routeTotal, stageDone, routePercent: routeTotal ? safePercent(stageDone / routeTotal * 100) : 0 };
+}
+function renderActivityLessons(key) {
+  if (key && getActivity(key)) {
+    state.selectedActivityKey = key;
+    localStorage.setItem("lego_selected_activity", key);
+  }
+  const act = getActivity(state.selectedActivityKey) || state.catalog.activities[0];
+  const info = getActivityProgressInfo(act.key);
+  const readyNote = info.readyCount ? 'Первый готовый урок доступен сразу. Следующий урок открывается после приёмки ДЗ предыдущего урока.' : 'Материалы направления временно закрыты: уроки откроются после оформления изображений, тестов и проверки логики.';
+  const html = `
+    ${card('blue-card-v2', `<p class="eyebrow">Я предприниматель</p><h1>${esc(act.title)}</h1><p>${esc(activityIntroText(act))}</p><p class="small">${readyNote}</p><div class="step-summary-line"><span>Прогресс направления</span><b>${info.stageDone}/${info.routeTotal} этапов · ${info.routePercent}%</b></div>`)}
+    ${card('', `<div class="activity-toolbar"><button class="btn secondary" onclick="renderLearning()">К видам деятельности</button></div><h2>Уроки направления</h2><p>Маршрут направления считается от 10 уроков: <b>40 этапов</b>. Доступно сейчас: <b>${info.openCount} из ${info.lessons.length}</b>. Готово к выдаче: <b>${info.readyCount}</b>.</p><div class="lesson-list-v2">${info.lessons.map(renderLessonRow).join('')}</div>`)}
+  `;
+  shell(html, 'learning');
+}
+function lessonSummaryForDoneBlock(meta) {
+  const info = lessonStageProgressInfo(meta.code);
+  return `${esc(meta.activityTitle || '')} · ${info.done}/${info.total} этапов`;
+}
+function insightsKey() {
+  const ids = possibleIds();
+  const suffix = ids[0] || normalizeUsername(state.user?.username || getTelegramUser().username) || 'local';
+  return 'lego_lesson_insights_v1_' + suffix;
+}
+function loadInsights() { try { return JSON.parse(localStorage.getItem(insightsKey()) || '[]'); } catch(e){ return []; } }
+function saveInsights(list) { localStorage.setItem(insightsKey(), JSON.stringify(Array.isArray(list) ? list : [])); }
+function saveLessonInsight() {
+  const input = $('lesson-insight-input');
+  const text = String(input?.value || '').trim();
+  if (!text) { alert('Запишите вывод одной-двумя фразами.'); return; }
+  const meta = getLessonMeta(state.selectedLessonCode);
+  const list = loadInsights();
+  list.unshift({
+    id: Date.now(),
+    lessonCode: state.selectedLessonCode,
+    lessonTitle: meta?.title || '',
+    activityTitle: meta?.activityTitle || '',
+    text,
+    createdAt: nowIso()
+  });
+  saveInsights(list.slice(0, 100));
+  if (input) input.value = '';
+  renderLessonHub();
+}
+function deleteInsight(id) {
+  saveInsights(loadInsights().filter(x => String(x.id) !== String(id)));
+  renderProfile();
+}
+function lessonInsightCard() {
+  const list = loadInsights().filter(x => x.lessonCode === state.selectedLessonCode).slice(0,3);
+  return card('insight-card', `<h2>Мой вывод по уроку</h2><p>Зафиксируйте одну управленческую мысль, которую нужно перенести в действия или ДЗ.</p><textarea id="lesson-insight-input" rows="3" placeholder="Например: главное ограничение сейчас не в потоке, а в переходе заявки в оплату..."></textarea><button class="btn primary" onclick="saveLessonInsight()">Сохранить вывод</button>${list.length ? `<div class="insight-list-mini">${list.map(x=>`<div><b>${shortDate(x.createdAt)}</b><p>${esc(x.text)}</p></div>`).join('')}</div>` : ''}`);
+}
+function renderLessonHub() {
+  loadLesson(state.selectedLessonCode).then(lesson => {
+    const meta = getLessonMeta(state.selectedLessonCode);
+    const activityKey = meta ? meta.activityKey : (lesson.activityKey || state.selectedActivityKey);
+    const adminService = isAdminMode() && lesson.passportText ? `<details class="admin-details"><summary>Служебное описание урока</summary><pre class="text-pre">${esc(lesson.passportText || '')}</pre></details>` : "";
+    const html = `
+      ${card('blue-card-v2 lesson-head-card', `<p class="eyebrow">${esc(lesson.activityTitle)} · урок ${String(lesson.number).padStart(2,'0')}</p><h1>${esc(lesson.title)}</h1><div class="lesson-meta-chips"><span>${esc(lesson.activityTitle)}</span><span>Урок ${String(lesson.number).padStart(2,'0')}</span></div><p>${esc(cleanLessonDescription(lesson))}</p>${lessonProgressMini(meta.code)}<button class="btn primary" onclick="continueLessonFromProgress('${meta.code}')">Продолжить с последнего места</button>`)}
+      ${lessonOverviewCard(lesson)}
+      <div class="stage-grid-v2">
+        ${stageCard('presentation','Презентация','Информационная часть урока',isStageDone(meta.code,'presentation'),'startSlides()')}
+        ${stageCard('quiz','Тест','Проверка понимания материала',isStageDone(meta.code,'quiz'),'startQuiz(false)',!isStageDone(meta.code,'presentation') && !isAdminMode())}
+        ${stageCard('books','Саммари','Информация о полезных книгах',isStageDone(meta.code,'books'),'startBooks()',!isStageDone(meta.code,'quiz') && !isAdminMode())}
+        ${stageCard('homework','Домашнее задание','Практическая часть урока',isStageDone(meta.code,'homeworkSubmitted'),'renderHomework()',!isStageDone(meta.code,'books') && !isAdminMode())}
+      </div>
+      ${lessonInsightCard()}
+      ${card('', `<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">← К выбору уроков</button>`)}
+      ${adminService}
+    `;
+    shell(html, 'learning');
+  }).catch(e => emergencyScreen(e.message || 'LESSON_HUB_ERROR'));
+}
+function preloadImage(src) {
+  if (!src) return;
+  try { const img = new Image(); img.src = src + (src.includes('?') ? '&' : '?') + 'v=' + APP_CACHE_VERSION; } catch(e) {}
+}
+function mediaSrcFor(label, index, lesson) {
+  if (!lesson) return lessonImageFallback(label, index);
+  if (label === 'Слайд') return lesson.slides?.[index-1]?.image || lessonImageFallback(label, index);
+  if (label === 'Саммари') return lesson.bookScreens?.[index-1]?.image || lessonImageFallback(label, index);
+  return lessonImageFallback(label, index);
+}
+function preloadAdjacentMedia(label, current, total, lesson) {
+  [current + 1, current + 2, current - 1].forEach(i => {
+    if (i >= 1 && i <= total) preloadImage(mediaSrcFor(label, i, lesson));
+  });
+}
+async function renderSlide(){
+  const lesson=await loadLesson(state.selectedLessonCode);
+  const slide=lesson.slides[state.slideIndex];
+  shell(`${topLessonNav('prevSlide()','nextSlide()',state.slideIndex===0,state.slideIndex===lesson.slides.length-1?'К тесту':'Далее')} ${mediaScreen(slide.image,'Слайд',state.slideIndex+1,lesson.slides.length,renderDisplayText(slide,'slide'))}`,'learning');
+  preloadAdjacentMedia('Слайд', state.slideIndex + 1, lesson.slides.length, lesson);
+}
+async function renderBook(){
+  const lesson=await loadLesson(state.selectedLessonCode);
+  const scr=lesson.bookScreens[state.bookIndex];
+  shell(`${topLessonNav('prevBook()','nextBook()',state.bookIndex===0,state.bookIndex===lesson.bookScreens.length-1?'К ДЗ':'Далее')} ${mediaScreen(scr.image,'Саммари',state.bookIndex+1,lesson.bookScreens.length,renderDisplayText(scr,'book'))}`,'learning');
+  preloadAdjacentMedia('Саммари', state.bookIndex + 1, lesson.bookScreens.length, lesson);
+}
+function renderBookChallenge(){
+  shell(`${card('blue-card-v2 soon-page-card', `<p class="eyebrow">скоро</p><h1>100 книг за 100 дней</h1><p>Раздел скоро откроется. Внутри будет ежедневный челлендж: одна книга за 24 часа, мини-тест, +1 учебная единица и баллы серии.</p>`)}${card('', `<h2>Как будет работать начисление</h2><div class="list-clean"><div><b>Книга зачтена</b><p>Саммари изучено, мини-тест пройден: книга остаётся в доступе, начисляется +1 учебная единица.</p></div><div><b>Баллы серии</b><p>Первый день — 50 баллов. Каждый зачёт подряд увеличивает награду следующего дня на 2 балла. При пропуске серия возвращается к 50.</p></div><div><b>100-й день</b><p>При непрерывном прохождении награда доходит до 250 баллов.</p></div></div><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
+}
+function renderAdditionalMaterials(){
+  shell(`${card('blue-card-v2 soon-page-card', `<p class="eyebrow">скоро</p><h1>Дополнительные материалы</h1><p>Раздел скоро откроется. Здесь будут отдельные уроки, разборы, шаблоны и материалы, которые дополняют основной маршрут.</p>`)}${card('', `<button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
+}
+function doneSummaryHtml() {
+  const lessons = readyCoreLessons();
+  const presentation = lessons.filter(l => isStageDone(l.code,'presentation')).length;
+  const quiz = lessons.filter(l => isStageDone(l.code,'quiz')).length;
+  const books = lessons.filter(l => isStageDone(l.code,'books')).length;
+  const hw = lessons.filter(l => isStageDone(l.code,'homeworkVerified')).length;
+  const insights = loadInsights().length;
+  const ch = getChallengeState();
+  return card('done-summary-card', `<h2>Что уже сделано</h2><div class="done-grid"><div><span>Презентации</span><b>${presentation}</b></div><div><span>Тесты</span><b>${quiz}</b></div><div><span>Саммари</span><b>${books}</b></div><div><span>Принятые ДЗ</span><b>${hw}</b></div><div><span>Книги челленджа</span><b>${Number(ch.passedBooks || 0)}</b></div><div><span>Мои выводы</span><b>${insights}</b></div></div>`);
+}
+function insightsProfileHtml() {
+  const list = loadInsights().slice(0, 8);
+  return card('insight-card', `<h2>Мои выводы</h2><p>Короткие управленческие выводы, которые вы сохранили внутри уроков.</p>${list.length ? `<div class="insight-list">${list.map(x=>`<div><div><b>${esc(x.activityTitle || '')} · ${esc(x.lessonTitle || x.lessonCode)}</b><span>${shortDate(x.createdAt)}</span><p>${esc(x.text)}</p></div><button onclick="deleteInsight('${x.id}')">×</button></div>`).join('')}</div>` : '<p class="small">Пока выводов нет. Откройте урок и сохраните первый вывод после презентации или саммари.</p>'}`);
+}
+function consultationCardsHtml(points) {
+  const missing = Math.max(0, CONSULTATION_COST - Number(points || 0));
+  const canRequest = missing <= 0;
+  return card('consultation-card', `<h2>Консультации</h2><div class="consult-grid"><div><b>Консультация за баллы</b><p>Стоимость: ${consultationCostText()}.</p><p>${canRequest ? 'Баллов достаточно. Можно отправить заявку на консультацию за баллы.' : `Недостаточно баллов. Нужно ещё: ${formatPoints(missing)}.`}</p>${canRequest ? externalButton('Запросить консультацию за баллы', CONSULTATION_FORM_URL, 'primary') : '<button class="btn secondary" disabled>Недостаточно баллов</button>'}</div><div><b>Индивидуальная консультация</b><p>Можно оставить заявку на разбор бизнеса, управленческого вопроса или конкретной ситуации. Условия консультации согласовываются отдельно.</p>${externalButton('Подать заявку на индивидуальную консультацию', CONSULTATION_FORM_URL, 'secondary')}</div></div><h3>Что можно будет получать за баллы</h3><div class="bonus-list"><span>Приоритетный разбор ДЗ</span><span>Дополнительный шаблон</span><span>Закрытый разбор кейса</span><span>Проверка гипотезы</span></div>`);
+}
+function renderProfile(){
+  const gp = globalStageProgress();
+  const points = totalPoints();
+  const activeMeta = getLessonMeta(state.selectedLessonCode) || nextLessonMeta();
+  const lp = activeMeta ? lessonStageProgressInfo(activeMeta.code) : {done:0,total:0,percent:0};
+  const titleInfo = studentTitleInfo();
+  const adminBlock = isAdminUser()
+    ? card('boss-panel-card', `<h2>Панель Босса Л.Е.Г.О</h2><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Просмотр как ученик</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Режим Босса</button></div><p class="small">Панель управления, проверка ДЗ и полный предпросмотр уроков доступны только владельцу системы.</p>${actionButton('Открыть панель Босса','renderAdmin()','primary')}`)
+    : '';
+  shell(`${card('blue-card-v2', `<h1>Профиль</h1><p>${esc(state.user?.first_name || 'Пользователь')} · ${studentRoleLabel()}</p>`)}${titleCardHtml()}${card('', `<h2>Прогресс и баллы</h2>${progressRing(gp.percent,'общий',`${gp.done} из ${gp.total || 0} этапов`)}<div class="profile-score-grid"><div><span>Всего баллов</span><b>${formatPoints(points)}</b></div><div><span>Текущий урок</span><b>${lp.done} / ${lp.total}</b></div><div><span>Учебные единицы</span><b>${formatPoints(titleInfo.units)}</b></div><div><span>Готовые уроки</span><b>${readyCoreLessons().length}</b></div></div>`)}${doneSummaryHtml()}${insightsProfileHtml()}${adminBlock}${consultationCardsHtml(points)}${card('', `<h2>Поддержка</h2>${externalButton('Задать вопрос',SUPPORT_FORM_URL,'secondary')}${externalButton('Предложить идею',IDEA_FORM_URL,'secondary')}`)}`,'profile');
+}
+function renderAdmin(){
+  if(!isAdminUser()){ alert('Нет прав Босса Л.Е.Г.О.'); return; }
+  shell(`${card('blue-card-v2', `<h1>Панель Босса Л.Е.Г.О</h1><p>Полный доступ ко всем урокам, предпросмотр контента и проверка ДЗ.</p>`)}${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${state.catalog.lessons.map(l=>`<button class="lesson-row-v2" onclick="openLesson('${l.code}')"><div><b>${esc(l.code)} · ${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${l.slidesCount} слайдов · ${l.quizCount} вопросов · ${l.bookScreensCount} саммари</p></div><span>→</span></button>`).join('')}</div>`)}${card('', `<h2>Проверка ДЗ</h2><input id="admin-target-user" placeholder="Telegram ID или username ученика"><textarea id="admin-review-comment" placeholder="Комментарий проверяющего"></textarea><button class="btn primary" onclick="adminApproveTargetUser()">Принять ДЗ</button><button class="btn secondary" onclick="adminRejectTargetUser()">Отправить на доработку</button>`)}`,'profile');
 }
