@@ -546,3 +546,48 @@
     margin-top: 6px !important;
   }
 }
+
+
+/* =====================================================
+   v17 вЂ” 100 РєРЅРёРі Р·Р° 100 РґРЅРµР№
+   ===================================================== */
+.books100-entry{border-color:rgba(246,195,67,.55) !important;background:linear-gradient(180deg,#fff,#FFF8E3) !important;}
+.books100-hero h1{margin-bottom:10px !important;}
+.books100-status-card .challenge-grid{margin-bottom:12px;}
+.challenge-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;}
+.challenge-grid>div{padding:12px;border-radius:16px;background:#F6F8FC;border:1px solid #DDE5EF;}
+.challenge-grid span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#7D8A99;font-weight:900;}
+.challenge-grid b{display:block;margin-top:5px;font-size:18px;color:#071B35;line-height:1.15;}
+.blue-card-v2 .challenge-grid>div{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.16);}
+.blue-card-v2 .challenge-grid span{color:rgba(255,255,255,.68);}
+.blue-card-v2 .challenge-grid b{color:#fff;}
+.books100-current{display:grid;gap:12px;padding:14px;border-radius:18px;background:#FFF3C8;border:1px solid rgba(246,195,67,.40);}
+.books100-current h2{margin-bottom:4px;}
+.books100-current p{margin:0;color:#4D5B6B;}
+.books100-list{display:grid;gap:10px;margin-top:12px;}
+.books100-book-card{width:100%;display:grid;grid-template-columns:84px minmax(0,1fr);gap:12px;align-items:center;padding:10px;border-radius:18px;background:#fff;border:1px solid #DDE5EF;box-shadow:0 8px 20px rgba(7,27,53,.06);text-align:left;}
+.books100-book-card.locked{opacity:.55;cursor:not-allowed;background:#F6F8FC;box-shadow:none;}
+.books100-cover{width:84px;aspect-ratio:16/10;border-radius:14px;background:#E7ECF3;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.books100-cover img{display:block;width:100%;height:100%;object-fit:cover;}
+.books100-book-card b{display:block;font-size:14px;line-height:1.25;color:#071B35;}
+.books100-book-card p{margin:4px 0 6px;font-size:12px;line-height:1.35;color:#4D5B6B;}
+.books100-book-card em{display:inline-flex;padding:5px 8px;border-radius:999px;background:#E7F0FA;color:#1F4F8A;font-style:normal;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;}
+.books100-book-card.locked em{background:#E7ECF3;color:#7D8A99;}
+.books100-text .books100-full-summary{margin-top:14px;padding-top:14px;border-top:1px solid #DDE5EF;}
+.books100-text .books100-full-summary h3{margin-top:14px;}
+.books100-text ul,.books100-text ol{padding-left:20px;margin:8px 0 14px;color:#263852;line-height:1.6;}
+.books100-quiz-card .small{margin-top:-4px;margin-bottom:12px;}
+.review-row{padding:12px;border-radius:16px;margin:10px 0;background:#F6F8FC;border:1px solid #DDE5EF;}
+.review-row.ok{background:#DFF8F4;border-color:rgba(22,168,154,.30);}
+.review-row.bad{background:#FFE1E1;border-color:rgba(217,74,74,.25);}
+.review-row h3{font-size:16px;margin-bottom:8px;}
+.review-row p{font-size:14px;line-height:1.48;margin:6px 0;color:#4D5B6B;}
+@media(max-width:420px){
+  .challenge-grid{grid-template-columns:1fr 1fr;gap:8px;}
+  .challenge-grid>div{padding:10px;}
+  .challenge-grid b{font-size:16px;}
+  .books100-book-card{grid-template-columns:72px minmax(0,1fr);gap:10px;padding:9px;}
+  .books100-cover{width:72px;}
+  .books100-book-card b{font-size:13px;}
+}
+@media(max-width:350px){.challenge-grid{grid-template-columns:1fr}.books100-book-card{grid-template-columns:1fr}.books100-cover{width:100%;}}
