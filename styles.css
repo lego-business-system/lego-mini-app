@@ -440,3 +440,109 @@
   .dashboard-mini-grid-compact{grid-template-columns:1fr !important;}
   .business-kpi-grid{grid-template-columns:1fr;}
 }
+
+
+/* =====================================================
+   v16 вЂ” compact dashboard progress and VIP cleanup
+   ===================================================== */
+.v16-dashboard-card .v16-dashboard-head {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 104px !important;
+  gap: 14px !important;
+  align-items: center !important;
+}
+.v16-dashboard-copy h1 {
+  margin-bottom: 10px !important;
+}
+.v16-dashboard-copy p:not(.eyebrow) {
+  max-width: 100% !important;
+  margin-bottom: 0 !important;
+}
+.compact-ring-wrap {
+  width: 96px !important;
+  height: 96px !important;
+  position: relative !important;
+  display: grid !important;
+  place-items: center !important;
+  justify-self: end !important;
+  flex: 0 0 96px !important;
+}
+.compact-ring-svg {
+  width: 96px !important;
+  height: 96px !important;
+  transform: rotate(-90deg) !important;
+  overflow: visible !important;
+}
+.compact-ring-svg circle {
+  fill: none !important;
+  stroke-width: 9 !important;
+  stroke-linecap: round !important;
+}
+.compact-ring-track {
+  stroke: rgba(255,255,255,.22) !important;
+}
+.compact-ring-value {
+  stroke: url(#none) !important;
+  stroke: #F6C343 !important;
+  transition: stroke-dashoffset .3s ease !important;
+}
+.compact-ring-center {
+  position: absolute !important;
+  inset: 16px !important;
+  border-radius: 50% !important;
+  background: rgba(7,27,53,.72) !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  display: grid !important;
+  place-items: center !important;
+}
+.compact-ring-center b {
+  color: #fff !important;
+  font-size: 25px !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+  font-variant-numeric: tabular-nums !important;
+}
+.v16-mini-grid {
+  margin-top: 14px !important;
+}
+.v16-mini-grid > div {
+  min-height: 76px !important;
+  padding: 14px 16px !important;
+}
+.timeline-row.review em {
+  color: var(--lego-gray-500, #7D8A99) !important;
+}
+@media (max-width: 420px) {
+  .v16-dashboard-card .v16-dashboard-head {
+    grid-template-columns: minmax(0, 1fr) 92px !important;
+    gap: 10px !important;
+  }
+  .compact-ring-wrap {
+    width: 86px !important;
+    height: 86px !important;
+    flex-basis: 86px !important;
+  }
+  .compact-ring-svg {
+    width: 86px !important;
+    height: 86px !important;
+  }
+  .compact-ring-center {
+    inset: 14px !important;
+  }
+  .compact-ring-center b {
+    font-size: 22px !important;
+  }
+  .v16-dashboard-copy p:not(.eyebrow) {
+    font-size: 14px !important;
+    line-height: 1.42 !important;
+  }
+}
+@media (max-width: 360px) {
+  .v16-dashboard-card .v16-dashboard-head {
+    grid-template-columns: 1fr !important;
+  }
+  .compact-ring-wrap {
+    justify-self: start !important;
+    margin-top: 6px !important;
+  }
+}
