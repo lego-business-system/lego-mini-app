@@ -1834,3 +1834,394 @@ function renderHome() {
   `;
   shell(html, 'home');
 }
+
+
+/* =====================================================
+   v17 — 100 книг за 100 дней: запуск челленджа, админ-просмотр, книга дня, мини-тест
+   ===================================================== */
+
+const BOOKS100_INDEX_URL = "content/challenges/books100/index.json";
+const BOOKS100_CACHE_VERSION = "v17-books100-20260602";
+const BOOKS100_STORAGE_KEY = "lego_books100_challenge_v17";
+
+state.books100Index = null;
+state.books100Cache = {};
+state.books100ScreenIndex = 0;
+state.books100QuestionIndex = 0;
+state.books100Answers = {};
+state.books100ActiveBookDay = 1;
+state.books100AdminPreview = false;
+
+function books100NowMs(){ return Date.now(); }
+function books100DayMs(){ return 24 * 60 * 60 * 1000; }
+function books100Iso(ms){ return new Date(ms || books100NowMs()).toISOString(); }
+function books100RemainingMs(ch){
+  if (!ch || !ch.active || !ch.dayStartedAt) return 0;
+  return Math.max(0, new Date(ch.dayStartedAt).getTime() + books100DayMs() - books100NowMs());
+}
+function books100TimeLeftText(ms){
+  const total = Math.max(0, Number(ms || 0));
+  const hours = Math.floor(total / (60 * 60 * 1000));
+  const minutes = Math.floor((total % (60 * 60 * 1000)) / (60 * 1000));
+  return `${hours} ч ${minutes} мин`;
+}
+function books100RewardForCurrent(ch){
+  const day = Math.max(1, Number(ch?.currentDay || 1));
+  const streakBefore = Math.max(0, Number(ch?.streak || 0));
+  if (day >= 100 && streakBefore >= 99) return 250;
+  return Math.min(250, 50 + streakBefore * 2);
+}
+function books100DefaultState(){
+  return {
+    active: false,
+    startedAt: null,
+    currentDay: 1,
+    currentIndex: 0,
+    dayStartedAt: null,
+    streak: 0,
+    passedBooks: 0,
+    missedBooks: 0,
+    pointsEarned: 0,
+    unitsEarned: 0,
+    passedBookIds: [],
+    missedBookIds: [],
+    currentBookTitle: "",
+    todayStage: "саммари не открыто",
+    updatedAt: books100Iso()
+  };
+}
+function getBooks100RawState(){
+  try { return Object.assign(books100DefaultState(), JSON.parse(localStorage.getItem(BOOKS100_STORAGE_KEY) || "{}")); }
+  catch(e){ return books100DefaultState(); }
+}
+function saveBooks100State(data){
+  const next = Object.assign(books100DefaultState(), data || {}, { updatedAt: books100Iso() });
+  localStorage.setItem(BOOKS100_STORAGE_KEY, JSON.stringify(next));
+  return next;
+}
+function getChallengeState(){
+  // Профиль и главная используют эту функцию для баллов и учебных единиц.
+  return getBooks100RawState();
+}
+function saveChallengeState(data){ return saveBooks100State(data); }
+function challengeUnits(ch){ return Number((ch || getBooks100RawState()).unitsEarned || (ch || {}).passedBooks || 0); }
+function challengePoints(ch){ return Number((ch || getBooks100RawState()).pointsEarned || 0); }
+function currentChallengeDay(ch){ return Math.max(1, Math.min(100, Number((ch || getBooks100RawState()).currentDay || 1))); }
+function currentChallengeReward(ch){ return books100RewardForCurrent(ch || getBooks100RawState()); }
+
+async function loadBooks100Index(){
+  if (state.books100Index) return state.books100Index;
+  const response = await fetch(BOOKS100_INDEX_URL + "?v=" + BOOKS100_CACHE_VERSION);
+  if (!response.ok) throw new Error("BOOKS100_INDEX_LOAD_FAILED");
+  state.books100Index = await response.json();
+  return state.books100Index;
+}
+async function loadBooks100Book(bookMeta){
+  const key = bookMeta.id || String(bookMeta.day || "");
+  if (state.books100Cache[key]) return state.books100Cache[key];
+  const response = await fetch(bookMeta.contentUrl + "?v=" + BOOKS100_CACHE_VERSION);
+  if (!response.ok) throw new Error("BOOKS100_BOOK_LOAD_FAILED: " + key);
+  const data = await response.json();
+  state.books100Cache[key] = data;
+  return data;
+}
+function books100ByDay(index, day){
+  return (index?.books || []).find(b => Number(b.day) === Number(day));
+}
+function books100ByIndex(index, idx){
+  return (index?.books || [])[Number(idx || 0)] || null;
+}
+function normalizeBooks100State(ch, index){
+  let next = Object.assign(books100DefaultState(), ch || {});
+  if (!next.active) return next;
+  let changed = false;
+  const books = index?.books || [];
+  if (!books.length) return next;
+  if (Number(next.currentIndex || 0) >= books.length) return next;
+  while (next.active && Number(next.currentIndex || 0) < books.length) {
+    const currentBook = books100ByIndex(index, next.currentIndex);
+    const currentId = currentBook?.id;
+    const alreadyPassed = currentId && (next.passedBookIds || []).includes(currentId);
+    const expired = next.dayStartedAt && (books100NowMs() - new Date(next.dayStartedAt).getTime() >= books100DayMs());
+    if (!expired || alreadyPassed) break;
+    if (currentId && !(next.missedBookIds || []).includes(currentId)) {
+      next.missedBookIds = (next.missedBookIds || []).concat(currentId);
+      next.missedBooks = Number(next.missedBooks || 0) + 1;
+    }
+    next.streak = 0;
+    next.currentIndex = Number(next.currentIndex || 0) + 1;
+    next.currentDay = Number(next.currentDay || 1) + 1;
+    next.dayStartedAt = books100Iso();
+    next.todayStage = "саммари не открыто";
+    changed = true;
+  }
+  const current = books100ByIndex(index, next.currentIndex);
+  next.currentBookTitle = current ? current.title : "следующая книга готовится";
+  if (changed) saveBooks100State(next);
+  return next;
+}
+async function getBooks100StateNormalized(){
+  const index = await loadBooks100Index();
+  const ch = normalizeBooks100State(getBooks100RawState(), index);
+  saveBooks100State(ch);
+  return ch;
+}
+function startBookChallenge(){ startBooks100Challenge(); }
+async function startBooks100Challenge(){
+  const index = await loadBooks100Index();
+  const firstBook = books100ByIndex(index, 0);
+  const next = saveBooks100State({
+    active: true,
+    startedAt: books100Iso(),
+    currentDay: 1,
+    currentIndex: 0,
+    dayStartedAt: books100Iso(),
+    streak: 0,
+    passedBooks: 0,
+    missedBooks: 0,
+    pointsEarned: 0,
+    unitsEarned: 0,
+    passedBookIds: [],
+    missedBookIds: [],
+    currentBookTitle: firstBook ? firstBook.title : "книга дня",
+    todayStage: "саммари не открыто"
+  });
+  renderBookChallenge();
+  return next;
+}
+function resetBooks100Challenge(){
+  if (!confirm('Сбросить тестовое состояние челленджа на этом устройстве?')) return;
+  localStorage.removeItem(BOOKS100_STORAGE_KEY);
+  state.books100ScreenIndex = 0;
+  state.books100QuestionIndex = 0;
+  state.books100Answers = {};
+  renderBookChallenge();
+}
+async function forceBooks100Miss(){
+  const index = await loadBooks100Index();
+  const ch = getBooks100RawState();
+  if (!ch.active) { alert('Челлендж ещё не запущен.'); return; }
+  ch.dayStartedAt = books100Iso(books100NowMs() - books100DayMs() - 1000);
+  saveBooks100State(ch);
+  await renderBookChallenge();
+}
+function canOpenBooks100BookForStudent(bookMeta, ch){
+  if (!bookMeta) return false;
+  const id = bookMeta.id;
+  const current = Number(bookMeta.day) === Number(ch.currentDay) || Number(bookMeta.day) === Number(ch.currentIndex) + 1;
+  return (ch.passedBookIds || []).includes(id) || current;
+}
+function books100StatusForBook(bookMeta, ch){
+  if (!bookMeta) return 'закрыто';
+  if ((ch.passedBookIds || []).includes(bookMeta.id)) return 'зачтено';
+  if ((ch.missedBookIds || []).includes(bookMeta.id)) return 'пропущено';
+  const currentBook = Number(bookMeta.day) === Number(ch.currentIndex || 0) + 1;
+  if (ch.active && currentBook) return 'книга дня';
+  return 'закрыто';
+}
+function books100Card(bookMeta, ch, admin){
+  const status = admin ? 'доступно Боссу' : books100StatusForBook(bookMeta, ch);
+  const locked = !admin && !canOpenBooks100BookForStudent(bookMeta, ch);
+  const img = bookMeta.coverImage || `assets/challenges/books100/${String(bookMeta.day).padStart(3,'0')}/screen_01.png`;
+  return `<button class="books100-book-card ${locked ? 'locked' : ''}" ${locked ? 'disabled' : `onclick="openBooks100Book(${Number(bookMeta.day)}, ${admin ? 'true' : 'false'})"`}>
+    <div class="books100-cover"><img src="${img}?v=${BOOKS100_CACHE_VERSION}" alt="${esc(bookMeta.title)}" onerror="this.style.display='none';"></div>
+    <div><b>${String(bookMeta.day).padStart(3,'0')}. ${esc(bookMeta.title)}</b><p>${esc(bookMeta.author || '')}</p><em>${esc(status)}</em></div>
+  </button>`;
+}
+function activeChallengeCardHtml(){
+  const raw = getBooks100RawState();
+  if (!raw.active) return '';
+  const ms = books100RemainingMs(raw);
+  const reward = books100RewardForCurrent(raw);
+  return card('challenge-active-card', `<p class="eyebrow">ежедневная задача</p><h2>100 книг за 100 дней</h2><div class="challenge-grid"><div><span>День</span><b>${Number(raw.currentDay || 1)} / 100</b></div><div><span>Осталось</span><b>${books100TimeLeftText(ms)}</b></div><div><span>Серия</span><b>${Number(raw.streak || 0)} подряд</b></div><div><span>Награда</span><b>${formatPoints(reward)} баллов</b></div></div><p><b>Книга:</b> ${esc(raw.currentBookTitle || 'книга дня')}</p><p><b>Этап:</b> ${esc(raw.todayStage || 'саммари не открыто')}</p><button class="btn primary" onclick="renderBookChallenge()">Продолжить челлендж</button>`);
+}
+async function renderBookChallenge(){
+  try {
+    const index = await loadBooks100Index();
+    const ch = await getBooks100StateNormalized();
+    if (isAdminMode()) {
+      const html = `${card('blue-card-v2 books100-hero', `<p class="eyebrow">режим Босса</p><h1>100 книг за 100 дней</h1><p>В режиме Босса все загруженные книги открыты для просмотра без таймера, без блокировок и без начисления баллов.</p>`)}
+      ${card('', `<h2>Загруженные книги</h2><p class="small">Сейчас подключено: ${index.books.length}. По мере добавления book_006.json и далее список расширится автоматически.</p><div class="books100-list">${index.books.map(b=>books100Card(b, ch, true)).join('')}</div><div class="grid-v2"><button class="btn secondary" onclick="resetBooks100Challenge()">Сбросить тестовое состояние</button><button class="btn secondary" onclick="forceBooks100Miss()">Сымитировать пропуск суток</button></div>`)}
+      ${card('', `<button class="btn secondary" onclick="renderHome()">На главную</button>`)} `;
+      shell(html,'home');
+      return;
+    }
+    if (!ch.active) {
+      const html = `${card('blue-card-v2 books100-hero', `<p class="eyebrow">ежедневный челлендж</p><h1>100 книг за 100 дней</h1><p>Каждый день открывается одна книга на 24 часа. Если саммари изучено и мини-тест пройден, книга остаётся в личной библиотеке, начисляется +1 учебная единица и баллы серии.</p>`)}
+      ${card('', `<h2>Правила зачёта</h2><div class="list-clean"><div><b>Одна книга в день</b><p>На книгу даётся 24 часа с момента открытия дня.</p></div><div><b>Награда растёт по серии</b><p>Первый зачёт — 50 баллов. Каждый день подряд добавляет +2 к награде следующей книги. При пропуске серия возвращается к 50.</p></div><div><b>Учебная единица</b><p>Каждая зачтённая книга после мини-теста даёт +1 учебную единицу.</p></div></div><button class="btn primary" onclick="startBooks100Challenge()">Начать челлендж</button><button class="btn secondary" onclick="renderHome()">На главную</button>`)} `;
+      shell(html,'home');
+      return;
+    }
+    const currentBook = books100ByIndex(index, ch.currentIndex);
+    const ms = books100RemainingMs(ch);
+    const reward = books100RewardForCurrent(ch);
+    const currentBlock = currentBook
+      ? `<div class="books100-current"><div><p class="eyebrow">книга дня</p><h2>${esc(currentBook.title)}</h2><p>${esc(currentBook.author || '')}</p></div><button class="btn primary" onclick="openBooks100Book(${Number(currentBook.day)}, false)">Открыть книгу дня</button></div>`
+      : `<div class="books100-current"><h2>Следующие книги готовятся</h2><p>Первые ${index.books.length} книг подключены. Добавьте следующие JSON-файлы в content/challenges/books100/, чтобы продолжить маршрут.</p></div>`;
+    const html = `${card('blue-card-v2 books100-hero', `<p class="eyebrow">100 книг за 100 дней</p><h1>День ${Number(ch.currentDay || 1)} / 100</h1><p>До конца окна: <b>${books100TimeLeftText(ms)}</b>. Награда за зачёт сегодня: <b>${formatPoints(reward)} баллов</b> и <b>+1 учебная единица</b>.</p>${progressBarHtml(Math.min(100, Number(ch.passedBooks || 0)), 'on-dark')}`)}
+    ${card('books100-status-card', `<div class="challenge-grid"><div><span>Серия</span><b>${Number(ch.streak || 0)}</b></div><div><span>Зачтено</span><b>${Number(ch.passedBooks || 0)}</b></div><div><span>Пропущено</span><b>${Number(ch.missedBooks || 0)}</b></div><div><span>Баллы</span><b>${formatPoints(Number(ch.pointsEarned || 0))}</b></div></div>${currentBlock}`)}
+    ${card('', `<h2>Личная библиотека</h2><p class="small">Зачтённые книги остаются доступными. Пропущенные книги закрываются.</p><div class="books100-list">${index.books.map(b=>books100Card(b, ch, false)).join('')}</div><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`;
+    shell(html,'home');
+  } catch(e) {
+    shell(`${card('result-bad-v2', `<h1>Книги не загрузились</h1><p>Проверьте, что файлы лежат в <b>content/challenges/books100/</b> и называются index.json, book_001.json, book_002.json и так далее.</p><p class="small">${esc(e.message || e)}</p><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
+  }
+}
+async function openBooks100Book(day, adminPreview){
+  const index = await loadBooks100Index();
+  const bookMeta = books100ByDay(index, day);
+  if (!bookMeta) { alert('Книга не найдена.'); return; }
+  const ch = await getBooks100StateNormalized();
+  if (!adminPreview && !canOpenBooks100BookForStudent(bookMeta, ch)) { alert('Эта книга сейчас закрыта.'); return; }
+  state.books100ActiveBookDay = Number(day);
+  state.books100ScreenIndex = 0;
+  state.books100AdminPreview = Boolean(adminPreview);
+  if (!adminPreview) saveBooks100State(Object.assign(ch, { todayStage: 'саммари открыто' }));
+  renderBooks100Reading();
+}
+function books100ScreenTextHtml(book, screen){
+  const assignment = book.practicalAssignment || {};
+  const screenText = screen ? `<h3>${esc(screen.title || '')}</h3><p>${esc(screen.text || '')}</p>` : '';
+  const summary = state.books100ScreenIndex >= (book.screens || []).length - 1
+    ? `<div class="books100-full-summary"><h3>Развёрнутое саммари</h3>${book.fullSummaryHtml || ''}<h3>Практика дня</h3><p><b>${esc(assignment.title || 'Практическое задание')}</b></p><p>${esc(assignment.result || '')}</p></div>`
+    : '';
+  return `<section class="slide-text-v2 books100-text">${screenText}${summary}</section>`;
+}
+async function renderBooks100Reading(){
+  const index = await loadBooks100Index();
+  const bookMeta = books100ByDay(index, state.books100ActiveBookDay);
+  const book = await loadBooks100Book(bookMeta);
+  const screens = book.screens || [];
+  const i = Math.max(0, Math.min(state.books100ScreenIndex, screens.length - 1));
+  state.books100ScreenIndex = i;
+  const screen = screens[i];
+  const total = screens.length || 1;
+  const image = screen?.image || `assets/challenges/books100/${String(book.day).padStart(3,'0')}/screen_${String(i+1).padStart(2,'0')}.png`;
+  const nav = `<div class="nav-panel-v2 nav-panel-v2-three"><button class="btn secondary" onclick="renderBookChallenge()">К челленджу</button><button class="btn secondary" ${i===0?'disabled':''} onclick="prevBooks100Screen()">Назад</button><button class="btn primary" onclick="nextBooks100Screen()">${i===total-1?'К мини-тесту':'Далее'}</button></div>`;
+  shell(`${nav}<div class="media-counter">Книга ${String(book.day).padStart(3,'0')}: экран ${i+1}/${total}</div><div class="media-box-v2"><img src="${image}?v=${BOOKS100_CACHE_VERSION}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><div class="image-missing-v2" style="display:none"><b>Экран ${i+1}</b><p>Иллюстрация в подготовке.</p></div></div>${books100ScreenTextHtml(book, screen)}`,'home');
+}
+function prevBooks100Screen(){ if (state.books100ScreenIndex > 0) { state.books100ScreenIndex--; renderBooks100Reading(); } }
+function nextBooks100Screen(){
+  loadBooks100Index().then(index=>{
+    const bookMeta = books100ByDay(index, state.books100ActiveBookDay);
+    return loadBooks100Book(bookMeta);
+  }).then(book=>{
+    const total = (book.screens || []).length;
+    if (state.books100ScreenIndex < total - 1) { state.books100ScreenIndex++; renderBooks100Reading(); }
+    else startBooks100Quiz();
+  });
+}
+async function startBooks100Quiz(){
+  state.books100QuestionIndex = 0;
+  state.books100Answers = {};
+  const ch = getBooks100RawState();
+  if (!state.books100AdminPreview) saveBooks100State(Object.assign(ch, { todayStage: 'мини-тест открыт' }));
+  renderBooks100QuizQuestion();
+}
+async function renderBooks100QuizQuestion(){
+  const index = await loadBooks100Index();
+  const bookMeta = books100ByDay(index, state.books100ActiveBookDay);
+  const book = await loadBooks100Book(bookMeta);
+  const quiz = book.quiz || [];
+  if (!quiz.length) { alert('В этой книге нет мини-теста.'); return; }
+  const i = Math.max(0, Math.min(state.books100QuestionIndex, quiz.length-1));
+  state.books100QuestionIndex = i;
+  const q = quiz[i];
+  const selected = state.books100Answers[i];
+  const nav = `<div class="nav-panel-v2 nav-panel-v2-three"><button class="btn secondary" onclick="renderBookChallenge()">К челленджу</button><button class="btn secondary" ${i===0?'disabled':''} onclick="prevBooks100Question()">Назад</button><button class="btn secondary" onclick="renderBooks100Reading()">К саммари</button></div>`;
+  shell(`${nav}<div class="quiz-card-v2 books100-quiz-card"><p class="eyebrow">Мини-тест · вопрос ${i+1}/${quiz.length}</p><h2>${esc(q.q)}</h2><p class="small">Нажмите на вариант ответа — следующий вопрос откроется автоматически.</p>${(q.a||[]).map((a,idx)=>`<button class="option-v2 ${Number(selected)===idx?'selected':''}" onclick="selectBooks100Answer(${idx})">${quizOptionLabel(idx)}. ${esc(a)}</button>`).join('')}</div>`,'home');
+}
+function prevBooks100Question(){ if (state.books100QuestionIndex > 0) { state.books100QuestionIndex--; renderBooks100QuizQuestion(); } }
+function selectBooks100Answer(i){
+  state.books100Answers[state.books100QuestionIndex] = i;
+  loadBooks100Index().then(index=>loadBooks100Book(books100ByDay(index, state.books100ActiveBookDay))).then(book=>{
+    if (state.books100QuestionIndex < (book.quiz || []).length - 1) { state.books100QuestionIndex++; renderBooks100QuizQuestion(); }
+    else finishBooks100Quiz();
+  });
+}
+function books100QuizReviewHtml(book){
+  return `<div class="quiz-review-v2"><h2>Разбор мини-теста</h2>${(book.quiz || []).map((q,i)=>{
+    const userIndex = Number(state.books100Answers[i]);
+    const correctIndex = Number(q.correct || 0);
+    const ok = userIndex === correctIndex;
+    return `<div class="review-row ${ok?'ok':'bad'}"><h3>Вопрос ${i+1}. ${ok?'Верно':'Нужно повторить'}</h3><p><b>Ваш ответ:</b> ${Number.isFinite(userIndex) ? esc(`${quizOptionLabel(userIndex)}. ${q.a[userIndex] || ''}`) : 'нет ответа'}</p>${ok?'':`<p><b>Правильный ответ:</b> ${esc(`${quizOptionLabel(correctIndex)}. ${q.a[correctIndex] || ''}`)}</p>`}<p><b>Почему:</b> ${esc(q.explanation || 'Ответ проверяет применение идеи книги к управленческой ситуации.')}</p></div>`;
+  }).join('')}</div>`;
+}
+async function finishBooks100Quiz(){
+  const index = await loadBooks100Index();
+  const bookMeta = books100ByDay(index, state.books100ActiveBookDay);
+  const book = await loadBooks100Book(bookMeta);
+  const quiz = book.quiz || [];
+  let score = 0;
+  quiz.forEach((q,i)=>{ if (Number(state.books100Answers[i]) === Number(q.correct || 0)) score++; });
+  const passScore = Number(book.passScore || Math.ceil(quiz.length * 0.8));
+  const passed = score >= passScore;
+  let resultNotice = '';
+  if (passed && !state.books100AdminPreview) {
+    const ch = await getBooks100StateNormalized();
+    if (!(ch.passedBookIds || []).includes(bookMeta.id)) {
+      const reward = books100RewardForCurrent(ch);
+      const nextIndex = Number(ch.currentIndex || 0) + 1;
+      const nextBook = books100ByIndex(index, nextIndex);
+      saveBooks100State(Object.assign(ch, {
+        passedBookIds: (ch.passedBookIds || []).concat(bookMeta.id),
+        passedBooks: Number(ch.passedBooks || 0) + 1,
+        streak: Number(ch.streak || 0) + 1,
+        pointsEarned: Number(ch.pointsEarned || 0) + reward,
+        unitsEarned: Number(ch.unitsEarned || 0) + 1,
+        currentIndex: nextIndex,
+        currentDay: Number(ch.currentDay || 1) + 1,
+        dayStartedAt: books100Iso(),
+        currentBookTitle: nextBook ? nextBook.title : 'следующая книга готовится',
+        todayStage: nextBook ? 'саммари не открыто' : 'первые книги пройдены'
+      }));
+      resultNotice = `<p>Начислено: <b>${formatPoints(reward)} баллов</b> и <b>+1 учебная единица</b>. Книга остаётся в личной библиотеке.</p>`;
+    } else {
+      resultNotice = `<p>Книга уже была зачтена ранее. Повторный проход не начисляет баллы повторно.</p>`;
+    }
+  }
+  if (state.books100AdminPreview) {
+    resultNotice = `<p>Это режим Босса Л.Е.Г.О. Баллы, серия и учебные единицы не изменяются.</p>`;
+  }
+  const msg = passed
+    ? `<h1>Книга зачтена</h1><p>Результат: <b>${score}/${quiz.length}</b>. Проходной уровень: <b>${passScore}/${quiz.length}</b>.</p>${resultNotice}`
+    : `<h1>Мини-тест не пройден</h1><p>Результат: <b>${score}/${quiz.length}</b>. Проходной уровень: <b>${passScore}/${quiz.length}</b>.</p><p>Лучше спокойно вернуться к саммари и пройти тест повторно до окончания 24 часов.</p>`;
+  shell(`${card(passed?'result-ok-v2':'result-bad-v2', `${msg}<div class="grid-v2">${passed?'<button class="btn primary" onclick="renderBookChallenge()">К челленджу</button>':'<button class="btn primary" onclick="renderBooks100Reading()">Вернуться к саммари</button><button class="btn secondary" onclick="startBooks100Quiz()">Пройти тест заново</button>'}<button class="btn secondary" onclick="renderHome()">На главную</button></div>`)}${card('', books100QuizReviewHtml(book))}`,'home');
+}
+
+function renderHome() {
+  const gp = globalStageProgress();
+  const points = totalPoints();
+  const html = `
+    ${card('hero-dashboard main-dashboard-card merged-dashboard-card v16-dashboard-card', `
+      <div class="v16-dashboard-head">
+        <div class="v16-dashboard-copy">
+          <p class="eyebrow">общая система</p>
+          <h1>Ваш прогресс</h1>
+          <p>Прогресс считается по пройденным этапам готовых уроков: презентация, тест, саммари и принятое домашнее задание.</p>
+        </div>
+        ${compactProgressRing(gp.percent)}
+      </div>
+      <div class="dashboard-mini-grid dashboard-mini-grid-compact v16-mini-grid">
+        <div><span>Баллы</span><b>${formatPoints(points)}</b></div>
+        <div><span>Достижение</span><b>${esc(studentTitleInfo().current.title)}</b></div>
+      </div>
+      ${achievementInlineHtml()}
+    `)}
+    ${activeChallengeCardHtml()}
+    ${card('', `<h2>Выбрать блок</h2><p>Выберите направление работы внутри платформы.</p>
+      <div class="top-track-grid top-track-grid-six">
+        ${renderMainBlockCard('Нет своего бизнеса','Базовый маршрут для подготовки к предпринимательскому мышлению и запуску.','скоро','','disabled')}
+        ${renderMainBlockCard('Я предприниматель','Диагностика, уроки, ДЗ, проверка и управленческие действия.','доступно','renderLearning()','active')}
+        ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','','disabled')}
+        ${renderMainBlockCard('100 книг за 100 дней','Ежедневный челлендж: одна книга, 24 часа, мини-тест, +1 учебная единица и баллы серии.','доступно','renderBookChallenge()','active books100-entry')}
+        ${renderMainBlockCard('Дополнительные материалы','Отдельные уроки, разборы и материалы, которые дополняют основной маршрут.','скоро','','disabled')}
+        ${renderMainBlockCard('VIP уровень','Более подробные разборы, инструменты и активность.','в разработке','','disabled')}
+      </div>`)}
+  `;
+  shell(html, 'home');
+}
+
+function renderAdmin(){
+  if(!isAdminUser()){ alert('Нет прав Босса Л.Е.Г.О.'); return; }
+  shell(`${card('blue-card-v2', `<h1>Панель Босса Л.Е.Г.О</h1><p>Полный доступ ко всем урокам, предпросмотр контента, книги челленджа и проверка ДЗ.</p>`)}${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${state.catalog.lessons.map(l=>`<button class="lesson-row-v2" onclick="openLesson('${l.code}')"><div><b>${esc(l.code)} · ${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${l.slidesCount} слайдов · ${l.quizCount} вопросов · ${l.bookScreensCount} саммари</p></div><span>→</span></button>`).join('')}</div>`)}${card('', `<h2>Книги челленджа</h2><p>В режиме Босса все загруженные книги доступны для просмотра без таймера и без начисления баллов.</p><button class="btn primary" onclick="renderBookChallenge()">Открыть книги челленджа</button>`)}${card('', `<h2>Проверка ДЗ</h2><input id="admin-target-user" placeholder="Telegram ID или username ученика"><textarea id="admin-review-comment" placeholder="Комментарий проверяющего"></textarea><button class="btn primary" onclick="adminApproveTargetUser()">Принять ДЗ</button><button class="btn secondary" onclick="adminRejectTargetUser()">Отправить на доработку</button>`)}`,'profile');
+}
