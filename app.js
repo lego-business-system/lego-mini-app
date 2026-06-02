@@ -29,7 +29,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v14-white-header-logo-20260602";
+const APP_CACHE_VERSION = "v16-dashboard-challenge-20260602";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01"];
@@ -1712,4 +1712,125 @@ function renderProfile(){
     ? card('boss-panel-card', `<h2>Панель Босса Л.Е.Г.О</h2><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Просмотр как ученик</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Режим Босса</button></div><p class="small">Панель управления, проверка ДЗ и полный предпросмотр уроков доступны только владельцу системы.</p>${actionButton('Открыть панель Босса','renderAdmin()','primary')}`)
     : '';
   shell(`${card('blue-card-v2 profile-head-card', `<h1>Профиль</h1><p class="profile-name-line">${esc(state.user?.first_name || 'Пользователь')} · ${studentRoleLabel()}</p>`)}${titleCardHtml()}${card('', `<h2>Прогресс и баллы</h2>${progressRing(gp.percent,'общий',`${gp.done} из ${gp.total || 0}`)}<div class="profile-score-grid"><div><span>Всего баллов</span><b>${formatPoints(points)}</b></div><div><span>Текущий урок</span><b>${lp.percent}%</b></div><div><span>Учебные единицы</span><b>${formatPoints(titleInfo.units)}</b></div><div><span>Готовые уроки</span><b>${readyCoreLessons().length}</b></div></div>`)}${doneSummaryHtml()}${insightsProfileHtml()}${adminBlock}${consultationCardsHtml(points)}${card('', `<h2>Поддержка</h2>${externalButton('Задать вопрос',SUPPORT_FORM_URL,'secondary')}${externalButton('Предложить идею',IDEA_FORM_URL,'secondary')}`)}${myBusinessCardHtml()}`,'profile');
+}
+
+
+/* =====================================================
+   v16 overrides — dashboard ring, VIP text, homework dates
+   ===================================================== */
+
+function compactProgressRing(percent) {
+  const p = safePercent(percent);
+  const r = 34;
+  const c = Math.round(2 * Math.PI * r);
+  const offset = Math.round(c * (1 - p / 100));
+  return `<div class="compact-ring-wrap" aria-label="Ваш прогресс ${p}%">
+    <svg class="compact-ring-svg" viewBox="0 0 96 96">
+      <circle class="compact-ring-track" cx="48" cy="48" r="${r}"></circle>
+      <circle class="compact-ring-value" cx="48" cy="48" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${offset}"></circle>
+    </svg>
+    <div class="compact-ring-center"><b>${p}%</b></div>
+  </div>`;
+}
+
+function pickLatestDateValue() {
+  const values = Array.prototype.slice.call(arguments).filter(Boolean);
+  if (!values.length) return null;
+  let best = null;
+  let bestTime = -Infinity;
+  values.forEach(function(value){
+    const d = new Date(value);
+    const t = d.getTime();
+    if (!isNaN(t) && t > bestTime) { bestTime = t; best = value; }
+  });
+  return best || values[0];
+}
+
+function stageCompletedDate(code, stage) {
+  const p = getProgress(code);
+  if (stage === 'presentation') {
+    return isStageDone(code,'presentation') ? pickLatestDateValue(p.presentation_completed_at, p.presentation_started_at) : null;
+  }
+  if (stage === 'quiz') {
+    return isStageDone(code,'quiz') ? pickLatestDateValue(p.quiz_completed_at, p.quiz_started_at) : null;
+  }
+  if (stage === 'books') {
+    return isStageDone(code,'books') ? pickLatestDateValue(p.books_completed_at, p.books_started_at) : null;
+  }
+  if (stage === 'homeworkSubmitted') {
+    return isStageDone(code,'homeworkSubmitted') ? pickLatestDateValue(p.homework_submitted_at, p.homework_started_at) : null;
+  }
+  if (stage === 'homeworkVerified') {
+    if (!isStageDone(code,'homeworkVerified')) return null;
+    return pickLatestDateValue(p.homework_verified_at, p.homework_checked_at, p.homework_completed_at, p.completed_at);
+  }
+  return null;
+}
+
+function stageStatusText(code, stage) {
+  if (stage === 'homeworkVerified') return isStageDone(code,'homeworkVerified') ? 'принято' : 'ожидает проверки';
+  if (stage === 'homeworkSubmitted') return isStageDone(code,'homeworkSubmitted') ? 'отправлено' : 'не отправлено';
+  return isStageDone(code, stage) ? 'пройдено' : 'не пройдено';
+}
+
+function lessonTimelineHtml(code) {
+  const rows = [
+    ['presentation','Презентация'],
+    ['quiz','Тест'],
+    ['books','Саммари'],
+    ['homeworkSubmitted','ДЗ отправлено'],
+    ['homeworkVerified','ДЗ принято']
+  ];
+  return card('lesson-timeline-card', `<h2>История прохождения</h2><div class="timeline-grid">${rows.map(([stage,label])=>{
+    const status = stageStatusText(code, stage);
+    const date = stageCompletedDate(code, stage);
+    const done = status === 'пройдено' || status === 'отправлено' || status === 'принято';
+    const review = status === 'ожидает проверки';
+    return `<div class="timeline-row ${done?'done':''} ${review?'review':''}"><span>${esc(label)}</span><b>${esc(status)}</b><em>${date ? shortDate(date) : '—'}</em></div>`;
+  }).join('')}</div>`);
+}
+
+function homeworkReviewNoticeHtml(code) {
+  const submittedAt = stageCompletedDate(code,'homeworkSubmitted');
+  const verifiedAt = stageCompletedDate(code,'homeworkVerified');
+  if (isStageDone(code,'homeworkSubmitted') && !isStageDone(code,'homeworkVerified')) {
+    return `<div class="homework-review-notice"><b>Домашнее задание на проверке</b><p>Работа отправлена ${shortDate(submittedAt)}. После проверки Босс Л.Е.Г.О примет ДЗ или вернёт его на доработку.</p></div>`;
+  }
+  if (isStageDone(code,'homeworkVerified')) {
+    return `<div class="homework-review-notice accepted"><b>Домашнее задание принято</b><p>Проверка завершена ${shortDate(verifiedAt)}. Урок засчитан.</p></div>`;
+  }
+  return '';
+}
+
+function renderHome() {
+  const gp = globalStageProgress();
+  const points = totalPoints();
+  const html = `
+    ${card('hero-dashboard main-dashboard-card merged-dashboard-card v16-dashboard-card', `
+      <div class="v16-dashboard-head">
+        <div class="v16-dashboard-copy">
+          <p class="eyebrow">общая система</p>
+          <h1>Ваш прогресс</h1>
+          <p>Прогресс считается по пройденным этапам готовых уроков: презентация, тест, саммари и принятое домашнее задание.</p>
+        </div>
+        ${compactProgressRing(gp.percent)}
+      </div>
+      <div class="dashboard-mini-grid dashboard-mini-grid-compact v16-mini-grid">
+        <div><span>Баллы</span><b>${formatPoints(points)}</b></div>
+        <div><span>Достижение</span><b>${esc(studentTitleInfo().current.title)}</b></div>
+      </div>
+      ${achievementInlineHtml()}
+    `)}
+    ${activeChallengeCardHtml()}
+    ${card('', `<h2>Выбрать блок</h2><p>Выберите направление работы внутри платформы.</p>
+      <div class="top-track-grid top-track-grid-six">
+        ${renderMainBlockCard('Нет своего бизнеса','Базовый маршрут для подготовки к предпринимательскому мышлению и запуску.','скоро','','disabled')}
+        ${renderMainBlockCard('Я предприниматель','Диагностика, уроки, ДЗ, проверка и управленческие действия.','доступно','renderLearning()','active')}
+        ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','','disabled')}
+        ${renderMainBlockCard('100 книг за 100 дней','Ежедневный челлендж: одна книга, 24 часа, мини-тест, +1 учебная единица и баллы серии.','скоро','','disabled')}
+        ${renderMainBlockCard('Дополнительные материалы','Отдельные уроки, разборы и материалы, которые дополняют основной маршрут.','скоро','','disabled')}
+        ${renderMainBlockCard('VIP уровень','Более подробные разборы, инструменты и активность.','в разработке','','disabled')}
+      </div>`)}
+  `;
+  shell(html, 'home');
 }
