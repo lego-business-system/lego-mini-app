@@ -29,7 +29,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v21-ui-small-fixes-20260603";
+const APP_CACHE_VERSION = "v22-production-tests-ui-20260603";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01"];
@@ -2636,7 +2636,7 @@ async function finishBooks100Quiz(){
 /* =====================================================
    v20 — Books100 FAST mode: быстрый экран, кэш индекса, фоновая синхронизация, без обложек в списке
    ===================================================== */
-const BOOKS100_CACHE_VERSION_V20 = "v21-books100-ui-fixes-20260603";
+const BOOKS100_CACHE_VERSION_V20 = "v22-production-tests-ui-20260603";
 const BOOKS100_INDEX_CACHE_KEY_V20 = "lego_books100_index_v20";
 const BOOKS100_INDEX_CACHE_TTL_V20 = 6 * 60 * 60 * 1000;
 
@@ -2880,3 +2880,73 @@ async function openBooks100Book(day, adminPreview){
 }
 
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+
+/* =====================================================
+   v22 — production access, homepage blocks, instruction panel
+   ===================================================== */
+function isLessonPrepared(meta) {
+  if (!meta) return false;
+  const readyFirstLessons = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01"];
+  if (readyFirstLessons.includes(meta.code)) return true;
+  if (Number(meta.number) === 1) return false;
+  return meta.status === "ready";
+}
+
+function toggleGlobalInstruction(force) {
+  const el = $("global-instruction-panel");
+  if (!el) return;
+  const next = force === undefined ? el.style.display === "none" || !el.style.display : Boolean(force);
+  el.style.display = next ? "block" : "none";
+  if (next) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function globalInstructionPanelHtml() {
+  return `<div id="global-instruction-panel" class="global-instruction-panel" style="display:none">
+    <div class="instruction-head"><b>Как пользоваться системой</b><button onclick="toggleGlobalInstruction(false)" aria-label="Закрыть инструкцию">×</button></div>
+    <div class="instruction-steps">
+      <div><b>1. Выберите блок</b><p>Основной маршрут сейчас находится в разделе «Я предприниматель». Там выбирается вид деятельности и открывается последовательный путь уроков.</p></div>
+      <div><b>2. Проходите урок по порядку</b><p>Внутри урока сохраняется маршрут: презентация → тест → саммари книг → домашнее задание → проверка. Следующий этап открывается после предыдущего, чтобы не терялась логика обучения.</p></div>
+      <div><b>3. Работайте с фактами бизнеса</b><p>В домашнем задании важно заполнять реальные или честно оценочные данные. Цель — не красивая таблица, а первичный диагноз: где теряется результат и что проверить ближайшие 7 дней.</p></div>
+      <div><b>4. Следите за прогрессом</b><p>Общий прогресс считается по готовым урокам и их этапам: презентация, тест, саммари и принятое домашнее задание. Баллы и достижения показывают накопленную активность внутри системы.</p></div>
+      <div><b>5. Используйте дополнительные блоки отдельно</b><p>Челлендж книг, бизнес-факты, материалы и медиа будут усиливать обучение, но основной порядок остаётся прежним: сначала урок, затем практика и проверка.</p></div>
+    </div>
+  </div>`;
+}
+
+function renderHome() {
+  const gp = globalStageProgress();
+  const points = totalPoints();
+  const html = `
+    ${card('hero-dashboard main-dashboard-card merged-dashboard-card v16-dashboard-card', `
+      <div class="v16-dashboard-head">
+        <div class="v16-dashboard-copy">
+          <div class="eyebrow-row"><p class="eyebrow">общая система</p><button class="instruction-link" onclick="toggleGlobalInstruction()">инструкция</button></div>
+          <h1>Ваш прогресс</h1>
+          <p>Прогресс считается по пройденным этапам готовых уроков: презентация, тест, саммари и принятое домашнее задание.</p>
+        </div>
+        ${compactProgressRing(gp.percent)}
+      </div>
+      <div class="dashboard-mini-grid dashboard-mini-grid-compact v16-mini-grid">
+        <div><span>Баллы</span><b>${formatPoints(points)}</b></div>
+        <div><span>Достижение</span><b>${esc(studentTitleInfo().current.title)}</b></div>
+      </div>
+      ${achievementInlineHtml()}
+      ${globalInstructionPanelHtml()}
+    `)}
+    ${activeChallengeCardHtml()}
+    ${card('', `<h2>Выбрать блок</h2><p>Выберите направление работы внутри платформы.</p>
+      <div class="top-track-grid main-track-grid-v22">
+        ${renderMainBlockCard('Нет своего бизнеса','Базовый маршрут для подготовки к предпринимательскому мышлению и запуску.','скоро','','disabled main-block-card')}
+        ${renderMainBlockCard('Я предприниматель','Диагностика, уроки, ДЗ, проверка и управленческие действия.','доступно','renderLearning()','active main-block-card')}
+        ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','','disabled main-block-card')}
+      </div>
+      <div class="secondary-track-grid-v22">
+        ${renderMainBlockCard('100 книг за 100 дней','Ежедневный челлендж: одна книга, 24 часа, мини-тест, +1 учебная единица и баллы серии.','доступно','renderBookChallenge()','active books100-entry compact-card')}
+        ${renderMainBlockCard('Бизнес-факты','Короткие практические статьи о реальных бизнес-ситуациях: ошибки, решения, цифры и выводы, которые можно применить в своей системе.','скоро','','disabled compact-card')}
+        ${renderMainBlockCard('Дополнительные материалы','Отдельные уроки, разборы и материалы, которые дополняют основной маршрут.','скоро','','disabled compact-card')}
+        ${renderMainBlockCard('VIP уровень','Более подробные разборы, инструменты и активность.','в разработке','','disabled compact-card')}
+        ${renderMainBlockCard('Бизнес-медиа','Подборки фильмов, сериалов, интервью и полезных видео о бизнесе с управленческими выводами для практики.','скоро','','disabled compact-card compact-card-wide')}
+      </div>`)}
+  `;
+  shell(html, 'home');
+}
