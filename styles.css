@@ -641,3 +641,35 @@
 [data-books100-sync-line="1"] {
   min-height: 18px;
 }
+
+
+/* =====================================================
+   v21 вЂ” small UI fixes: Books100 library text + financial helper locked card
+   ===================================================== */
+.my-business-card-locked {
+  background: linear-gradient(180deg, #FFFFFF, #F6F8FC);
+  border-color: #DDE5EF;
+}
+.my-business-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.my-business-card-head h2 {
+  margin: 0;
+}
+.my-business-card-head span {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #E7ECF3;
+  color: #7D8A99;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.my-business-card-locked .btn {
+  display: none;
+}
