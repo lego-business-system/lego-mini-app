@@ -29,7 +29,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v19-books100-cache-timer-20260603";
+const APP_CACHE_VERSION = "v21-ui-small-fixes-20260603";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01"];
@@ -1694,13 +1694,21 @@ function businessDiagnosticText(s){
   return 'Картина управляемая: продолжайте вести ежедневные факты и сравнивайте выручку, расходы, конверсию и свободные деньги.';
 }
 function renderMyBusiness(){
+  if(!isAdminMode()){
+    alert('Финансовый помощник скоро откроется.');
+    renderProfile();
+    return;
+  }
   const s7 = businessSummary(7);
   const s30 = businessSummary(30);
   const rows = loadBusinessEntries().slice(0,14);
-  shell(`${card('blue-card-v2 my-business-hero', `<p class="eyebrow">мой бизнес</p><h1>Внутренняя аналитика</h1><p>Здесь можно фиксировать ежедневные факты: выручку, расходы, деньги, входящие и продажи. Блок помогает увидеть не ощущения, а управленческую картину по дням.</p>`)}${card('', `<h2>Добавить день</h2><div class="business-form"><input id="biz-date" type="date" value="${new Date().toISOString().slice(0,10)}"><input id="biz-revenue" type="number" placeholder="Выручка за день"><input id="biz-expenses" type="number" placeholder="Расходы за день"><input id="biz-cash" type="number" placeholder="Деньги на конец дня"><input id="biz-leads" type="number" placeholder="Входящие / заявки"><input id="biz-sales" type="number" placeholder="Продажи / оплаты"><textarea id="biz-note" placeholder="Короткий комментарий: что повлияло на день"></textarea><button class="btn primary" onclick="addBusinessEntry()">Сохранить день</button></div>`)}${card('business-analytics-card', `<h2>Аналитика за 7 дней</h2><div class="business-kpi-grid"><div><span>Выручка</span><b>${formatPoints(s7.revenue)}</b></div><div><span>Расходы</span><b>${formatPoints(s7.expenses)}</b></div><div><span>Разница</span><b>${formatPoints(s7.profit)}</b></div><div><span>Конверсия</span><b>${s7.conversion}%</b></div><div><span>Средний чек</span><b>${formatPoints(s7.avgCheck)}</b></div><div><span>Деньги</span><b>${formatPoints(s7.cash)}</b></div></div><div class="business-diagnosis"><b>Предварительный вывод</b><p>${esc(businessDiagnosticText(s7))}</p></div>`)}${card('', `<h2>Сравнение 30 дней</h2><p>Выручка: <b>${formatPoints(s30.revenue)}</b> · Расходы: <b>${formatPoints(s30.expenses)}</b> · Разница: <b>${formatPoints(s30.profit)}</b> · Конверсия: <b>${s30.conversion}%</b></p>`)}${card('', `<h2>Последние записи</h2>${rows.length ? `<div class="business-entry-list">${rows.map(x=>`<div><div><b>${shortDate(x.date)}</b><p>Выручка ${formatPoints(x.revenue)} · расходы ${formatPoints(x.expenses)} · продажи ${formatPoints(x.sales)}${x.note ? ` · ${esc(x.note)}` : ''}</p></div><button onclick="deleteBusinessEntry('${x.id}')">×</button></div>`).join('')}</div>` : '<p class="small">Пока нет записей.</p>'}<button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`,'profile');
+  shell(`${card('blue-card-v2 my-business-hero', `<p class="eyebrow">мой бизнес</p><h1>Финансовый помощник</h1>`)}${card('', `<h2>Добавить день</h2><div class="business-form"><input id="biz-date" type="date" value="${new Date().toISOString().slice(0,10)}"><input id="biz-revenue" type="number" placeholder="Выручка за день"><input id="biz-expenses" type="number" placeholder="Расходы за день"><input id="biz-cash" type="number" placeholder="Деньги на конец дня"><input id="biz-leads" type="number" placeholder="Входящие / заявки"><input id="biz-sales" type="number" placeholder="Продажи / оплаты"><textarea id="biz-note" placeholder="Короткий комментарий: что повлияло на день"></textarea><button class="btn primary" onclick="addBusinessEntry()">Сохранить день</button></div>`)}${card('business-analytics-card', `<h2>Аналитика за 7 дней</h2><div class="business-kpi-grid"><div><span>Выручка</span><b>${formatPoints(s7.revenue)}</b></div><div><span>Расходы</span><b>${formatPoints(s7.expenses)}</b></div><div><span>Разница</span><b>${formatPoints(s7.profit)}</b></div><div><span>Конверсия</span><b>${s7.conversion}%</b></div><div><span>Средний чек</span><b>${formatPoints(s7.avgCheck)}</b></div><div><span>Деньги</span><b>${formatPoints(s7.cash)}</b></div></div><div class="business-diagnosis"><b>Предварительный вывод</b><p>${esc(businessDiagnosticText(s7))}</p></div>`)}${card('', `<h2>Сравнение 30 дней</h2><p>Выручка: <b>${formatPoints(s30.revenue)}</b> · Расходы: <b>${formatPoints(s30.expenses)}</b> · Разница: <b>${formatPoints(s30.profit)}</b> · Конверсия: <b>${s30.conversion}%</b></p>`)}${card('', `<h2>Последние записи</h2>${rows.length ? `<div class="business-entry-list">${rows.map(x=>`<div><div><b>${shortDate(x.date)}</b><p>Выручка ${formatPoints(x.revenue)} · расходы ${formatPoints(x.expenses)} · продажи ${formatPoints(x.sales)}${x.note ? ` · ${esc(x.note)}` : ''}</p></div><button onclick="deleteBusinessEntry('${x.id}')">×</button></div>`).join('')}</div>` : '<p class="small">Пока нет записей.</p>'}<button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`,'profile');
 }
 function myBusinessCardHtml(){
-  return card('my-business-card', `<p class="eyebrow">мой бизнес</p><h2>Внутренняя аналитика</h2><p>Фиксируйте ежедневную выручку, расходы, деньги, входящие и продажи. Система соберёт первичный вывод по 7 и 30 дням.</p><button class="btn primary" onclick="renderMyBusiness()">Открыть аналитику бизнеса</button>`);
+  if(isAdminMode()){
+    return card('my-business-card', `<p class="eyebrow">мой бизнес</p><h2>Финансовый помощник</h2><button class="btn primary" onclick="renderMyBusiness()">Открыть финансовый помощник</button>`);
+  }
+  return card('my-business-card my-business-card-locked', `<p class="eyebrow">мой бизнес</p><div class="my-business-card-head"><h2>Финансовый помощник</h2><span>скоро</span></div>`);
 }
 function renderProfile(){
   const gp = globalStageProgress();
@@ -2628,7 +2636,7 @@ async function finishBooks100Quiz(){
 /* =====================================================
    v20 — Books100 FAST mode: быстрый экран, кэш индекса, фоновая синхронизация, без обложек в списке
    ===================================================== */
-const BOOKS100_CACHE_VERSION_V20 = "v20-books100-fast-20260603";
+const BOOKS100_CACHE_VERSION_V20 = "v21-books100-ui-fixes-20260603";
 const BOOKS100_INDEX_CACHE_KEY_V20 = "lego_books100_index_v20";
 const BOOKS100_INDEX_CACHE_TTL_V20 = 6 * 60 * 60 * 1000;
 
@@ -2789,7 +2797,7 @@ function renderBookChallengeFromStateV20(index, ch, syncing, errorText){
   const visibleBooks = books100VisibleStudentBooksV20(index, ch);
   shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">100 книг за 100 дней</p><h1>День ${Number(ch.currentDay||1)} / 100</h1><p>Награда за зачёт текущей книги: <b>${formatPoints(reward)} баллов</b> и <b>+1 учебная единица</b>. Новая книга не открывается сразу после теста — она ждёт окончания 24-часового окна.</p><p class="small" data-books100-sync-line="1">${syncing ? 'Синхронизируем состояние с Supabase...' : 'Состояние синхронизировано.'}</p>${progressBarHtml(Math.min(100, Number(ch.passedBooks||0)), 'on-dark')}`)}
     ${card('books100-status-card', `<div class="challenge-grid"><div><span>Осталось</span>${books100TimerHtmlV19(ch, ms)}</div><div><span>Серия</span><b>${Number(ch.streak||0)}</b></div><div><span>Зачтено</span><b>${Number(ch.passedBooks||0)}</b></div><div><span>Баллы</span><b>${formatPoints(Number(ch.pointsEarned||0))}</b></div></div>${books100CurrentStateCardV18(ch,currentBook,ms)}`)}
-    ${card('', `<h2>Личная библиотека</h2><p class="small">Показаны текущая, зачтённые и пропущенные книги. Полный список без блокировок доступен только в режиме Босса.</p><div class="books100-list">${visibleBooks.map(b=>books100Card(b,ch,false)).join('')}</div><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
+    ${card('', `<h2>Личная библиотека</h2><p class="small">Показаны текущая книга, зачтённые книги и пропущенные книги.</p><div class="books100-list">${visibleBooks.map(b=>books100Card(b,ch,false)).join('')}</div><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
   setTimeout(()=>startBooks100LiveTimerV19(new Date(ch.dayStartedAt).getTime() + books100DayMs()), 0);
 }
 async function renderBookChallenge(){
