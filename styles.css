@@ -887,3 +887,31 @@
    v24 вЂ” stabilization UI fixes
    ===================================================== */
 .lesson-row-progress{margin-top:8px;width:100%;max-width:360px}.timeline-row.revision{background:var(--lego-red-soft,#ffe1e1);border-color:rgba(217,74,74,.28)}.timeline-row.revision b,.timeline-row.revision em{color:#a12828}.homework-review-notice.revision{background:var(--lego-red-soft,#ffe1e1);border:1px solid rgba(217,74,74,.32);color:#7c1f1f}.homework-review-notice.revision b{color:#a12828}.activity-progress-head .step-progress-block{margin-top:12px}.lesson-progress-mini .lesson-progress-bottom{display:none!important}.lesson-row-v2 p{line-height:1.38}.lesson-row-v2 .lesson-row-progress .progress-track{height:8px}.result-bad-v2 .quiz-review-v2,.result-ok-v2 .quiz-review-v2{margin-top:12px}.review-row{padding:14px;border-radius:16px;background:#f6f8fb;border:1px solid rgba(7,27,56,.07);margin:10px 0}.review-row.ok{background:var(--lego-turquoise-soft,#dff8f4);border-color:rgba(22,168,154,.25)}.review-row.bad{background:var(--lego-red-soft,#ffe1e1);border-color:rgba(217,74,74,.24)}.review-row h3{margin-bottom:8px}.homework-review-notice{margin-top:12px}.global-instruction-panel .instruction-head button,.title-help-head button{display:inline-flex;align-items:center;justify-content:center;line-height:1}.mode-pill{white-space:nowrap}.activity-toolbar{display:grid;gap:8px}.profile-name-line{font-size:17px!important;font-weight:800!important;color:#fff!important}.image-missing-v2 p.small{font-size:12px;opacity:.72}@media(max-width:420px){.lesson-row-v2{align-items:flex-start}.lesson-row-v2 span{margin-top:4px}.dashboard-mini-grid-compact.v16-mini-grid{grid-template-columns:1fr 1fr}.profile-name-line{font-size:16px!important}}
+
+/* =====================================================
+   v25 вЂ” homework review queue and alerts
+   ===================================================== */
+.admin-select-v25{
+  width:100%;
+  margin:9px 0 0;
+  padding:13px 14px;
+  border-radius:16px;
+  border:1px solid rgba(7,27,56,.12);
+  background:#fff;
+  color:#071b38;
+  font-size:15px;
+  font-weight:700;
+}
+.admin-homework-queue-v25{margin-top:14px;display:grid;gap:10px}
+.admin-homework-row-v25{padding:14px;border-radius:18px;background:#f6f8fb;border:1px solid rgba(7,27,56,.08);box-shadow:0 8px 18px rgba(7,27,56,.04)}
+.admin-homework-row-v25 b{display:block;color:#071b38;font-size:16px;margin-bottom:4px}
+.admin-homework-row-v25 p{margin:0 0 8px;color:#59677c;font-size:14px}
+.empty-admin-v25{padding:14px;border-radius:18px;background:#f6f8fb;border:1px dashed rgba(7,27,56,.18)}
+.empty-admin-v25.error{background:#fff3f3;border-color:#f2b6b6}
+.homework-alert-card{border-color:rgba(242,140,40,.45);background:linear-gradient(135deg,#fff8e8,#fff)}
+.homework-alert-card.revision{border-color:rgba(217,74,74,.38);background:linear-gradient(135deg,#fff1f1,#fff)}
+.homework-review-notice{margin:0 0 14px;padding:14px;border-radius:18px;background:#fff7e8;border:1px solid rgba(242,140,40,.32)}
+.homework-review-notice b{display:block;color:#071b38;font-size:16px;margin-bottom:5px}
+.homework-review-notice p{margin:0;color:#31415c}
+.homework-review-notice.revision{background:#fff1f1;border-color:rgba(217,74,74,.35)}
+.homework-review-notice.accepted{background:#eafaf6;border-color:rgba(22,168,154,.34)}
