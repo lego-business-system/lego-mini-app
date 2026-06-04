@@ -3760,3 +3760,249 @@ function accessDenied(reason){
     : (clean === 'NOT_CHANNEL_MEMBER' ? 'Доступ открыт только участникам закрытого Telegram-канала.' : 'Не удалось подтвердить доступ. Проверьте подписку или напишите в поддержку.');
   shell(card('result-bad-v2', `<h1>Доступ закрыт</h1><p>${esc(friendly)}</p><div class="grid-v2">${externalButton('Написать в поддержку',SUPPORT_FORM_URL,'primary')}</div><p class="small">Код проверки: ${esc(clean)}</p>`),'home');
 }
+
+/* =====================================================
+   v25 — homework review queue + clear student comments + books100 recovery tools
+   ===================================================== */
+const APP_STABILIZATION_VERSION_V25 = "v25-homework-books-fix-20260604";
+
+function homeworkStateV24(code){
+  const p = getProgress(code) || {};
+  const status = String(p.status || p.homework_status || "").toLowerCase();
+  const verified = Boolean(p.homework_verified || p.homework_checked && status === "completed" || p.homework_verified_at || p.homework_completed || p.homework_completed_at || status === "completed");
+  const revision = !verified && Boolean(status === "homework_revision" || status === "revision" || status === "rejected" || status === "needs_revision" || p.homework_revision || p.homework_revision_at || p.revision_required);
+  const review = !verified && !revision && Boolean(p.homework_submitted || p.homework_submitted_at || status === "homework_submitted");
+  if (verified) return "verified";
+  if (revision) return "revision";
+  if (review) return "review";
+  return "none";
+}
+function homeworkCommentV25(code){
+  const p = getProgress(code) || {};
+  return String(p.admin_review_comment || p.review_comment || p.homework_revision_comment || "").trim();
+}
+function homeworkStateLabelV25(code){
+  const hw = homeworkStateV24(code);
+  if (hw === "verified") return "ДЗ принято";
+  if (hw === "revision") return "ДЗ на доработке";
+  if (hw === "review") return "ДЗ на проверке";
+  if (isStageDone(code,"books")) return "можно сдавать";
+  return "закрыто";
+}
+function homeworkReviewNoticeHtml(code) {
+  const hw = homeworkStateV24(code);
+  if (hw === 'review') {
+    return `<div class="homework-review-notice"><b>Домашнее задание на проверке</b><p>Работа отправлена ${shortDate(stageCompletedDate(code,'homeworkSubmitted'))}. После проверки появится статус: принято или на доработке.</p></div>`;
+  }
+  if (hw === 'revision') {
+    const comment = homeworkCommentV25(code);
+    return `<div class="homework-review-notice revision"><b>Домашнее задание требует доработки</b><p>${comment ? esc(comment) : 'Уточните вывод, показатель или действие на 7 дней и отправьте работу повторно.'}</p></div>`;
+  }
+  if (hw === 'verified') {
+    const comment = homeworkCommentV25(code);
+    return `<div class="homework-review-notice accepted"><b>Домашнее задание принято</b><p>Проверка завершена ${shortDate(stageCompletedDate(code,'homeworkVerified'))}. Урок засчитан.${comment ? '<br><br><b>Комментарий:</b> ' + esc(comment) : ''}</p></div>`;
+  }
+  return '';
+}
+function stageStatusText(code, stage) {
+  const hw = homeworkStateV24(code);
+  if(stage === "presentation") return isStageDone(code,"presentation") ? "пройдена" : "—";
+  if(stage === "quiz") return isStageDone(code,"quiz") ? "пройден" : "—";
+  if(stage === "books") return isStageDone(code,"books") ? "изучено" : "—";
+  if(stage === "homeworkSubmitted") {
+    if(hw === "revision") return "на доработке";
+    if(hw === "review" || hw === "verified") return "отправлено";
+    return "—";
+  }
+  if(stage === "homeworkVerified") {
+    if(hw === "verified") return "принято";
+    if(hw === "review") return "ожидает проверки";
+    if(hw === "revision") return "требует доработки";
+    return "—";
+  }
+  return "—";
+}
+function lessonTimelineHtml(code) {
+  const hw = homeworkStateV24(code);
+  const rows = [
+    ["presentation", "Презентация"],
+    ["quiz", "Тест"],
+    ["books", "Саммари"],
+    ["homeworkSubmitted", "ДЗ отправлено"],
+    ["homeworkVerified", "ДЗ принято"]
+  ];
+  return card('lesson-timeline-card', `<h2>История прохождения</h2><div class="timeline-grid">${rows.map(([stage,label])=>{
+    const status = stageStatusText(code, stage);
+    const date = stageCompletedDate(code, stage);
+    const done = status === 'пройдена' || status === 'пройден' || status === 'изучено' || status === 'отправлено' || status === 'принято';
+    const review = status === 'ожидает проверки';
+    const revision = status === 'на доработке' || status === 'требует доработки';
+    return `<div class="timeline-row ${done?'done':''} ${review?'review':''} ${revision?'revision':''}"><span>${esc(label)}</span><b>${esc(status)}</b><em>${date ? shortDate(date) : (stage==='homeworkVerified' && hw==='review' ? 'ожидает' : '—')}</em></div>`;
+  }).join('')}</div>`);
+}
+async function renderHomework(){
+  const lesson = await loadLesson(state.selectedLessonCode);
+  const code = state.selectedLessonCode;
+  const activityKey = lesson.activityKey || state.selectedActivityKey;
+  const hwState = homeworkStateV24(code);
+  if (!isAdminMode() && !(isStageDone(code, 'books') || hwState === 'revision' || hwState === 'review' || hwState === 'verified')) {
+    shell(`${card('blue-card-v2', `<h1>Домашнее задание пока закрыто</h1><p>Домашнее задание открывается после информационной части, теста и саммари.</p>`)}${card('', `${actionButton('К уроку','renderLessonHub()','primary')}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button>` )}`,'homework');
+    return;
+  }
+  if (hwState === 'none' && isStageDone(code, 'books')) await remoteSave('homework_started',{});
+  const hw = lesson.homework || {};
+  const tableButton = hw.buttonLabel || 'Получить шаблон таблицы ДЗ';
+  const defaultInstruction = `<h3>Практическая часть урока</h3><p>Заполните прикреплённый шаблон по фактическим данным своего бизнеса. Главная цель — увидеть первичное ограничение, сформулировать действие на 7 дней и выбрать метрику проверки.</p>`;
+  const instruction = cleanStudentHtml(hw.instructionHtml || defaultInstruction);
+  const notice = homeworkReviewNoticeHtml(code);
+  const actionLabel = hwState === 'revision' ? 'Я отправил доработанное ДЗ' : 'Я отправил ДЗ';
+  const submitButton = hwState === 'verified'
+    ? ''
+    : actionButton(actionLabel,'markHomeworkSubmitted()','primary');
+  shell(`${card('blue-card-v2', `<h1>${esc(hw.title || 'Домашнее задание')}</h1><p>Практическая часть урока. Здесь материал переносится в реальные цифры и управленческий вывод.</p>`)}${notice}${card('', `${instruction}<div class="grid-v2">${externalButton(tableButton,homeworkSheetUrl(code, hw),'primary')}${externalButton('Открыть форму сдачи',hw.submitFormUrl||'#','secondary')}${submitButton}${actionButton('← Вернуться к уроку','renderLessonHub()','secondary')}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button></div>`)}${isAdminMode()?card('', `<details class="admin-details"><summary>Служебное ТЗ таблицы и критерии</summary><h3>ТЗ таблицы</h3><pre class="text-pre">${esc(hw.tableTzText || 'ТЗ таблицы будет добавлено позже.')}</pre><h3>Критерии</h3><pre class="text-pre">${esc(hw.gradingText || '')}</pre></details>`):''}`,'homework');
+}
+function renderHomeworkStatus(){
+  const code = state.selectedLessonCode;
+  const meta = getLessonMeta(code);
+  const activityKey = meta ? meta.activityKey : state.selectedActivityKey;
+  const hw = homeworkStateV24(code);
+  const comment = homeworkCommentV25(code);
+  const statusText = hw === 'verified' ? 'Домашнее задание принято' : (hw === 'revision' ? 'Домашнее задание требует доработки' : (hw === 'review' ? 'Домашнее задание на проверке' : 'Домашнее задание пока не отправлено'));
+  const detail = hw === 'verified'
+    ? `Проверка завершена ${shortDate(stageCompletedDate(code,'homeworkVerified'))}. Урок засчитан.${comment ? '\n\nКомментарий: ' + comment : ''}`
+    : (hw === 'revision' ? (comment || 'Уточните вывод, показатель или действие на 7 дней и отправьте работу повторно.') : (hw === 'review' ? `Работа отправлена ${shortDate(stageCompletedDate(code,'homeworkSubmitted'))}. После проверки откроется следующий шаг или появится комментарий на доработку.` : 'Откройте домашнее задание, заполните шаблон и отправьте форму на проверку.'));
+  shell(`${card('blue-card-v2', `<h1>${esc(statusText)}</h1><p>${esc(detail).replace(/\n/g,'<br>')}</p>`)}${lessonTimelineHtml(code)}${card('', `${hw === 'revision' ? actionButton('Открыть ДЗ для доработки','renderHomework()','primary') : actionButton('К уроку','renderLessonHub()','primary')}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button>`)}`,'homework');
+}
+function renderHomeworkCenter(){
+  const visibleLessons = (state.catalog.lessons || []).filter(l=>canOpenLesson(l) || isStageDone(l.code,'homeworkSubmitted') || homeworkStateV24(l.code) !== 'none').slice(0,60);
+  shell(`${card('blue-card-v2', `<h1>Домашние задания</h1><p>Здесь отображаются задания по открытым урокам и статусы проверки.</p>`)}${card('', `<div class="lesson-list-v2">${visibleLessons.map(l=>{
+    const hw = homeworkStateV24(l.code);
+    const ready = isAdminMode() || isStageDone(l.code,'books') || hw !== 'none';
+    const status = homeworkStateLabelV25(l.code);
+    const comment = hw === 'revision' ? homeworkCommentV25(l.code) : '';
+    return `<button class="lesson-row-v2 ${ready?'':'locked'}" onclick="openLesson('${l.code}').then(()=>${ready?'renderHomework()':'renderLessonHub()'})"><div><b>${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${esc(status)}${comment ? ' · комментарий есть' : ''}</p></div><span>${ready?'→':'🔒'}</span></button>`;
+  }).join('')}</div>`)}`,'homework');
+}
+function studentHomeworkAlertCardV25(){
+  if (isAdminMode() || !state.catalog) return '';
+  const lessons = state.catalog.lessons || [];
+  const revision = lessons.find(l => homeworkStateV24(l.code) === 'revision');
+  const review = lessons.find(l => homeworkStateV24(l.code) === 'review');
+  const meta = revision || review;
+  if (!meta) return '';
+  const stateKey = homeworkStateV24(meta.code);
+  const comment = homeworkCommentV25(meta.code);
+  const title = stateKey === 'revision' ? 'ДЗ вернулось на доработку' : 'ДЗ находится на проверке';
+  const text = stateKey === 'revision'
+    ? (comment || 'Откройте домашнее задание, уточните вывод и отправьте работу повторно.')
+    : 'Работа отправлена. После проверки появится статус и комментарий.';
+  return card(stateKey === 'revision' ? 'homework-alert-card revision' : 'homework-alert-card', `<h2>${esc(title)}</h2><p><b>${esc(meta.activityTitle)} · ${esc(meta.title)}</b></p><p>${esc(text)}</p><button class="btn primary" onclick="openLesson('${meta.code}').then(()=>renderHomeworkStatus())">Открыть статус ДЗ</button>`);
+}
+function renderHome() {
+  const gp = globalStageProgress();
+  const points = totalPoints();
+  const html = `
+    ${card('hero-dashboard main-dashboard-card merged-dashboard-card v16-dashboard-card', `
+      <div class="v16-dashboard-head">
+        <div class="v16-dashboard-copy">
+          <div class="eyebrow-row"><p class="eyebrow">общая система</p><button class="instruction-link" onclick="toggleGlobalInstruction()">инструкция</button></div>
+          <h1>Ваш прогресс</h1>
+          <p>Прогресс считается по готовым урокам и их этапам: презентация, тест, саммари и принятое домашнее задание.</p>
+        </div>
+        ${compactProgressRing(gp.percent)}
+      </div>
+      <div class="dashboard-mini-grid dashboard-mini-grid-compact v16-mini-grid">
+        <div><span>Баллы</span><b>${formatPoints(points)}</b></div>
+        <div><span>Достижение</span><b>${esc(studentTitleInfo().current.title)}</b></div>
+      </div>
+      ${achievementInlineHtml()}
+      ${globalInstructionPanelHtml()}
+    `)}
+    ${studentHomeworkAlertCardV25()}
+    ${safeActiveChallengeCardHtmlV24()}
+    ${card('', `<h2>Выбрать блок</h2><p>Выберите направление работы внутри платформы.</p>
+      <div class="top-track-grid main-track-grid-v22">
+        ${renderMainBlockCard('Нет своего бизнеса','Базовый маршрут для подготовки к предпринимательскому мышлению и запуску.','скоро','','disabled main-block-card')}
+        ${renderMainBlockCard('Я предприниматель','Диагностика, уроки, ДЗ, проверка и управленческие действия.','доступно','renderLearning()','active main-block-card')}
+        ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','','disabled main-block-card')}
+      </div>
+      <div class="secondary-track-grid-v22">
+        ${renderMainBlockCard('100 книг за 100 дней','Ежедневный челлендж: одна книга, 24 часа, мини-тест, +1 учебная единица и баллы серии.','доступно','renderBookChallenge()','active books100-entry compact-card')}
+        ${renderMainBlockCard('Бизнес-факты','Короткие практические статьи о реальных бизнес-ситуациях: ошибки, решения, цифры и выводы, которые можно применить в своей системе.','скоро','','disabled compact-card')}
+        ${renderMainBlockCard('Дополнительные материалы','Отдельные уроки, разборы и материалы, которые дополняют основной маршрут.','скоро','','disabled compact-card')}
+        ${renderMainBlockCard('VIP уровень','Более подробные разборы, инструменты и активность.','в разработке','','disabled compact-card')}
+        ${renderMainBlockCard('Бизнес-медиа','Подборки фильмов, сериалов, интервью и полезных видео о бизнесе с управленческими выводами для практики.','скоро','','disabled compact-card compact-card-wide')}
+      </div>`)}
+  `;
+  shell(html, 'home');
+}
+function adminLessonOptionsV25(){
+  return (state.catalog?.lessons || []).map(l => `<option value="${esc(l.code)}" ${l.code===state.selectedLessonCode?'selected':''}>${esc(l.code)} · ${esc(l.activityTitle)} · ${esc(l.title)}</option>`).join('');
+}
+function renderAdmin(){
+  if(!isAdminUser()){ alert('Нет прав Босса Л.Е.Г.О.'); return; }
+  shell(`${card('blue-card-v2', `<h1>Панель Босса Л.Е.Г.О</h1><p>Проверка ДЗ теперь привязана к конкретному уроку. Сначала найдите работы ученика или выберите урок вручную.</p>`)}
+    ${card('', `<h2>Проверка ДЗ</h2><p class="small">Комментарий сохраняется внутри статуса ДЗ. Telegram-сообщение ученику появится только после отдельного подключения бота уведомлений.</p><input id="admin-target-user" placeholder="Telegram ID или username ученика"><select id="admin-lesson-code" class="admin-select-v25">${adminLessonOptionsV25()}</select><textarea id="admin-review-comment" placeholder="Комментарий проверяющего. Для доработки обязателен."></textarea><div class="grid-v2"><button class="btn secondary" onclick="adminLoadHomeworkQueueV25()">Найти ДЗ ученика</button><button class="btn secondary" onclick="adminLoadHomeworkQueueV25('all')">Показать все ДЗ на проверке</button><button class="btn primary" onclick="adminReviewManualV25('approve_homework')">Принять выбранный урок</button><button class="btn secondary" onclick="adminReviewManualV25('reject_homework')">Вернуть выбранный урок на доработку</button></div><div id="admin-homework-queue" class="admin-homework-queue-v25"></div>`) }
+    ${card('', `<h2>100 книг за 100 дней</h2><p>Можно восстановить зачёты из успешных попыток теста, если после обновлений часть статусов стала отображаться неверно.</p><div class="grid-v2"><button class="btn primary" onclick="books100AdminRepairAllV25()">Проверить и восстановить зачёты книг</button><button class="btn secondary" onclick="renderBookChallenge()">Открыть книги челленджа</button></div>`)}
+    ${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${state.catalog.lessons.map(l=>`<button class="lesson-row-v2" onclick="openLesson('${l.code}')"><div><b>${esc(l.code)} · ${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${l.slidesCount} слайдов · ${l.quizCount} вопросов · ${l.bookScreensCount} саммари</p></div><span>→</span></button>`).join('')}</div>`)}`,'profile');
+}
+async function adminApiV25(payload){
+  if(!tg || !tg.initData) throw new Error('Админ-проверка работает только внутри Telegram WebApp.');
+  const res = await fetch(ADMIN_REVIEW_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({ initData: tg.initData }, payload || {})) });
+  const out = await res.json().catch(()=>({}));
+  if(!res.ok || !out.ok) throw new Error(out.reason || out.details || out.error || 'ADMIN_REVIEW_FAILED');
+  return out;
+}
+async function adminLoadHomeworkQueueV25(mode){
+  const box = $('admin-homework-queue');
+  if(box) box.innerHTML = '<p class="small">Загружаем список ДЗ...</p>';
+  try{
+    const target = mode === 'all' ? '' : ($('admin-target-user')?.value || '').trim();
+    const out = await adminApiV25({ action:'list_homework', targetUser: target });
+    if(!box) return;
+    const rows = out.rows || [];
+    if(!rows.length){ box.innerHTML = '<div class="empty-admin-v25"><b>ДЗ не найдено</b><p>Проверьте Telegram ID / username или попросите ученика открыть приложение хотя бы один раз.</p></div>'; return; }
+    box.innerHTML = `<h3>Найденные домашние задания</h3>${rows.map(adminHomeworkRowHtmlV25).join('')}`;
+  }catch(e){ if(box) box.innerHTML = `<div class="empty-admin-v25 error"><b>Ошибка загрузки</b><p>${esc(e.message||e)}</p></div>`; }
+}
+function adminHomeworkRowHtmlV25(row){
+  const lesson = row.lesson || {}; const target = row.target || {};
+  const name = target.first_name || target.username || target.telegram_id || 'ученик';
+  const code = lesson.code || '';
+  const title = lesson.title || 'урок';
+  const comment = row.admin_review_comment || '';
+  return `<div class="admin-homework-row-v25"><div><b>${esc(name)} · ${esc(code)}</b><p>${esc(title)} · ${esc(row.status_label || row.status || 'статус не указан')}</p><p class="small">Отправлено: ${row.homework_submitted_at ? shortDate(row.homework_submitted_at) : '—'}${comment ? ' · комментарий: ' + esc(comment) : ''}</p></div><div class="grid-v2"><button class="btn primary" onclick="adminReviewProgressV25('approve_homework','${esc(row.progress_id)}','${esc(code)}')">Принять это ДЗ</button><button class="btn secondary" onclick="adminReviewProgressV25('reject_homework','${esc(row.progress_id)}','${esc(code)}')">Вернуть это ДЗ</button></div></div>`;
+}
+async function adminReviewProgressV25(action, progressId, lessonCode){
+  const comment = $('admin-review-comment')?.value.trim() || '';
+  if(action === 'reject_homework' && !comment){ alert('Для доработки нужен комментарий.'); return; }
+  if(!confirm(action === 'approve_homework' ? `Принять ДЗ ${lessonCode}?` : `Вернуть ДЗ ${lessonCode} на доработку?`)) return;
+  try{
+    const out = await adminApiV25({ action, progressId, comment, homeworkScore:70 });
+    alert((action === 'approve_homework' ? 'ДЗ принято. ' : 'ДЗ отправлено на доработку. ') + 'Комментарий будет виден ученику внутри статуса ДЗ после синхронизации приложения.');
+    adminLoadHomeworkQueueV25($('admin-target-user')?.value.trim() ? undefined : 'all');
+  }catch(e){ alert('Ошибка: ' + (e.message||e)); }
+}
+async function adminReviewManualV25(action){
+  const target = $('admin-target-user')?.value.trim();
+  const lessonCode = $('admin-lesson-code')?.value || state.selectedLessonCode;
+  const comment = $('admin-review-comment')?.value.trim() || '';
+  if(!target){ alert('Укажите Telegram ID или username ученика.'); return; }
+  if(!lessonCode){ alert('Выберите урок.'); return; }
+  if(action === 'reject_homework' && !comment){ alert('Для доработки нужен комментарий.'); return; }
+  if(!confirm(action === 'approve_homework' ? `Принять ДЗ ученика по уроку ${lessonCode}?` : `Вернуть ДЗ ученика по уроку ${lessonCode} на доработку?`)) return;
+  try{
+    await adminApiV25({ action, targetUser:target, lessonCode, comment, homeworkScore:70 });
+    alert((action === 'approve_homework' ? 'ДЗ принято. ' : 'ДЗ отправлено на доработку. ') + 'Проверьте список ДЗ ученика.');
+    adminLoadHomeworkQueueV25();
+  }catch(e){ alert('Ошибка: ' + (e.message||e)); }
+}
+async function books100AdminRepairAllV25(){
+  if(!isAdminMode()) return alert('Доступно только в режиме Босса Л.Е.Г.О.');
+  if(!confirm('Проверить все зачёты книг и восстановить статусы из успешных попыток теста?')) return;
+  try{
+    const index = await loadBooks100Index();
+    const out = await books100ApiV20('admin_repair_all', { books: books100BooksPayloadV18(index) }, { timeoutMs: 30000 });
+    alert(`Проверено пользователей: ${out.usersChecked || 0}. Исправлено: ${out.repairedUsers || 0}.`);
+  }catch(e){ alert('Ошибка восстановления книг: ' + (e.message||e)); }
+}
