@@ -29,10 +29,10 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v22-production-tests-ui-20260603";
+const APP_CACHE_VERSION = "v25-construction-bd01-ready-20260606";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
-const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01"];
+const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
 
 const state = {
   access: false,
@@ -2886,7 +2886,7 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
    ===================================================== */
 function isLessonPrepared(meta) {
   if (!meta) return false;
-  const readyFirstLessons = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01"];
+  const readyFirstLessons = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
   if (readyFirstLessons.includes(meta.code)) return true;
   if (Number(meta.number) === 1) return false;
   return meta.status === "ready";
@@ -2954,8 +2954,8 @@ function renderHome() {
 /* =====================================================
    v24 — stabilization layer: progress, lessons, quiz, homework
    ===================================================== */
-var LEGO_V24_CACHE_VERSION = "v24-stabilize-core-20260604";
-var LEGO_READY_FIRST_LESSON_CODES_V24 = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01"];
+var LEGO_V24_CACHE_VERSION = "v25-construction-bd01-ready-20260606";
+var LEGO_READY_FIRST_LESSON_CODES_V24 = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
 var LEGO_CORE_STAGE_CODES_V24 = ["presentation", "quiz", "books", "homework"];
 
 function contentVersionV24() {
@@ -3348,7 +3348,7 @@ function renderHomeworkCenter(){
    v24 — stabilization overrides: progress, lessons, quiz, homework
    ===================================================== */
 
-function appStableVersionV24(){ return "v24-stabilize-core-20260604"; }
+function appStableVersionV24(){ return "v25-construction-bd01-ready-20260606"; }
 
 function safeFetchUrlV24(url){
   const sep = String(url || "").includes("?") ? "&" : "?";
@@ -3375,7 +3375,7 @@ async function loadLesson(code) {
   return data;
 }
 
-function readyFirstLessonCodesV24(){ return ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01"]; }
+function readyFirstLessonCodesV24(){ return ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"]; }
 function isLessonPrepared(meta) {
   if (!meta) return false;
   if (readyFirstLessonCodesV24().includes(meta.code)) return true;
