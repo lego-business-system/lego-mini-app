@@ -29,7 +29,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v25-construction-bd01-ready-20260606";
+const APP_CACHE_VERSION = "v26-construction-bd01-ready-lesson-path-20260606";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -2954,7 +2954,7 @@ function renderHome() {
 /* =====================================================
    v24 — stabilization layer: progress, lessons, quiz, homework
    ===================================================== */
-var LEGO_V24_CACHE_VERSION = "v25-construction-bd01-ready-20260606";
+var LEGO_V24_CACHE_VERSION = "v26-construction-bd01-ready-lesson-path-20260606";
 var LEGO_READY_FIRST_LESSON_CODES_V24 = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
 var LEGO_CORE_STAGE_CODES_V24 = ["presentation", "quiz", "books", "homework"];
 
@@ -3348,7 +3348,7 @@ function renderHomeworkCenter(){
    v24 — stabilization overrides: progress, lessons, quiz, homework
    ===================================================== */
 
-function appStableVersionV24(){ return "v25-construction-bd01-ready-20260606"; }
+function appStableVersionV24(){ return "v26-construction-bd01-ready-lesson-path-20260606"; }
 
 function safeFetchUrlV24(url){
   const sep = String(url || "").includes("?") ? "&" : "?";
@@ -4005,4 +4005,105 @@ async function books100AdminRepairAllV25(){
     const out = await books100ApiV20('admin_repair_all', { books: books100BooksPayloadV18(index) }, { timeoutMs: 30000 });
     alert(`Проверено пользователей: ${out.usersChecked || 0}. Исправлено: ${out.repairedUsers || 0}.`);
   }catch(e){ alert('Ошибка восстановления книг: ' + (e.message||e)); }
+}
+
+/* =====================================================
+   v26 — construction BD-01 ready, singular lesson assets, final overrides
+   ===================================================== */
+function contentVersionV24() {
+  return "v26-construction-bd01-ready-lesson-path-20260606";
+}
+function appStableVersionV24(){
+  return "v26-construction-bd01-ready-lesson-path-20260606";
+}
+function readyFirstLessonCodesV24(){
+  return ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
+}
+function isLessonPrepared(meta) {
+  if (!meta) return false;
+  if (readyFirstLessonCodesV24().includes(meta.code)) return true;
+  if (Number(meta.number) === 1) return false;
+  return String(meta.status || "").toLowerCase() === "ready";
+}
+function normalizeLessonAssetPath(path) {
+  const raw = String(path || "").trim();
+  if (!raw) return "";
+  if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("data:")) return raw;
+  return raw.replace(/^assets\/lessons\//, "assets/lesson/");
+}
+function mediaUrlV24(url) {
+  const normalized = normalizeLessonAssetPath(url);
+  if (!normalized) return "";
+  return normalized + (normalized.indexOf("?") >= 0 ? "&" : "?") + "v=" + contentVersionV24();
+}
+function lessonImageFallback(label, current) {
+  const n = String(current).padStart(2, "0");
+  const idx = Number(current);
+
+  if (state.selectedLessonCode === "ENT-TR-01") return legacyTradeImage(label, current);
+
+  if (state.selectedLessonCode === "ENT-SV-01") {
+    if (label === "Слайд") return `assets/lesson/services/01/slides/slide_${n}.png`;
+    if (label === "Саммари") {
+      if (idx >= 1 && idx <= 5) return `assets/lesson/services/01/books/book1_${String(idx).padStart(2,"0")}.png`;
+      if (idx >= 6 && idx <= 10) return `assets/lesson/services/01/books/book2_${String(idx-5).padStart(2,"0")}.png`;
+      if (idx >= 11 && idx <= 15) return `assets/lesson/services/01/books/book3_${String(idx-10).padStart(2,"0")}.png`;
+      if (idx >= 16 && idx <= 20) return `assets/lesson/services/01/books/book4_${String(idx-15).padStart(2,"0")}.png`;
+      if (idx >= 21 && idx <= 25) return `assets/lesson/services/01/books/book5_${String(idx-20).padStart(2,"0")}.png`;
+      if (idx === 26) return `assets/lesson/services/01/books/final_summary.png`;
+    }
+  }
+
+  if (state.selectedLessonCode === "ENT-BD-01") {
+    if (label === "Слайд") return `assets/lesson/construction/01/slides/slide_${n}.png`;
+    if (label === "Саммари") {
+      if (idx >= 1 && idx <= 5) return `assets/lesson/construction/01/books/book1_${String(idx).padStart(2,"0")}.png`;
+      if (idx >= 6 && idx <= 10) return `assets/lesson/construction/01/books/book2_${String(idx-5).padStart(2,"0")}.png`;
+      if (idx >= 11 && idx <= 15) return `assets/lesson/construction/01/books/book3_${String(idx-10).padStart(2,"0")}.png`;
+      if (idx >= 16 && idx <= 20) return `assets/lesson/construction/01/books/book4_${String(idx-15).padStart(2,"0")}.png`;
+      if (idx >= 21 && idx <= 25) return `assets/lesson/construction/01/books/book5_${String(idx-20).padStart(2,"0")}.png`;
+      if (idx === 26) return `assets/lesson/construction/01/books/final_summary.png`;
+    }
+  }
+
+  return null;
+}
+function handleImageError(img) {
+  if (!img) return;
+  if (img.dataset && img.dataset.fallbackUsed !== "1") {
+    const fallback = normalizeLessonAssetPath(lessonImageFallback(img.dataset.label, Number(img.dataset.index)) || "");
+    if (fallback && img.src.indexOf(fallback) === -1) {
+      img.dataset.fallbackUsed = "1";
+      img.src = mediaUrlV24(fallback);
+      return;
+    }
+    const original = normalizeLessonAssetPath(img.dataset.originalSrc || "");
+    if (original && img.src.indexOf(original) === -1) {
+      img.dataset.fallbackUsed = "1";
+      img.src = mediaUrlV24(original);
+      return;
+    }
+  }
+  img.style.display = "none";
+  const fallbackBox = img.nextElementSibling;
+  if (fallbackBox) fallbackBox.style.display = "flex";
+}
+function mediaScreen(image,label,current,total,html){
+  const fallback = lessonImageFallback(label, current);
+  const src = normalizeLessonAssetPath(image || fallback || "");
+  const imageHtml = src
+    ? `<img src="${mediaUrlV24(src)}" data-original-src="${esc(src)}" data-label="${esc(label)}" data-index="${Number(current)}" onerror="handleImageError(this)">`
+    : `<img src="" data-label="${esc(label)}" data-index="${Number(current)}" style="display:none" onerror="handleImageError(this)">`;
+  return `<div class="media-counter">${esc(label)}: ${Number(current)}/${Number(total)}</div><div class="media-box-v2">${imageHtml}<div class="image-missing-v2" style="display:none"><b>${esc(label)} ${Number(current)}</b><p>Иллюстрация в подготовке.</p></div></div><section class="slide-text-v2">${cleanStudentHtml(html)}</section>`;
+}
+function preloadImage(src) {
+  const normalized = normalizeLessonAssetPath(src);
+  if (!normalized) return;
+  try { const img = new Image(); img.src = mediaUrlV24(normalized); } catch(e) {}
+}
+function mediaSrcFor(label, index, lesson) {
+  if (!lesson) return normalizeLessonAssetPath(lessonImageFallback(label, index));
+  if (label === "Слайд") return normalizeLessonAssetPath(lesson.slides?.[index-1]?.image || lessonImageFallback(label, index));
+  if (label === "Саммари") return normalizeLessonAssetPath(lesson.bookScreens?.[index-1]?.image || lessonImageFallback(label, index));
+  return normalizeLessonAssetPath(lessonImageFallback(label, index));
 }
