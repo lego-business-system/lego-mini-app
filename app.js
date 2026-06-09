@@ -29,7 +29,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v26-construction-bd01-ready-lesson-path-20260606";
+const APP_CACHE_VERSION = "v28-books100-legacy-id-compat-20260609";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -1849,7 +1849,7 @@ function renderHome() {
    ===================================================== */
 
 const BOOKS100_INDEX_URL = "content/challenges/books100/index.json";
-const BOOKS100_CACHE_VERSION = "v27-books100-days001-020-20260609";
+const BOOKS100_CACHE_VERSION = "v28-books100-legacy-id-compat-20260609";
 const BOOKS100_STORAGE_KEY = "lego_books100_challenge_v17";
 
 state.books100Index = null;
@@ -2239,7 +2239,7 @@ function renderAdmin(){
    v18 — Books100 Supabase timer and reading overrides
    ===================================================== */
 const BOOKS100_PROGRESS_URL_V18 = "https://soxtekhspohkddpdidvp.supabase.co/functions/v1/books100-progress";
-const BOOKS100_CACHE_VERSION_V18 = "v27-books100-days001-020-20260609";
+const BOOKS100_CACHE_VERSION_V18 = "v28-books100-legacy-id-compat-20260609";
 state.books100ServerState = null;
 
 function books100BookPayloadV18(book){
@@ -2636,8 +2636,8 @@ async function finishBooks100Quiz(){
 /* =====================================================
    v20 — Books100 FAST mode: быстрый экран, кэш индекса, фоновая синхронизация, без обложек в списке
    ===================================================== */
-const BOOKS100_CACHE_VERSION_V20 = "v27-books100-days001-020-20260609";
-const BOOKS100_INDEX_CACHE_KEY_V20 = "lego_books100_index_v27_days001_020";
+const BOOKS100_CACHE_VERSION_V20 = "v28-books100-legacy-id-compat-20260609";
+const BOOKS100_INDEX_CACHE_KEY_V20 = "lego_books100_index_v28_legacy_days001_020";
 const BOOKS100_INDEX_CACHE_TTL_V20 = 6 * 60 * 60 * 1000;
 
 state.books100IndexPromiseV20 = null;
@@ -2687,15 +2687,46 @@ async function loadBooks100Index(){
   return await books100RefreshIndexV20();
 }
 async function loadBooks100Book(bookMeta){
+  bookMeta = normalizeBooks100BookMetaV28(bookMeta);
   if(!bookMeta) throw new Error("BOOKS100_BOOK_META_MISSING");
-  const key = bookMeta.id || String(bookMeta.day || "");
+  const key = bookMeta.id || books100LegacyIdFromDayV28(bookMeta.day);
   if(state.books100Cache && state.books100Cache[key]) return state.books100Cache[key];
-  const response = await fetch(bookMeta.contentUrl + "?v=" + BOOKS100_CACHE_VERSION_V20, { cache: "default" });
-  if(!response.ok) throw new Error("BOOKS100_BOOK_LOAD_FAILED: " + key);
-  const data = await response.json();
-  state.books100Cache[key] = data;
-  return data;
+  const urls = Array.from(new Set([bookMeta.contentUrl, ...(bookMeta.fallbackContentUrls || [])].filter(Boolean)));
+  let lastError = null;
+  for(const url of urls){
+    try{
+      const response = await fetch(url + "?v=" + BOOKS100_CACHE_VERSION_V20, { cache: "no-store" });
+      if(!response.ok){ lastError = new Error(`HTTP_${response.status}: ${url}`); continue; }
+      const data = await response.json();
+      data.id = data.id || key;
+      state.books100Cache[key] = data;
+      return data;
+    }catch(e){ lastError = e; }
+  }
+  throw new Error("BOOKS100_BOOK_LOAD_FAILED: " + key + " | " + (lastError?.message || "no available contentUrl"));
 }
+
+function books100LegacyIdFromDayV28(day){
+  return `book100-${String(Number(day || 1)).padStart(2,"0")}`;
+}
+function books100Day3V28(day){
+  return String(Number(day || 1)).padStart(3,"0");
+}
+function normalizeBooks100BookMetaV28(bookMeta){
+  if(!bookMeta) return null;
+  const idNumber = String(bookMeta.id || "").match(/(\d+)/)?.[1];
+  const day = Number(bookMeta.day || idNumber || 1);
+  const day2 = String(day).padStart(2,"0");
+  const day3 = String(day).padStart(3,"0");
+  return Object.assign({}, bookMeta, {
+    day,
+    id: bookMeta.id || `book100-${day2}`,
+    contentUrl: bookMeta.contentUrl || `content/challenges/books100/book100-${day2}.json`,
+    fallbackContentUrls: Array.from(new Set([...(bookMeta.fallbackContentUrls || []), `content/challenges/books100/${day3}.json`, `content/challenges/books100/book_${day3}.json`])),
+    coverImage: bookMeta.coverImage || `assets/challenges/books100/${day3}/screen_01.png`
+  });
+}
+
 function books100ApiV20(action, payload, options){
   if(!tg || !tg.initData) return Promise.reject(new Error("BOOKS100_TELEGRAM_REQUIRED"));
   const timeoutMs = Number((options && options.timeoutMs) || 9000);
@@ -2954,7 +2985,7 @@ function renderHome() {
 /* =====================================================
    v24 — stabilization layer: progress, lessons, quiz, homework
    ===================================================== */
-var LEGO_V24_CACHE_VERSION = "v26-construction-bd01-ready-lesson-path-20260606";
+var LEGO_V24_CACHE_VERSION = "v28-books100-legacy-id-compat-20260609";
 var LEGO_READY_FIRST_LESSON_CODES_V24 = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
 var LEGO_CORE_STAGE_CODES_V24 = ["presentation", "quiz", "books", "homework"];
 
@@ -3348,7 +3379,7 @@ function renderHomeworkCenter(){
    v24 — stabilization overrides: progress, lessons, quiz, homework
    ===================================================== */
 
-function appStableVersionV24(){ return "v26-construction-bd01-ready-lesson-path-20260606"; }
+function appStableVersionV24(){ return "v28-books100-legacy-id-compat-20260609"; }
 
 function safeFetchUrlV24(url){
   const sep = String(url || "").includes("?") ? "&" : "?";
@@ -4011,10 +4042,10 @@ async function books100AdminRepairAllV25(){
    v26 — construction BD-01 ready, singular lesson assets, final overrides
    ===================================================== */
 function contentVersionV24() {
-  return "v26-construction-bd01-ready-lesson-path-20260606";
+  return "v28-books100-legacy-id-compat-20260609";
 }
 function appStableVersionV24(){
-  return "v26-construction-bd01-ready-lesson-path-20260606";
+  return "v28-books100-legacy-id-compat-20260609";
 }
 function readyFirstLessonCodesV24(){
   return ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
