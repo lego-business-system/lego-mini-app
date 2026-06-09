@@ -1,8 +1,8 @@
 {
   "id": "books100",
   "title": "100 книг за 100 дней",
-  "version": "v27-days-001-020-ready-20260609",
-  "description": "Ежедневный челлендж: одно саммари, один мини-тест, +1 учебная единица и баллы серии за зачёт книги.",
+  "version": "v28-legacy-id-compat-days-001-020-20260609",
+  "description": "Ежедневный челлендж: одна книга, саммари, мини-тест, практическое задание, +1 учебная единица и баллы серии.",
   "rules": {
     "timeWindowHours": 24,
     "passScoreDefault": 8,
@@ -11,13 +11,16 @@
   },
   "books": [
     {
-      "id": "BOOK100-001",
+      "id": "book100-01",
       "day": 1,
       "title": "The Personal MBA / Сам себе MBA",
       "author": "Josh Kaufman",
       "block": "Базовое предпринимательское мышление",
       "status": "ready_v19_text_fixed",
-      "contentUrl": "content/challenges/books100/001.json",
+      "contentUrl": "content/challenges/books100/book100-01.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/001.json"
+      ],
       "coverImage": "assets/challenges/books100/001/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
@@ -25,13 +28,16 @@
       "shortDescription": "Бизнес можно разложить на пять управляемых механизмов: ценность, внимание, продажа, доставка результата и деньги."
     },
     {
-      "id": "BOOK100-002",
+      "id": "book100-02",
       "day": 2,
       "title": "The E-Myth Revisited / Миф о предпринимательстве",
       "author": "Michael E. Gerber",
       "block": "Базовое предпринимательское мышление",
       "status": "ready_v18",
-      "contentUrl": "content/challenges/books100/002.json",
+      "contentUrl": "content/challenges/books100/book100-02.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/002.json"
+      ],
       "coverImage": "assets/challenges/books100/002/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
@@ -39,13 +45,16 @@
       "shortDescription": "Сильный малый бизнес строится не на героизме владельца, а на повторяемых процессах, ролях и стандартах качества."
     },
     {
-      "id": "BOOK100-003",
+      "id": "book100-03",
       "day": 3,
       "title": "Rework / Переделка",
       "author": "Jason Fried, David Heinemeier Hansson",
       "block": "Базовое предпринимательское мышление",
       "status": "ready_v18",
-      "contentUrl": "content/challenges/books100/003.json",
+      "contentUrl": "content/challenges/books100/book100-03.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/003.json"
+      ],
       "coverImage": "assets/challenges/books100/003/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
@@ -53,13 +62,16 @@
       "shortDescription": "Сильный фокус часто появляется не через добавление задач, а через удаление лишнего, ранний запуск и близость к реальной проблеме клиента."
     },
     {
-      "id": "BOOK100-004",
+      "id": "book100-04",
       "day": 4,
       "title": "Zero to One / От нуля к единице",
       "author": "Peter Thiel",
       "block": "Базовое предпринимательское мышление",
       "status": "ready_v18",
-      "contentUrl": "content/challenges/books100/004.json",
+      "contentUrl": "content/challenges/books100/book100-04.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/004.json"
+      ],
       "coverImage": "assets/challenges/books100/004/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
@@ -67,13 +79,16 @@
       "shortDescription": "Сильный бизнес не копирует рынок, а создаёт ценное отличие и занимает узкий участок, где может стать лучшим."
     },
     {
-      "id": "BOOK100-005",
+      "id": "book100-05",
       "day": 5,
       "title": "The Lean Startup / Бизнес с нуля",
       "author": "Eric Ries",
       "block": "Базовое предпринимательское мышление",
       "status": "ready_v18",
-      "contentUrl": "content/challenges/books100/005.json",
+      "contentUrl": "content/challenges/books100/book100-05.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/005.json"
+      ],
       "coverImage": "assets/challenges/books100/005/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
@@ -81,214 +96,259 @@
       "shortDescription": "Новые продукты и направления нужно развивать через проверяемые гипотезы, минимальные версии, метрики и решения по данным."
     },
     {
-      "id": "BOOK100-006",
+      "id": "book100-06",
       "day": 6,
       "title": "The Hard Thing About Hard Things / Трудные вещи в трудных делах",
       "author": "Ben Horowitz",
       "block": "Базовое предпринимательское мышление",
       "status": "ready_v27_days_001_020",
-      "contentUrl": "content/challenges/books100/006.json",
+      "contentUrl": "content/challenges/books100/book100-06.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/006.json"
+      ],
       "coverImage": "assets/challenges/books100/006/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Книга показывает реальную сторону управления: кризисы, увольнения, кассовое давление, ошибки найма, слабые процессы и решения, которые неприятны, но необходимы."
+      "shortDescription": "Предпринимательство требует умения принимать трудные решения в условиях давления, неполных данных и личной ответственности."
     },
     {
-      "id": "BOOK100-007",
+      "id": "book100-07",
       "day": 7,
       "title": "Shoe Dog / Продавец обуви",
       "author": "Phil Knight",
       "block": "Базовое предпринимательское мышление",
       "status": "ready_v27_days_001_020",
-      "contentUrl": "content/challenges/books100/007.json",
+      "contentUrl": "content/challenges/books100/book100-07.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/007.json"
+      ],
       "coverImage": "assets/challenges/books100/007/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "История Nike полезна не как биография успеха, а как разбор раннего хаоса бизнеса: продаж с машины, зависимости от поставщиков, нехватки денег, команды и постепенного формирования бренда."
+      "shortDescription": "Большой бизнес часто строится не как ровный план, а как длинный путь через неопределённость, кассовые разрывы, партнёрства, риск и веру в продукт."
     },
     {
-      "id": "BOOK100-008",
+      "id": "book100-08",
       "day": 8,
       "title": "Anything You Want / Всё, что хочешь",
       "author": "Derek Sivers",
       "block": "Базовое предпринимательское мышление",
       "status": "ready_v27_days_001_020",
-      "contentUrl": "content/challenges/books100/008.json",
+      "contentUrl": "content/challenges/books100/book100-08.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/008.json"
+      ],
       "coverImage": "assets/challenges/books100/008/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Книга показывает предпринимательство через простоту, клиентскую пользу, личные правила собственника и отказ от лишней сложности."
+      "shortDescription": "Бизнес должен строиться вокруг ясной пользы для клиента и собственных правил, а не вокруг слепого копирования чужой модели."
     },
     {
-      "id": "BOOK100-009",
+      "id": "book100-09",
       "day": 9,
       "title": "Company of One / Компания одного человека",
       "author": "Paul Jarvis",
       "block": "Базовое предпринимательское мышление",
       "status": "ready_v27_days_001_020",
-      "contentUrl": "content/challenges/books100/009.json",
+      "contentUrl": "content/challenges/books100/book100-09.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/009.json"
+      ],
       "coverImage": "assets/challenges/books100/009/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Книга помогает отделить полезный рост от роста ради статуса и проверить, усиливает ли масштабирование прибыль и управляемость."
+      "shortDescription": "Рост не всегда является целью; сильный бизнес может быть устойчивым, прибыльным и управляемым без постоянного расширения."
     },
     {
-      "id": "BOOK100-010",
+      "id": "book100-10",
       "day": 10,
       "title": "Built to Sell / Построено на продажу",
       "author": "John Warrillow",
       "block": "Базовое предпринимательское мышление",
       "status": "ready_v27_days_001_020",
-      "contentUrl": "content/challenges/books100/010.json",
+      "contentUrl": "content/challenges/books100/book100-10.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/010.json"
+      ],
       "coverImage": "assets/challenges/books100/010/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Книга показывает, как превратить бизнес из личной занятости владельца в систему, которую можно передать, масштабировать или продать."
+      "shortDescription": "Бизнес становится ценным, когда не зависит полностью от собственника и работает через повторяемый продукт, процесс и команду."
     },
     {
-      "id": "BOOK100-011",
+      "id": "book100-11",
       "day": 11,
       "title": "Good Strategy Bad Strategy / Хорошая стратегия, плохая стратегия",
       "author": "Richard Rumelt",
       "block": "Стратегия и конкуренция",
       "status": "ready_v27_days_001_020",
-      "contentUrl": "content/challenges/books100/011.json",
+      "contentUrl": "content/challenges/books100/book100-11.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/011.json"
+      ],
       "coverImage": "assets/challenges/books100/011/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Книга помогает отличать стратегию от желания: диагноз ситуации, выбор главного препятствия и набор согласованных действий."
+      "shortDescription": "Хорошая стратегия начинается с точного диагноза, выбирает главный вызов и задаёт согласованное действие; плохая стратегия заменяет это лозунгами и целями."
     },
     {
-      "id": "BOOK100-012",
+      "id": "book100-12",
       "day": 12,
       "title": "Playing to Win / Игра на победу",
       "author": "A.G. Lafley, Roger Martin",
       "block": "Стратегия и конкуренция",
       "status": "ready_v27_days_001_020",
-      "contentUrl": "content/challenges/books100/012.json",
+      "contentUrl": "content/challenges/books100/book100-12.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/012.json"
+      ],
       "coverImage": "assets/challenges/books100/012/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Книга помогает предпринимателю перестать просто работать на рынке и начать делать стратегический выбор: клиент, территория, предложение, преимущество и процессы."
+      "shortDescription": "Стратегия требует выбора: где играть, как выигрывать, какие возможности нужны и какая система управления поддержит выбор."
     },
     {
-      "id": "BOOK100-013",
+      "id": "book100-13",
       "day": 13,
       "title": "Competitive Strategy / Конкурентная стратегия",
       "author": "Michael Porter",
       "block": "Стратегия и конкуренция",
       "status": "ready_v27_days_001_020",
-      "contentUrl": "content/challenges/books100/013.json",
+      "contentUrl": "content/challenges/books100/book100-13.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/013.json"
+      ],
       "coverImage": "assets/challenges/books100/013/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Книга помогает понять, откуда давление на маржу: клиент, поставщик, конкурент, заменитель или структура рынка."
+      "shortDescription": "Прибыль зависит не только от усилий компании, но и от структуры отрасли: покупателей, поставщиков, заменителей, новых игроков и конкурентов."
     },
     {
-      "id": "BOOK100-014",
+      "id": "book100-14",
       "day": 14,
       "title": "Blue Ocean Strategy / Стратегия голубого океана",
       "author": "W. Chan Kim, Renée Mauborgne",
       "block": "Стратегия и конкуренция",
       "status": "ready_v27_days_001_020",
-      "contentUrl": "content/challenges/books100/014.json",
+      "contentUrl": "content/challenges/books100/book100-14.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/014.json"
+      ],
       "coverImage": "assets/challenges/books100/014/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Книга помогает изменить предложение так, чтобы клиент получил новую ценность, а бизнес ушёл от прямого сравнения по цене."
+      "shortDescription": "Бизнес может уйти от прямой ценовой борьбы, если пересоберёт ценность: что убрать, снизить, повысить и создать заново."
     },
     {
-      "id": "BOOK100-015",
+      "id": "book100-15",
       "day": 15,
       "title": "The Innovator’s Dilemma / Дилемма инноватора",
       "author": "Clayton M. Christensen",
       "block": "Стратегия и конкуренция",
       "status": "ready_v27_days_001_020",
-      "contentUrl": "content/challenges/books100/015.json",
+      "contentUrl": "content/challenges/books100/book100-15.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/015.json"
+      ],
       "coverImage": "assets/challenges/books100/015/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Книга предупреждает: нельзя смотреть только на текущих лучших клиентов, текущую маржу и привычный формат."
+      "shortDescription": "Успешные компании могут проигрывать из-за того, что слишком хорошо обслуживают текущих клиентов и не замечают новые, сначала маленькие изменения рынка."
     },
     {
-      "id": "BOOK100-016",
+      "id": "book100-16",
       "day": 16,
       "title": "Business Model Generation",
       "author": "Alexander Osterwalder, Yves Pigneur",
       "block": "Бизнес-модель, ценность и прибыль",
       "status": "ready_v27_days_001_020",
-      "contentUrl": "content/challenges/books100/016.json",
+      "contentUrl": "content/challenges/books100/book100-16.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/016.json"
+      ],
       "coverImage": "assets/challenges/books100/016/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Книга даёт инструмент Business Model Canvas и помогает увидеть всю конструкцию бизнеса, а не один показатель."
+      "shortDescription": "Бизнес нужно видеть как модель из связанных блоков: клиенты, ценность, каналы, отношения, доходы, ресурсы, процессы, партнёры и расходы."
     },
     {
-      "id": "BOOK100-017",
+      "id": "book100-17",
       "day": 17,
       "title": "Value Proposition Design",
       "author": "Alexander Osterwalder, Yves Pigneur, Greg Bernarda, Alan Smith",
       "block": "Бизнес-модель, ценность и прибыль",
       "status": "ready_v27_days_001_020",
-      "contentUrl": "content/challenges/books100/017.json",
+      "contentUrl": "content/challenges/books100/book100-17.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/017.json"
+      ],
       "coverImage": "assets/challenges/books100/017/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Книга помогает разобрать ценностное предложение: что клиент пытается сделать, какие боли мешают, какие выгоды он хочет получить и как продукт это закрывает."
+      "shortDescription": "Сильное предложение строится вокруг задач, болей и выгод клиента; продукт должен попадать в реальную работу клиента."
     },
     {
-      "id": "BOOK100-018",
+      "id": "book100-18",
       "day": 18,
       "title": "Competing Against Luck / Конкуренция против удачи",
       "author": "Clayton Christensen, Taddy Hall, Karen Dillon, David Duncan",
       "block": "Бизнес-модель, ценность и прибыль",
       "status": "ready_v27_days_001_020",
-      "contentUrl": "content/challenges/books100/018.json",
+      "contentUrl": "content/challenges/books100/book100-18.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/018.json"
+      ],
       "coverImage": "assets/challenges/books100/018/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Книга объясняет Jobs to Be Done: клиент покупает не продукт сам по себе, а прогресс в определённой ситуации."
+      "shortDescription": "Клиенты “нанимают” продукт для выполнения конкретной работы в конкретной ситуации; нужно понимать работу клиента, а не только демографию."
     },
     {
-      "id": "BOOK100-019",
+      "id": "book100-19",
       "day": 19,
       "title": "The 80/20 Principle / Принцип 80/20",
       "author": "Richard Koch",
       "block": "Бизнес-модель, ценность и прибыль",
       "status": "ready_v27_days_001_020",
-      "contentUrl": "content/challenges/books100/019.json",
+      "contentUrl": "content/challenges/books100/book100-19.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/019.json"
+      ],
       "coverImage": "assets/challenges/books100/019/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Книга помогает увидеть неравномерность бизнеса: не все клиенты, продукты, задачи и каналы одинаково ценны."
+      "shortDescription": "Небольшая часть клиентов, продуктов, каналов и действий часто создаёт большую часть результата; задача управления — найти сильные 20% и не распылять ресурс."
     },
     {
-      "id": "BOOK100-020",
+      "id": "book100-20",
       "day": 20,
       "title": "The Art of Profitability / Искусство прибыльности",
       "author": "Adrian Slywotzky",
       "block": "Бизнес-модель, ценность и прибыль",
       "status": "ready_v27_days_001_020",
-      "contentUrl": "content/challenges/books100/020.json",
+      "contentUrl": "content/challenges/books100/book100-20.json",
+      "fallbackContentUrls": [
+        "content/challenges/books100/020.json"
+      ],
       "coverImage": "assets/challenges/books100/020/screen_01.png",
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Книга помогает смотреть на прибыль как на результат выбранной модели, а не как на остаток после продаж."
+      "shortDescription": "Прибыль возникает не случайно; у бизнеса должна быть понятная модель прибыли, объясняющая, где, почему и за счёт чего остаются деньги."
     }
   ]
 }
