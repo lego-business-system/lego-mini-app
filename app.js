@@ -1849,7 +1849,7 @@ function renderHome() {
    ===================================================== */
 
 const BOOKS100_INDEX_URL = "content/challenges/books100/index.json";
-const BOOKS100_CACHE_VERSION = "v19-books100-cache-timer-20260603";
+const BOOKS100_CACHE_VERSION = "v27-books100-days001-020-20260609";
 const BOOKS100_STORAGE_KEY = "lego_books100_challenge_v17";
 
 state.books100Index = null;
@@ -2239,7 +2239,7 @@ function renderAdmin(){
    v18 — Books100 Supabase timer and reading overrides
    ===================================================== */
 const BOOKS100_PROGRESS_URL_V18 = "https://soxtekhspohkddpdidvp.supabase.co/functions/v1/books100-progress";
-const BOOKS100_CACHE_VERSION_V18 = "v19-books100-cache-timer-20260603";
+const BOOKS100_CACHE_VERSION_V18 = "v27-books100-days001-020-20260609";
 state.books100ServerState = null;
 
 function books100BookPayloadV18(book){
@@ -2636,8 +2636,8 @@ async function finishBooks100Quiz(){
 /* =====================================================
    v20 — Books100 FAST mode: быстрый экран, кэш индекса, фоновая синхронизация, без обложек в списке
    ===================================================== */
-const BOOKS100_CACHE_VERSION_V20 = "v22-production-tests-ui-20260603";
-const BOOKS100_INDEX_CACHE_KEY_V20 = "lego_books100_index_v20";
+const BOOKS100_CACHE_VERSION_V20 = "v27-books100-days001-020-20260609";
+const BOOKS100_INDEX_CACHE_KEY_V20 = "lego_books100_index_v27_days001_020";
 const BOOKS100_INDEX_CACHE_TTL_V20 = 6 * 60 * 60 * 1000;
 
 state.books100IndexPromiseV20 = null;
