@@ -1,8 +1,8 @@
 {
   "id": "books100",
   "title": "100 книг за 100 дней",
-  "version": "v30-deep-rewrite-books-011-015-20260609",
-  "description": "100 книг за 100 дней: первые 20 книг подключены; книги 11–15 переписаны глубже под стратегию, конкуренцию и управленческую диагностику.",
+  "version": "v31-deep-rewrite-books-016-020-20260609",
+  "description": "Ежедневный челлендж: одна книга, глубокое саммари, мини-тест, практическое задание, +1 учебная единица и баллы серии.",
   "rules": {
     "timeWindowHours": 24,
     "passScoreDefault": 8,
@@ -200,7 +200,7 @@
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Хорошая стратегия начинается с честного диагноза, выбирает главный вызов, задаёт направляющую политику и связывает действия в единую систему."
+      "shortDescription": "Хорошая стратегия начинается с точного диагноза, выбирает главный вызов и связывает действия вокруг одного рычага."
     },
     {
       "id": "book100-12",
@@ -217,7 +217,7 @@
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Стратегия требует связанных выборов: какую победу выбирает бизнес, где он играет, как выигрывает, какие возможности строит и чем управляет выполнение."
+      "shortDescription": "Стратегия требует связанных выборов: где играть, как выигрывать, какие возможности построить и чем управлять результатом."
     },
     {
       "id": "book100-13",
@@ -234,7 +234,7 @@
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Прибыль зависит не только от усилий компании, но и от структуры отрасли: покупателей, поставщиков, заменителей, новых игроков и соперничества."
+      "shortDescription": "Прибыль зависит не только от усилий компании, но и от структуры отрасли: покупателей, поставщиков, заменителей, новых игроков и конкурентов."
     },
     {
       "id": "book100-14",
@@ -251,7 +251,7 @@
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Бизнес может уйти от прямой ценовой борьбы, если пересоберёт ценность: уберёт лишнее, снизит неважное, повысит важное и создаст новый критерий выбора."
+      "shortDescription": "Бизнес может уйти от прямой ценовой борьбы, если пересоберёт ценность через убрать, снизить, повысить и создать."
     },
     {
       "id": "book100-15",
@@ -268,7 +268,7 @@
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Успешная текущая модель может ослеплять бизнес к новым, сначала маленьким и неудобным моделям спроса."
+      "shortDescription": "Сильная текущая модель может мешать бизнесу заметить новые, сначала маленькие и непривычные изменения спроса."
     },
     {
       "id": "book100-16",
@@ -276,7 +276,7 @@
       "title": "Business Model Generation",
       "author": "Alexander Osterwalder, Yves Pigneur",
       "block": "Бизнес-модель, ценность и прибыль",
-      "status": "ready_v27_days_001_020",
+      "status": "ready_v31_deep_rewrite",
       "contentUrl": "content/challenges/books100/book100-16.json",
       "fallbackContentUrls": [
         "content/challenges/books100/016.json"
@@ -285,15 +285,15 @@
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Бизнес нужно видеть как модель из связанных блоков: клиенты, ценность, каналы, отношения, доходы, ресурсы, процессы, партнёры и расходы."
+      "shortDescription": "Business Model Canvas как рабочая карта: клиенты, ценность, каналы, доходы, ресурсы, процессы и расходы должны быть согласованы."
     },
     {
       "id": "book100-17",
       "day": 17,
       "title": "Value Proposition Design",
-      "author": "Alexander Osterwalder, Yves Pigneur, Greg Bernarda, Alan Smith",
+      "author": "Alexander Osterwalder, Yves Pigneur и команда Strategyzer",
       "block": "Бизнес-модель, ценность и прибыль",
-      "status": "ready_v27_days_001_020",
+      "status": "ready_v31_deep_rewrite",
       "contentUrl": "content/challenges/books100/book100-17.json",
       "fallbackContentUrls": [
         "content/challenges/books100/017.json"
@@ -302,15 +302,15 @@
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Сильное предложение строится вокруг задач, болей и выгод клиента; продукт должен попадать в реальную работу клиента."
+      "shortDescription": "Предложение работает, когда продукт точно попадает в задачи, боли, выгоды и доказательства для конкретного клиента."
     },
     {
       "id": "book100-18",
       "day": 18,
       "title": "Competing Against Luck / Конкуренция против удачи",
-      "author": "Clayton Christensen, Taddy Hall, Karen Dillon, David Duncan",
+      "author": "Clayton Christensen и соавторы",
       "block": "Бизнес-модель, ценность и прибыль",
-      "status": "ready_v27_days_001_020",
+      "status": "ready_v31_deep_rewrite",
       "contentUrl": "content/challenges/books100/book100-18.json",
       "fallbackContentUrls": [
         "content/challenges/books100/018.json"
@@ -319,7 +319,7 @@
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Клиенты “нанимают” продукт для выполнения конкретной работы в конкретной ситуации; нужно понимать работу клиента, а не только демографию."
+      "shortDescription": "Клиент “нанимает” продукт для прогресса в конкретной ситуации; нужно понимать работу клиента, альтернативы и силы выбора."
     },
     {
       "id": "book100-19",
@@ -327,7 +327,7 @@
       "title": "The 80/20 Principle / Принцип 80/20",
       "author": "Richard Koch",
       "block": "Бизнес-модель, ценность и прибыль",
-      "status": "ready_v27_days_001_020",
+      "status": "ready_v31_deep_rewrite",
       "contentUrl": "content/challenges/books100/book100-19.json",
       "fallbackContentUrls": [
         "content/challenges/books100/019.json"
@@ -336,7 +336,7 @@
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Небольшая часть клиентов, продуктов, каналов и действий часто создаёт большую часть результата; задача управления — найти сильные 20% и не распылять ресурс."
+      "shortDescription": "Небольшая часть клиентов, продуктов, каналов и задач часто создаёт основной результат; управление начинается с поиска сильных 20%."
     },
     {
       "id": "book100-20",
@@ -344,7 +344,7 @@
       "title": "The Art of Profitability / Искусство прибыльности",
       "author": "Adrian Slywotzky",
       "block": "Бизнес-модель, ценность и прибыль",
-      "status": "ready_v27_days_001_020",
+      "status": "ready_v31_deep_rewrite",
       "contentUrl": "content/challenges/books100/book100-20.json",
       "fallbackContentUrls": [
         "content/challenges/books100/020.json"
@@ -353,7 +353,7 @@
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Прибыль возникает не случайно; у бизнеса должна быть понятная модель прибыли, объясняющая, где, почему и за счёт чего остаются деньги."
+      "shortDescription": "Прибыль нужно проектировать через модель бизнеса, а не ждать как остаток после роста продаж."
     }
   ]
 }
