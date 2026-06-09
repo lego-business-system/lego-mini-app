@@ -29,7 +29,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v28-books100-legacy-id-compat-20260609";
+const APP_CACHE_VERSION = "v29-books100-06-10-deep-rewrite-20260609";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -1849,7 +1849,7 @@ function renderHome() {
    ===================================================== */
 
 const BOOKS100_INDEX_URL = "content/challenges/books100/index.json";
-const BOOKS100_CACHE_VERSION = "v28-books100-legacy-id-compat-20260609";
+const BOOKS100_CACHE_VERSION = "v29-books100-06-10-deep-rewrite-20260609";
 const BOOKS100_STORAGE_KEY = "lego_books100_challenge_v17";
 
 state.books100Index = null;
@@ -2239,7 +2239,7 @@ function renderAdmin(){
    v18 — Books100 Supabase timer and reading overrides
    ===================================================== */
 const BOOKS100_PROGRESS_URL_V18 = "https://soxtekhspohkddpdidvp.supabase.co/functions/v1/books100-progress";
-const BOOKS100_CACHE_VERSION_V18 = "v28-books100-legacy-id-compat-20260609";
+const BOOKS100_CACHE_VERSION_V18 = "v29-books100-06-10-deep-rewrite-20260609";
 state.books100ServerState = null;
 
 function books100BookPayloadV18(book){
@@ -2636,7 +2636,7 @@ async function finishBooks100Quiz(){
 /* =====================================================
    v20 — Books100 FAST mode: быстрый экран, кэш индекса, фоновая синхронизация, без обложек в списке
    ===================================================== */
-const BOOKS100_CACHE_VERSION_V20 = "v28-books100-legacy-id-compat-20260609";
+const BOOKS100_CACHE_VERSION_V20 = "v29-books100-06-10-deep-rewrite-20260609";
 const BOOKS100_INDEX_CACHE_KEY_V20 = "lego_books100_index_v28_legacy_days001_020";
 const BOOKS100_INDEX_CACHE_TTL_V20 = 6 * 60 * 60 * 1000;
 
@@ -2985,7 +2985,7 @@ function renderHome() {
 /* =====================================================
    v24 — stabilization layer: progress, lessons, quiz, homework
    ===================================================== */
-var LEGO_V24_CACHE_VERSION = "v28-books100-legacy-id-compat-20260609";
+var LEGO_V24_CACHE_VERSION = "v29-books100-06-10-deep-rewrite-20260609";
 var LEGO_READY_FIRST_LESSON_CODES_V24 = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
 var LEGO_CORE_STAGE_CODES_V24 = ["presentation", "quiz", "books", "homework"];
 
@@ -3379,7 +3379,7 @@ function renderHomeworkCenter(){
    v24 — stabilization overrides: progress, lessons, quiz, homework
    ===================================================== */
 
-function appStableVersionV24(){ return "v28-books100-legacy-id-compat-20260609"; }
+function appStableVersionV24(){ return "v29-books100-06-10-deep-rewrite-20260609"; }
 
 function safeFetchUrlV24(url){
   const sep = String(url || "").includes("?") ? "&" : "?";
@@ -4042,10 +4042,10 @@ async function books100AdminRepairAllV25(){
    v26 — construction BD-01 ready, singular lesson assets, final overrides
    ===================================================== */
 function contentVersionV24() {
-  return "v28-books100-legacy-id-compat-20260609";
+  return "v29-books100-06-10-deep-rewrite-20260609";
 }
 function appStableVersionV24(){
-  return "v28-books100-legacy-id-compat-20260609";
+  return "v29-books100-06-10-deep-rewrite-20260609";
 }
 function readyFirstLessonCodesV24(){
   return ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
