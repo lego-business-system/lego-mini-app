@@ -1,8 +1,8 @@
 {
   "id": "books100",
   "title": "100 книг за 100 дней",
-  "version": "v29-deep-rewrite-books-006-010-20260609",
-  "description": "Ежедневный челлендж: одна книга, саммари, мини-тест, практическое задание, +1 учебная единица и баллы серии.",
+  "version": "v30-deep-rewrite-books-011-015-20260609",
+  "description": "100 книг за 100 дней: первые 20 книг подключены; книги 11–15 переписаны глубже под стратегию, конкуренцию и управленческую диагностику.",
   "rules": {
     "timeWindowHours": 24,
     "passScoreDefault": 8,
@@ -191,7 +191,7 @@
       "title": "Good Strategy Bad Strategy / Хорошая стратегия, плохая стратегия",
       "author": "Richard Rumelt",
       "block": "Стратегия и конкуренция",
-      "status": "ready_v27_days_001_020",
+      "status": "ready_v30_deep_rewrite",
       "contentUrl": "content/challenges/books100/book100-11.json",
       "fallbackContentUrls": [
         "content/challenges/books100/011.json"
@@ -200,7 +200,7 @@
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Хорошая стратегия начинается с точного диагноза, выбирает главный вызов и задаёт согласованное действие; плохая стратегия заменяет это лозунгами и целями."
+      "shortDescription": "Хорошая стратегия начинается с честного диагноза, выбирает главный вызов, задаёт направляющую политику и связывает действия в единую систему."
     },
     {
       "id": "book100-12",
@@ -208,7 +208,7 @@
       "title": "Playing to Win / Игра на победу",
       "author": "A.G. Lafley, Roger Martin",
       "block": "Стратегия и конкуренция",
-      "status": "ready_v27_days_001_020",
+      "status": "ready_v30_deep_rewrite",
       "contentUrl": "content/challenges/books100/book100-12.json",
       "fallbackContentUrls": [
         "content/challenges/books100/012.json"
@@ -217,7 +217,7 @@
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Стратегия требует выбора: где играть, как выигрывать, какие возможности нужны и какая система управления поддержит выбор."
+      "shortDescription": "Стратегия требует связанных выборов: какую победу выбирает бизнес, где он играет, как выигрывает, какие возможности строит и чем управляет выполнение."
     },
     {
       "id": "book100-13",
@@ -225,7 +225,7 @@
       "title": "Competitive Strategy / Конкурентная стратегия",
       "author": "Michael Porter",
       "block": "Стратегия и конкуренция",
-      "status": "ready_v27_days_001_020",
+      "status": "ready_v30_deep_rewrite",
       "contentUrl": "content/challenges/books100/book100-13.json",
       "fallbackContentUrls": [
         "content/challenges/books100/013.json"
@@ -234,7 +234,7 @@
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Прибыль зависит не только от усилий компании, но и от структуры отрасли: покупателей, поставщиков, заменителей, новых игроков и конкурентов."
+      "shortDescription": "Прибыль зависит не только от усилий компании, но и от структуры отрасли: покупателей, поставщиков, заменителей, новых игроков и соперничества."
     },
     {
       "id": "book100-14",
@@ -242,7 +242,7 @@
       "title": "Blue Ocean Strategy / Стратегия голубого океана",
       "author": "W. Chan Kim, Renée Mauborgne",
       "block": "Стратегия и конкуренция",
-      "status": "ready_v27_days_001_020",
+      "status": "ready_v30_deep_rewrite",
       "contentUrl": "content/challenges/books100/book100-14.json",
       "fallbackContentUrls": [
         "content/challenges/books100/014.json"
@@ -251,15 +251,15 @@
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Бизнес может уйти от прямой ценовой борьбы, если пересоберёт ценность: что убрать, снизить, повысить и создать заново."
+      "shortDescription": "Бизнес может уйти от прямой ценовой борьбы, если пересоберёт ценность: уберёт лишнее, снизит неважное, повысит важное и создаст новый критерий выбора."
     },
     {
       "id": "book100-15",
       "day": 15,
       "title": "The Innovator’s Dilemma / Дилемма инноватора",
-      "author": "Clayton M. Christensen",
+      "author": "Clayton Christensen",
       "block": "Стратегия и конкуренция",
-      "status": "ready_v27_days_001_020",
+      "status": "ready_v30_deep_rewrite",
       "contentUrl": "content/challenges/books100/book100-15.json",
       "fallbackContentUrls": [
         "content/challenges/books100/015.json"
@@ -268,7 +268,7 @@
       "screensCount": 6,
       "quizCount": 10,
       "passScore": 8,
-      "shortDescription": "Успешные компании могут проигрывать из-за того, что слишком хорошо обслуживают текущих клиентов и не замечают новые, сначала маленькие изменения рынка."
+      "shortDescription": "Успешная текущая модель может ослеплять бизнес к новым, сначала маленьким и неудобным моделям спроса."
     },
     {
       "id": "book100-16",
