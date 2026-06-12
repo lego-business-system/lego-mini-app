@@ -29,7 +29,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v31-books100-16-20-deep-rewrite-20260609";
+const APP_CACHE_VERSION = "v32-access-gate-fix-20260610";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -2910,7 +2910,7 @@ async function openBooks100Book(day, adminPreview){
   }
 }
 
-if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+/* v32: boot is moved to the final access-gate block */
 
 /* =====================================================
    v22 — production access, homepage blocks, instruction panel
@@ -4137,4 +4137,204 @@ function mediaSrcFor(label, index, lesson) {
   if (label === "Слайд") return normalizeLessonAssetPath(lesson.slides?.[index-1]?.image || lessonImageFallback(label, index));
   if (label === "Саммари") return normalizeLessonAssetPath(lesson.bookScreens?.[index-1]?.image || lessonImageFallback(label, index));
   return normalizeLessonAssetPath(lessonImageFallback(label, index));
+}
+
+
+
+/* =====================================================
+   v32 — hard access gate fix
+   Причина: при открытии через обычную GitHub-ссылку экран "Доступ закрыт"
+   показывался, но нижняя навигация позволяла перейти в уроки/ДЗ/профиль.
+   Исправление: до успешной проверки Telegram initData и доступа каналов
+   приложение не показывает нижнее меню и блокирует все внутренние экраны.
+   ===================================================== */
+
+function hasVerifiedAccessV32() {
+  return Boolean(state && state.access === true);
+}
+
+function accessDeniedTitleV32(reason) {
+  if (reason === "OPEN_FROM_TELEGRAM_REQUIRED") return "Откройте приложение из Telegram";
+  if (reason === "ACCESS_DENIED") return "Доступ закрыт";
+  if (reason === "CHECK_ACCESS_ERROR") return "Проверка доступа не выполнена";
+  return "Доступ закрыт";
+}
+
+function accessDeniedTextV32(reason) {
+  if (reason === "OPEN_FROM_TELEGRAM_REQUIRED") {
+    return "Система не получила Telegram-данные для проверки. Откройте Л.Е.Г.О через кнопку в Telegram-боте или через закреплённое сообщение в закрытом канале.";
+  }
+  return "Приложение доступно только участникам закрытого Telegram-канала. Если подписка активна, откройте приложение заново из Telegram.";
+}
+
+function accessDenied(reason) {
+  try {
+    state.access = false;
+    state.accessReason = reason || "ACCESS_DENIED";
+  } catch(e) {}
+
+  const root = $("app");
+  if (!root) return;
+
+  const telegramLink = "https://t.me/Lego_bisiness_system_bot?startapp";
+  root.innerHTML = `
+    <div class="app-shell-v2 access-locked-shell">
+      <header class="app-header-v2">
+        ${typeof brandLogoHtml === "function" ? brandLogoHtml(false) : `<div><div class="brand-logo">Л.Е.Г.О.</div><div class="brand-subtitle">система внедрения управленческих изменений</div></div>`}
+      </header>
+      <main class="content-v2">
+        <section class="card-v2 result-bad-v2">
+          <h1>${esc(accessDeniedTitleV32(reason))}</h1>
+          <p>${esc(accessDeniedTextV32(reason))}</p>
+          <p class="small">Причина: <b>${esc(reason || "ACCESS_DENIED")}</b></p>
+          <a class="btn primary" href="${telegramLink}">Открыть через Telegram</a>
+        </section>
+      </main>
+    </div>`;
+}
+
+function shell(content, activeTab) {
+  const root = $("app");
+  if (!root) return;
+
+  const allowNav = hasVerifiedAccessV32();
+  const modeButton = allowNav && isAdminUser()
+    ? `<button class="mode-pill ${isAdminMode() ? "admin" : "student-preview"}" onclick="renderProfile()">${isAdminMode() ? "Босс" : "Режим ученика"}</button>`
+    : "";
+
+  root.innerHTML = `
+    <div class="app-shell-v2 ${allowNav ? "" : "access-pending-shell"}">
+      <header class="app-header-v2">
+        ${typeof brandLogoHtml === "function" ? brandLogoHtml(false) : `<div><div class="brand-logo">Л.Е.Г.О.</div><div class="brand-subtitle">система внедрения управленческих изменений</div></div>`}
+        ${modeButton}
+      </header>
+      <main class="content-v2">${content}</main>
+      ${allowNav ? bottomNav(activeTab || "home") : ""}
+    </div>`;
+}
+
+function bottomNav(active) {
+  if (!hasVerifiedAccessV32()) return "";
+  const item = (key,label,icon,fn)=>`<button class="bottom-item ${active===key?'active':''}" onclick="safeNavigateV32('${fn.replace("()","")}')"><span>${icon}</span><b>${label}</b></button>`;
+  return `<nav class="bottom-nav-v2 bottom-nav-v2-four">
+    ${item('home','Главная','⌂','renderHome()')}
+    ${item('learning','Уроки','▣','renderLearning()')}
+    ${item('homework','ДЗ','✓','renderHomeworkCenter()')}
+    ${item('profile','Профиль','○','renderProfile()')}
+  </nav>`;
+}
+
+function safeNavigateV32(fnName) {
+  if (!hasVerifiedAccessV32()) {
+    accessDenied("OPEN_FROM_TELEGRAM_REQUIRED");
+    return;
+  }
+  const fn = window[fnName];
+  if (typeof fn === "function") return fn();
+}
+
+async function checkAccess() {
+  try {
+    state.access = false;
+    state.accessReason = null;
+  } catch(e) {}
+
+  shell(card('blue-card-v2', '<h1>Проверяем доступ</h1><p>Проверяем запуск из Telegram и доступ к закрытому каналу.</p>'), 'home');
+
+  if (!tg || !tg.initData) {
+    accessDenied("OPEN_FROM_TELEGRAM_REQUIRED");
+    return;
+  }
+
+  try {
+    const response = await fetch(CHECK_ACCESS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: tg.initData })
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || !result.access) {
+      accessDenied(result.reason || "ACCESS_DENIED");
+      return;
+    }
+
+    state.access = true;
+    state.accessReason = result.reason || "ACCESS_GRANTED";
+    state.user = result.user || null;
+    state.role = result.user?.role || 'student';
+
+    if (!isAdminUser()) {
+      state.appMode = 'student';
+      localStorage.setItem('lego_app_mode', 'student');
+    }
+
+    state.remoteProgressByLesson = result.progress_by_lesson || result.progressByLesson || {};
+    if (result.progress && result.lesson && result.lesson.code) {
+      state.remoteProgressByLesson[result.lesson.code] = result.progress;
+    }
+
+    if (isAdminUser() && !localStorage.getItem('lego_app_mode')) {
+      state.appMode = 'admin';
+    }
+
+    await loadCatalog();
+    renderHome();
+
+  } catch(e) {
+    console.error(e);
+    accessDenied("CHECK_ACCESS_ERROR");
+  }
+}
+
+(function protectScreensV32(){
+  const protectedNames = [
+    "renderHome",
+    "renderLearning",
+    "renderHomeworkCenter",
+    "renderProfile",
+    "renderAdmin",
+    "renderLessonHub",
+    "renderActivityLessons",
+    "renderAdditionalMaterials",
+    "openLesson",
+    "renderLesson",
+    "renderLessonStage",
+    "renderLessonStageScreen",
+    "nextSlide",
+    "prevSlide",
+    "nextBookScreen",
+    "prevBookScreen",
+    "submitQuiz",
+    "renderBookChallenge",
+    "startBookChallenge",
+    "openBooks100Book",
+    "renderBooks100Reading",
+    "renderBooks100Quiz",
+    "selectBooks100Answer",
+    "finishBooks100Quiz"
+  ];
+
+  protectedNames.forEach(function(name) {
+    const original = window[name];
+    if (typeof original !== "function" || original.__accessGateV32) return;
+
+    const guarded = function(...args) {
+      if (!hasVerifiedAccessV32()) {
+        accessDenied("OPEN_FROM_TELEGRAM_REQUIRED");
+        return;
+      }
+      return original.apply(this, args);
+    };
+
+    guarded.__accessGateV32 = true;
+    window[name] = guarded;
+  });
+})();
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
 }
