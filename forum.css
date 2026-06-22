@@ -1,4 +1,3 @@
-
 /* =====================================================
    Л.Е.Г.О. — Бизнес-форум v1
    Изолированные стили модуля.
@@ -547,3 +546,227 @@
   .forum-reply-head{display:block}
   .forum-reply-head span{display:block;margin-top:3px}
 }
+
+/* =====================================================
+   Бизнес-форум v2 — обязательные правила, адресные ответы,
+   скрытые темы и очередь жалоб администратора
+   ===================================================== */
+.forum-home-grid-locked{
+  position:relative;
+}
+.forum-home-card.locked,
+.forum-home-card:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+  filter:grayscale(.18);
+  box-shadow:none;
+}
+.forum-home-card.locked:active,
+.forum-home-card:disabled:active{
+  transform:none;
+}
+.forum-rules-entry.required{
+  border-color:rgba(242,140,40,.42);
+  background:linear-gradient(135deg,#fff8eb,#fff);
+}
+.forum-rules-entry.accepted{
+  border-color:rgba(22,168,154,.32);
+  background:linear-gradient(135deg,#eefaf7,#fff);
+}
+.forum-rules-entry.required .eyebrow{color:#a65a12!important}
+.forum-rules-entry.accepted .eyebrow{color:#08796f!important}
+.forum-rules-accept-panel{
+  flex:1 1 100%;
+  display:grid;
+  gap:10px;
+}
+.forum-rules-accept-panel .forum-rule-check{
+  margin:0;
+}
+.forum-rules-accept-panel .btn{
+  width:100%;
+  margin:0;
+}
+.btn.danger{
+  background:var(--lego-red-soft);
+  color:#a12828;
+  border:1px solid rgba(217,74,74,.30);
+}
+.forum-topic-card.hidden{
+  background:linear-gradient(135deg,#fff1f1,#f6f8fc);
+  border:1px dashed rgba(217,74,74,.45);
+  opacity:.9;
+}
+.forum-topic-full.hidden{
+  background:linear-gradient(180deg,#fff5f5,#fff);
+  border:1px dashed rgba(217,74,74,.45);
+}
+.forum-badge.hidden{
+  background:var(--lego-red-soft);
+  color:#a12828;
+}
+.forum-reply-reference{
+  margin:0 0 10px;
+  padding:10px 11px;
+  border-left:3px solid var(--lego-steel);
+  border-radius:0 12px 12px 0;
+  background:var(--lego-steel-light);
+}
+.forum-reply-reference b{
+  display:block;
+  margin-bottom:4px;
+  color:var(--lego-steel-2);
+  font-size:12px;
+}
+.forum-reply-reference p{
+  margin:0;
+  color:var(--lego-gray-700);
+  font-size:12px;
+  line-height:17px;
+  display:-webkit-box;
+  -webkit-line-clamp:3;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.forum-text-button.reply{
+  color:var(--lego-steel);
+}
+.forum-reply-target{
+  margin:0 0 12px;
+}
+.forum-reply-target[hidden]{display:none!important}
+.forum-reply-target-inner{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 32px;
+  gap:10px;
+  align-items:start;
+  padding:11px 12px;
+  border-radius:15px;
+  background:var(--lego-steel-light);
+  border:1px solid rgba(47,95,159,.24);
+}
+.forum-reply-target-inner b{
+  display:block;
+  color:var(--lego-steel-2);
+  font-size:13px;
+  margin-bottom:3px;
+}
+.forum-reply-target-inner p{
+  margin:0;
+  color:var(--lego-gray-700);
+  font-size:12px;
+  line-height:17px;
+  display:-webkit-box;
+  -webkit-line-clamp:3;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.forum-reply-target-inner button{
+  width:32px;
+  height:32px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:#fff;
+  color:var(--lego-steel-2);
+  border:1px solid rgba(47,95,159,.20);
+  font-size:20px;
+  font-weight:900;
+  line-height:1;
+}
+.forum-admin-reports-card{
+  border-color:rgba(242,140,40,.36);
+  background:linear-gradient(180deg,#fffaf0,#fff);
+}
+.forum-admin-reports-title{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+.forum-admin-reports-title h2{margin:0}
+.forum-admin-reports-title>span{
+  min-width:34px;
+  height:34px;
+  padding:0 9px;
+  border-radius:999px;
+  display:grid;
+  place-items:center;
+  background:var(--lego-orange-soft);
+  color:#9a4e00;
+  font-size:14px;
+  font-weight:900;
+}
+#forum-admin-reports-list{
+  display:grid;
+  gap:10px;
+  margin-top:12px;
+}
+.forum-admin-report-row{
+  padding:13px;
+  border-radius:17px;
+  background:#fff;
+  border:1px solid var(--lego-border);
+  box-shadow:0 7px 18px rgba(7,27,53,.04);
+}
+.forum-admin-report-row p{
+  margin:7px 0;
+  font-size:13px;
+  line-height:19px;
+}
+.forum-admin-report-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:7px;
+}
+.forum-admin-report-head span{
+  display:block;
+  color:var(--lego-gray-500);
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  font-weight:900;
+}
+.forum-admin-report-head b{
+  display:block;
+  margin-top:3px;
+  color:var(--lego-navy);
+  font-size:15px;
+}
+.forum-admin-report-head em{
+  color:var(--lego-gray-500);
+  font-size:11px;
+  font-style:normal;
+  white-space:nowrap;
+}
+.forum-admin-report-target{
+  margin:8px 0;
+  padding:10px 11px;
+  border-radius:13px;
+  background:var(--lego-gray-100);
+  color:var(--lego-gray-700);
+  font-size:13px;
+  line-height:19px;
+  overflow-wrap:anywhere;
+}
+@media(max-width:390px){
+  .forum-admin-report-head{display:block}
+  .forum-admin-report-head em{display:block;margin-top:4px;white-space:normal}
+  .forum-reply-actions{justify-content:flex-start;flex-wrap:wrap}
+}
+
+/* Профиль администратора: постоянный счётчик жалоб Бизнес-форума. */
+.forum-admin-profile-notification{
+  display:grid;
+  gap:10px;
+  border-color:rgba(47,95,159,.24);
+  background:linear-gradient(180deg,#fff,#f7faff);
+}
+.forum-admin-profile-notification.has-new{
+  border-color:rgba(242,140,40,.42);
+  background:linear-gradient(135deg,#fff8e8,#fff);
+}
+.forum-admin-profile-notification h2{margin-bottom:6px}
+.forum-admin-profile-notification p{margin-bottom:0}

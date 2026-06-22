@@ -1,10 +1,9 @@
-
 /* =====================================================
-   Л.Е.Г.О. — Бизнес-форум v1.2
+   Л.Е.Г.О. — Бизнес-форум v2.0
    Отдельный модуль. Не изменяет логику уроков, ДЗ и прогресса.
    ===================================================== */
 
-const FORUM_API_URL = "https://soxtekhspohkddpdidvp.supabase.co/functions/v1/forum-api-v2";
+const FORUM_API_URL = "https://soxtekhspohkddpdidvp.supabase.co/functions/v1/forum-api-v3";
 
 const FORUM_CATEGORIES = [
   { key: "general", label: "Общее" },
@@ -25,6 +24,7 @@ const forumState = {
   pendingTopicRequestId: null,
   pendingReplyRequestId: null,
   timerId: null,
+  replyTo: null,
 };
 
 class ForumApiError extends Error {
@@ -67,8 +67,8 @@ function forumReasonText(reason) {
     APP_ACCESS_DENIED: "Доступ к приложению не подтверждён.",
     FORUM_DISABLED: "Бизнес-форум пока выключен для учеников.",
     FORUM_BETA_ONLY: "Бизнес-форум пока доступен только участникам тестовой группы.",
-    FORUM_BLOCKED_FULL: "Доступ к Бизнес-форуму ограничен Боссом.",
-    FORUM_BLOCKED_WRITE: "Чтение доступно, но публикация временно ограничена Боссом.",
+    FORUM_BLOCKED_FULL: "Доступ к Бизнес-форуму ограничен администратором.",
+    FORUM_BLOCKED_WRITE: "Чтение доступно, но публикация временно ограничена администратором.",
     RULES_NOT_ACCEPTED: "Перед публикацией примите правила Бизнес-форума.",
     TOPIC_COOLDOWN: "Новую тему можно создать после завершения недельного ограничения.",
     REPLY_COOLDOWN: "Следующий ответ в этой теме можно отправить после завершения 15-минутного ограничения.",
@@ -81,8 +81,9 @@ function forumReasonText(reason) {
     TOPIC_HIDDEN: "Тема скрыта. Сначала восстановите её.",
     TOPIC_NOT_FOUND: "Тема не найдена или скрыта.",
     REPLY_NOT_FOUND: "Ответ не найден или уже скрыт.",
-    NOT_TOPIC_AUTHOR: "Закрыть тему может только её автор или Босс.",
-    ADMIN_REQUIRED: "Это действие доступно только Боссу.",
+    PARENT_REPLY_NOT_FOUND: "Ответ, на который вы отвечаете, не найден или скрыт.",
+    NOT_TOPIC_AUTHOR: "Закрыть тему может только её автор или администратор.",
+    ADMIN_REQUIRED: "Это действие доступно только администратору.",
     ALREADY_REPORTED: "Вы уже отправляли жалобу на эту публикацию.",
     REQUEST_ID_CONFLICT: "Повторная отправка не выполнена. Обновите страницу и повторите действие.",
     TELEGRAM_ACCESS_CHECK_ERROR: "Не удалось проверить доступ через Telegram. Повторите попытку позже.",
@@ -218,7 +219,7 @@ function forumTopicTypeLabel(value) {
 function forumStatusLabel(value) {
   if (value === "open") return "Открыта";
   if (value === "closed_by_author") return "Закрыта автором";
-  if (value === "closed_by_boss") return "Закрыта Боссом";
+  if (value === "closed_by_boss") return "Закрыта администратором";
   if (value === "hidden") return "Скрыта";
   return "Закрыта";
 }
@@ -231,6 +232,38 @@ function forumCategoryTabs(activeKey) {
   return `<div class="forum-category-tabs">${FORUM_CATEGORIES.map((item) => `
     <button class="forum-category-tab ${activeKey === item.key ? "active" : ""}" onclick="renderForumTopics('${item.key}')">${forumEsc(item.label)}</button>
   `).join("")}</div>`;
+}
+
+function forumRulesAccepted(bootstrap) {
+  return Boolean(bootstrap?.rules_accepted || bootstrap?.user?.is_boss);
+}
+
+function forumRequireAcceptedRules(bootstrap, returnTo) {
+  if (forumRulesAccepted(bootstrap)) return true;
+  renderForumRules(returnTo || "forum");
+  return false;
+}
+
+function forumTopicLimitText(bootstrap) {
+  if (forumIsBossMode()) return "Создание тем без недельного лимита.";
+  if (!forumRulesAccepted(bootstrap)) return "Сначала откройте и примите правила форума.";
+  const left = forumTimeLeft(bootstrap?.next_topic_at);
+  if (left > 0) return `Следующая тема будет доступна через ${forumDuration(left)}.`;
+  return "Доступно сейчас. После публикации — одна новая тема раз в 7 суток.";
+}
+
+function forumRulesEntryHtml(bootstrap) {
+  const accepted = forumRulesAccepted(bootstrap);
+  return card(`forum-rules-entry ${accepted ? "accepted" : "required"}`, `
+    <div>
+      <p class="eyebrow">${accepted ? "правила приняты" : "обязательный первый шаг"}</p>
+      <h2>Правила Бизнес-форума</h2>
+      <p>${accepted
+        ? "Правила приняты. Актуальные темы, ваши темы и создание новой темы доступны."
+        : "Перед первым входом в обсуждения необходимо прочитать правила до конца и подтвердить их принятие."}</p>
+    </div>
+    <button class="btn ${accepted ? "secondary" : "primary"}" onclick="renderForumRules()">${accepted ? "Открыть правила" : "Прочитать и принять правила"}</button>
+  `);
 }
 
 function forumContainsForbiddenLink(value) {
@@ -290,35 +323,38 @@ async function renderBusinessForum() {
   forumLoading("Бизнес-форум", "Проверяем доступ и состояние форума.");
   try {
     const bootstrap = await loadForumBootstrap(true);
-    const bossNote = bootstrap.user?.is_boss
-      ? `<div class="forum-boss-note"><b>Режим Босса</b><span>Создание тем и ответы доступны без временных ограничений.</span></div>`
+    const accepted = forumRulesAccepted(bootstrap);
+    const isBossUi = forumIsBossMode();
+    const bossNote = isBossUi
+      ? `<div class="forum-boss-note"><b>Режим Босса</b><span>Административные функции и публикации доступны без временных ограничений.</span></div>`
       : "";
-    const rulesNote = !bootstrap.rules_accepted
-      ? `<div class="forum-notice"><b>Перед первой публикацией</b><p>Необходимо ознакомиться с правилами и подтвердить их принятие. Читать темы можно без подтверждения.</p><button class="btn secondary" onclick="renderForumRules()">Открыть правила</button></div>`
-      : "";
+    const locked = accepted ? "" : "locked";
+    const disabled = accepted ? "" : "disabled";
+    const clickTopics = accepted ? `onclick="renderForumTopics('${forumState.category || "general"}')"` : "";
+    const clickMine = accepted ? `onclick="renderForumMyTopics()"` : "";
+    const clickCreate = accepted ? `onclick="renderForumCreateTopic()"` : "";
 
     forumShell(`
       ${card("blue-card-v2 forum-hero", `<p class="eyebrow">профессиональная среда</p><h1>Бизнес-форум</h1><p>Практические вопросы, обсуждения и опыт участников по видам деятельности.</p>`)}
+      ${forumRulesEntryHtml(bootstrap)}
       ${bossNote}
-      ${rulesNote}
-      <div class="forum-home-grid">
-        <button class="forum-home-card primary" onclick="renderForumTopics('${forumState.category || "general"}')">
+      <div class="forum-home-grid ${accepted ? "" : "forum-home-grid-locked"}">
+        <button class="forum-home-card primary ${locked}" ${clickTopics} ${disabled}>
           <span class="forum-home-icon">◎</span>
           <b>Актуальные темы</b>
-          <p>Выберите вид деятельности и откройте обсуждения участников.</p>
+          <p>${accepted ? "Выберите вид деятельности и откройте обсуждения участников." : "Станет доступно после принятия правил."}</p>
         </button>
-        <button class="forum-home-card" onclick="renderForumMyTopics()">
+        <button class="forum-home-card ${locked}" ${clickMine} ${disabled}>
           <span class="forum-home-icon">▤</span>
           <b>Мои темы</b>
-          <p>Ваши вопросы, обсуждения, статусы и ответы.</p>
+          <p>${accepted ? "Созданные вами вопросы, обсуждения и их статусы." : "Станет доступно после принятия правил."}</p>
         </button>
-        <button class="forum-home-card" onclick="renderForumCreateTopic()">
+        <button class="forum-home-card ${locked}" ${clickCreate} ${disabled}>
           <span class="forum-home-icon">＋</span>
           <b>Создать новую тему</b>
-          <p>${bootstrap.user?.is_boss ? "Без ограничений для Босса." : "Одна новая тема раз в 7 суток."}</p>
+          <p>${forumEsc(forumTopicLimitText(bootstrap))}</p>
         </button>
       </div>
-      ${card("forum-rules-entry", `<div><p class="eyebrow">порядок общения</p><h2>Правила Бизнес-форума</h2><p>Запрещены ссылки, файлы, реклама, политика, религиозные споры, оскорбления и публикация конфиденциальных данных.</p></div><button class="btn secondary" onclick="renderForumRules()">Прочитать правила</button>`)}
       <div class="forum-bottom-actions"><button class="btn secondary" onclick="renderHome()">← На главную</button></div>
     `);
   } catch (error) {
@@ -327,14 +363,16 @@ async function renderBusinessForum() {
 }
 
 function forumTopicCardHtml(topic) {
-  const isClosed = topic.status !== "open";
+  const isHidden = topic.status === "hidden";
+  const isClosed = topic.status !== "open" && !isHidden;
   const badges = [
     topic.is_pinned ? `<span class="forum-badge pinned">Закреплено</span>` : "",
     `<span class="forum-badge type">${forumEsc(forumTopicTypeLabel(topic.topic_type))}</span>`,
     isClosed ? `<span class="forum-badge closed">${forumEsc(forumStatusLabel(topic.status))}</span>` : "",
+    isHidden ? `<span class="forum-badge hidden">Скрыта от участников</span>` : "",
   ].filter(Boolean).join("");
 
-  return `<button class="forum-topic-card ${isClosed ? "closed" : ""}" onclick="renderForumTopic('${forumEsc(topic.id)}')">
+  return `<button class="forum-topic-card ${isClosed ? "closed" : ""} ${isHidden ? "hidden" : ""}" onclick="renderForumTopic('${forumEsc(topic.id)}')">
     <div class="forum-topic-badges">${badges}</div>
     <h3>${forumEsc(topic.title)}</h3>
     <div class="forum-topic-meta">
@@ -351,21 +389,26 @@ async function renderForumTopics(category) {
   forumLoading("Актуальные темы", `Загружаем раздел «${forumCategoryLabel(forumState.category)}».`);
 
   try {
-    await loadForumBootstrap();
+    const bootstrap = await loadForumBootstrap();
+    if (!forumRequireAcceptedRules(bootstrap, "forum")) return;
     const result = await forumApi("list_topics", {
       category: forumState.category,
       page: 1,
       limit: 50,
+      includeHidden: forumIsBossMode(),
     });
 
     const topicsHtml = result.topics?.length
       ? `<div class="forum-topic-list">${result.topics.map(forumTopicCardHtml).join("")}</div>`
-      : `<div class="forum-empty"><b>В этом разделе пока нет тем</b><p>Первую тему можно создать как вопрос или обсуждение.</p><button class="btn primary" onclick="renderForumCreateTopic('${forumState.category}')">Создать тему</button></div>`;
+      : `<div class="forum-empty"><b>В этом разделе пока нет тем</b><p>Новые вопросы и обсуждения создаются только через отдельный блок «Создать новую тему».</p></div>`;
+    const adminHint = forumIsBossMode()
+      ? " Скрытые темы отображаются только администратору и находятся внизу списка."
+      : "";
 
     forumShell(`
-      ${card("blue-card-v2 forum-hero compact", `<p class="eyebrow">Бизнес-форум</p><h1>Актуальные темы</h1><p>Сначала открытые темы. Выше находятся закреплённые и темы с большим количеством ответов. Закрытые обсуждения расположены ниже и доступны для чтения.</p>`)}
+      ${card("blue-card-v2 forum-hero compact", `<p class="eyebrow">Бизнес-форум</p><h1>Актуальные темы</h1><p>Сначала закреплённые и открытые темы с наибольшим количеством ответов. Закрытые обсуждения расположены ниже и доступны для чтения.${adminHint}</p>`)}
       ${forumCategoryTabs(forumState.category)}
-      <div class="forum-list-header"><div><b>${forumEsc(forumCategoryLabel(forumState.category))}</b><span>${Number(result.total || 0)} тем</span></div><button class="btn primary small-btn" onclick="renderForumCreateTopic('${forumState.category}')">＋ Новая тема</button></div>
+      <div class="forum-list-header"><div><b>${forumEsc(forumCategoryLabel(forumState.category))}</b><span>${Number(result.total || 0)} тем</span></div></div>
       ${topicsHtml}
       <div class="forum-bottom-actions"><button class="btn secondary" onclick="renderBusinessForum()">← В Бизнес-форум</button></div>
     `);
@@ -380,23 +423,27 @@ async function renderForumMyTopics() {
 
   try {
     const bootstrap = await loadForumBootstrap();
+    if (!forumRequireAcceptedRules(bootstrap, "forum")) return;
     const result = await forumApi("my_topics", { page: 1, limit: 100 });
-    const cooldown = !bootstrap.user?.is_boss && forumTimeLeft(result.next_topic_at) > 0
-      ? `<div class="forum-cooldown"><b>Следующую тему можно создать через</b><span id="forum-my-topic-countdown">${forumDuration(forumTimeLeft(result.next_topic_at))}</span><small>${forumEsc(forumDate(result.next_topic_at))}</small></div>`
-      : `<button class="btn primary" onclick="renderForumCreateTopic()">Создать новую тему</button>`;
+    const left = forumTimeLeft(result.next_topic_at);
+    const quota = forumIsBossMode()
+      ? `<div class="forum-form-ok">В административном режиме недельный лимит на создание тем не применяется.</div>`
+      : left > 0
+      ? `<div class="forum-cooldown"><b>Следующую тему можно создать через</b><span id="forum-my-topic-countdown">${forumDuration(left)}</span><small>${forumEsc(forumDate(result.next_topic_at))}</small></div>`
+      : `<div class="forum-form-ok">Новая тема доступна. Для публикации откройте отдельный блок «Создать новую тему».</div>`;
 
     const topicsHtml = result.topics?.length
       ? `<div class="forum-topic-list">${result.topics.map(forumTopicCardHtml).join("")}</div>`
-      : `<div class="forum-empty"><b>Вы ещё не создавали темы</b><p>Сформулируйте конкретный вопрос или откройте деловое обсуждение.</p></div>`;
+      : `<div class="forum-empty"><b>Вы ещё не создавали темы</b><p>Когда тема будет опубликована через отдельный блок, она появится здесь.</p></div>`;
 
     forumShell(`
-      ${card("blue-card-v2 forum-hero compact", `<p class="eyebrow">Бизнес-форум</p><h1>Мои темы</h1><p>Здесь сохраняются все созданные вами темы и их текущий статус.</p>`)}
-      ${cooldown}
+      ${card("blue-card-v2 forum-hero compact", `<p class="eyebrow">Бизнес-форум</p><h1>Мои темы</h1><p>Здесь сохраняются созданные вами темы и их текущий статус.</p>`)}
+      ${quota}
       ${topicsHtml}
       <div class="forum-bottom-actions"><button class="btn secondary" onclick="renderBusinessForum()">← В Бизнес-форум</button></div>
     `);
 
-    if (!bootstrap.user?.is_boss && forumTimeLeft(result.next_topic_at) > 0) {
+    if (!forumIsBossMode() && left > 0) {
       startForumCountdown("forum-my-topic-countdown", result.next_topic_at, renderForumMyTopics);
     }
   } catch (error) {
@@ -410,6 +457,7 @@ async function renderForumCreateTopic(preselectedCategory) {
 
   try {
     const bootstrap = await loadForumBootstrap(true);
+    if (!forumRequireAcceptedRules(bootstrap, "create")) return;
     const category = FORUM_CATEGORIES.some((item) => item.key === preselectedCategory)
       ? preselectedCategory
       : forumState.category || "general";
@@ -417,9 +465,9 @@ async function renderForumCreateTopic(preselectedCategory) {
 
     if (cooldownLeft > 0) {
       forumShell(`
-        ${card("blue-card-v2 forum-hero compact", `<p class="eyebrow">Бизнес-форум</p><h1>Новая тема пока недоступна</h1><p>Ученик может создать одну тему раз в 7 суток. Удаление или закрытие предыдущей темы не сбрасывает ограничение.</p>`)}
+        ${card("blue-card-v2 forum-hero compact", `<p class="eyebrow">Бизнес-форум</p><h1>Новая тема пока недоступна</h1><p>Ученик может создать одну тему раз в 7 суток. Закрытие или удаление темы администратором не сбрасывает недельное ограничение автора.</p>`)}
         <div class="forum-cooldown large"><b>До следующей темы</b><span id="forum-create-topic-countdown">${forumDuration(cooldownLeft)}</span><small>${forumEsc(forumDate(bootstrap.next_topic_at))}</small></div>
-        <div class="forum-bottom-actions"><button class="btn secondary" onclick="renderForumMyTopics()">← Мои темы</button><button class="btn secondary" onclick="renderBusinessForum()">В Бизнес-форум</button></div>
+        <div class="forum-bottom-actions"><button class="btn secondary" onclick="renderBusinessForum()">← В Бизнес-форум</button></div>
       `);
       startForumCountdown("forum-create-topic-countdown", bootstrap.next_topic_at, function () {
         forumState.bootstrap = null;
@@ -429,19 +477,16 @@ async function renderForumCreateTopic(preselectedCategory) {
     }
 
     forumState.pendingTopicRequestId = null;
-    const rulesBlock = bootstrap.rules_accepted
-      ? `<div class="forum-form-ok">Правила Бизнес-форума приняты.</div>`
-      : `<label class="forum-rule-check"><input type="checkbox" id="forum-rules-check"><span>Я ознакомился и принимаю <button type="button" onclick="renderForumRules('create')">правила Бизнес-форума</button>.</span></label>`;
-
     forumShell(`
       ${card("blue-card-v2 forum-hero compact", `<p class="eyebrow">Бизнес-форум</p><h1>Создать новую тему</h1><p>Одна тема должна содержать один понятный вопрос или одно конкретное направление обсуждения.</p>`)}
+      ${forumIsBossMode() ? `<div class="forum-boss-note"><b>Административный режим</b><span>Недельный лимит на создание тем не применяется.</span></div>` : ""}
       <form class="forum-form" id="forum-topic-form" onsubmit="submitForumTopic(event)" ondrop="forumPreventFileDrop(event)" ondragover="event.preventDefault()">
         <label><span>Вид деятельности</span><select id="forum-topic-category">${FORUM_CATEGORIES.map((item) => `<option value="${item.key}" ${item.key === category ? "selected" : ""}>${forumEsc(item.label)}</option>`).join("")}</select></label>
         <label><span>Формат темы</span><select id="forum-topic-type"><option value="question">Вопрос</option><option value="discussion">Обсуждение</option></select></label>
         <label><span>Заголовок</span><input id="forum-topic-title" maxlength="140" minlength="10" placeholder="Кратко сформулируйте суть темы" onpaste="forumRejectForbiddenPaste(event)" oninput="forumCounter('forum-topic-title','forum-title-counter',140)" required><small id="forum-title-counter">0 / 140</small></label>
         <label><span>Описание ситуации</span><textarea id="forum-topic-body" maxlength="5000" minlength="30" rows="9" placeholder="Опишите факты, контекст, уже предпринятые действия и конкретный вопрос к участникам" onpaste="forumRejectForbiddenPaste(event)" oninput="forumCounter('forum-topic-body','forum-body-counter',5000)" required></textarea><small id="forum-body-counter">0 / 5000</small></label>
         <div class="forum-form-warning"><b>Нельзя добавлять</b><p>Ссылки, адреса сайтов, внешние контакты, изображения, видео, документы и другие файлы.</p></div>
-        ${rulesBlock}
+        <div class="forum-form-ok">Правила Бизнес-форума приняты.</div>
         <div id="forum-topic-form-error" class="forum-inline-error" hidden></div>
         <div class="forum-actions"><button class="btn primary" id="forum-topic-submit" type="submit">Опубликовать тему</button><button class="btn secondary" type="button" onclick="renderBusinessForum()">Отмена</button></div>
       </form>
@@ -483,15 +528,6 @@ async function submitForumTopic(event) {
   }
 
   try {
-    if (!bootstrap?.rules_accepted) {
-      const checkbox = document.getElementById("forum-rules-check");
-      if (!checkbox?.checked) {
-        setForumInlineError("forum-topic-form-error", "Перед публикацией подтвердите принятие правил.");
-        return;
-      }
-      await forumApi("accept_rules", {});
-      forumState.bootstrap.rules_accepted = true;
-    }
 
     if (submitButton) {
       submitButton.disabled = true;
@@ -527,12 +563,14 @@ async function submitForumTopic(event) {
 
 async function renderForumTopic(topicId) {
   if (!ensureForumAccess()) return;
+  if (forumState.currentTopicId !== topicId) forumState.replyTo = null;
   forumState.currentTopicId = topicId;
   forumLoading("Открываем тему", "Загружаем вопрос и ответы участников.");
 
   try {
     const bootstrap = await loadForumBootstrap();
-    const result = await forumApi("get_topic", { topicId, page: 1, limit: 200 });
+    if (!forumRequireAcceptedRules(bootstrap, "forum")) return;
+    const result = await forumApi("get_topic", { topicId, page: 1, limit: 200, adminView: forumIsBossMode() });
     forumState.currentTopic = result.topic;
     forumState.currentReplies = result.replies || [];
     forumState.pendingReplyRequestId = null;
@@ -543,13 +581,15 @@ async function renderForumTopic(topicId) {
     const authorControls = !isBossUi && topic.is_mine && isOpen
       ? `<button class="btn secondary" onclick="forumSetTopicState('close')">Закрыть свою тему</button>`
       : "";
+    const deleteButton = `<button class="btn danger" onclick="forumSetTopicState('delete')">Удалить навсегда</button>`;
     const bossControls = isBossUi
-      ? `<div class="forum-boss-controls"><b>Управление Босса</b><div class="forum-actions">
+      ? `<div class="forum-boss-controls"><b>Управление администратора</b><div class="forum-actions">
           ${topic.status === "hidden"
-            ? `<button class="btn secondary" onclick="forumSetTopicState('restore')">Восстановить тему</button>`
+            ? `<button class="btn secondary" onclick="forumSetTopicState('restore')">Восстановить тему</button>${deleteButton}`
             : `${isOpen ? `<button class="btn secondary" onclick="forumSetTopicState('close')">Закрыть тему</button>` : `<button class="btn secondary" onclick="forumSetTopicState('reopen')">Переоткрыть тему</button>`}
                <button class="btn secondary" onclick="forumSetTopicState('${topic.is_pinned ? "unpin" : "pin"}')">${topic.is_pinned ? "Снять закрепление" : "Закрепить тему"}</button>
-               <button class="btn secondary" onclick="forumSetTopicState('hide')">Скрыть тему</button>`}
+               <button class="btn secondary" onclick="forumSetTopicState('hide')">Скрыть тему</button>
+               ${deleteButton}`}
         </div></div>`
       : "";
 
@@ -558,18 +598,18 @@ async function renderForumTopic(topicId) {
       : `<div class="forum-empty compact"><b>Ответов пока нет</b><p>Первый содержательный ответ поднимет тему выше в списке открытых обсуждений.</p></div>`;
 
     const replyBlock = topic.status === "hidden"
-      ? `<div class="forum-closed-panel"><b>Тема скрыта</b><p>Она не отображается ученикам и в общем списке.</p>${isBossUi ? `<button class="btn primary" onclick="forumSetTopicState('restore')">Восстановить тему</button>` : ""}</div>`
+      ? `<div class="forum-closed-panel"><b>Тема скрыта</b><p>Она не отображается участникам, но остаётся доступной администратору.</p>${isBossUi ? `<button class="btn primary" onclick="forumSetTopicState('restore')">Восстановить тему</button>` : ""}</div>`
       : isOpen
-      ? forumReplyFormHtml(result.next_reply_at, bootstrap.user?.is_boss, bootstrap.rules_accepted)
+      ? forumReplyFormHtml(result.next_reply_at, bootstrap.user?.is_boss)
       : `<div class="forum-closed-panel"><b>Тема закрыта</b><p>Все материалы доступны для чтения, но новые ответы не принимаются.</p>${isBossUi ? `<button class="btn primary" onclick="forumSetTopicState('reopen')">Переоткрыть тему</button>` : ""}</div>`;
 
     forumShell(`
-      <article class="forum-topic-full">
+      <article class="forum-topic-full ${topic.status === "hidden" ? "hidden" : ""}">
         <div class="forum-topic-badges">
           ${topic.is_pinned ? `<span class="forum-badge pinned">Закреплено</span>` : ""}
           <span class="forum-badge type">${forumEsc(forumTopicTypeLabel(topic.topic_type))}</span>
           <span class="forum-badge category">${forumEsc(forumCategoryLabel(topic.category))}</span>
-          ${!isOpen ? `<span class="forum-badge closed">${forumEsc(forumStatusLabel(topic.status))}</span>` : ""}
+          ${!isOpen ? `<span class="forum-badge ${topic.status === "hidden" ? "hidden" : "closed"}">${forumEsc(forumStatusLabel(topic.status))}</span>` : ""}
         </div>
         <h1>${forumEsc(topic.title)}</h1>
         <div class="forum-topic-meta"><span>${forumEsc(topic.author_name)}</span><span>${forumEsc(forumDate(topic.created_at))}</span><span>Ответов: ${Number(topic.replies_count || 0)}</span></div>
@@ -594,17 +634,29 @@ async function renderForumTopic(topicId) {
 
 function forumReplyHtml(reply, isBossUi) {
   const hidden = reply.status === "hidden";
-  return `<article class="forum-reply ${hidden ? "hidden" : ""}">
+  const parent = reply.parent_reply_id
+    ? `<div class="forum-reply-reference"><b>В ответ: ${forumEsc(reply.parent_author_name || "участник")}</b><p>${forumEsc(reply.parent_excerpt || "Исходный ответ скрыт или недоступен.")}</p></div>`
+    : "";
+  const canReply = !hidden && forumState.currentTopic?.status === "open";
+  return `<article class="forum-reply ${hidden ? "hidden" : ""}" id="forum-reply-${forumEsc(reply.id)}">
     <div class="forum-reply-head"><b>${forumEsc(reply.author_name || "Участник")}</b><span>${forumEsc(forumDate(reply.created_at))}</span></div>
-    <div class="forum-reply-body">${hidden ? `<i>Ответ скрыт Боссом.</i>` : forumTextHtml(reply.body)}</div>
+    ${parent}
+    <div class="forum-reply-body">${hidden ? `<i>Ответ скрыт администратором.</i>` : forumTextHtml(reply.body)}</div>
     <div class="forum-reply-actions">
+      ${canReply ? `<button class="forum-text-button reply" onclick="forumStartReplyTo('${forumEsc(reply.id)}')">Ответить</button>` : ""}
       ${!hidden ? `<button class="forum-text-button" onclick="renderForumReport('reply','${forumEsc(reply.id)}')">Пожаловаться</button>` : ""}
       ${isBossUi ? `<button class="forum-text-button boss" onclick="forumSetReplyState('${forumEsc(reply.id)}','${hidden ? "restore" : "hide"}')">${hidden ? "Восстановить" : "Скрыть"}</button>` : ""}
     </div>
   </article>`;
 }
 
-function forumReplyFormHtml(nextReplyAt, isBoss, rulesAccepted) {
+function forumReplyTargetHtml() {
+  const target = forumState.replyTo;
+  if (!target) return "";
+  return `<div class="forum-reply-target-inner"><div><b>Ответ для ${forumEsc(target.author_name || "участника")}</b><p>${forumEsc(target.excerpt || "")}</p></div><button type="button" onclick="forumCancelReplyTo()" aria-label="Отменить ответ на сообщение">×</button></div>`;
+}
+
+function forumReplyFormHtml(nextReplyAt, isBoss) {
   const cooldownLeft = isBoss ? 0 : forumTimeLeft(nextReplyAt);
   if (cooldownLeft > 0) {
     return `<div class="forum-cooldown"><b>Следующий ответ в этой теме можно отправить через</b><span id="forum-reply-countdown">${forumDuration(cooldownLeft)}</span><small>${forumEsc(forumDate(nextReplyAt))}</small></div>`;
@@ -612,12 +664,47 @@ function forumReplyFormHtml(nextReplyAt, isBoss, rulesAccepted) {
 
   return `<form class="forum-form forum-reply-form" onsubmit="submitForumReply(event)" ondrop="forumPreventFileDrop(event)" ondragover="event.preventDefault()">
     <h2>Ваш ответ</h2>
-    ${!rulesAccepted ? `<div class="forum-notice compact"><p>Перед первым ответом необходимо принять правила.</p><label class="forum-rule-check"><input type="checkbox" id="forum-reply-rules-check"><span>Я принимаю <button type="button" onclick="renderForumRules('topic')">правила Бизнес-форума</button>.</span></label></div>` : ""}
+    <div id="forum-reply-target" class="forum-reply-target" ${forumState.replyTo ? "" : "hidden"}>${forumReplyTargetHtml()}</div>
     <label><textarea id="forum-reply-body" maxlength="3000" minlength="2" rows="6" placeholder="Напишите содержательный ответ по существу темы" onpaste="forumRejectForbiddenPaste(event)" oninput="forumCounter('forum-reply-body','forum-reply-counter',3000)" required></textarea><small id="forum-reply-counter">0 / 3000</small></label>
     <div class="forum-form-warning compact"><p>Ссылки, контакты, изображения и файлы запрещены.</p></div>
     <div id="forum-reply-form-error" class="forum-inline-error" hidden></div>
     <button class="btn primary" id="forum-reply-submit" type="submit">Отправить ответ</button>
   </form>`;
+}
+
+function forumStartReplyTo(replyId) {
+  const reply = (forumState.currentReplies || []).find((item) => String(item.id) === String(replyId));
+  if (!reply || reply.status === "hidden") return;
+  forumState.replyTo = {
+    id: reply.id,
+    author_name: reply.author_name || "Участник",
+    excerpt: String(reply.body || "").slice(0, 220),
+  };
+  const target = document.getElementById("forum-reply-target");
+  if (target) {
+    target.hidden = false;
+    target.innerHTML = forumReplyTargetHtml();
+  }
+  const input = document.getElementById("forum-reply-body");
+  if (input) {
+    input.focus();
+    input.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+  const cooldown = document.getElementById("forum-reply-countdown");
+  if (cooldown) {
+    cooldown.scrollIntoView({ behavior: "smooth", block: "center" });
+    alert("Ответ выбран. Написать сообщение можно будет после окончания 15-минутного ограничения.");
+  }
+}
+
+function forumCancelReplyTo() {
+  forumState.replyTo = null;
+  const target = document.getElementById("forum-reply-target");
+  if (target) {
+    target.hidden = true;
+    target.innerHTML = "";
+  }
 }
 
 async function submitForumReply(event) {
@@ -636,15 +723,6 @@ async function submitForumReply(event) {
   }
 
   try {
-    if (!forumState.bootstrap?.rules_accepted) {
-      const checkbox = document.getElementById("forum-reply-rules-check");
-      if (!checkbox?.checked) {
-        setForumInlineError("forum-reply-form-error", "Перед отправкой подтвердите принятие правил.");
-        return;
-      }
-      await forumApi("accept_rules", {});
-      forumState.bootstrap.rules_accepted = true;
-    }
 
     if (submitButton) {
       submitButton.disabled = true;
@@ -659,9 +737,11 @@ async function submitForumReply(event) {
       requestId: forumState.pendingReplyRequestId,
       topicId: forumState.currentTopicId,
       body,
+      parentReplyId: forumState.replyTo?.id || null,
     });
 
     forumState.pendingReplyRequestId = null;
+    forumState.replyTo = null;
     await renderForumTopic(forumState.currentTopicId);
   } catch (error) {
     setForumInlineError("forum-reply-form-error", error?.message || forumReasonText(error?.result?.reason));
@@ -680,13 +760,23 @@ async function forumSetTopicState(mode) {
     reopen: "Переоткрыть тему для новых ответов?",
     pin: "Закрепить тему в верхней части открытых тем?",
     unpin: "Снять закрепление с темы?",
-    hide: "Скрыть тему из общего списка? Босс сможет восстановить её.",
+    hide: "Скрыть тему от участников? Она останется доступной администратору.",
     restore: "Восстановить скрытую тему?",
+    delete: "Удалить тему навсегда вместе со всеми ответами и жалобами? Восстановление будет невозможно.",
   }[mode];
   if (confirmation && !confirm(confirmation)) return;
+  if (mode === "delete" && !confirm("Подтвердите окончательное удаление темы. Это действие нельзя отменить.")) return;
 
   try {
-    await forumApi("set_topic_state", { topicId: topic.id, mode });
+    const result = await forumApi("set_topic_state", { topicId: topic.id, mode });
+    if (mode === "delete" || result?.deleted) {
+      forumState.currentTopic = null;
+      forumState.currentTopicId = null;
+      forumState.currentReplies = [];
+      forumState.replyTo = null;
+      alert("Тема удалена навсегда.");
+      return renderForumTopics(topic.category || forumState.category || "general");
+    }
     await renderForumTopic(topic.id);
   } catch (error) {
     alert(error?.message || forumReasonText(error?.result?.reason));
@@ -708,7 +798,7 @@ function renderForumReport(targetType, targetId) {
     ? `renderForumTopic('${forumEsc(forumState.currentTopicId)}')`
     : "renderBusinessForum()";
   forumShell(`
-    ${card("blue-card-v2 forum-hero compact", `<p class="eyebrow">Бизнес-форум</p><h1>Пожаловаться</h1><p>Жалоба попадёт в очередь Босса. Сообщение не скрывается автоматически.</p>`)}
+    ${card("blue-card-v2 forum-hero compact", `<p class="eyebrow">Бизнес-форум</p><h1>Пожаловаться</h1><p>Жалоба попадёт в очередь администратора. Сообщение не скрывается автоматически.</p>`)}
     <form class="forum-form" onsubmit="submitForumReport(event,'${forumEsc(targetType)}','${forumEsc(targetId)}')">
       <label><span>Причина</span><select id="forum-report-reason"><option value="spam">Реклама или спам</option><option value="insult">Оскорбление или агрессия</option><option value="politics_religion">Политика или религиозный спор</option><option value="personal_data">Персональные или конфиденциальные данные</option><option value="illegal">Незаконный или опасный материал</option><option value="off_topic">Не по теме форума</option><option value="other">Другое</option></select></label>
       <label><span>Комментарий — необязательно</span><textarea id="forum-report-comment" maxlength="1000" rows="5" placeholder="Кратко поясните нарушение" onpaste="forumRejectForbiddenPaste(event)"></textarea></label>
@@ -729,7 +819,7 @@ async function submitForumReport(event, targetType, targetId) {
       reason,
       comment,
     });
-    alert("Жалоба отправлена Боссу.");
+    alert("Жалоба отправлена администратору.");
     await renderForumTopic(forumState.currentTopicId);
   } catch (error) {
     setForumInlineError("forum-report-error", error?.message || forumReasonText(error?.result?.reason));
@@ -749,8 +839,9 @@ function forumRulesHtml() {
       <section><h2>8. Незаконные и недобросовестные действия</h2><p>Запрещены инструкции и предложения, связанные с мошенничеством, обманом клиентов, подделкой документов, незаконным получением данных, обходом обязательств, сокрытием нарушений и причинением ущерба сотрудникам, партнёрам или конкурентам.</p></section>
       <section><h2>9. Чужие материалы</h2><p>Нельзя полностью копировать платные курсы, закрытые методические материалы, книги, статьи, документы компаний и материалы других сообществ. Допускается краткий пересказ идеи своими словами для обсуждения её практического применения.</p></section>
       <section><h2>10. Достоверность</h2><p>Личное мнение или опыт нельзя выдавать за установленный факт. При отсутствии подтверждения это необходимо прямо обозначить. Запрещены необоснованные гарантии дохода, результата или безопасности предложенного решения.</p></section>
-      <section><h2>11. Закрытие и модерация</h2><p>Автор может закрыть свою тему. После закрытия она остаётся доступной для чтения, но новые ответы не принимаются. Босс может закрывать, переоткрывать и закреплять темы, скрывать нарушения, рассматривать жалобы и ограничивать доступ участника к форуму.</p></section>
-      <section><h2>12. Ответственность участника</h2><p>Публикуя тему или ответ, участник подтверждает, что ознакомился с правилами и несёт ответственность за содержание своего сообщения.</p></section>
+      <section><h2>11. Закрытие и модерация</h2><p>Автор может закрыть свою тему. После закрытия она остаётся доступной для чтения, но новые ответы не принимаются. Администратор может закрывать, переоткрывать и закреплять темы, скрывать нарушения, удалять темы без возможности восстановления, рассматривать жалобы и ограничивать доступ участника к форуму.</p></section>
+      <section><h2>12. Отображение имени</h2><p>В форуме отображается имя участника и первая буква фамилии, если эти данные указаны в Telegram. Telegram username, ID и номер телефона другим участникам не показываются. Если имя не указано, используется постоянное нейтральное обозначение участника.</p></section>
+      <section><h2>13. Ответственность участника</h2><p>Публикуя тему или ответ, участник подтверждает, что ознакомился с правилами и несёт ответственность за содержание своего сообщения.</p></section>
     </div>`;
 }
 
@@ -758,29 +849,45 @@ async function renderForumRules(returnTo) {
   if (!ensureForumAccess()) return;
   try {
     const bootstrap = await loadForumBootstrap();
-    const acceptButton = bootstrap.rules_accepted
+    const accepted = forumRulesAccepted(bootstrap);
+    const acceptance = accepted
       ? `<div class="forum-form-ok">Текущая версия правил принята.</div>`
-      : `<button class="btn primary" onclick="acceptForumRules('${forumEsc(returnTo || "forum")}')">Принять правила</button>`;
-    const backAction = returnTo === "create"
+      : `<div class="forum-rules-accept-panel">
+          <label class="forum-rule-check"><input type="checkbox" id="forum-rules-final-check" onchange="toggleForumRulesAcceptButton()"><span>Я прочитал правила Бизнес-форума, ознакомлен с ограничениями и принимаю их.</span></label>
+          <button class="btn primary" id="forum-rules-accept-button" onclick="acceptForumRules('${forumEsc(returnTo || "forum")}')" disabled>Принять правила и открыть форум</button>
+        </div>`;
+    const backAction = accepted && returnTo === "create"
       ? "renderForumCreateTopic()"
-      : returnTo === "topic" && forumState.currentTopicId
+      : accepted && returnTo === "topic" && forumState.currentTopicId
       ? `renderForumTopic('${forumEsc(forumState.currentTopicId)}')`
       : "renderBusinessForum()";
 
     forumShell(`
-      ${card("blue-card-v2 forum-hero compact", `<p class="eyebrow">Бизнес-форум</p><h1>Правила</h1><p>Правила сохраняют деловой характер обсуждений и защищают участников.</p>`)}
+      ${card("blue-card-v2 forum-hero compact", `<p class="eyebrow">Бизнес-форум</p><h1>Правила</h1><p>Прочитайте документ до конца. Остальные разделы форума откроются после подтверждения.</p>`)}
       ${forumRulesHtml()}
-      <div class="forum-actions sticky-actions">${acceptButton}<button class="btn secondary" onclick="${backAction}">Вернуться</button></div>
+      <div class="forum-actions sticky-actions">${acceptance}<button class="btn secondary" onclick="${backAction}">${accepted ? "Вернуться" : "Вернуться без принятия"}</button></div>
     `);
   } catch (error) {
     forumErrorScreen(error, "renderBusinessForum()");
   }
 }
 
+function toggleForumRulesAcceptButton() {
+  const checkbox = document.getElementById("forum-rules-final-check");
+  const button = document.getElementById("forum-rules-accept-button");
+  if (button) button.disabled = !checkbox?.checked;
+}
+
 async function acceptForumRules(returnTo) {
+  const checkbox = document.getElementById("forum-rules-final-check");
+  if (checkbox && !checkbox.checked) {
+    alert("Поставьте отметку о принятии правил.");
+    return;
+  }
   try {
     await forumApi("accept_rules", {});
     if (forumState.bootstrap) forumState.bootstrap.rules_accepted = true;
+    forumState.bootstrap = null;
     if (returnTo === "create") return renderForumCreateTopic();
     if (returnTo === "topic" && forumState.currentTopicId) return renderForumTopic(forumState.currentTopicId);
     return renderBusinessForum();
@@ -788,6 +895,121 @@ async function acceptForumRules(returnTo) {
     alert(error?.message || forumReasonText(error?.result?.reason));
   }
 }
+
+function forumReportReasonLabel(reason) {
+  return ({
+    spam: "Реклама или спам",
+    insult: "Оскорбление или агрессия",
+    politics_religion: "Политика или религиозный спор",
+    personal_data: "Персональные или конфиденциальные данные",
+    illegal_content: "Незаконный или опасный материал",
+    off_topic: "Не по теме форума",
+    other: "Другое",
+  })[reason] || "Другое";
+}
+
+function forumAdminReportRowHtml(report) {
+  const targetLabel = report.target_type === "reply" ? "Ответ" : "Тема";
+  const targetText = report.target_type === "reply"
+    ? (report.reply_excerpt || "Ответ недоступен")
+    : (report.topic_title || "Тема недоступна");
+  const openButton = report.topic_id
+    ? `<button class="btn secondary" onclick="renderForumTopic('${forumEsc(report.topic_id)}')">Открыть публикацию</button>`
+    : `<button class="btn secondary" disabled>Публикация удалена</button>`;
+  return `<article class="forum-admin-report-row">
+    <div class="forum-admin-report-head"><div><span>${forumEsc(targetLabel)}</span><b>${forumEsc(forumReportReasonLabel(report.reason))}</b></div><em>${forumEsc(forumDate(report.created_at))}</em></div>
+    <p><b>Жалобу отправил:</b> ${forumEsc(report.reporter_name || "Участник")}</p>
+    <p><b>Автор публикации:</b> ${forumEsc(report.target_author_name || "Участник")}</p>
+    <div class="forum-admin-report-target">${forumEsc(targetText)}</div>
+    ${report.comment ? `<p><b>Комментарий:</b> ${forumEsc(report.comment)}</p>` : ""}
+    <div class="forum-actions">${openButton}<button class="btn primary" onclick="forumAdminSetReportStatus('${forumEsc(report.id)}','reviewed')">Рассмотрено</button><button class="btn secondary" onclick="forumAdminSetReportStatus('${forumEsc(report.id)}','dismissed')">Отклонить жалобу</button></div>
+  </article>`;
+}
+
+async function forumAdminLoadReports(status) {
+  const box = document.getElementById("forum-admin-reports-list");
+  const badge = document.getElementById("forum-admin-reports-count");
+  if (!box || !(typeof isAdminUser === "function" && isAdminUser())) return;
+  box.innerHTML = `<p class="small">Загружаем жалобы...</p>`;
+  try {
+    const result = await forumApi("admin_list_reports", { status: status || "new", limit: 50 });
+    if (badge) badge.textContent = String(Number(result.new_count || 0));
+    box.innerHTML = result.reports?.length
+      ? result.reports.map(forumAdminReportRowHtml).join("")
+      : `<div class="forum-empty compact"><b>Новых жалоб нет</b><p>Все обращения участников обработаны.</p></div>`;
+  } catch (error) {
+    box.innerHTML = `<div class="forum-inline-error">${forumEsc(error?.message || "Не удалось загрузить жалобы.")}</div>`;
+  }
+}
+
+async function forumAdminSetReportStatus(reportId, status) {
+  try {
+    await forumApi("admin_update_report", { reportId, status });
+    await forumAdminLoadReports("new");
+  } catch (error) {
+    alert(error?.message || "Не удалось обновить жалобу.");
+  }
+}
+
+function injectForumAdminReportsPanel() {
+  if (!(typeof isAdminUser === "function" && isAdminUser())) return;
+  const content = document.querySelector(".content-v2");
+  if (!content || document.getElementById("forum-admin-reports-card")) return;
+  const html = `<section class="card-v2 forum-admin-reports-card" id="forum-admin-reports-card">
+    <div class="forum-admin-reports-title"><div><p class="eyebrow">Бизнес-форум</p><h2>Жалобы участников</h2></div><span id="forum-admin-reports-count">0</span></div>
+    <p>Здесь сохраняются жалобы на темы и ответы. Публикация не скрывается автоматически: администратор открывает её, принимает решение и затем отмечает жалобу рассмотренной.</p>
+    <div id="forum-admin-reports-list"><p class="small">Загружаем жалобы...</p></div>
+  </section>`;
+  const firstCard = content.querySelector(".card-v2");
+  if (firstCard) firstCard.insertAdjacentHTML("afterend", html);
+  else content.insertAdjacentHTML("afterbegin", html);
+  forumAdminLoadReports("new");
+}
+
+(function installForumAdminPanelEnhancement() {
+  const original = window.renderAdmin;
+  if (typeof original !== "function" || original.__forumReportsEnhanced) return;
+  const enhanced = function (...args) {
+    const result = original.apply(this, args);
+    setTimeout(injectForumAdminReportsPanel, 0);
+    return result;
+  };
+  enhanced.__forumReportsEnhanced = true;
+  window.renderAdmin = enhanced;
+})();
+
+async function injectForumAdminProfileNotification() {
+  if (!(typeof isAdminUser === "function" && isAdminUser())) return;
+  const content = document.querySelector(".content-v2");
+  if (!content || document.getElementById("forum-admin-profile-notification")) return;
+  try {
+    const result = await forumApi("admin_list_reports", { status: "new", limit: 1 });
+    const count = Number(result.new_count || 0);
+    const html = `<section class="card-v2 forum-admin-profile-notification ${count > 0 ? "has-new" : ""}" id="forum-admin-profile-notification">
+      <div><p class="eyebrow">Бизнес-форум</p><h2>Уведомления модерации</h2><p>${count > 0
+        ? `Новых жалоб участников: <b>${count}</b>. Они сохранены в панели администратора.`
+        : "Новых жалоб участников нет."}</p></div>
+      <button class="btn ${count > 0 ? "primary" : "secondary"}" onclick="renderAdmin()">Открыть панель администратора</button>
+    </section>`;
+    const supportCard = [...content.querySelectorAll(".card-v2")].find((element) => element.querySelector("h2")?.textContent?.trim() === "Поддержка");
+    if (supportCard) supportCard.insertAdjacentHTML("beforebegin", html);
+    else content.insertAdjacentHTML("beforeend", html);
+  } catch (error) {
+    console.warn("FORUM_PROFILE_REPORTS_LOAD_ERROR", error);
+  }
+}
+
+(function installForumAdminProfileEnhancement() {
+  const original = window.renderProfile;
+  if (typeof original !== "function" || original.__forumProfileReportsEnhanced) return;
+  const enhanced = function (...args) {
+    const result = original.apply(this, args);
+    setTimeout(injectForumAdminProfileNotification, 0);
+    return result;
+  };
+  enhanced.__forumProfileReportsEnhanced = true;
+  window.renderProfile = enhanced;
+})();
 
 Object.assign(window, {
   renderBusinessForum,
@@ -799,10 +1021,15 @@ Object.assign(window, {
   submitForumReply,
   forumSetTopicState,
   forumSetReplyState,
+  forumStartReplyTo,
+  forumCancelReplyTo,
   renderForumReport,
   submitForumReport,
   renderForumRules,
   acceptForumRules,
+  toggleForumRulesAcceptButton,
+  forumAdminLoadReports,
+  forumAdminSetReportStatus,
   forumRejectForbiddenPaste,
   forumPreventFileDrop,
   forumCounter,
