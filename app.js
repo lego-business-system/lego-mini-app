@@ -4290,6 +4290,16 @@ async function checkAccess() {
 }
 
 /* =====================================================
+   v38 — безопасный флаг публикации Бизнес-форума
+   false: форум виден только в режиме администратора;
+   true: форум можно показывать ученикам (после финального теста и включения Supabase).
+   ===================================================== */
+window.FORUM_PUBLIC_UI_V38 = false;
+function forumVisibleInNavigationV38(){
+  return Boolean(window.FORUM_PUBLIC_UI_V38 === true || (typeof isAdminMode === 'function' && isAdminMode()));
+}
+
+/* =====================================================
    v36 — АРХИТЕКТУРА admin preview theme
    Включение одним из двух способов:
    1) ?ui=architecture в URL приложения;
@@ -4351,7 +4361,7 @@ if (architectureModeV35()) {
 }
 
 function architectureAssetV35(name){
-  return 'assets/brand/' + name + '?v=v37-architecture-logo-final-20260623';
+  return 'assets/brand/' + name + '?v=v38-forum-safe-20260624';
 }
 
 function architectureBrandLogoHtmlV35(compact){
@@ -4388,11 +4398,12 @@ window.bottomNav = function(active){
   function item(key,label,fn){
     return `<button class="bottom-item ${active===key?'active':''}" onclick="safeNavigateV32('${fn}')"><span class="arch-nav-icon">${architectureNavIconV35(key)}</span><b>${label}</b></button>`;
   }
-  return `<nav class="bottom-nav-v2 bottom-nav-v2-five" aria-label="Основное меню">
+  var showForum = forumVisibleInNavigationV38();
+  return `<nav class="bottom-nav-v2 ${showForum ? 'bottom-nav-v2-five' : 'bottom-nav-v2-four'}" aria-label="Основное меню">
     ${item('home','Главная','renderHome')}
     ${item('learning','Обучение','renderLearning')}
     ${item('homework','ДЗ','renderHomeworkCenter')}
-    ${item('forum','Форум','renderBusinessForum')}
+    ${showForum ? item('forum','Форум','renderBusinessForum') : ''}
     ${item('profile','Профиль','renderProfile')}
   </nav>`;
 };
@@ -4494,7 +4505,7 @@ window.renderHome = function(){
       </div>
       <div class="secondary-track-grid-v22 architecture-secondary-tracks">
         ${renderMainBlockCard('100 книг за 100 дней','Ежедневная книга, мини-тест, учебные единицы и серия баллов.','доступно','renderBookChallenge()','active books100-entry compact-card')}
-        ${renderMainBlockCard('Бизнес-форум','Практические вопросы и обмен опытом по видам деятельности.','доступно','renderBusinessForum()','active compact-card')}
+        ${forumVisibleInNavigationV38() ? renderMainBlockCard('Бизнес-форум','Практические вопросы и обмен опытом по видам деятельности.','тестирование','renderBusinessForum()','active compact-card') : ''}
         ${renderMainBlockCard('Бизнес-факты','Короткие практические статьи о реальных бизнес-ситуациях.','скоро','','disabled compact-card')}
         ${renderMainBlockCard('Дополнительные материалы','Разборы, шаблоны и материалы вне основного маршрута.','скоро','','disabled compact-card')}
         ${renderMainBlockCard('VIP уровень','Расширенные разборы и дополнительные возможности.','в разработке','','disabled compact-card')}
