@@ -1,21 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
-  <title id="title">АРХИТЕКТУРА</title>
-  <desc id="desc">Маршрут внутри управленческого цикла к результату</desc>
-  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M26 96A49 49 0 0 1 27 31" stroke="#10243A" stroke-width="7"/>
-    <path d="M27 31A49 49 0 0 1 93 23" stroke="#10243A" stroke-width="7"/>
-    <path d="M93 23A49 49 0 0 1 103 91" stroke="#10243A" stroke-width="7"/>
-    <path d="M103 91A49 49 0 0 1 26 96" stroke="#10243A" stroke-width="7"/>
-    <path d="M21 43l6-12 12 6" stroke="#10243A" stroke-width="7"/>
-    <path d="M91 17l12 6-6 12" stroke="#10243A" stroke-width="7"/>
-    <path d="M110 79l-7 12-12-7" stroke="#10243A" stroke-width="7"/>
-    <path d="M39 104l-13-8 8-12" stroke="#10243A" stroke-width="7"/>
-    <path d="M29 91C42 84 45 72 55 69c10-3 12-15 23-17 7-1 10-7 14-14" stroke="#10243A" stroke-width="7"/>
-    <circle cx="31" cy="90" r="7" fill="#F7F4ED" stroke="#10243A" stroke-width="5"/>
-    <circle cx="54" cy="69" r="6" fill="#F7F4ED" stroke="#10243A" stroke-width="5"/>
-    <circle cx="77" cy="52" r="6" fill="#F7F4ED" stroke="#10243A" stroke-width="5"/>
-    <path d="M91 42l4-15 13 8" stroke="#10243A" stroke-width="7"/>
-    <circle cx="96" cy="31" r="10" fill="#F28C28" stroke="#F28C28" stroke-width="3"/>
-    <path d="M96 12v8M112 18l-6 6M120 31h-9" stroke="#F28C28" stroke-width="5"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">АРХИТЕКТУРА — знак</title>
+  <desc id="desc">Маршрут внутри управленческого цикла ведёт к измеримому результату</desc>
+  <g stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision">
+    <path d="M330 82 A194 194 0 1 0 430 182" fill="none" stroke="#082A55" stroke-width="9"/>
+    <path d="M112 370 C132 346 151 334 174 318 C195 302 202 282 219 282 C242 282 249 297 264 279 C278 262 267 236 291 226 C316 216 330 221 345 197 C355 181 363 166 371 153" fill="none" stroke="#082A55" stroke-width="12"/>
+    <path d="M363 148 L386 139 L376 163 Z" fill="#082A55"/>
+    <circle cx="112" cy="370" r="13" fill="#FFFFFF" stroke="#082A55" stroke-width="8"/>
+    <circle cx="174" cy="318" r="12" fill="#FFFFFF" stroke="#082A55" stroke-width="8"/>
+    <circle cx="264" cy="279" r="12" fill="#FFFFFF" stroke="#082A55" stroke-width="8"/>
+    <circle cx="395" cy="126" r="17" fill="#FFFFFF" stroke="#F36B16" stroke-width="9"/>
+    <path d="M395 88 L395 70 M423 99 L436 86 M434 126 L452 126" fill="none" stroke="#F36B16" stroke-width="8"/>
   </g>
 </svg>
