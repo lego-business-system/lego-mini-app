@@ -4351,7 +4351,7 @@ if (architectureModeV35()) {
 }
 
 function architectureAssetV35(name){
-  return 'assets/brand/' + name + '?v=v36-architecture-admin-preview-20260623';
+  return 'assets/brand/' + name + '?v=v37-architecture-logo-final-20260623';
 }
 
 function architectureBrandLogoHtmlV35(compact){
