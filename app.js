@@ -4290,7 +4290,7 @@ async function checkAccess() {
 }
 
 /* =====================================================
-   v35 — АРХИТЕКТУРА preview theme
+   v36 — АРХИТЕКТУРА admin preview theme
    Включение одним из двух способов:
    1) ?ui=architecture в URL приложения;
    2) запуск Mini App из Telegram с startapp=architecture.
@@ -4300,14 +4300,35 @@ async function checkAccess() {
 
 var ARCHITECTURE_UI_V35 = (function(){
   try {
-    var query = new URLSearchParams(window.location.search);
-    var byUrl = query.get('ui') === 'architecture';
-    var byTelegram = Boolean(
-      tg && tg.initDataUnsafe &&
-      String(tg.initDataUnsafe.start_param || '') === 'architecture'
-    );
-    var byTelegramQuery = String(query.get('tgWebAppStartParam') || '') === 'architecture';
-    return byUrl || byTelegram || byTelegramQuery;
+    var query = new URLSearchParams(window.location.search || '');
+    var hashText = String(window.location.hash || '').replace(/^#/, '');
+    var hash = new URLSearchParams(hashText);
+    var tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : {};
+    var startParam = tg && tg.initDataUnsafe ? String(tg.initDataUnsafe.start_param || '') : '';
+
+    var forcedLegacy = [query.get('ui'), hash.get('ui')].some(function(value){
+      return String(value || '').toLowerCase() === 'legacy';
+    });
+    if (forcedLegacy) return false;
+
+    var previewValues = [
+      query.get('ui'),
+      query.get('startapp'),
+      query.get('tgWebAppStartParam'),
+      hash.get('ui'),
+      hash.get('startapp'),
+      hash.get('tgWebAppStartParam'),
+      startParam
+    ].map(function(value){ return String(value || '').toLowerCase(); });
+
+    var byPreviewParam = previewValues.includes('architecture');
+    var byAdminId = ['1762603232'].includes(String(tgUser.id || ''));
+    var byAdminUsername = ['prosvewenie2000'].includes(String(tgUser.username || '').replace('@','').toLowerCase());
+
+    // Надёжный предпросмотр: у владельца новая оболочка включается автоматически,
+    // даже если Telegram не передал startapp-параметр. Обычные ученики продолжают
+    // видеть прежнюю версию до общего запуска.
+    return byPreviewParam || byAdminId || byAdminUsername;
   }
   catch(e) { return false; }
 })();
@@ -4316,6 +4337,7 @@ function architectureModeV35(){ return Boolean(ARCHITECTURE_UI_V35); }
 
 if (architectureModeV35()) {
   document.documentElement.classList.add('theme-architecture');
+  document.documentElement.setAttribute('data-ui-version','architecture-v36');
   document.title = 'АРХИТЕКТУРА — Библиотека бизнес-систем';
   try {
     var themeMetaV35 = document.querySelector('meta[name="theme-color"]');
@@ -4329,7 +4351,7 @@ if (architectureModeV35()) {
 }
 
 function architectureAssetV35(name){
-  return 'assets/brand/' + name + '?v=v35-architecture-preview-20260623';
+  return 'assets/brand/' + name + '?v=v36-architecture-admin-preview-20260623';
 }
 
 function architectureBrandLogoHtmlV35(compact){

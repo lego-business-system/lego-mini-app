@@ -918,7 +918,7 @@
 
 /* =====================================================
    v35 — АРХИТЕКТУРА preview theme
-   Включается классом html.theme-architecture через ?ui=architecture
+   Включается классом html.theme-architecture для владельца автоматически или через ?ui=architecture
    ===================================================== */
 html.theme-architecture{
   --arch-bg:#F7F4ED;
