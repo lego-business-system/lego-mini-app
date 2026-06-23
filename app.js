@@ -4289,6 +4289,313 @@ async function checkAccess() {
   }
 }
 
+/* =====================================================
+   v35 — АРХИТЕКТУРА preview theme
+   Включение одним из двух способов:
+   1) ?ui=architecture в URL приложения;
+   2) запуск Mini App из Telegram с startapp=architecture.
+   Вся Supabase-логика, Telegram-доступ, прогресс и localStorage-ключи
+   остаются без изменений. Меняется только видимая оболочка.
+   ===================================================== */
+
+var ARCHITECTURE_UI_V35 = (function(){
+  try {
+    var query = new URLSearchParams(window.location.search);
+    var byUrl = query.get('ui') === 'architecture';
+    var byTelegram = Boolean(
+      tg && tg.initDataUnsafe &&
+      String(tg.initDataUnsafe.start_param || '') === 'architecture'
+    );
+    var byTelegramQuery = String(query.get('tgWebAppStartParam') || '') === 'architecture';
+    return byUrl || byTelegram || byTelegramQuery;
+  }
+  catch(e) { return false; }
+})();
+
+function architectureModeV35(){ return Boolean(ARCHITECTURE_UI_V35); }
+
+if (architectureModeV35()) {
+  document.documentElement.classList.add('theme-architecture');
+  document.title = 'АРХИТЕКТУРА — Библиотека бизнес-систем';
+  try {
+    var themeMetaV35 = document.querySelector('meta[name="theme-color"]');
+    if (!themeMetaV35) {
+      themeMetaV35 = document.createElement('meta');
+      themeMetaV35.name = 'theme-color';
+      document.head.appendChild(themeMetaV35);
+    }
+    themeMetaV35.content = '#F7F4ED';
+  } catch(e) {}
+}
+
+function architectureAssetV35(name){
+  return 'assets/brand/' + name + '?v=v35-architecture-preview-20260623';
+}
+
+function architectureBrandLogoHtmlV35(compact){
+  var logo = compact ? architectureAssetV35('architecture-mark.svg') : architectureAssetV35('architecture-logo.svg');
+  return `<button class="brand-lockup architecture-brand ${compact ? 'compact' : ''}" onclick="renderHome()" aria-label="АРХИТЕКТУРА — на главную">
+    <span class="brand-logo-plate">
+      <img src="${logo}" alt="АРХИТЕКТУРА — Библиотека бизнес-систем" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+      <span class="brand-fallback" style="display:none"><b>АРХИТЕКТУРА</b><span>Библиотека бизнес-систем</span></span>
+    </span>
+  </button>`;
+}
+
+var legacyBrandLogoHtmlV35 = window.brandLogoHtml;
+window.brandLogoHtml = function(compact){
+  if (!architectureModeV35()) return legacyBrandLogoHtmlV35(compact);
+  return architectureBrandLogoHtmlV35(Boolean(compact));
+};
+
+function architectureNavIconV35(key){
+  var paths = {
+    home: '<path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z"/>',
+    learning: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5v16M8 7h8M8 11h7"/>',
+    homework: '<path d="M7 3h10v3h3v15H4V6h3z"/><path d="m8 14 2.5 2.5L16 11"/>',
+    forum: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>',
+    profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4.2 3.4-6 8-6s7.2 1.8 8 6"/>'
+  };
+  return `<svg class="arch-nav-svg" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths[key] || paths.home}</svg>`;
+}
+
+var legacyBottomNavV35 = window.bottomNav;
+window.bottomNav = function(active){
+  if (!architectureModeV35()) return legacyBottomNavV35(active);
+  if (typeof hasVerifiedAccessV32 === 'function' && !hasVerifiedAccessV32()) return '';
+  function item(key,label,fn){
+    return `<button class="bottom-item ${active===key?'active':''}" onclick="safeNavigateV32('${fn}')"><span class="arch-nav-icon">${architectureNavIconV35(key)}</span><b>${label}</b></button>`;
+  }
+  return `<nav class="bottom-nav-v2 bottom-nav-v2-five" aria-label="Основное меню">
+    ${item('home','Главная','renderHome')}
+    ${item('learning','Обучение','renderLearning')}
+    ${item('homework','ДЗ','renderHomeworkCenter')}
+    ${item('forum','Форум','renderBusinessForum')}
+    ${item('profile','Профиль','renderProfile')}
+  </nav>`;
+};
+
+function architectureBlockIconV35(title){
+  var t = String(title || '').toLowerCase();
+  var body = '<path d="M5 19h14M7 16l3-4 3 2 4-7"/><circle cx="17" cy="7" r="2"/>';
+  if (t.includes('нет своего')) body = '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2M12 2v2M22 12h-2M4 12H2"/>';
+  else if (t.includes('сотрудник')) body = '<circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3.5 20c.6-4 2.5-6 5.5-6s5 2 5.5 6M13 15c3.8-.5 6.2 1.2 7 5"/>';
+  else if (t.includes('100 книг')) body = '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5v16M8 7h8M8 11h7"/>';
+  else if (t.includes('форум')) body = '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>';
+  else if (t.includes('дополнитель')) body = '<path d="M3 7h7l2 2h9v11H3z"/><path d="M8 13h8M12 9v8"/>';
+  else if (t.includes('бизнес-факты')) body = '<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v5h5M8 12h8M8 16h6"/>';
+  else if (t.includes('vip')) body = '<path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>';
+  else if (t.includes('медиа')) body = '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/>';
+  return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+}
+
+var legacyRenderMainBlockCardV35 = window.renderMainBlockCard;
+window.renderMainBlockCard = function(title,text,status,action,cls){
+  if (!architectureModeV35()) return legacyRenderMainBlockCardV35(title,text,status,action,cls);
+  var clickable = Boolean(action);
+  return `<button class="track-card architecture-track-card ${cls || ''} ${clickable ? '' : 'disabled'}" ${clickable ? `onclick="${action}"` : 'disabled'}>
+    <span class="track-card-icon">${architectureBlockIconV35(title)}</span>
+    <span class="track-card-copy"><b>${esc(title)}</b><p>${esc(text)}</p></span>
+    <em>${esc(status)}</em><span class="track-card-arrow">${clickable ? '›' : '·'}</span>
+  </button>`;
+};
+
+function architectureActivityIconV35(key){
+  var map = { trade:'₽', services:'✓', production:'⚙', construction:'▥', logistics:'→', horeca:'◫' };
+  return map[key] || '•';
+}
+
+var legacyRenderLearningV35 = window.renderLearning;
+window.renderLearning = function(){
+  if (!architectureModeV35()) return legacyRenderLearningV35();
+  var html = `
+    ${card('blue-card-v2 architecture-section-head', `<p class="eyebrow">маршрут собственника</p><h1>Я предприниматель</h1><p>Выберите вид деятельности. Внутри каждого направления — последовательный путь из уроков, тестов, саммари и практических заданий.</p>${isAdminMode() ? '<p class="small admin-note">Режим администратора: доступны все подготовленные материалы.</p>' : ''}`)}
+    ${typeof entrepreneurCurrentStepCard === 'function' ? entrepreneurCurrentStepCard() : ''}
+    <div class="activity-grid-v2 architecture-activity-grid">
+      ${(state.catalog?.activities || []).map(function(a){
+        var info = getActivityProgressInfo(a.key);
+        var cardText = String(a.description || a.chain || activityIntroText(a)).trim();
+        var available = isAdminMode() || Number(info.readyCount || 0) > 0;
+        var readyText = available ? `${info.openCount} из ${info.lessons.length} уроков доступно` : 'в подготовке';
+        return `<button class="activity-card-v2 ${a.key===state.selectedActivityKey?'active':''} ${available?'':'locked'}" ${available?`onclick="renderActivityLessons('${a.key}')"`:'disabled'}>
+          <span class="activity-line-icon">${architectureActivityIconV35(a.key)}</span>
+          <b>${esc(a.title)}</b>
+          <small>${esc(cardText)}</small>
+          <em>${esc(readyText)}</em>
+        </button>`;
+      }).join('')}
+    </div>`;
+  shell(html, 'learning');
+};
+
+var legacyStageCardV35 = window.stageCard;
+window.stageCard = function(key,title,note,done,action,locked,extraCls){
+  if (!architectureModeV35()) return legacyStageCardV35.apply(this, arguments);
+  var order = { presentation:'01', quiz:'02', books:'03', homework:'04' };
+  return `<button class="stage-card-v2 stage-${esc(key)} ${done?'done':''} ${locked?'locked':''} ${extraCls||''}" onclick="${locked?'alert(\'Этап пока закрыт.\')':action}">
+    <span class="stage-number">${order[key] || '•'}</span>
+    <span class="stage-copy"><b>${esc(title)}</b><p>${esc(note)}</p></span>
+    <span class="stage-state">${done?'✓':(locked?'🔒':'›')}</span>
+  </button>`;
+};
+
+var legacyRenderHomeV35 = window.renderHome;
+window.renderHome = function(){
+  if (!architectureModeV35()) return legacyRenderHomeV35();
+  var gp = globalStageProgress();
+  var points = totalPoints();
+  var titleInfo = studentTitleInfo();
+  var html = `
+    ${card('hero-dashboard main-dashboard-card architecture-dashboard', `
+      <div class="architecture-dashboard-head">
+        <div>
+          <div class="eyebrow-row"><p class="eyebrow">ваша система</p><button class="instruction-link" onclick="toggleGlobalInstruction()">как пользоваться</button></div>
+          <h1>Общий прогресс</h1>
+          <p>Учитываются только завершённые этапы готовых уроков: презентация, тест, саммари и принятое домашнее задание.</p>
+        </div>
+        ${compactProgressRing(gp.percent)}
+      </div>
+      <div class="architecture-metrics">
+        <div><span>Баллы</span><b>${formatPoints(points)}</b></div>
+        <div><span>Уровень</span><b>${titleInfo.current.level} / 25</b></div>
+        <div><span>Достижение</span><b>${esc(titleInfo.current.title)}</b></div>
+      </div>
+      ${globalInstructionPanelHtml()}
+    `)}
+    ${typeof studentHomeworkAlertCardV25 === 'function' ? studentHomeworkAlertCardV25() : ''}
+    ${typeof safeActiveChallengeCardHtmlV24 === 'function' ? safeActiveChallengeCardHtmlV24() : ''}
+    ${card('architecture-blocks-card', `<div class="section-heading-v35"><div><p class="eyebrow">основные маршруты</p><h2>Выберите блок</h2></div><p>Открывайте только тот раздел, с которым работаете сейчас.</p></div>
+      <div class="top-track-grid main-track-grid-v22 architecture-main-tracks">
+        ${renderMainBlockCard('Нет своего бизнеса','Подготовка к запуску и базовое предпринимательское мышление.','скоро','','disabled main-block-card')}
+        ${renderMainBlockCard('Я предприниматель','Диагностика, уроки, ДЗ, проверка и управленческие действия.','доступно','renderLearning()','active main-block-card')}
+        ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','','disabled main-block-card')}
+      </div>
+      <div class="secondary-track-grid-v22 architecture-secondary-tracks">
+        ${renderMainBlockCard('100 книг за 100 дней','Ежедневная книга, мини-тест, учебные единицы и серия баллов.','доступно','renderBookChallenge()','active books100-entry compact-card')}
+        ${renderMainBlockCard('Бизнес-форум','Практические вопросы и обмен опытом по видам деятельности.','доступно','renderBusinessForum()','active compact-card')}
+        ${renderMainBlockCard('Бизнес-факты','Короткие практические статьи о реальных бизнес-ситуациях.','скоро','','disabled compact-card')}
+        ${renderMainBlockCard('Дополнительные материалы','Разборы, шаблоны и материалы вне основного маршрута.','скоро','','disabled compact-card')}
+        ${renderMainBlockCard('VIP уровень','Расширенные разборы и дополнительные возможности.','в разработке','','disabled compact-card')}
+        ${renderMainBlockCard('Бизнес-медиа','Фильмы, интервью и видео с управленческими выводами.','скоро','','disabled compact-card')}
+      </div>`)}
+  `;
+  shell(html, 'home');
+};
+
+var legacyAdminLabelV35 = window.adminLabel;
+window.adminLabel = function(){ return architectureModeV35() ? 'Администратор' : legacyAdminLabelV35(); };
+var legacyStudentRoleLabelV35 = window.studentRoleLabel;
+window.studentRoleLabel = function(){ return architectureModeV35() ? (isAdminUser() ? 'Администратор' : 'Участник') : legacyStudentRoleLabelV35(); };
+try {
+  if (architectureModeV35() && typeof LEGO_LEVELS !== 'undefined' && LEGO_LEVELS.length) {
+    LEGO_LEVELS[LEGO_LEVELS.length - 1].title = 'Мастер системного управления';
+  }
+} catch(e) {}
+
+var legacyAccessDeniedTitleV35 = window.accessDeniedTitleV32;
+window.accessDeniedTitleV32 = function(reason){
+  if (!architectureModeV35()) return legacyAccessDeniedTitleV35(reason);
+  if (reason === 'OPEN_FROM_TELEGRAM_REQUIRED') return 'Откройте приложение из Telegram';
+  if (reason === 'CHECK_ACCESS_ERROR') return 'Проверка доступа не выполнена';
+  return 'Доступ не подтверждён';
+};
+var legacyAccessDeniedTextV35 = window.accessDeniedTextV32;
+window.accessDeniedTextV32 = function(reason){
+  if (!architectureModeV35()) return legacyAccessDeniedTextV35(reason);
+  if (reason === 'OPEN_FROM_TELEGRAM_REQUIRED') return 'Система не получила Telegram-данные. Откройте «АРХИТЕКТУРУ» через кнопку Mini App в Telegram.';
+  return 'Приложение доступно участникам закрытого Telegram-канала. При активной подписке закройте Mini App и откройте его заново.';
+};
+
+function architectureLoadingScreenV35(){
+  var root = $('app');
+  if (!root) return;
+  root.innerHTML = `<div class="architecture-loading-screen">
+    <div class="architecture-loading-brand"><img src="${architectureAssetV35('architecture-mark.svg')}" alt=""><h1>АРХИТЕКТУРА</h1><p>Библиотека бизнес-систем</p></div>
+    <div class="architecture-loading-status"><span class="architecture-spinner"></span><b>Проверяем доступ</b><p>Подключаем ваш прогресс и материалы.</p></div>
+  </div>`;
+};
+
+var legacyCheckAccessV35 = window.checkAccess;
+window.checkAccess = async function(){
+  if (!architectureModeV35()) return legacyCheckAccessV35();
+  try { state.access = false; state.accessReason = null; } catch(e) {}
+  architectureLoadingScreenV35();
+  if (!tg || !tg.initData) { accessDenied('OPEN_FROM_TELEGRAM_REQUIRED'); return; }
+  try {
+    var response = await fetch(CHECK_ACCESS_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({initData:tg.initData}) });
+    var result = await response.json().catch(function(){ return {}; });
+    if (!response.ok || !result.access) { accessDenied(result.reason || 'ACCESS_DENIED'); return; }
+    state.access = true;
+    state.accessReason = result.reason || 'ACCESS_GRANTED';
+    state.user = result.user || null;
+    state.role = result.user?.role || 'student';
+    if (!isAdminUser()) { state.appMode='student'; localStorage.setItem('lego_app_mode','student'); }
+    state.remoteProgressByLesson = result.progress_by_lesson || result.progressByLesson || {};
+    if (result.progress && result.lesson && result.lesson.code) state.remoteProgressByLesson[result.lesson.code] = result.progress;
+    if (isAdminUser() && !localStorage.getItem('lego_app_mode')) state.appMode='admin';
+    await loadCatalog();
+    renderHome();
+  } catch(e) {
+    console.error(e);
+    accessDenied('CHECK_ACCESS_ERROR');
+  }
+};
+
+function architectureReplaceTextV35(value){
+  var out = String(value || '');
+  var pairs = [
+    [/Панель Босса Л\.Е\.Г\.О\.?/g, 'Панель администратора'],
+    [/Боссу Л\.Е\.Г\.О\.?/g, 'администратору'],
+    [/Босса Л\.Е\.Г\.О\.?/g, 'администратора'],
+    [/Босс Л\.Е\.Г\.О\.?/g, 'Администратор'],
+    [/Ученик Л\.Е\.Г\.О\.?/g, 'Участник'],
+    [/Мастер Л\.Е\.Г\.О\.?/g, 'Мастер системного управления'],
+    [/Режим Босса/g, 'Режим администратора'],
+    [/Боссу/g, 'администратору'],
+    [/Босса/g, 'администратора'],
+    [/Боссом/g, 'администратором'],
+    [/Босс/g, 'Администратор'],
+    [/Л\.Е\.Г\.О\./g, 'АРХИТЕКТУРА'],
+    [/Л\.Е\.Г\.О/g, 'АРХИТЕКТУРА'],
+    [/система внедрения управленческих изменений/gi, 'Библиотека бизнес-систем']
+  ];
+  pairs.forEach(function(pair){ out = out.replace(pair[0], pair[1]); });
+  return out;
+}
+
+function applyArchitectureTextV35(root){
+  if (!architectureModeV35() || !root) return;
+  var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  var node;
+  while ((node = walker.nextNode())) {
+    if (!node.nodeValue || !node.nodeValue.trim()) continue;
+    var next = architectureReplaceTextV35(node.nodeValue);
+    if (next !== node.nodeValue) node.nodeValue = next;
+  }
+  root.querySelectorAll('[alt],[aria-label],[title],[placeholder]').forEach(function(el){
+    ['alt','aria-label','title','placeholder'].forEach(function(attr){
+      if (!el.hasAttribute(attr)) return;
+      var current = el.getAttribute(attr);
+      var next = architectureReplaceTextV35(current);
+      if (next !== current) el.setAttribute(attr,next);
+    });
+  });
+}
+
+function installArchitectureObserverV35(){
+  if (!architectureModeV35() || !document.body || window.__architectureObserverV35) return;
+  window.__architectureObserverV35 = new MutationObserver(function(records){
+    records.forEach(function(record){
+      record.addedNodes.forEach(function(node){ if (node.nodeType === 1) applyArchitectureTextV35(node); });
+    });
+  });
+  window.__architectureObserverV35.observe(document.body,{childList:true,subtree:true});
+  applyArchitectureTextV35(document.body);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installArchitectureObserverV35);
+else installArchitectureObserverV35();
+
+
 (function protectScreensV32(){
   const protectedNames = [
     "renderHome",

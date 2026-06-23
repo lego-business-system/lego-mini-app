@@ -140,7 +140,7 @@ function stopForumTimer() {
 
 function forumShell(content) {
   stopForumTimer();
-  shell(`<div class="forum-module">${content}</div>`, "home");
+  shell(`<div class="forum-module">${content}</div>`, "forum");
 }
 
 function forumLoading(title, text) {
