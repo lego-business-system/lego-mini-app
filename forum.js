@@ -27,6 +27,14 @@ const forumState = {
   replyTo: null,
 };
 
+function forumPublicUiAllowed() {
+  return window.FORUM_PUBLIC_UI_V38 === true;
+}
+
+function forumVisibleForCurrentMode() {
+  return forumPublicUiAllowed() || (typeof isAdminMode === "function" && isAdminMode());
+}
+
 class ForumApiError extends Error {
   constructor(result, status) {
     super(result?.message || forumReasonText(result?.reason) || "Операция не выполнена.");
@@ -282,6 +290,8 @@ function forumContainsForbiddenLink(value) {
     /[a-z0-9._%+-]+\s*@\s*[a-z0-9.-]+\s*(?:\.|\s+точка\s+)\s*[a-zа-яё]{2,24}/iu,
     /(?:^|[^a-z0-9_])@[a-z0-9_]{5,32}(?:[^a-z0-9_]|$)/iu,
     /[a-zа-яё0-9](?:[a-zа-яё0-9-]{0,62}[a-zа-яё0-9])?\s*(?:\.|\[\s*\.\s*\]|\(\s*\.\s*\)|\s+точка\s+)\s*(?:ru|рф|com|net|org|io|me|biz|site|online|app|pro|info)(?![a-zа-яё0-9-])/iu,
+    /(?:^|[^\d])(?:\+\s*\d{1,3}|8)(?:[\s().-]*\d){9,14}(?!\d)/u,
+    /(?:телефон|номер|whatsapp|whats\s*app|ватсап|вацап|viber|вайбер)\s*[:\-]?\s*(?:\+?\s*\d)(?:[\s().-]*\d){6,14}/iu,
     /\[[^\]]{1,200}\]\s*\([^)]{1,500}\)/u,
     /<\s*a(?:\s|>)/iu,
     /data\s*:\s*image\s*\//iu,
@@ -320,13 +330,17 @@ async function loadForumBootstrap(force) {
 
 async function renderBusinessForum() {
   if (!ensureForumAccess()) return;
+  if (!forumVisibleForCurrentMode()) {
+    forumShell(`${card("blue-card-v2 forum-hero", `<p class="eyebrow">Бизнес-форум</p><h1>Раздел пока закрыт</h1><p>Форум проходит доработку и пока доступен только в режиме администратора.</p><button class="btn secondary" onclick="renderHome()">Вернуться на главную</button>`)}`);
+    return;
+  }
   forumLoading("Бизнес-форум", "Проверяем доступ и состояние форума.");
   try {
     const bootstrap = await loadForumBootstrap(true);
     const accepted = forumRulesAccepted(bootstrap);
     const isBossUi = forumIsBossMode();
     const bossNote = isBossUi
-      ? `<div class="forum-boss-note"><b>Режим Босса</b><span>Административные функции и публикации доступны без временных ограничений.</span></div>`
+      ? `<div class="forum-boss-note"><b>Режим администратора</b><span>Административные функции и публикации доступны без временных ограничений.</span></div>`
       : "";
     const locked = accepted ? "" : "locked";
     const disabled = accepted ? "" : "disabled";
@@ -427,7 +441,7 @@ async function renderForumMyTopics() {
     const result = await forumApi("my_topics", { page: 1, limit: 100 });
     const left = forumTimeLeft(result.next_topic_at);
     const quota = forumIsBossMode()
-      ? `<div class="forum-form-ok">В административном режиме недельный лимит на создание тем не применяется.</div>`
+      ? `<div class="forum-form-ok">В режиме администратора недельный лимит на создание тем не применяется.</div>`
       : left > 0
       ? `<div class="forum-cooldown"><b>Следующую тему можно создать через</b><span id="forum-my-topic-countdown">${forumDuration(left)}</span><small>${forumEsc(forumDate(result.next_topic_at))}</small></div>`
       : `<div class="forum-form-ok">Новая тема доступна. Для публикации откройте отдельный блок «Создать новую тему».</div>`;
@@ -800,7 +814,7 @@ function renderForumReport(targetType, targetId) {
   forumShell(`
     ${card("blue-card-v2 forum-hero compact", `<p class="eyebrow">Бизнес-форум</p><h1>Пожаловаться</h1><p>Жалоба попадёт в очередь администратора. Сообщение не скрывается автоматически.</p>`)}
     <form class="forum-form" onsubmit="submitForumReport(event,'${forumEsc(targetType)}','${forumEsc(targetId)}')">
-      <label><span>Причина</span><select id="forum-report-reason"><option value="spam">Реклама или спам</option><option value="insult">Оскорбление или агрессия</option><option value="politics_religion">Политика или религиозный спор</option><option value="personal_data">Персональные или конфиденциальные данные</option><option value="illegal">Незаконный или опасный материал</option><option value="off_topic">Не по теме форума</option><option value="other">Другое</option></select></label>
+      <label><span>Причина</span><select id="forum-report-reason"><option value="spam">Реклама или спам</option><option value="insult">Оскорбление или агрессия</option><option value="politics_religion">Политика или религиозный спор</option><option value="personal_data">Персональные или конфиденциальные данные</option><option value="illegal_content">Незаконный или опасный материал</option><option value="off_topic">Не по теме форума</option><option value="other">Другое</option></select></label>
       <label><span>Комментарий — необязательно</span><textarea id="forum-report-comment" maxlength="1000" rows="5" placeholder="Кратко поясните нарушение" onpaste="forumRejectForbiddenPaste(event)"></textarea></label>
       <div id="forum-report-error" class="forum-inline-error" hidden></div>
       <div class="forum-actions"><button class="btn primary" type="submit">Отправить жалобу</button><button class="btn secondary" type="button" onclick="${back}">Отмена</button></div>
@@ -979,37 +993,11 @@ function injectForumAdminReportsPanel() {
 })();
 
 async function injectForumAdminProfileNotification() {
-  if (!(typeof isAdminUser === "function" && isAdminUser())) return;
-  const content = document.querySelector(".content-v2");
-  if (!content || document.getElementById("forum-admin-profile-notification")) return;
-  try {
-    const result = await forumApi("admin_list_reports", { status: "new", limit: 1 });
-    const count = Number(result.new_count || 0);
-    const html = `<section class="card-v2 forum-admin-profile-notification ${count > 0 ? "has-new" : ""}" id="forum-admin-profile-notification">
-      <div><p class="eyebrow">Бизнес-форум</p><h2>Уведомления модерации</h2><p>${count > 0
-        ? `Новых жалоб участников: <b>${count}</b>. Они сохранены в панели администратора.`
-        : "Новых жалоб участников нет."}</p></div>
-      <button class="btn ${count > 0 ? "primary" : "secondary"}" onclick="renderAdmin()">Открыть панель администратора</button>
-    </section>`;
-    const supportCard = [...content.querySelectorAll(".card-v2")].find((element) => element.querySelector("h2")?.textContent?.trim() === "Поддержка");
-    if (supportCard) supportCard.insertAdjacentHTML("beforebegin", html);
-    else content.insertAdjacentHTML("beforeend", html);
-  } catch (error) {
-    console.warn("FORUM_PROFILE_REPORTS_LOAD_ERROR", error);
-  }
+  // Уведомления модерации убраны из профиля.
+  // Жалобы остаются только внутри панели администратора.
+  return;
 }
 
-(function installForumAdminProfileEnhancement() {
-  const original = window.renderProfile;
-  if (typeof original !== "function" || original.__forumProfileReportsEnhanced) return;
-  const enhanced = function (...args) {
-    const result = original.apply(this, args);
-    setTimeout(injectForumAdminProfileNotification, 0);
-    return result;
-  };
-  enhanced.__forumProfileReportsEnhanced = true;
-  window.renderProfile = enhanced;
-})();
 
 Object.assign(window, {
   renderBusinessForum,

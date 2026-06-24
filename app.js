@@ -5124,6 +5124,335 @@ else installArchitectureObserverV35();
   };
 })();
 
+
+/* =====================================================
+   v40 — иерархия разделов, боковое меню и прозрачные правила прогресса
+
+   Изменяется только интерфейс. Данные Supabase, прогресс, книги,
+   самостоятельные работы и доступ к урокам не пересобираются.
+   ===================================================== */
+(function installArchitectureHierarchyV40(){
+  window.APP_UI_VERSION_V40 = 'v40-hierarchy-drawer-content-20260624';
+
+  function architectureV40Enabled(){
+    return typeof architectureModeV35 === 'function' && architectureModeV35();
+  }
+
+  function studentVisibleTextV40(value){
+    var out = String(value == null ? '' : value);
+    var pairs = [
+      [/в домашнем задании/gi, 'в самостоятельной работе'],
+      [/для домашнего задания/gi, 'для самостоятельной работы'],
+      [/к домашнему заданию/gi, 'к самостоятельной работе'],
+      [/по домашнему заданию/gi, 'по самостоятельной работе'],
+      [/проверенное ДЗ/gi, 'выполненная самостоятельная работа'],
+      [/форма сдачи ДЗ/gi, 'форма самостоятельной работы'],
+      [/таблица ДЗ/gi, 'рабочая таблица'],
+      [/итог ДЗ/gi, 'итог самостоятельной работы'],
+      [/ДЗ показывает/gi, 'самостоятельная работа показывает'],
+      [/таблица и ДЗ/gi, 'таблица и самостоятельная работа']
+    ];
+    pairs.forEach(function(pair){ out = out.replace(pair[0], pair[1]); });
+    return out;
+  }
+  window.studentVisibleTextV40 = studentVisibleTextV40;
+
+  var shellBeforeHierarchyV40 = window.shell;
+  window.shell = function(content, activeTab){
+    var result = shellBeforeHierarchyV40(studentVisibleTextV40(content), activeTab);
+    setTimeout(function(){
+      installAppDrawerV40();
+      removeProfileModerationNoticeV40();
+    }, 0);
+    return result;
+  };
+
+  function forumReadyForCurrentModeV40(){
+    return Boolean(
+      typeof forumVisibleInNavigationV38 === 'function' &&
+      forumVisibleInNavigationV38() &&
+      typeof window.renderBusinessForum === 'function'
+    );
+  }
+  window.forumReadyForCurrentModeV40 = forumReadyForCurrentModeV40;
+
+  function renderPlaceholderSectionsV40(items){
+    return `<div class="content-preview-list-v40">${items.map(function(item){
+      return `<div><span>${esc(item.icon || '•')}</span><section><b>${esc(item.title)}</b><p>${esc(item.text)}</p></section></div>`;
+    }).join('')}</div>`;
+  }
+
+  window.renderContentPlaceholderV40 = function(title, eyebrow, description, items){
+    if (typeof hasVerifiedAccessV32 === 'function' && !hasVerifiedAccessV32()) {
+      accessDenied('OPEN_FROM_TELEGRAM_REQUIRED');
+      return;
+    }
+    var blocks = Array.isArray(items) ? items : [];
+    shell(`${card('blue-card-v2 content-placeholder-hero-v40', `<p class="eyebrow">${esc(eyebrow || 'новый раздел')}</p><h1>${esc(title)}</h1><p>${esc(description || 'Раздел создан. Наполнение будет добавляться отдельными публикациями.')}</p>`)}
+      ${card('content-placeholder-card-v40', `<h2>Как будет устроен раздел</h2>${renderPlaceholderSectionsV40(blocks)}<div class="content-placeholder-note-v40"><b>Статус</b><p>Структура раздела подключена к приложению. Публикации и обложки добавляются отдельно, без изменения основной логики обучения.</p></div><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
+  };
+
+  window.renderNoBusinessV40 = function(){
+    renderContentPlaceholderV40('Нет своего бизнеса','основной маршрут','Базовый путь для человека, который хочет разобраться в предпринимательском мышлении до запуска бизнеса.',[
+      {icon:'01',title:'Выбор направления',text:'Определить интересующую модель бизнеса и критерии первого запуска.'},
+      {icon:'02',title:'Экономика идеи',text:'Проверить спрос, цену, расходы, маржу и минимальный объём продаж.'},
+      {icon:'03',title:'План первого цикла',text:'Собрать проверяемое действие, срок и показатель результата.'}
+    ]);
+  };
+  window.renderEmployeeRouteV40 = function(){
+    renderContentPlaceholderV40('Я сотрудник','основной маршрут','Маршрут для руководителей, управляющих и ключевых сотрудников, которые отвечают за отдельный участок бизнес-системы.',[
+      {icon:'01',title:'Роль и зона ответственности',text:'Понять свой процесс, результат и показатели управления.'},
+      {icon:'02',title:'Факты и отклонения',text:'Фиксировать результат без догадок и искать причину отклонения.'},
+      {icon:'03',title:'Управленческое действие',text:'Назначать конкретное изменение, срок и проверку эффекта.'}
+    ]);
+  };
+  window.renderNewspaperV40 = function(){
+    renderContentPlaceholderV40('Газета','цифровая газета','Новости бизнеса, изменения внутри приложения и важные события будут выходить отдельными выпусками в газетной подаче.',[
+      {icon:'№',title:'Главная тема выпуска',text:'Одна крупная новость с разбором причин, последствий и практического значения.'},
+      {icon:'↗',title:'Деловая хроника',text:'Короткие новости рынка, управления, финансов, продаж и технологий.'},
+      {icon:'✎',title:'Колонка редакции',text:'Практический вывод: что предпринимателю проверить или изменить после выпуска.'}
+    ]);
+  };
+  window.renderEntrepreneurArticlesV40 = function(){
+    renderContentPlaceholderV40('Предпринимательские статьи','практические статьи','Статьи будут разбирать реальные управленческие ситуации, ошибки, цифры, решения и последствия для бизнеса.',[
+      {icon:'01',title:'Проблема',text:'Какая управленческая ситуация возникла и почему она важна.'},
+      {icon:'02',title:'Разбор',text:'Факты, причинно-следственные связи и варианты решения.'},
+      {icon:'03',title:'Применение',text:'Один вопрос к своему бизнесу и одно действие после статьи.'}
+    ]);
+  };
+  window.renderDirectReviewsV40 = function(){
+    renderContentPlaceholderV40('Прямые разборы','разборы кейсов','Здесь будут разбираться гарвардские кейсы, российские и международные бизнес-ситуации, управленческие решения и альтернативные сценарии.',[
+      {icon:'A',title:'Исходные данные',text:'Контекст компании, ограничения, цифры и позиция участников.'},
+      {icon:'B',title:'Точка решения',text:'Что должен решить руководитель и какие варианты реально доступны.'},
+      {icon:'C',title:'Разбор последствий',text:'Риски каждого решения, критерии выбора и практический перенос в свой бизнес.'}
+    ]);
+  };
+  window.renderWatchV40 = function(){
+    renderContentPlaceholderV40('Что посмотреть','бизнес-медиа','Подборки фильмов, сериалов, интервью, лекций и документальных проектов с пояснением, что именно смотреть предпринимателю.',[
+      {icon:'▶',title:'Фильмы и сериалы',text:'Сюжеты о лидерстве, переговорах, рисках, власти, деньгах и системах.'},
+      {icon:'●',title:'Интервью',text:'Разговоры с предпринимателями и руководителями без лишней мотивационной подачи.'},
+      {icon:'✓',title:'Вопросы после просмотра',text:'Короткий список выводов и вопросов для применения в своём бизнесе.'}
+    ]);
+  };
+  window.renderVipV40 = function(){
+    renderContentPlaceholderV40('VIP уровень','расширенный уровень','Закрытые форматы, персональные разборы, дополнительные инструменты и приоритетные активности будут подключены отдельным этапом.',[
+      {icon:'01',title:'Персональные разборы',text:'Углублённая работа с конкретной ситуацией бизнеса.'},
+      {icon:'02',title:'Закрытые материалы',text:'Дополнительные методики, шаблоны и кейсы.'},
+      {icon:'03',title:'Приоритет участия',text:'Отдельные форматы обратной связи и взаимодействия.'}
+    ]);
+  };
+  window.renderForumUnavailableV40 = function(){
+    renderContentPlaceholderV40('Бизнес-форум','раздел в подготовке','Форум пока закрыт для учеников. После завершения тестирования здесь появятся вопросы по урокам, обсуждения практики и обмен опытом.',[
+      {icon:'01',title:'Вопросы по урокам',text:'Обсуждение конкретных затруднений без обязательной проверки самостоятельной работы.'},
+      {icon:'02',title:'Разбор ситуаций',text:'Участники смогут описывать факты, действия и результаты.'},
+      {icon:'03',title:'Профессиональные ответы',text:'Ответы по существу темы с сохранением правил и модерации.'}
+    ]);
+  };
+  window.openForumBlockV40 = function(){
+    if (forumReadyForCurrentModeV40()) return renderBusinessForum();
+    return renderForumUnavailableV40();
+  };
+
+  window.renderProgressRulesV40 = function(){
+    var gp = typeof globalStageProgress === 'function' ? globalStageProgress() : {done:0,total:0,percent:0};
+    shell(`${card('blue-card-v2 progress-rules-hero-v40', `<p class="eyebrow">правила системы</p><h1>Как считаются прогресс и баллы</h1><p>Прогресс и баллы — разные показатели. Прогресс показывает прохождение этапов, баллы используются как мотивационная система.</p>`)}
+      ${card('', `<h2>Прогресс</h2><p>В расчёт входят только опубликованные уроки. В каждом опубликованном уроке четыре этапа равного веса:</p><div class="score-rule-grid-v40 equal"><div><span>25%</span><b>Презентация</b></div><div><span>25%</span><b>Тест</b></div><div><span>25%</span><b>Саммари</b></div><div><span>25%</span><b>Самостоятельная работа</b></div></div><p class="small">Сейчас выполнено: <b>${gp.done} из ${gp.total}</b> этапов — <b>${gp.percent}%</b>.</p>`)}
+      ${card('', `<h2>Баллы за один урок</h2><div class="score-rule-grid-v40"><div><span>10</span><b>Презентация</b></div><div><span>10</span><b>Тест</b></div><div><span>10</span><b>Саммари</b></div><div><span>70</span><b>Самостоятельная работа</b></div></div><p class="small">Полностью завершённый урок даёт 100 баллов. Старую пропорцию мы пока сохраняем, чтобы не пересчитать уже накопленные баллы и уровни.</p>`)}
+      ${card('', `<h2>Отдельно: 100 книг за 100 дней</h2><p>Баллы челленджа прибавляются к баллам уроков. Первый зачтённый день даёт 50 баллов, далее награда растёт на 2 балла за каждый день серии.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`,'profile');
+  };
+
+  function primaryRoutesHtmlV40(){
+    return `<div class="top-track-grid architecture-main-tracks-v40">
+      ${renderMainBlockCard('Я предприниматель','Системный маршрут по видам бизнеса: уроки, тесты, саммари и самостоятельная практика.','доступно','renderLearning()','active main-block-card v40-primary-card')}
+      ${renderMainBlockCard('Нет своего бизнеса','Подготовка к запуску и базовое предпринимательское мышление.','скоро','renderNoBusinessV40()','soon main-block-card v40-primary-card')}
+      ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','renderEmployeeRouteV40()','soon main-block-card v40-primary-card')}
+    </div>`;
+  }
+  window.primaryRoutesHtmlV40 = primaryRoutesHtmlV40;
+
+  function secondaryBlocksHtmlV40(){
+    var forumStatus = forumReadyForCurrentModeV40() ? (isAdminMode() ? 'тестирование' : 'доступно') : 'в подготовке';
+    var forumClass = forumReadyForCurrentModeV40() ? 'active' : 'soon';
+    return `<div class="secondary-track-grid-v22 architecture-secondary-tracks-v40">
+      ${renderMainBlockCard('Бизнес-форум','Вопросы по урокам, обсуждения практики и обмен опытом участников.',forumStatus,'openForumBlockV40()',forumClass + ' compact-card')}
+      ${renderMainBlockCard('100 книг за 100 дней','Ежедневная книга, мини-тест, учебные единицы и серия баллов.','доступно','renderBookChallenge()','active books100-entry compact-card')}
+      ${renderMainBlockCard('Газета','Новости бизнеса и приложения в формате цифровых газетных выпусков.','скоро','renderNewspaperV40()','soon compact-card')}
+      ${renderMainBlockCard('Предпринимательские статьи','Практические статьи о ситуациях, цифрах, решениях и последствиях.','скоро','renderEntrepreneurArticlesV40()','soon compact-card')}
+      ${renderMainBlockCard('Прямые разборы','Гарвардские и другие бизнес-кейсы с разбором вариантов решения.','скоро','renderDirectReviewsV40()','soon compact-card')}
+      ${renderMainBlockCard('Что посмотреть','Фильмы, интервью, лекции и видео с управленческими выводами.','скоро','renderWatchV40()','soon compact-card')}
+      ${renderMainBlockCard('Дополнительные материалы','Шаблоны, инструкции и материалы вне основного маршрута.','скоро','renderAdditionalMaterials()','soon compact-card')}
+      ${renderMainBlockCard('VIP уровень','Расширенные разборы, инструменты и закрытые возможности.','в разработке','renderVipV40()','soon compact-card')}
+    </div>`;
+  }
+  window.secondaryBlocksHtmlV40 = secondaryBlocksHtmlV40;
+
+  var renderHomeBeforeHierarchyV40 = window.renderHome;
+  window.renderHome = function(){
+    if (!architectureV40Enabled()) return renderHomeBeforeHierarchyV40();
+    var gp = globalStageProgress();
+    var points = totalPoints();
+    var titleInfo = studentTitleInfo();
+    var html = `
+      ${card('hero-dashboard main-dashboard-card architecture-dashboard v40-dashboard', `
+        <div class="architecture-dashboard-head">
+          <div>
+            <div class="eyebrow-row"><p class="eyebrow">ваша система</p><button class="instruction-link" onclick="toggleGlobalInstruction()">как пользоваться</button></div>
+            <h1>Общий прогресс</h1>
+            <p>Завершено <b>${gp.done} из ${gp.total}</b> этапов опубликованных уроков. Каждый этап даёт одинаковую долю прогресса.</p>
+          </div>
+          ${compactProgressRing(gp.percent)}
+        </div>
+        <div class="architecture-metrics">
+          <div><span>Баллы</span><b>${formatPoints(points)}</b></div>
+          <div><span>Уровень</span><b>${titleInfo.current.level} / 25</b></div>
+          <div><span>Достижение</span><b>${esc(titleInfo.current.title)}</b></div>
+        </div>
+        ${globalInstructionPanelHtml()}
+      `)}
+      ${card('architecture-blocks-card v40-blocks-card', `<div class="section-heading-v35"><div><p class="eyebrow">структура приложения</p><h2>Выберите блок</h2></div><p>Первые три раздела — основные маршруты. Остальные дополняют обучение и практику.</p></div>${primaryRoutesHtmlV40()}${secondaryBlocksHtmlV40()}`)}
+      ${typeof safeActiveChallengeCardHtmlV24 === 'function' ? safeActiveChallengeCardHtmlV24() : ''}
+    `;
+    shell(html,'home');
+  };
+
+  window.renderRoutesHubV40 = function(){
+    if (typeof hasVerifiedAccessV32 === 'function' && !hasVerifiedAccessV32()) {
+      accessDenied('OPEN_FROM_TELEGRAM_REQUIRED');
+      return;
+    }
+    shell(`${card('blue-card-v2 routes-hub-hero-v40', `<p class="eyebrow">маршруты обучения</p><h1>Выберите свою роль</h1><p>Нижняя вкладка «Маршруты» ведёт не в один набор уроков, а в три основные траектории приложения.</p>`)}
+      ${typeof entrepreneurCurrentStepCard === 'function' ? entrepreneurCurrentStepCard() : ''}
+      ${card('routes-hub-card-v40', `${primaryRoutesHtmlV40()}`)}`,'learning');
+  };
+
+  var bottomNavBeforeHierarchyV40 = window.bottomNav;
+  window.bottomNav = function(active){
+    if (!architectureV40Enabled()) return bottomNavBeforeHierarchyV40(active);
+    if (typeof hasVerifiedAccessV32 === 'function' && !hasVerifiedAccessV32()) return '';
+    function item(key,label,fn){
+      var iconKey = key === 'learning' ? 'learning' : key;
+      var icon = typeof architectureNavIconV35 === 'function'
+        ? `<span class="arch-nav-icon">${architectureNavIconV35(iconKey)}</span>`
+        : '<span>•</span>';
+      return `<button class="bottom-item ${active===key?'active':''}" onclick="safeNavigateV32('${fn}')">${icon}<b>${label}</b></button>`;
+    }
+    return `<nav class="bottom-nav-v2 bottom-nav-v2-four v40-bottom-nav" aria-label="Основное меню">
+      ${item('home','Главная','renderHome')}
+      ${item('learning','Маршруты','renderRoutesHubV40')}
+      ${item('homework','Практика','renderHomeworkCenter')}
+      ${item('profile','Профиль','renderProfile')}
+    </nav>`;
+  };
+
+  var blockIconBeforeV40 = window.architectureBlockIconV35;
+  window.architectureBlockIconV35 = function(title){
+    var text = String(title || '').toLowerCase();
+    var body = '';
+    if (text.includes('газета')) body = '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h5M7 11h10M7 14h10M7 17h7M15 7h3v3h-3z"/>';
+    else if (text.includes('предпринимательские статьи')) body = '<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v5h5M8 12h8M8 16h6"/>';
+    else if (text.includes('прямые разборы')) body = '<path d="M4 5h10v10H4zM14 9h6v10H10v-4"/><path d="m7 12 2-3 2 2 2-4"/>';
+    else if (text.includes('что посмотреть')) body = '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/>';
+    if (!body) return blockIconBeforeV40(title);
+    return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+  };
+
+  function drawerItemsV40(){
+    var forumStatus = forumReadyForCurrentModeV40() ? 'доступно' : 'в подготовке';
+    return [
+      {title:'Я предприниматель',status:'доступно',action:'renderLearning()'},
+      {title:'Нет своего бизнеса',status:'скоро',action:'renderNoBusinessV40()'},
+      {title:'Я сотрудник',status:'скоро',action:'renderEmployeeRouteV40()'},
+      {title:'Бизнес-форум',status:forumStatus,action:'openForumBlockV40()'},
+      {title:'100 книг за 100 дней',status:'доступно',action:'renderBookChallenge()'},
+      {title:'Газета',status:'скоро',action:'renderNewspaperV40()'},
+      {title:'Предпринимательские статьи',status:'скоро',action:'renderEntrepreneurArticlesV40()'},
+      {title:'Прямые разборы',status:'скоро',action:'renderDirectReviewsV40()'},
+      {title:'Что посмотреть',status:'скоро',action:'renderWatchV40()'},
+      {title:'Дополнительные материалы',status:'скоро',action:'renderAdditionalMaterials()'},
+      {title:'VIP уровень',status:'в разработке',action:'renderVipV40()'}
+    ];
+  }
+
+  function appDrawerHtmlV40(){
+    return `<div class="app-drawer-overlay-v40" id="app-drawer-overlay-v40" onclick="closeAppDrawerV40()" aria-hidden="true">
+      <aside class="app-drawer-v40" role="dialog" aria-modal="true" aria-label="Все разделы приложения" onclick="event.stopPropagation()">
+        <div class="app-drawer-head-v40"><div><p>АРХИТЕКТУРА</p><span>Все разделы</span></div><button onclick="closeAppDrawerV40()" aria-label="Закрыть меню">×</button></div>
+        <div class="app-drawer-list-v40">${drawerItemsV40().map(function(item,index){
+          return `<button onclick="closeAppDrawerV40(); ${item.action}"><span class="app-drawer-number-v40">${String(index+1).padStart(2,'0')}</span><span class="app-drawer-copy-v40"><b>${esc(item.title)}</b><small>${esc(item.status)}</small></span><span class="app-drawer-arrow-v40">›</span></button>`;
+        }).join('')}</div>
+        <div class="app-drawer-footer-v40"><button onclick="closeAppDrawerV40(); renderProgressRulesV40()">Как считаются прогресс и баллы</button></div>
+      </aside>
+    </div>`;
+  }
+
+  window.installAppDrawerV40 = function(){
+    if (!architectureV40Enabled()) return;
+    var shellRoot = document.querySelector('.app-shell-v2');
+    var header = document.querySelector('.app-header-v2');
+    if (!shellRoot || !header) return;
+    if (!header.querySelector('.app-menu-button-v40')) {
+      var menuButton = document.createElement('button');
+      menuButton.className = 'app-menu-button-v40';
+      menuButton.setAttribute('aria-label','Открыть все разделы');
+      menuButton.innerHTML = '<span></span><span></span><span></span>';
+      menuButton.onclick = window.openAppDrawerV40;
+      var mode = header.querySelector('.mode-pill');
+      if (mode) header.insertBefore(menuButton, mode);
+      else header.appendChild(menuButton);
+    }
+    if (!document.getElementById('app-drawer-overlay-v40')) {
+      shellRoot.insertAdjacentHTML('beforeend', appDrawerHtmlV40());
+    }
+  };
+  window.openAppDrawerV40 = function(){
+    var overlay = document.getElementById('app-drawer-overlay-v40');
+    if (!overlay) { installAppDrawerV40(); overlay = document.getElementById('app-drawer-overlay-v40'); }
+    if (!overlay) return;
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden','false');
+    document.body.classList.add('app-drawer-open-v40');
+  };
+  window.closeAppDrawerV40 = function(){
+    var overlay = document.getElementById('app-drawer-overlay-v40');
+    if (overlay) {
+      overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden','true');
+    }
+    document.body.classList.remove('app-drawer-open-v40');
+  };
+
+  function removeProfileModerationNoticeV40(){
+    var notice = document.getElementById('forum-admin-profile-notification');
+    if (notice) notice.remove();
+  }
+  window.removeProfileModerationNoticeV40 = removeProfileModerationNoticeV40;
+
+  function injectProgressRulesCardV40(){
+    removeProfileModerationNoticeV40();
+    var content = document.querySelector('.content-v2');
+    if (!content || document.getElementById('progress-rules-card-v40')) return;
+    var supportCard = Array.from(content.querySelectorAll('.card-v2')).find(function(card){
+      return card.querySelector('h2') && card.querySelector('h2').textContent.trim() === 'Поддержка';
+    });
+    var html = `<section class="card-v2 progress-rules-card-v40" id="progress-rules-card-v40"><p class="eyebrow">прозрачные правила</p><h2>Прогресс и баллы</h2><p>Прогресс считается по четырём этапам опубликованных уроков. Баллы начисляются отдельно: 10 + 10 + 10 + 70.</p><button class="btn secondary" onclick="renderProgressRulesV40()">Посмотреть расчёт</button></section>`;
+    if (supportCard) supportCard.insertAdjacentHTML('beforebegin', html);
+    else content.insertAdjacentHTML('beforeend', html);
+  }
+
+  var renderProfileBeforeHierarchyV40 = window.renderProfile;
+  window.renderProfile = function(){
+    var result = renderProfileBeforeHierarchyV40();
+    setTimeout(injectProgressRulesCardV40,0);
+    return result;
+  };
+
+  if (!window.__drawerEscapeV40) {
+    window.__drawerEscapeV40 = true;
+    document.addEventListener('keydown', function(event){ if (event.key === 'Escape') closeAppDrawerV40(); });
+  }
+})();
+
+
 (function protectScreensV32(){
   const protectedNames = [
     "renderHome",
