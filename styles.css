@@ -3129,3 +3129,183 @@ html.theme-architecture .profile-overview-v44{
     grid-template-columns:repeat(2,minmax(0,1fr))!important;
   }
 }
+
+/* =====================================================
+   v45 — compact home progress, calm instruction control,
+   visible profile progress track
+   ===================================================== */
+
+/* 1. Главная: плотная компоновка без лишней вертикальной пустоты. */
+html.theme-architecture .v44-dashboard{
+  padding:13px!important;
+}
+html.theme-architecture .v44-dashboard .v44-dashboard-head{
+  grid-template-columns:minmax(0,1fr) 80px!important;
+  gap:9px!important;
+  align-items:center!important;
+}
+html.theme-architecture .v44-dashboard-copy{
+  align-self:center!important;
+}
+html.theme-architecture .v44-dashboard-title-row{
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:8px!important;
+  margin-bottom:5px!important;
+}
+html.theme-architecture .v44-dashboard-title-row h1{
+  font-size:22px!important;
+  line-height:1.08!important;
+}
+html.theme-architecture .v44-dashboard-copy>p{
+  max-width:none!important;
+  font-size:12.5px!important;
+  line-height:1.36!important;
+}
+html.theme-architecture .v44-dashboard .compact-ring-wrap,
+html.theme-architecture .v44-dashboard .compact-ring-svg{
+  width:78px!important;
+  height:78px!important;
+  min-width:78px!important;
+  flex-basis:78px!important;
+}
+html.theme-architecture .v44-dashboard .compact-ring-center{
+  inset:13px!important;
+}
+html.theme-architecture .v44-dashboard .compact-ring-center b{
+  font-size:20px!important;
+}
+html.theme-architecture .v44-dashboard .architecture-metrics{
+  gap:7px!important;
+  margin-top:10px!important;
+}
+html.theme-architecture .v44-dashboard .architecture-metrics>div{
+  min-height:64px!important;
+  padding:8px 7px!important;
+  border-radius:13px!important;
+}
+html.theme-architecture .v44-dashboard .architecture-metrics b{
+  margin-top:5px!important;
+  font-size:15px!important;
+}
+html.theme-architecture .v44-dashboard .architecture-metrics>div:last-child b{
+  font-size:12.5px!important;
+}
+
+/* 1. Кнопка инструкции: спокойный сине-серый акцент вместо резкого жёлтого. */
+html.theme-architecture .v44-dashboard-title-row .instruction-link{
+  min-height:31px!important;
+  padding:6px 9px!important;
+  border-radius:10px!important;
+  background:#E7F0FA!important;
+  border:1px solid #C8D8EA!important;
+  color:#1F4F8A!important;
+  box-shadow:none!important;
+  font-size:11px!important;
+  line-height:1!important;
+}
+html.theme-architecture .v44-dashboard-title-row .instruction-link:active{
+  background:#DCE9F6!important;
+}
+html.theme-architecture .v44-instruction-panel{
+  margin-top:11px!important;
+}
+
+/* 2. Профиль: полноценная окружность вокруг жёлтого прогресса. */
+.profile-overview-v44 .compact-ring-wrap{
+  position:relative!important;
+  border-radius:50%!important;
+  background:#F4F7FA!important;
+  box-shadow:inset 0 0 0 1px #D7E0EA, 0 4px 12px rgba(16,36,58,.07)!important;
+}
+.profile-overview-v44 .compact-ring-svg{
+  position:relative!important;
+  z-index:1!important;
+}
+.profile-overview-v44 .compact-ring-track{
+  stroke:#C9D5E2!important;
+  stroke-width:9!important;
+}
+.profile-overview-v44 .compact-ring-value{
+  stroke:#F28C28!important;
+  stroke-width:9!important;
+}
+.profile-overview-v44 .compact-ring-center{
+  z-index:2!important;
+  background:#FFFFFF!important;
+  border:1px solid #D7E0EA!important;
+  box-shadow:0 2px 8px rgba(16,36,58,.08)!important;
+}
+.profile-overview-v44 .compact-ring-center b{
+  color:#10243A!important;
+}
+
+@media(max-width:420px){
+  html.theme-architecture .v44-dashboard{
+    padding:12px!important;
+  }
+  html.theme-architecture .v44-dashboard .v44-dashboard-head{
+    grid-template-columns:minmax(0,1fr) 72px!important;
+    gap:7px!important;
+  }
+  html.theme-architecture .v44-dashboard-title-row{
+    flex-direction:row!important;
+    align-items:center!important;
+    gap:6px!important;
+  }
+  html.theme-architecture .v44-dashboard-title-row h1{
+    font-size:20px!important;
+  }
+  html.theme-architecture .v44-dashboard-title-row .instruction-link{
+    flex:0 0 auto!important;
+    min-height:29px!important;
+    padding:5px 8px!important;
+    font-size:10.5px!important;
+  }
+  html.theme-architecture .v44-dashboard-copy>p{
+    font-size:12px!important;
+    line-height:1.32!important;
+  }
+  html.theme-architecture .v44-dashboard .compact-ring-wrap,
+  html.theme-architecture .v44-dashboard .compact-ring-svg{
+    width:70px!important;
+    height:70px!important;
+    min-width:70px!important;
+    flex-basis:70px!important;
+  }
+  html.theme-architecture .v44-dashboard .compact-ring-center{
+    inset:12px!important;
+  }
+  html.theme-architecture .v44-dashboard .compact-ring-center b{
+    font-size:18px!important;
+  }
+  html.theme-architecture .v44-dashboard .architecture-metrics{
+    margin-top:8px!important;
+  }
+  html.theme-architecture .v44-dashboard .architecture-metrics>div{
+    min-height:59px!important;
+    padding:7px 6px!important;
+  }
+}
+
+@media(max-width:350px){
+  html.theme-architecture .v44-dashboard .v44-dashboard-head{
+    grid-template-columns:minmax(0,1fr) 66px!important;
+  }
+  html.theme-architecture .v44-dashboard .compact-ring-wrap,
+  html.theme-architecture .v44-dashboard .compact-ring-svg{
+    width:64px!important;
+    height:64px!important;
+    min-width:64px!important;
+    flex-basis:64px!important;
+  }
+  html.theme-architecture .v44-dashboard-title-row h1{
+    font-size:19px!important;
+  }
+  html.theme-architecture .v44-dashboard-title-row .instruction-link{
+    padding:5px 7px!important;
+    font-size:10px!important;
+  }
+}

@@ -6633,3 +6633,28 @@ if (document.readyState === 'loading') {
 } else {
   boot();
 }
+
+/* =====================================================
+   v45 — strict owner-only administration visibility
+   ===================================================== */
+(function installOwnerOnlyAdministrationV45(){
+  window.APP_UI_VERSION_V45 = 'v45-compact-progress-owner-admin-20260624';
+
+  function enforceOwnerOnlyAdministrationV45(){
+    var owner = typeof isAdminUser === 'function' && isAdminUser();
+    document.querySelectorAll('.drawer-admin-v44, .profile-admin-compact-v43, .boss-panel-card').forEach(function(node){
+      if (!owner) node.remove();
+    });
+  }
+  window.enforceOwnerOnlyAdministrationV45 = enforceOwnerOnlyAdministrationV45;
+
+  var shellBeforeV45 = window.shell;
+  if (typeof shellBeforeV45 === 'function') {
+    window.shell = function(content, activeTab){
+      var result = shellBeforeV45(content, activeTab);
+      setTimeout(enforceOwnerOnlyAdministrationV45, 0);
+      setTimeout(enforceOwnerOnlyAdministrationV45, 100);
+      return result;
+    };
+  }
+})();
