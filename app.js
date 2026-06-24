@@ -6515,9 +6515,15 @@ else installArchitectureObserverV35();
     var titleInfo = studentTitleInfo();
     var achievement = typeof libraryPositioningTextV43 === 'function' ? libraryPositioningTextV43(titleInfo.current.title) : titleInfo.current.title;
     var html = `
-      ${card('hero-dashboard main-dashboard-card architecture-dashboard v40-dashboard v41-dashboard v43-dashboard v44-dashboard', `
-        <div class="architecture-dashboard-head v44-dashboard-head"><div class="v44-dashboard-copy"><div class="v44-dashboard-title-row"><h1>Общий прогресс</h1><button class="instruction-link" onclick="toggleGlobalInstruction()">как пользоваться</button></div><p>Изучено <b>${progress.done} из ${progress.total}</b> информационных этапов библиотеки.</p></div>${compactProgressRing(progress.percent)}</div>
-        <div class="architecture-metrics"><div><span>Баллы</span><b>${formatPoints(points)}</b></div><div><span>Уровень</span><b>${titleInfo.current.level} / 25</b></div><div><span>Достижение</span><b>${esc(achievement)}</b></div></div>
+      ${card('hero-dashboard main-dashboard-card architecture-dashboard v40-dashboard v41-dashboard v43-dashboard v44-dashboard v47-dashboard', `
+        <div class="architecture-dashboard-head v44-dashboard-head v47-dashboard-head">
+          <div class="v44-dashboard-copy v47-dashboard-copy">
+            <div class="v44-dashboard-title-row v47-dashboard-title-row"><h1>Общий прогресс</h1><button class="instruction-link" onclick="toggleGlobalInstruction()">как пользоваться</button></div>
+            <div class="v47-progress-summary"><span>Изучено</span><b>${progress.done} / ${progress.total}</b><em>информационных этапов</em></div>
+          </div>
+          ${compactProgressRing(progress.percent)}
+        </div>
+        <div class="architecture-metrics v47-metrics"><div><span>Баллы</span><b>${formatPoints(points)}</b></div><div><span>Уровень</span><b>${titleInfo.current.level} / 25</b></div><div><span>Достижение</span><b>${esc(achievement)}</b></div></div>
         ${globalInstructionPanelHtml()}
       `)}
       ${card('architecture-blocks-card v40-blocks-card', `<div class="section-heading-v35"><div><p class="eyebrow">структура библиотеки</p><h2>Выберите блок</h2></div><p>Архитектуры, системы, разборы и материалы собраны в единой структуре.</p></div>${primaryRoutesHtmlV40()}${secondaryBlocksHtmlV40()}`)}
@@ -6661,3 +6667,6 @@ if (document.readyState === 'loading') {
 
 /* v46 — UI package marker: extra-compact overall progress + lesson migration audit. */
 window.APP_UI_VERSION_V46 = 'v46-extra-compact-progress-audit-20260624';
+
+/* v47 — compact progress composition + aligned lesson stage cards. */
+window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
