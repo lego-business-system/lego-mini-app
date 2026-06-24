@@ -6658,3 +6658,6 @@ if (document.readyState === 'loading') {
     };
   }
 })();
+
+/* v46 — UI package marker: extra-compact overall progress + lesson migration audit. */
+window.APP_UI_VERSION_V46 = 'v46-extra-compact-progress-audit-20260624';
