@@ -1646,3 +1646,88 @@ html.theme-architecture .architecture-spinner{
   html.theme-architecture .track-card-arrow{display:none}
   html.theme-architecture .architecture-track-card em{grid-column:2}
 }
+
+
+/* =====================================================
+   v39 — самостоятельная практика и открытые уроки
+   ===================================================== */
+.self-study-hero,
+.practice-center-hero,
+.self-study-status-card{
+  border-color:rgba(22,168,154,.32)!important;
+}
+.self-study-checklist{
+  margin-top:16px;
+  padding:15px;
+  border-radius:18px;
+  background:linear-gradient(180deg,#F8FBFF,#FFFFFF);
+  border:1px solid var(--lego-border);
+}
+.self-study-checklist h3{
+  margin:0 0 10px;
+}
+.self-study-checklist label{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:11px 0;
+  border-bottom:1px solid var(--lego-gray-200);
+  color:var(--lego-navy);
+  font-size:14px;
+  line-height:1.4;
+  font-weight:750;
+}
+.self-study-checklist label:last-of-type{
+  border-bottom:0;
+}
+.self-study-checklist input{
+  width:20px;
+  min-width:20px;
+  height:20px;
+  margin:0;
+  padding:0;
+  accent-color:var(--lego-turquoise);
+}
+.self-study-checklist .btn{
+  margin-top:13px;
+}
+.self-study-completed-panel{
+  margin-top:16px;
+  padding:14px;
+  border-radius:18px;
+  background:var(--lego-turquoise-soft);
+  border:1px solid rgba(22,168,154,.30);
+}
+.self-study-completed-panel b{
+  display:block;
+  color:#086C63;
+  font-size:17px;
+  margin-bottom:5px;
+}
+.self-study-completed-panel p{
+  margin:0;
+  color:var(--lego-gray-700);
+}
+.self-study-complete-notice{
+  background:var(--lego-turquoise-soft)!important;
+  border-color:rgba(22,168,154,.30)!important;
+}
+.self-study-nav{
+  margin-top:10px;
+}
+.practice-center-hero .eyebrow,
+.self-study-hero .eyebrow,
+.self-study-status-card .eyebrow{
+  color:var(--lego-yellow)!important;
+}
+.lesson-row-v2.locked[onclick]{
+  cursor:pointer;
+}
+@media(max-width:420px){
+  .self-study-checklist{
+    padding:13px;
+  }
+  .self-study-checklist label{
+    font-size:13px;
+  }
+}

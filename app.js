@@ -4629,6 +4629,501 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 else installArchitectureObserverV35();
 
 
+
+/* =====================================================
+   v39 — открытые опубликованные уроки + самостоятельная практика
+
+   Безопасная модель совместимости:
+   1. Все подготовленные уроки доступны сразу.
+   2. Четвёртый этап называется «Самостоятельная работа».
+   3. Проверка администратором больше не требуется.
+   4. Для сохранения на сервере используется уже существующее событие
+      homework_submitted. Старые статусы submitted/revision/verified
+      считаются выполненной самостоятельной работой.
+   5. Таблицы Supabase и старые данные не удаляются.
+   ===================================================== */
+(function installOpenLessonsSelfStudyV39(){
+  window.OPEN_ALL_READY_LESSONS_V39 = true;
+  window.SELF_STUDY_MODE_V39 = true;
+
+  function selfStudyReplaceTextV39(value){
+    var out = String(value == null ? '' : value);
+    var pairs = [
+      [/ДЗ, проверка и управленческие действия/g, 'самостоятельная практика и управленческие действия'],
+      [/принятое домашнее задание/g, 'выполненная самостоятельная работа'],
+      [/принятое Домашнее задание/g, 'выполненная самостоятельная работа'],
+      [/Домашние задания/g, 'Самостоятельные работы'],
+      [/домашние задания/g, 'самостоятельные работы'],
+      [/Домашнее задание/g, 'Самостоятельная работа'],
+      [/домашнее задание/g, 'самостоятельная работа'],
+      [/Домашнего задания/g, 'Самостоятельной работы'],
+      [/домашнего задания/g, 'самостоятельной работы'],
+      [/Проверка ДЗ/g, 'Самостоятельная практика'],
+      [/проверка ДЗ/g, 'самостоятельная практика'],
+      [/ДЗ на проверке/g, 'Самостоятельная работа выполнена'],
+      [/ДЗ принято/g, 'Самостоятельная работа выполнена'],
+      [/ДЗ отправлено/g, 'Самостоятельная работа выполнена'],
+      [/Сдать ДЗ/g, 'Выполнить работу'],
+      [/сдать ДЗ/g, 'выполнить работу'],
+      [/К ДЗ/g, 'К практике'],
+      [/к ДЗ/g, 'к практике'],
+      [/перед ДЗ/g, 'перед практикой'],
+      [/форму сдачи/gi, 'форму самостоятельной работы']
+    ];
+    pairs.forEach(function(pair){ out = out.replace(pair[0], pair[1]); });
+    return out;
+  }
+  window.selfStudyReplaceTextV39 = selfStudyReplaceTextV39;
+
+  var shellBeforeSelfStudyV39 = window.shell;
+  window.shell = function(content, activeTab){
+    return shellBeforeSelfStudyV39(selfStudyReplaceTextV39(content), activeTab);
+  };
+
+  function selfStudyCompletedV39(code){
+    var p = (typeof getProgress === 'function' ? getProgress(code) : {}) || {};
+    var status = String(p.status || p.homework_status || '').toLowerCase();
+    var completedStatuses = [
+      'completed', 'homework_submitted', 'homework_revision', 'revision',
+      'rejected', 'needs_revision', 'verified', 'accepted'
+    ];
+    return Boolean(
+      p.self_study_completed ||
+      p.self_study_completed_at ||
+      p.homework_self_study_completed ||
+      p.homework_self_study_completed_at ||
+      p.lesson_completed ||
+      p.lesson_completed_at ||
+      p.homework_submitted ||
+      p.homework_submitted_at ||
+      p.homework_verified ||
+      p.homework_verified_at ||
+      p.homework_checked ||
+      p.homework_checked_at ||
+      p.homework_revision ||
+      p.homework_revision_at ||
+      p.completed_at ||
+      completedStatuses.includes(status)
+    );
+  }
+  window.isSelfStudyCompletedV39 = selfStudyCompletedV39;
+
+  var localPatchBeforeSelfStudyV39 = window.localPatchForEvent;
+  window.localPatchForEvent = function(event, payload){
+    var now = nowIso();
+    if (event === 'homework_submitted' || event === 'lesson_completed') {
+      return {
+        status: event === 'lesson_completed' ? 'completed' : 'homework_submitted',
+        current_step: 'completed',
+        homework_submitted: true,
+        homework_submitted_at: now,
+        homework_self_study_completed: true,
+        homework_self_study_completed_at: now,
+        self_study_completed: true,
+        self_study_completed_at: now,
+        completed_at: now,
+        homework_revision: false,
+        admin_review_comment: ''
+      };
+    }
+    return localPatchBeforeSelfStudyV39(event, payload || {});
+  };
+
+  window.homeworkStateV24 = function(code){
+    return selfStudyCompletedV39(code) ? 'verified' : 'none';
+  };
+
+  window.isStageDone = function(code, stage){
+    var p = (typeof getProgress === 'function' ? getProgress(code) : {}) || {};
+    if (stage === 'presentation') return Boolean(p.presentation_completed || p.presentation_completed_at);
+    if (stage === 'quiz') return Boolean(p.quiz_completed || p.quiz_completed_at);
+    if (stage === 'books') return Boolean(p.books_completed || p.books_completed_at);
+    if (stage === 'homeworkSubmitted' || stage === 'homeworkVerified') return selfStudyCompletedV39(code);
+    if (stage === 'homeworkRevision') return false;
+    return false;
+  };
+
+  window.lessonStageLabel = function(code){
+    if (selfStudyCompletedV39(code)) return 'Урок завершён';
+    if (isStageDone(code, 'books')) return 'Выполнить самостоятельную работу';
+    if (isStageDone(code, 'quiz')) return 'Изучить саммари';
+    if (isStageDone(code, 'presentation')) return 'Пройти тест';
+    return 'Начать презентацию';
+  };
+
+  window.lessonStageAction = function(code){
+    if (selfStudyCompletedV39(code)) return 'renderHomeworkStatus()';
+    if (isStageDone(code, 'books')) return 'renderHomework()';
+    if (isStageDone(code, 'quiz')) return 'startBooks()';
+    if (isStageDone(code, 'presentation')) return 'startQuiz(false)';
+    return 'startSlides()';
+  };
+
+  window.canOpenLesson = function(meta){
+    if (!meta) return false;
+    if (typeof isAdminMode === 'function' && isAdminMode()) return true;
+    return typeof isLessonPrepared === 'function' ? Boolean(isLessonPrepared(meta)) : String(meta.status || '').toLowerCase() === 'ready';
+  };
+
+  window.openLesson = async function(code){
+    var meta = getLessonMeta(code);
+    if (!meta) return;
+    if (!canOpenLesson(meta)) {
+      alert('Урок пока не опубликован. Он откроется автоматически после подготовки материалов.');
+      return;
+    }
+    state.selectedLessonCode = code;
+    state.selectedActivityKey = meta.activityKey;
+    localStorage.setItem('lego_selected_lesson', code);
+    localStorage.setItem('lego_selected_activity', meta.activityKey);
+    await loadLesson(code);
+    return renderLessonHub();
+  };
+
+  window.getActivityProgressInfo = function(key){
+    var lessons = activityLessons(key);
+    var readyLessons = lessons.filter(isLessonPrepared);
+    var openCount = readyLessons.length;
+    var readyCount = readyLessons.length;
+    var doneCount = readyLessons.filter(isLessonFullyCompleted).length;
+    var routeTotal = readyLessons.reduce(function(sum, lesson){ return sum + lessonAvailableStages(lesson).length; }, 0);
+    var stageDone = readyLessons.reduce(function(sum, lesson){ return sum + lessonCompletedStageCount(lesson.code, lesson); }, 0);
+    return {
+      lessons: lessons,
+      readyLessons: readyLessons,
+      openCount: openCount,
+      doneCount: doneCount,
+      readyCount: readyCount,
+      routeTotal: routeTotal,
+      stageDone: stageDone,
+      routePercent: routeTotal ? safePercent(stageDone / routeTotal * 100) : 0
+    };
+  };
+
+  window.currentActivityProgress = function(){
+    return getActivityProgressInfo(state.selectedActivityKey).routePercent;
+  };
+
+  window.studentHomeworkAlertCardV25 = function(){ return ''; };
+
+  function selfStudyCompletedDateV39(code){
+    var p = getProgress(code) || {};
+    var values = [
+      p.self_study_completed_at,
+      p.homework_self_study_completed_at,
+      p.homework_submitted_at,
+      p.homework_verified_at,
+      p.homework_checked_at,
+      p.homework_revision_at,
+      p.completed_at,
+      p.updated_at
+    ].filter(Boolean);
+    if (!values.length) return null;
+    values.sort(function(a,b){ return new Date(b).getTime() - new Date(a).getTime(); });
+    return values[0];
+  }
+  window.selfStudyCompletedDateV39 = selfStudyCompletedDateV39;
+
+  var stageCompletedDateBeforeSelfStudyV39 = window.stageCompletedDate;
+  window.stageCompletedDate = function(code, stage){
+    if (stage === 'homeworkSubmitted' || stage === 'homeworkVerified' || stage === 'selfStudy') {
+      return selfStudyCompletedV39(code) ? selfStudyCompletedDateV39(code) : null;
+    }
+    return stageCompletedDateBeforeSelfStudyV39(code, stage);
+  };
+
+  window.stageStatusText = function(code, stage){
+    if (stage === 'presentation') return isStageDone(code, 'presentation') ? 'пройдена' : '—';
+    if (stage === 'quiz') return isStageDone(code, 'quiz') ? 'пройден' : '—';
+    if (stage === 'books') return isStageDone(code, 'books') ? 'изучено' : '—';
+    if (stage === 'selfStudy' || stage === 'homeworkSubmitted' || stage === 'homeworkVerified') {
+      return selfStudyCompletedV39(code) ? 'выполнена' : '—';
+    }
+    return '—';
+  };
+
+  window.homeworkReviewNoticeHtml = function(code){
+    if (!selfStudyCompletedV39(code)) return '';
+    var date = selfStudyCompletedDateV39(code);
+    return `<div class="homework-review-notice accepted self-study-complete-notice"><b>Самостоятельная работа выполнена</b><p>Отмечено ${date ? shortDate(date) : 'сейчас'}. Проверка администратором не требуется.</p></div>`;
+  };
+
+  window.lessonTimelineHtml = function(code){
+    var rows = [
+      ['presentation', 'Презентация'],
+      ['quiz', 'Тест'],
+      ['books', 'Саммари'],
+      ['selfStudy', 'Самостоятельная работа']
+    ];
+    return card('lesson-timeline-card', `<h2>История прохождения</h2><div class="timeline-grid">${rows.map(function(row){
+      var stage = row[0];
+      var status = stageStatusText(code, stage);
+      var date = stageCompletedDate(code, stage);
+      var done = status !== '—';
+      return `<div class="timeline-row ${done ? 'done' : ''}"><span>${esc(row[1])}</span><b>${esc(status)}</b><em>${date ? shortDate(date) : '—'}</em></div>`;
+    }).join('')}</div>`);
+  };
+
+  function selfStudyForumButtonV39(){
+    var forumVisible = typeof forumVisibleInNavigationV38 === 'function' && forumVisibleInNavigationV38();
+    if (!forumVisible || typeof window.renderBusinessForum !== 'function') return '';
+    return `<button class="btn secondary" onclick="renderBusinessForum()">Обсудить вопрос в форуме</button>`;
+  }
+  window.selfStudyForumButtonV39 = selfStudyForumButtonV39;
+
+  window.globalInstructionPanelHtml = function(){
+    return `<div id="global-instruction-panel" class="global-instruction-panel" style="display:none">
+      <div class="instruction-head"><b>Как пользоваться системой</b><button onclick="toggleGlobalInstruction(false)" aria-label="Закрыть инструкцию">×</button></div>
+      <div class="instruction-steps">
+        <div><b>1. Выберите направление</b><p>В разделе «Я предприниматель» откройте подходящий вид деятельности. Все опубликованные уроки этого направления доступны сразу.</p></div>
+        <div><b>2. Сохраняйте рекомендуемый порядок</b><p>Внутри каждого урока маршрут остаётся последовательным: презентация → тест → саммари → самостоятельная работа.</p></div>
+        <div><b>3. Работайте в своём темпе</b><p>Открывайте любые опубликованные уроки. Система ничего не блокирует раз в неделю и не требует принятия предыдущей работы.</p></div>
+        <div><b>4. Выполняйте практику самостоятельно</b><p>Заполните шаблон, сформулируйте вывод, выберите действие и показатель проверки. Отправлять работу администратору не нужно.</p></div>
+        <div><b>5. Задавайте вопросы в форуме</b><p>После открытия Бизнес-форума вопросы по урокам и практике можно будет обсуждать с участниками. Форум не влияет на завершение урока.</p></div>
+      </div>
+    </div>`;
+  };
+
+  window.renderActivityLessons = function(key){
+    if (key && getActivity(key)) {
+      state.selectedActivityKey = key;
+      localStorage.setItem('lego_selected_activity', key);
+    }
+    var act = getActivity(state.selectedActivityKey) || state.catalog.activities[0];
+    var info = getActivityProgressInfo(act.key);
+    var readyNote = info.readyCount
+      ? 'Все опубликованные уроки доступны сразу. Рекомендуемый порядок сохранён, но недельных блокировок и зависимости от проверки работы больше нет.'
+      : 'Материалы направления пока находятся в подготовке.';
+    var html = `
+      ${card('blue-card-v2 activity-progress-head', `<p class="eyebrow">Я предприниматель</p><h1>${esc(act.title)}</h1><p>${esc(activityIntroText(act))}</p><p class="small">${esc(readyNote)}</p><div class="step-progress-block"><div class="step-summary-line"><span>Прогресс опубликованных уроков</span><b>${info.routePercent}%</b></div>${progressBarHtml(info.routePercent,'on-dark')}</div>`)}
+      ${typeof entrepreneurCurrentStepCard === 'function' ? entrepreneurCurrentStepCard() : ''}
+      ${card('', `<div class="activity-toolbar"><button class="btn secondary" onclick="renderLearning()">К видам деятельности</button></div><h2>Уроки направления</h2><p>Опубликовано: <b>${info.readyCount}</b>. Доступно сейчас: <b>${info.openCount}</b>. Пройдено: <b>${info.doneCount}</b>.</p><div class="lesson-list-v2">${info.lessons.map(renderLessonRow).join('')}</div>`)}
+    `;
+    shell(html, 'learning');
+  };
+
+  window.renderLessonRow = function(lesson){
+    var prepared = isLessonPrepared(lesson);
+    var progress = lessonStageProgressInfo(lesson.code);
+    var status = prepared ? lessonStageLabel(lesson.code) : 'в подготовке';
+    return `<button class="lesson-row-v2 ${prepared ? '' : 'locked'}" ${prepared ? `onclick="openLesson('${lesson.code}')"` : 'disabled'}>
+      <div><b>${String(lesson.number).padStart(2,'0')}. ${esc(lesson.title)}</b><p>${esc(lesson.activityTitle)} · ${esc(status)} · ${progress.percent}%</p><div class="lesson-row-progress">${progressBarHtml(progress.percent,'')}</div></div>
+      <span>${prepared ? (isLessonFullyCompleted(lesson) ? '✓' : '→') : '🔒'}</span>
+    </button>`;
+  };
+
+  window.continueLessonFromProgress = async function(code){
+    var meta = getLessonMeta(code);
+    if (!meta) return;
+    if (!canOpenLesson(meta)) { alert('Урок пока не опубликован.'); return; }
+    state.selectedLessonCode = code;
+    state.selectedActivityKey = meta.activityKey;
+    localStorage.setItem('lego_selected_lesson', code);
+    localStorage.setItem('lego_selected_activity', meta.activityKey);
+    await loadLesson(code);
+    if (selfStudyCompletedV39(code)) return renderHomeworkStatus();
+    if (isStageDone(code, 'books')) return renderHomework();
+    if (isStageDone(code, 'quiz')) return startBooks();
+    if (isStageDone(code, 'presentation')) return startQuiz(false);
+    return startSlides();
+  };
+
+  window.renderLessonHub = async function(){
+    try {
+      var lesson = await loadLesson(state.selectedLessonCode);
+      var meta = getLessonMeta(state.selectedLessonCode);
+      var activityKey = meta ? meta.activityKey : (lesson.activityKey || state.selectedActivityKey);
+      var adminService = isAdminMode() && lesson.passportText
+        ? `<details class="admin-details"><summary>Служебное описание урока</summary><pre class="text-pre">${esc(lesson.passportText || '')}</pre></details>`
+        : '';
+      var practiceDone = selfStudyCompletedV39(meta.code);
+      var practiceLocked = !isStageDone(meta.code, 'books') && !practiceDone && !isAdminMode();
+      var html = `
+        ${card('blue-card-v2 lesson-head-card', `<p class="eyebrow">${esc(lesson.activityTitle)} · урок ${String(lesson.number).padStart(2,'0')}</p><h1>${esc(lesson.title)}</h1><div class="lesson-meta-chips"><span>${esc(lesson.activityTitle)}</span><span>Урок ${String(lesson.number).padStart(2,'0')}</span></div><p>${esc(cleanLessonDescription(lesson))}</p>${lessonProgressMini(meta.code)}${homeworkReviewNoticeHtml(meta.code)}<button class="btn primary" onclick="continueLessonFromProgress('${meta.code}')">Продолжить с последнего места</button>`)}
+        ${lessonOverviewCard(lesson)}
+        <div class="stage-grid-v2">
+          ${stageCard('presentation','Презентация','Информационная часть урока',isStageDone(meta.code,'presentation'),'startSlides()')}
+          ${stageCard('quiz','Тест','Проверка понимания материала',isStageDone(meta.code,'quiz'),'startQuiz(false)',!isStageDone(meta.code,'presentation') && !isAdminMode())}
+          ${stageCard('books','Саммари','Инструменты и идеи из книг',isStageDone(meta.code,'books'),'startBooks()',!isStageDone(meta.code,'quiz') && !isAdminMode())}
+          ${stageCard('homework','Самостоятельная работа','Примените урок к своему бизнесу',practiceDone,'renderHomework()',practiceLocked,practiceDone?'accepted':'')}
+        </div>
+        ${lessonTimelineHtml(meta.code)}
+        ${typeof lessonInsightCard === 'function' ? lessonInsightCard() : ''}
+        ${card('', `<div class="grid-v2"><button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">← К выбору уроков</button><button class="btn secondary" onclick="renderHome()">На главную</button></div>`)}
+        ${adminService}
+      `;
+      shell(html, 'learning');
+    } catch(error) {
+      emergencyScreen(error.message || 'LESSON_HUB_ERROR');
+    }
+  };
+
+  window.toggleSelfStudyReadyV39 = function(){
+    var checks = Array.from(document.querySelectorAll('[data-self-study-check="1"]'));
+    var button = document.getElementById('self-study-complete-button');
+    if (!button) return;
+    button.disabled = checks.length < 3 || !checks.every(function(input){ return input.checked; });
+  };
+
+  window.markSelfStudyCompletedV39 = async function(){
+    var checks = Array.from(document.querySelectorAll('[data-self-study-check="1"]'));
+    if (checks.length >= 3 && !checks.every(function(input){ return input.checked; })) {
+      alert('Сначала подтвердите три пункта самопроверки.');
+      return;
+    }
+    var code = state.selectedLessonCode;
+    var now = nowIso();
+    await remoteSave('homework_submitted', {
+      selfStudy: true,
+      completedAt: now,
+      source: 'self_study_v39'
+    });
+    saveLocalProgress(code, {
+      status: 'homework_submitted',
+      current_step: 'completed',
+      homework_submitted: true,
+      homework_submitted_at: now,
+      homework_self_study_completed: true,
+      homework_self_study_completed_at: now,
+      self_study_completed: true,
+      self_study_completed_at: now,
+      completed_at: now,
+      homework_revision: false,
+      admin_review_comment: ''
+    });
+    renderHomeworkStatus();
+  };
+  window.markHomeworkSubmitted = window.markSelfStudyCompletedV39;
+
+  function sanitizeSelfStudyInstructionV39(html){
+    var out = selfStudyReplaceTextV39(cleanStudentHtml(html || ''));
+    out = out
+      .replace(/отправьте\s+(?:форму|ссылку)[^.]*провер[^.]*\.?/gi, 'Сохраните полученный результат у себя.')
+      .replace(/откройте\s+форму\s+самостоятельной\s+работы/gi, 'зафиксируйте итог самостоятельной работы')
+      .replace(/после\s+проверки[^.]*\.?/gi, '')
+      .replace(/проверяющ(?:ий|его|ему|им)[^.]*\.?/gi, '');
+    return out;
+  }
+
+  window.renderHomework = async function(){
+    var lesson = await loadLesson(state.selectedLessonCode);
+    var code = state.selectedLessonCode;
+    var activityKey = lesson.activityKey || state.selectedActivityKey;
+    var completed = selfStudyCompletedV39(code);
+    if (!isAdminMode() && !isStageDone(code, 'books') && !completed) {
+      shell(`${card('blue-card-v2', `<h1>Самостоятельная работа пока закрыта</h1><p>Сначала завершите презентацию, тест и саммари внутри этого урока.</p>`)}${card('', `<div class="grid-v2">${actionButton('К уроку','renderLessonHub()','primary')}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button></div>`)}`,'homework');
+      return;
+    }
+    if (!completed) await remoteSave('homework_started', { selfStudy: true });
+    var hw = lesson.homework || {};
+    var tableLabel = selfStudyReplaceTextV39(hw.buttonLabel || 'Открыть рабочий шаблон');
+    var instruction = sanitizeSelfStudyInstructionV39(hw.instructionHtml || `<h3>Практическая часть урока</h3><p>Заполните рабочий шаблон по фактическим данным своего бизнеса. Определите главное ограничение, действие на ближайший цикл и показатель проверки.</p>`);
+    var exampleUrl = hw.exampleUrl || hw.exampleSheetUrl || hw.sampleUrl || hw.exampleFileUrl || '';
+    var completePanel = completed
+      ? `<div class="self-study-completed-panel"><b>Работа отмечена выполненной</b><p>Вы можете вернуться к шаблону, уточнить вывод или обсудить вопрос в форуме.</p></div>`
+      : `<div class="self-study-checklist"><h3>Самопроверка перед завершением</h3>
+          <label><input type="checkbox" data-self-study-check="1" onchange="toggleSelfStudyReadyV39()"><span>Я заполнил рабочий шаблон по своему бизнесу.</span></label>
+          <label><input type="checkbox" data-self-study-check="1" onchange="toggleSelfStudyReadyV39()"><span>Я сформулировал главный вывод по ситуации.</span></label>
+          <label><input type="checkbox" data-self-study-check="1" onchange="toggleSelfStudyReadyV39()"><span>Я выбрал конкретное действие и показатель проверки.</span></label>
+          <button class="btn primary" id="self-study-complete-button" onclick="markSelfStudyCompletedV39()" disabled>Отметить работу выполненной</button>
+        </div>`;
+    shell(`${card('blue-card-v2 self-study-hero', `<p class="eyebrow">практика</p><h1>${esc(selfStudyReplaceTextV39(hw.title || 'Самостоятельная работа'))}</h1><p>Работа выполняется самостоятельно. Отправлять ссылку и ждать проверки администратора не нужно.</p>`)}
+      ${homeworkReviewNoticeHtml(code)}
+      ${card('', `${instruction}<div class="grid-v2">${externalButton(tableLabel,homeworkSheetUrl(code, hw),'primary')}${exampleUrl ? externalButton('Открыть заполненный пример', exampleUrl, 'secondary') : ''}${selfStudyForumButtonV39()}</div>${completePanel}<div class="grid-v2 self-study-nav"><button class="btn secondary" onclick="renderLessonHub()">← Вернуться к уроку</button><button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button></div>`)}
+      ${isAdminMode() ? card('', `<details class="admin-details"><summary>Служебное ТЗ таблицы и критерии</summary><h3>ТЗ таблицы</h3><pre class="text-pre">${esc(hw.tableTzText || 'ТЗ таблицы будет добавлено позже.')}</pre><h3>Критерии самопроверки</h3><pre class="text-pre">${esc(hw.gradingText || '')}</pre></details>`) : ''}`,'homework');
+  };
+
+  window.renderHomeworkStatus = function(){
+    var code = state.selectedLessonCode;
+    var meta = getLessonMeta(code);
+    var activityKey = meta ? meta.activityKey : state.selectedActivityKey;
+    if (!selfStudyCompletedV39(code)) return renderHomework();
+    var date = selfStudyCompletedDateV39(code);
+    shell(`${card('blue-card-v2 self-study-status-card', `<p class="eyebrow">урок завершён</p><h1>Самостоятельная работа выполнена</h1><p>Отмечено ${date ? shortDate(date) : 'сейчас'}. Проверка администратором не требуется.</p>`)}${lessonTimelineHtml(code)}${card('', `<div class="grid-v2"><button class="btn primary" onclick="renderLessonHub()">К уроку</button><button class="btn secondary" onclick="renderHomework()">Открыть работу</button>${selfStudyForumButtonV39()}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button></div>`)}`,'homework');
+  };
+
+  window.openSelfStudyV39 = async function(code){
+    var meta = getLessonMeta(code);
+    if (!meta || !canOpenLesson(meta)) return;
+    state.selectedLessonCode = code;
+    state.selectedActivityKey = meta.activityKey;
+    localStorage.setItem('lego_selected_lesson', code);
+    localStorage.setItem('lego_selected_activity', meta.activityKey);
+    await loadLesson(code);
+    if (isStageDone(code, 'books') || selfStudyCompletedV39(code) || isAdminMode()) return renderHomework();
+    return renderLessonHub();
+  };
+
+  window.renderHomeworkCenter = function(){
+    var lessons = (state.catalog?.lessons || []).filter(isLessonPrepared);
+    shell(`${card('blue-card-v2 practice-center-hero', `<p class="eyebrow">практика</p><h1>Самостоятельные работы</h1><p>Работы не отправляются на проверку. Завершите саммари, примените материал к своему бизнесу и отметьте результат самостоятельно.</p>`)}${card('', `<div class="lesson-list-v2">${lessons.map(function(lesson){
+      var completed = selfStudyCompletedV39(lesson.code);
+      var ready = isStageDone(lesson.code, 'books') || completed || isAdminMode();
+      var status = completed ? 'выполнена' : (ready ? 'доступна' : 'сначала пройдите саммари');
+      return `<button class="lesson-row-v2 ${ready ? '' : 'locked'}" onclick="openSelfStudyV39('${lesson.code}')"><div><b>${esc(lesson.title)}</b><p>${esc(lesson.activityTitle)} · ${esc(status)}</p></div><span>${completed ? '✓' : (ready ? '→' : '○')}</span></button>`;
+    }).join('')}</div>`)}`,'homework');
+  };
+
+  window.doneSummaryHtml = function(){
+    var lessons = readyCoreLessons();
+    var presentation = lessons.filter(function(l){ return isStageDone(l.code,'presentation'); }).length;
+    var quiz = lessons.filter(function(l){ return isStageDone(l.code,'quiz'); }).length;
+    var books = lessons.filter(function(l){ return isStageDone(l.code,'books'); }).length;
+    var practice = lessons.filter(function(l){ return selfStudyCompletedV39(l.code); }).length;
+    var insights = typeof loadInsights === 'function' ? loadInsights().length : 0;
+    var ch = typeof getChallengeState === 'function' ? getChallengeState() : {};
+    return card('done-summary-card', `<h2>Что уже сделано</h2><div class="done-grid"><div><span>Презентации</span><b>${presentation}</b></div><div><span>Тесты</span><b>${quiz}</b></div><div><span>Саммари</span><b>${books}</b></div><div><span>Самостоятельные работы</span><b>${practice}</b></div><div><span>Книги челленджа</span><b>${Number(ch.passedBooks || 0)}</b></div><div><span>Мои выводы</span><b>${insights}</b></div></div>`);
+  };
+
+  var renderProfileBeforeSelfStudyV39 = window.renderProfile;
+  window.renderProfile = function(){
+    var result = renderProfileBeforeSelfStudyV39();
+    setTimeout(function(){
+      var root = document.getElementById('app');
+      if (!root) return;
+      Array.from(root.querySelectorAll('p,span,b,h1,h2,h3,button')).forEach(function(el){
+        if (el.children.length) return;
+        var next = selfStudyReplaceTextV39(el.textContent);
+        if (next !== el.textContent) el.textContent = next;
+      });
+    }, 0);
+    return result;
+  };
+
+  window.renderAdmin = function(){
+    if (!isAdminUser()) { alert('Нет прав администратора.'); return; }
+    var forumBlock = typeof window.renderBusinessForum === 'function'
+      ? card('', `<h2>Бизнес-форум</h2><p>Форум используется для вопросов и обсуждений. Пока он закрыт для учеников, администратор может продолжать тестирование.</p><button class="btn primary" onclick="renderBusinessForum()">Открыть форум</button>`)
+      : '';
+    shell(`${card('blue-card-v2', `<h1>Панель администратора</h1><p>Все опубликованные уроки доступны ученикам сразу. Самостоятельные работы больше не требуют проверки.</p>`)}
+      ${card('', `<h2>100 книг за 100 дней</h2><p>Можно проверить книги, мини-тесты и восстановление зачётов.</p><div class="grid-v2"><button class="btn primary" onclick="books100AdminRepairAllV25()">Проверить и восстановить зачёты книг</button><button class="btn secondary" onclick="renderBookChallenge()">Открыть книги челленджа</button></div>`)}
+      ${forumBlock}
+      ${card('', `<h2>Все уроки</h2><p>Значок «в подготовке» получают только неопубликованные материалы. Все остальные уроки доступны ученикам без недельного ожидания.</p><div class="lesson-list-v2">${(state.catalog?.lessons || []).map(function(lesson){
+        var ready = isLessonPrepared(lesson);
+        return `<button class="lesson-row-v2 ${ready ? '' : 'locked'}" ${ready ? `onclick="openLesson('${lesson.code}')"` : 'disabled'}><div><b>${esc(lesson.code)} · ${esc(lesson.title)}</b><p>${esc(lesson.activityTitle)} · ${ready ? 'опубликован' : 'в подготовке'} · ${lesson.slidesCount} слайдов · ${lesson.quizCount} вопросов · ${lesson.bookScreensCount} саммари</p></div><span>${ready ? '→' : '🔒'}</span></button>`;
+      }).join('')}</div>`)}`,'profile');
+  };
+
+  window.bottomNav = function(active){
+    if (typeof hasVerifiedAccessV32 === 'function' && !hasVerifiedAccessV32()) return '';
+    var architecture = typeof architectureModeV35 === 'function' && architectureModeV35();
+    var showForum = typeof forumVisibleInNavigationV38 === 'function' && forumVisibleInNavigationV38();
+    function item(key, label, fn, fallbackIcon){
+      var icon = architecture && typeof architectureNavIconV35 === 'function'
+        ? `<span class="arch-nav-icon">${architectureNavIconV35(key)}</span>`
+        : `<span>${fallbackIcon}</span>`;
+      return `<button class="bottom-item ${active===key?'active':''}" onclick="safeNavigateV32('${fn}')">${icon}<b>${label}</b></button>`;
+    }
+    return `<nav class="bottom-nav-v2 ${showForum ? 'bottom-nav-v2-five' : 'bottom-nav-v2-four'}" aria-label="Основное меню">
+      ${item('home','Главная','renderHome','⌂')}
+      ${item('learning','Уроки','renderLearning','▣')}
+      ${item('homework','Практика','renderHomeworkCenter','✓')}
+      ${showForum ? item('forum','Форум','renderBusinessForum','◎') : ''}
+      ${item('profile','Профиль','renderProfile','○')}
+    </nav>`;
+  };
+})();
+
 (function protectScreensV32(){
   const protectedNames = [
     "renderHome",
