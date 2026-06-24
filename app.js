@@ -5005,6 +5005,20 @@ else installArchitectureObserverV35();
     return out;
   }
 
+  function sanitizeSelfStudyInstructionV41(html){
+    var out = cleanStudentHtml(html || '');
+    if (typeof selfStudyReplaceTextV39 === 'function') out = selfStudyReplaceTextV39(out);
+    return String(out)
+      .replace(/отправ(?:ьте|ить|ляется|лена|лено)[^.<]*(?:форму|ссылку|работу)[^.<]*(?:провер[^.<]*)?[.]?/gi, '')
+      .replace(/сдат(?:ь|ься|е)[^.<]*(?:работу|ДЗ)[^.<]*[.]?/gi, '')
+      .replace(/(?:администратор|проверяющ(?:ий|его|ему|им))[^.<]*[.]?/gi, '')
+      .replace(/(?:принятие|приёмка)\s+(?:работы|ДЗ)[^.<]*[.]?/gi, '')
+      .replace(/<p>\s*<\/p>/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+  window.sanitizeSelfStudyInstructionV41 = sanitizeSelfStudyInstructionV41;
+
   window.renderHomework = async function(){
     var lesson = await loadLesson(state.selectedLessonCode);
     var code = state.selectedLessonCode;
@@ -5452,6 +5466,375 @@ else installArchitectureObserverV35();
   }
 })();
 
+
+
+/* =====================================================
+   v41 — понятные тексты, меню слева, три нижних пункта,
+   запланированный общий прогресс и закрытые будущие разделы
+   ===================================================== */
+(function installArchitectureClarityV41(){
+  window.APP_UI_VERSION_V41 = 'v41-clarity-left-menu-planned-progress-20260624';
+  window.PLANNED_ENTREPRENEUR_LESSONS_V41 = 60;
+  window.PLANNED_NO_BUSINESS_LESSONS_V41 = 10;
+  window.PLANNED_EMPLOYEE_LESSONS_V41 = 10;
+  window.PLANNED_LESSONS_TOTAL_V41 = 80;
+  window.PLANNED_STAGES_TOTAL_V41 = 320;
+
+  function architectureV41Enabled(){
+    return typeof architectureModeV35 === 'function' && architectureModeV35();
+  }
+
+  function cleanLegacyExplanationsV41(value){
+    var out = String(value == null ? '' : value);
+    var pairs = [
+      [/Проверка администратором не требуется\.?/gi, ''],
+      [/Отправлять ссылку и ждать проверки администратора не нужно\.?/gi, 'Заполните рабочий шаблон, сформулируйте вывод и выберите действие с показателем проверки.'],
+      [/Система ничего не блокирует раз в неделю и не требует принятия предыдущей работы\.?/gi, 'Открывайте любой опубликованный урок и проходите его в удобном темпе.'],
+      [/Рекомендуемый порядок сохранён, но недельных блокировок и зависимости от проверки работы больше нет\.?/gi, 'Нумерация уроков показывает рекомендуемый порядок прохождения.'],
+      [/Самостоятельные работы больше не требуют проверки\.?/gi, 'Самостоятельные работы помогают применить материал к своему бизнесу.'],
+      [/Все остальные уроки доступны ученикам без недельного ожидания\.?/gi, 'Опубликованные уроки доступны ученикам.'],
+      [/Форум не влияет на завершение урока\.?/gi, ''],
+      [/Работы не отправляются на проверку\.?/gi, ''],
+      [/Старую пропорцию мы пока сохраняем, чтобы не пересчитать уже накопленные баллы и уровни\.?/gi, ''],
+      [/После проверки (?:администратором|работы|самостоятельной работы|ДЗ)[^.]*\.?/gi, ''],
+      [/ждать проверки (?:администратора|работы|ДЗ)[^.]*\.?/gi, '']
+    ];
+    pairs.forEach(function(pair){ out = out.replace(pair[0], pair[1]); });
+    return out.replace(/\s{2,}/g,' ').replace(/\s+([.,;:])/g,'$1').trim();
+  }
+  window.cleanLegacyExplanationsV41 = cleanLegacyExplanationsV41;
+
+  /* Общий прогресс считается от всей запланированной программы:
+     60 уроков предпринимателя + 10 базовых + 10 для сотрудников. */
+  window.globalStageProgress = function(){
+    var lessons = (state.catalog && Array.isArray(state.catalog.lessons)) ? state.catalog.lessons : [];
+    var done = lessons.reduce(function(sum, lesson){
+      return sum + (typeof lessonCompletedStageCount === 'function' ? lessonCompletedStageCount(lesson.code, lesson) : 0);
+    }, 0);
+    var total = window.PLANNED_STAGES_TOTAL_V41;
+    return {
+      done: Math.max(0, Math.min(total, done)),
+      total: total,
+      percent: total ? safePercent(done / total * 100) : 0,
+      plannedLessons: window.PLANNED_LESSONS_TOTAL_V41
+    };
+  };
+  window.totalProgressPercent = function(){ return globalStageProgress().percent; };
+
+  /* Внутри каждого вида бизнеса прогресс считается от плана в 10 уроков. */
+  window.getActivityProgressInfo = function(key){
+    var lessons = activityLessons(key);
+    var readyLessons = lessons.filter(isLessonPrepared);
+    var routeTotal = 10 * 4;
+    var stageDone = lessons.reduce(function(sum, lesson){
+      return sum + lessonCompletedStageCount(lesson.code, lesson);
+    }, 0);
+    return {
+      lessons: lessons,
+      readyLessons: readyLessons,
+      openCount: readyLessons.length,
+      readyCount: readyLessons.length,
+      doneCount: readyLessons.filter(isLessonFullyCompleted).length,
+      routeTotal: routeTotal,
+      stageDone: stageDone,
+      routePercent: routeTotal ? safePercent(stageDone / routeTotal * 100) : 0
+    };
+  };
+  window.currentActivityProgress = function(){
+    return getActivityProgressInfo(state.selectedActivityKey).routePercent;
+  };
+
+  window.globalInstructionPanelHtml = function(){
+    return `<div id="global-instruction-panel" class="global-instruction-panel" style="display:none">
+      <div class="instruction-head"><b>Как пользоваться системой</b><button onclick="toggleGlobalInstruction(false)" aria-label="Закрыть инструкцию">×</button></div>
+      <div class="instruction-steps">
+        <div><b>1. Выберите нужный блок</b><p>Основной учебный маршрут находится в разделе «Я предприниматель». Дополнительные разделы открываются по мере публикации материалов.</p></div>
+        <div><b>2. Откройте направление и урок</b><p>Выберите вид бизнеса и откройте любой опубликованный урок. Нумерация показывает рекомендуемую последовательность.</p></div>
+        <div><b>3. Пройдите четыре этапа</b><p>В каждом уроке последовательно изучаются презентация, тест, саммари и самостоятельная работа.</p></div>
+        <div><b>4. Перенесите материал в свой бизнес</b><p>Заполните рабочий шаблон, сформулируйте вывод, выберите конкретное действие и показатель проверки результата.</p></div>
+        <div><b>5. Фиксируйте результат</b><p>Отмечайте завершённые этапы и возвращайтесь к сохранённым выводам, чтобы видеть движение по общей программе.</p></div>
+      </div>
+    </div>`;
+  };
+
+  window.homeworkReviewNoticeHtml = function(code){
+    if (!(typeof isSelfStudyCompletedV39 === 'function' && isSelfStudyCompletedV39(code))) return '';
+    var date = typeof selfStudyCompletedDateV39 === 'function' ? selfStudyCompletedDateV39(code) : null;
+    return `<div class="homework-review-notice accepted self-study-complete-notice"><b>Самостоятельная работа выполнена</b><p>Отмечено ${date ? shortDate(date) : 'сейчас'}. Результат сохранён в прогрессе урока.</p></div>`;
+  };
+
+  window.renderActivityLessons = function(key){
+    if (key && getActivity(key)) {
+      state.selectedActivityKey = key;
+      localStorage.setItem('lego_selected_activity', key);
+    }
+    var act = getActivity(state.selectedActivityKey) || state.catalog.activities[0];
+    var info = getActivityProgressInfo(act.key);
+    var readyNote = info.readyCount
+      ? 'Открывайте любой опубликованный урок. Нумерация показывает рекомендуемый порядок прохождения.'
+      : 'В этом направлении пока нет опубликованных уроков.';
+    var html = `
+      ${card('blue-card-v2 activity-progress-head', `<p class="eyebrow">Я предприниматель</p><h1>${esc(act.title)}</h1><p>${esc(activityIntroText(act))}</p><p class="small">${esc(readyNote)}</p><div class="step-progress-block"><div class="step-summary-line"><span>Прогресс направления</span><b>${info.routePercent}%</b></div>${progressBarHtml(info.routePercent,'on-dark')}</div>`)}
+      ${typeof entrepreneurCurrentStepCard === 'function' ? entrepreneurCurrentStepCard() : ''}
+      ${card('', `<div class="activity-toolbar"><button class="btn secondary" onclick="renderLearning()">К видам деятельности</button></div><h2>Уроки направления</h2><p>Опубликовано: <b>${info.readyCount} из 10</b>. Завершено уроков: <b>${info.doneCount}</b>.</p><div class="lesson-list-v2">${info.lessons.map(renderLessonRow).join('')}</div>`)}
+    `;
+    shell(html, 'learning');
+  };
+
+  window.renderHomework = async function(){
+    var lesson = await loadLesson(state.selectedLessonCode);
+    var code = state.selectedLessonCode;
+    var activityKey = lesson.activityKey || state.selectedActivityKey;
+    var completed = typeof isSelfStudyCompletedV39 === 'function' && isSelfStudyCompletedV39(code);
+    if (!isAdminMode() && !isStageDone(code, 'books') && !completed) {
+      shell(`${card('blue-card-v2', `<h1>Самостоятельная работа пока закрыта</h1><p>Сначала завершите презентацию, тест и саммари внутри этого урока.</p>`)}${card('', `<div class="grid-v2">${actionButton('К уроку','renderLessonHub()','primary')}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button></div>`)}`,'homework');
+      return;
+    }
+    if (!completed) await remoteSave('homework_started', { selfStudy: true });
+    var hw = lesson.homework || {};
+    var tableLabel = typeof selfStudyReplaceTextV39 === 'function' ? selfStudyReplaceTextV39(hw.buttonLabel || 'Открыть рабочий шаблон') : (hw.buttonLabel || 'Открыть рабочий шаблон');
+    var instruction = sanitizeSelfStudyInstructionV41(hw.instructionHtml || `<h3>Практическая часть урока</h3><p>Заполните рабочий шаблон, сформулируйте вывод, выберите действие и показатель проверки.</p>`);
+    var exampleUrl = hw.exampleUrl || hw.exampleSheetUrl || hw.sampleUrl || hw.exampleFileUrl || '';
+    var completePanel = completed
+      ? `<div class="self-study-completed-panel"><b>Работа отмечена выполненной</b><p>Вы можете вернуться к шаблону и уточнить свой вывод.</p></div>`
+      : `<div class="self-study-checklist"><h3>Самопроверка перед завершением</h3>
+          <label><input type="checkbox" data-self-study-check="1" onchange="toggleSelfStudyReadyV39()"><span>Я заполнил рабочий шаблон по своему бизнесу.</span></label>
+          <label><input type="checkbox" data-self-study-check="1" onchange="toggleSelfStudyReadyV39()"><span>Я сформулировал главный вывод по ситуации.</span></label>
+          <label><input type="checkbox" data-self-study-check="1" onchange="toggleSelfStudyReadyV39()"><span>Я выбрал конкретное действие и показатель проверки.</span></label>
+          <button class="btn primary" id="self-study-complete-button" onclick="markSelfStudyCompletedV39()" disabled>Отметить работу выполненной</button>
+        </div>`;
+    shell(`${card('blue-card-v2 self-study-hero', `<p class="eyebrow">практика</p><h1>${esc(typeof selfStudyReplaceTextV39 === 'function' ? selfStudyReplaceTextV39(hw.title || 'Самостоятельная работа') : (hw.title || 'Самостоятельная работа'))}</h1><p>Заполните рабочий шаблон, сформулируйте вывод и выберите действие с показателем проверки.</p>`)}
+      ${homeworkReviewNoticeHtml(code)}
+      ${card('', `${instruction}<div class="grid-v2">${externalButton(tableLabel,homeworkSheetUrl(code, hw),'primary')}${exampleUrl ? externalButton('Открыть заполненный пример', exampleUrl, 'secondary') : ''}</div>${completePanel}<div class="grid-v2 self-study-nav"><button class="btn secondary" onclick="renderLessonHub()">← Вернуться к уроку</button><button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button></div>`)}
+      ${isAdminMode() ? card('', `<details class="admin-details"><summary>Служебное ТЗ таблицы и критерии</summary><h3>ТЗ таблицы</h3><pre class="text-pre">${esc(hw.tableTzText || 'ТЗ таблицы будет добавлено позже.')}</pre><h3>Критерии самопроверки</h3><pre class="text-pre">${esc(hw.gradingText || '')}</pre></details>`) : ''}`,'homework');
+  };
+
+  window.renderHomeworkStatus = function(){
+    var code = state.selectedLessonCode;
+    var meta = getLessonMeta(code);
+    var activityKey = meta ? meta.activityKey : state.selectedActivityKey;
+    if (!(typeof isSelfStudyCompletedV39 === 'function' && isSelfStudyCompletedV39(code))) return renderHomework();
+    var date = typeof selfStudyCompletedDateV39 === 'function' ? selfStudyCompletedDateV39(code) : null;
+    shell(`${card('blue-card-v2 self-study-status-card', `<p class="eyebrow">урок завершён</p><h1>Самостоятельная работа выполнена</h1><p>Отмечено ${date ? shortDate(date) : 'сейчас'}. Результат сохранён.</p>`)}${lessonTimelineHtml(code)}${card('', `<div class="grid-v2"><button class="btn primary" onclick="renderLessonHub()">К уроку</button><button class="btn secondary" onclick="renderHomework()">Открыть работу</button><button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button></div>`)}`,'homework');
+  };
+
+  window.renderHomeworkCenter = function(){
+    var lessons = (state.catalog && Array.isArray(state.catalog.lessons) ? state.catalog.lessons : []).filter(isLessonPrepared);
+    shell(`${card('blue-card-v2 practice-center-hero', `<p class="eyebrow">практика</p><h1>Самостоятельные работы</h1><p>Применяйте материалы уроков к своему бизнесу и фиксируйте выполненные работы.</p>`)}${card('', `<div class="lesson-list-v2">${lessons.map(function(lesson){
+      var completed = typeof isSelfStudyCompletedV39 === 'function' && isSelfStudyCompletedV39(lesson.code);
+      var ready = isStageDone(lesson.code,'books') || completed || isAdminMode();
+      var status = completed ? 'выполнена' : (ready ? 'можно выполнить' : 'откроется после саммари');
+      return `<button class="lesson-row-v2 ${ready ? '' : 'locked'}" ${ready ? `onclick="openSelfStudyV39('${lesson.code}')"` : `onclick="openLesson('${lesson.code}')"`}><div><b>${esc(lesson.title)}</b><p>${esc(lesson.activityTitle)} · ${status}</p></div><span>${completed ? '✓' : (ready ? '→' : '🔒')}</span></button>`;
+    }).join('')}</div>`)}`,'homework');
+  };
+
+  window.renderProgressRulesV40 = function(){
+    var gp = globalStageProgress();
+    shell(`${card('blue-card-v2 progress-rules-hero-v40', `<p class="eyebrow">показатели системы</p><h1>Как считаются прогресс и баллы</h1><p>Общий прогресс показывает прохождение запланированной учебной программы. Баллы отражают выполненные действия внутри уроков и челленджа книг.</p>`)}
+      ${card('', `<h2>Общий прогресс</h2><div class="planned-progress-breakdown-v41"><div><b>60 уроков</b><span>Я предприниматель</span></div><div><b>10 уроков</b><span>Нет своего бизнеса</span></div><div><b>10 уроков</b><span>Я сотрудник</span></div></div><p>Всего в программе заложено <b>80 уроков</b>. Каждый урок состоит из четырёх этапов, поэтому полный план равен <b>320 этапам</b>.</p><div class="score-rule-grid-v40 equal"><div><span>25%</span><b>Презентация</b></div><div><span>25%</span><b>Тест</b></div><div><span>25%</span><b>Саммари</b></div><div><span>25%</span><b>Самостоятельная работа</b></div></div><p class="small">Сейчас выполнено: <b>${gp.done} из ${gp.total}</b> этапов — <b>${gp.percent}%</b>.</p>`)}
+      ${card('', `<h2>Баллы за один урок</h2><div class="score-rule-grid-v40"><div><span>10</span><b>Презентация</b></div><div><span>10</span><b>Тест</b></div><div><span>10</span><b>Саммари</b></div><div><span>70</span><b>Самостоятельная работа</b></div></div><p class="small">Полностью завершённый урок даёт 100 баллов.</p>`)}
+      ${card('', `<h2>100 книг за 100 дней</h2><p>Челлендж имеет собственный прогресс. Его баллы прибавляются к общему количеству баллов, но книги не входят в процент прохождения основной программы из 80 уроков.</p><p class="small">Первый зачтённый день даёт 50 баллов. Далее награда растёт на 2 балла за каждый день серии.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`,'profile');
+  };
+  window.renderPointsRulesV41 = window.renderProgressRulesV40;
+
+  var renderMainBlockBeforeV41 = window.renderMainBlockCard;
+  var studentLockedBlocksV41 = [
+    'Нет своего бизнеса', 'Я сотрудник', 'Бизнес-форум', 'Газета',
+    'Предпринимательские статьи', 'Прямые разборы', 'Что посмотреть',
+    'Дополнительные материалы', 'VIP уровень'
+  ];
+  window.studentLockedBlocksV41 = studentLockedBlocksV41;
+  function isStudentLockedBlockV41(title){
+    return !isAdminMode() && studentLockedBlocksV41.includes(String(title || '').trim());
+  }
+  window.isStudentLockedBlockV41 = isStudentLockedBlockV41;
+
+  window.renderMainBlockCard = function(title,text,status,action,cls){
+    if (architectureV41Enabled() && isStudentLockedBlockV41(title)) {
+      return renderMainBlockBeforeV41(title,text,'в подготовке','',(cls || '') + ' student-block-locked-v41');
+    }
+    return renderMainBlockBeforeV41(title,text,status,action,cls);
+  };
+
+  function financeIconV41(){
+    return `<svg class="arch-nav-svg" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V9M10 20V4M16 20v-7M22 20H2"/><path d="m4 7 5-3 5 5 6-6"/></svg>`;
+  }
+
+  var bottomNavBeforeV41 = window.bottomNav;
+  window.bottomNav = function(active){
+    if (!architectureV41Enabled()) return bottomNavBeforeV41(active);
+    if (typeof hasVerifiedAccessV32 === 'function' && !hasVerifiedAccessV32()) return '';
+    function activeItem(key,label,fn,icon){
+      return `<button class="bottom-item ${active===key?'active':''}" onclick="safeNavigateV32('${fn}')">${icon}<b>${label}</b></button>`;
+    }
+    var homeIcon = `<span class="arch-nav-icon">${architectureNavIconV35('home')}</span>`;
+    var profileIcon = `<span class="arch-nav-icon">${architectureNavIconV35('profile')}</span>`;
+    var financeIcon = `<span class="arch-nav-icon">${financeIconV41()}</span>`;
+    return `<nav class="bottom-nav-v2 v41-bottom-nav" aria-label="Основное меню">
+      ${activeItem('home','Главная','renderHome',homeIcon)}
+      <button class="bottom-item is-disabled-v41" type="button" disabled aria-disabled="true" title="Раздел в подготовке">${financeIcon}<b>Финансовый помощник</b><small>скоро</small></button>
+      ${activeItem('profile','Профиль','renderProfile',profileIcon)}
+    </nav>`;
+  };
+
+  function setupHeaderV41(){
+    if (!architectureV41Enabled()) return;
+    var header = document.querySelector('.app-header-v2');
+    if (!header) return;
+    header.querySelectorAll('.mode-pill').forEach(function(node){ node.remove(); });
+    var menu = header.querySelector('.app-menu-button-v40');
+    var brand = header.querySelector('.architecture-brand, .brand-lockup');
+    if (menu) header.insertBefore(menu, header.firstChild);
+    if (brand) header.appendChild(brand);
+  }
+  window.setupHeaderV41 = setupHeaderV41;
+
+  function lockDrawerItemsV41(){
+    var drawer = document.querySelector('.app-drawer-list-v40');
+    if (!drawer) return;
+    drawer.querySelectorAll(':scope > button').forEach(function(button){
+      var title = button.querySelector('b') ? button.querySelector('b').textContent.trim() : '';
+      var locked = isStudentLockedBlockV41(title);
+      button.classList.toggle('student-locked-v41', locked);
+      if (locked) {
+        button.disabled = true;
+        button.removeAttribute('onclick');
+        button.onclick = null;
+        var status = button.querySelector('small');
+        if (status) status.textContent = 'в подготовке';
+        var arrow = button.querySelector('.app-drawer-arrow-v40');
+        if (arrow) arrow.textContent = '•';
+      }
+    });
+  }
+  window.lockDrawerItemsV41 = lockDrawerItemsV41;
+
+  function cleanupProfileV41(){
+    var content = document.querySelector('.content-v2');
+    if (!content) return;
+    var progressCard = document.getElementById('progress-rules-card-v40');
+    if (progressCard) progressCard.remove();
+    content.querySelectorAll('.my-business-card').forEach(function(cardNode){ cardNode.remove(); });
+    var bossText = content.querySelector('.boss-panel-card p.small');
+    if (bossText) bossText.textContent = 'Панель управления и предпросмотр контента доступны только владельцу системы.';
+    var scoreGrid = content.querySelector('.profile-score-grid');
+    if (scoreGrid) {
+      Array.from(scoreGrid.children).forEach(function(metric){
+        var label = metric.querySelector('span');
+        if (!label || label.textContent.trim() !== 'Всего баллов') return;
+        metric.classList.add('points-metric-v41');
+        if (!metric.querySelector('.points-help-v41')) {
+          var help = document.createElement('button');
+          help.type = 'button';
+          help.className = 'points-help-v41';
+          help.setAttribute('aria-label','Как начисляются баллы');
+          help.textContent = '?';
+          help.onclick = function(){ renderPointsRulesV41(); };
+          metric.appendChild(help);
+        }
+      });
+    }
+  }
+  window.cleanupProfileV41 = cleanupProfileV41;
+
+  var shellBeforeV41 = window.shell;
+  window.shell = function(content, activeTab){
+    var result = shellBeforeV41(cleanLegacyExplanationsV41(content), activeTab);
+    setupHeaderV41();
+    setTimeout(function(){
+      setupHeaderV41();
+      lockDrawerItemsV41();
+      removeProfileModerationNoticeV40();
+    },0);
+    return result;
+  };
+
+  var renderProfileBeforeV41 = window.renderProfile;
+  window.renderProfile = function(){
+    var result = renderProfileBeforeV41();
+    setTimeout(function(){
+      cleanupProfileV41();
+      setupHeaderV41();
+      lockDrawerItemsV41();
+    },0);
+    return result;
+  };
+
+  if (typeof window.studentRoleLabel === 'function') {
+    window.studentRoleLabel = function(){ return isAdminMode() ? 'Администратор' : 'участник'; };
+  }
+
+  window.renderRoutesHubV40 = function(){ return renderLearning(); };
+
+  /* Даже прямой вызов будущего раздела не открывает его ученику. */
+  [
+    ['renderNoBusinessV40','Нет своего бизнеса'],
+    ['renderEmployeeRouteV40','Я сотрудник'],
+    ['openForumBlockV40','Бизнес-форум'],
+    ['renderNewspaperV40','Газета'],
+    ['renderEntrepreneurArticlesV40','Предпринимательские статьи'],
+    ['renderDirectReviewsV40','Прямые разборы'],
+    ['renderWatchV40','Что посмотреть'],
+    ['renderAdditionalMaterials','Дополнительные материалы'],
+    ['renderVipV40','VIP уровень']
+  ].forEach(function(row){
+    var name = row[0];
+    var title = row[1];
+    var original = window[name];
+    if (typeof original !== 'function') return;
+    window[name] = function(){
+      if (!isAdminMode()) {
+        alert('Раздел «' + title + '» находится в подготовке.');
+        return renderHome();
+      }
+      return original.apply(this, arguments);
+    };
+  });
+
+  window.renderHome = (function(renderHomeBeforeV41){
+    return function(){
+      if (!architectureV41Enabled()) return renderHomeBeforeV41();
+      var gp = globalStageProgress();
+      var points = totalPoints();
+      var titleInfo = studentTitleInfo();
+      var html = `
+        ${card('hero-dashboard main-dashboard-card architecture-dashboard v40-dashboard v41-dashboard', `
+          <div class="architecture-dashboard-head">
+            <div>
+              <div class="eyebrow-row"><p class="eyebrow">ваша система</p><button class="instruction-link" onclick="toggleGlobalInstruction()">как пользоваться</button></div>
+              <h1>Общий прогресс</h1>
+              <p>Завершено <b>${gp.done} из ${gp.total}</b> этапов общей программы.</p>
+            </div>
+            ${compactProgressRing(gp.percent)}
+          </div>
+          <div class="architecture-metrics">
+            <div><span>Баллы</span><b>${formatPoints(points)}</b></div>
+            <div><span>Уровень</span><b>${titleInfo.current.level} / 25</b></div>
+            <div><span>Достижение</span><b>${esc(titleInfo.current.title)}</b></div>
+          </div>
+          ${globalInstructionPanelHtml()}
+        `)}
+        ${card('architecture-blocks-card v40-blocks-card', `<div class="section-heading-v35"><div><p class="eyebrow">структура приложения</p><h2>Выберите блок</h2></div><p>Основные и дополнительные разделы собраны в единой структуре.</p></div>${primaryRoutesHtmlV40()}${secondaryBlocksHtmlV40()}`)}
+        ${typeof safeActiveChallengeCardHtmlV24 === 'function' ? safeActiveChallengeCardHtmlV24() : ''}
+      `;
+      shell(html,'home');
+    };
+  })(window.renderHome);
+
+  window.renderAdmin = function(){
+    if (!isAdminUser()) { alert('Нет прав администратора.'); return; }
+    var forumBlock = typeof window.renderBusinessForum === 'function'
+      ? card('', `<h2>Бизнес-форум</h2><p>Администраторский доступ используется для настройки и тестирования форума.</p><button class="btn primary" onclick="renderBusinessForum()">Открыть форум</button>`)
+      : '';
+    shell(`${card('blue-card-v2', `<h1>Панель администратора</h1><p>Здесь собраны предпросмотр опубликованных уроков, книги челленджа и тестовые разделы.</p>`)}
+      ${card('', `<h2>100 книг за 100 дней</h2><div class="grid-v2"><button class="btn primary" onclick="books100AdminRepairAllV25()">Проверить зачёты книг</button><button class="btn secondary" onclick="renderBookChallenge()">Открыть книги челленджа</button></div>`)}
+      ${forumBlock}
+      ${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${(state.catalog?.lessons || []).map(function(lesson){
+        var ready = isLessonPrepared(lesson);
+        return `<button class="lesson-row-v2 ${ready ? '' : 'locked'}" ${ready ? `onclick="openLesson('${lesson.code}')"` : 'disabled'}><div><b>${esc(lesson.code)} · ${esc(lesson.title)}</b><p>${esc(lesson.activityTitle)} · ${ready ? 'опубликован' : 'в подготовке'} · ${lesson.slidesCount} слайдов · ${lesson.quizCount} вопросов · ${lesson.bookScreensCount} саммари</p></div><span>${ready ? '→' : '🔒'}</span></button>`;
+      }).join('')}</div>`)}`,'profile');
+  };
+})();
 
 (function protectScreensV32(){
   const protectedNames = [

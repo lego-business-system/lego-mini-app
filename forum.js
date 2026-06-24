@@ -1022,3 +1022,20 @@ Object.assign(window, {
   forumPreventFileDrop,
   forumCounter,
 });
+
+
+/* =====================================================
+   v41 — форум закрыт для интерфейса ученика
+   ===================================================== */
+(function installForumStudentGuardV41(){
+  var originalRenderBusinessForumV41 = window.renderBusinessForum;
+  if (typeof originalRenderBusinessForumV41 !== 'function') return;
+  window.renderBusinessForum = function(){
+    if (!(typeof isAdminMode === 'function' && isAdminMode())) {
+      alert('Раздел «Бизнес-форум» находится в подготовке.');
+      if (typeof renderHome === 'function') renderHome();
+      return;
+    }
+    return originalRenderBusinessForumV41.apply(this, arguments);
+  };
+})();

@@ -2121,3 +2121,177 @@ body.app-drawer-open-v40{
     display:none!important;
   }
 }
+
+
+/* =====================================================
+   v41 — меню слева, логотип справа, три нижних пункта
+   ===================================================== */
+html.theme-architecture .app-header-v2{
+  justify-content:flex-start!important;
+  gap:9px!important;
+}
+html.theme-architecture .app-header-v2 .mode-pill{
+  display:none!important;
+}
+html.theme-architecture .app-header-v2 .app-menu-button-v40{
+  order:1!important;
+  flex:0 0 44px!important;
+}
+html.theme-architecture .app-header-v2 .architecture-brand,
+html.theme-architecture .app-header-v2 .brand-lockup{
+  order:2!important;
+  flex:1 1 auto!important;
+  max-width:calc(100% - 53px)!important;
+  margin-left:auto!important;
+  justify-content:flex-end!important;
+}
+html.theme-architecture .app-header-v2 .architecture-brand .brand-logo-plate,
+html.theme-architecture .app-header-v2 .brand-lockup .brand-logo-plate{
+  justify-content:flex-end!important;
+}
+html.theme-architecture .app-header-v2 .architecture-brand img,
+html.theme-architecture .app-header-v2 .brand-lockup img{
+  object-position:right center!important;
+}
+
+/* Панель открывается с привычной левой стороны. */
+.app-drawer-v40{
+  left:0!important;
+  right:auto!important;
+  border-left:0!important;
+  border-right:1px solid rgba(16,36,58,.10)!important;
+  box-shadow:22px 0 52px rgba(7,27,53,.22)!important;
+  transform:translateX(-104%)!important;
+}
+.app-drawer-overlay-v40.open .app-drawer-v40{
+  transform:translateX(0)!important;
+}
+.app-drawer-list-v40>button.student-locked-v41{
+  opacity:.56!important;
+  cursor:not-allowed!important;
+  box-shadow:none!important;
+  background:#F1F3F5!important;
+}
+.app-drawer-list-v40>button.student-locked-v41 .app-drawer-number-v40{
+  background:#E3E7EB!important;
+  color:#7A8694!important;
+}
+.app-drawer-list-v40>button.student-locked-v41 .app-drawer-arrow-v40{
+  color:#9AA4AF!important;
+}
+
+/* Заблокированные карточки остаются видимыми, но не открываются. */
+html.theme-architecture .architecture-track-card.student-block-locked-v41{
+  opacity:.62!important;
+  cursor:not-allowed!important;
+  box-shadow:none!important;
+  background:linear-gradient(180deg,#F8FAFC,#F2F4F7)!important;
+}
+html.theme-architecture .architecture-track-card.student-block-locked-v41 .track-card-arrow{
+  color:#9AA4AF!important;
+}
+
+/* Нижняя панель: Главная — Финансовый помощник — Профиль. */
+.bottom-nav-v2.v41-bottom-nav{
+  grid-template-columns:repeat(3,1fr)!important;
+}
+.v41-bottom-nav .bottom-item{
+  min-width:0!important;
+}
+.v41-bottom-nav .bottom-item b{
+  font-size:10px!important;
+  line-height:1.12!important;
+  text-align:center!important;
+}
+.v41-bottom-nav .bottom-item small{
+  display:block;
+  margin-top:1px;
+  color:inherit;
+  font-size:8px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+.v41-bottom-nav .bottom-item.is-disabled-v41{
+  opacity:.48!important;
+  cursor:not-allowed!important;
+  background:transparent!important;
+}
+
+/* Вопрос рядом с количеством баллов. */
+.profile-score-grid .points-metric-v41{
+  position:relative!important;
+  padding-right:48px!important;
+}
+.points-help-v41{
+  position:absolute;
+  top:10px;
+  right:10px;
+  width:30px;
+  height:30px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:#E7F0FA;
+  color:#1F4F8A;
+  border:1px solid #D8E2EE;
+  font-size:16px;
+  line-height:1;
+  font-weight:900;
+  box-shadow:0 5px 12px rgba(7,27,53,.07);
+}
+
+/* Финансовый помощник больше не дублируется внутри профиля. */
+html.theme-architecture .my-business-card,
+html.theme-architecture #progress-rules-card-v40{
+  display:none!important;
+}
+
+.planned-progress-breakdown-v41{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:9px;
+  margin:12px 0;
+}
+.planned-progress-breakdown-v41>div{
+  padding:13px;
+  border-radius:16px;
+  background:#F6F8FC;
+  border:1px solid #DDE5EF;
+}
+.planned-progress-breakdown-v41 b{
+  display:block;
+  color:#10243A;
+  font-size:18px;
+}
+.planned-progress-breakdown-v41 span{
+  display:block;
+  margin-top:5px;
+  color:#697586;
+  font-size:11px;
+  line-height:1.35;
+}
+
+@media(max-width:420px){
+  html.theme-architecture .app-header-v2 .architecture-brand,
+  html.theme-architecture .app-header-v2 .brand-lockup{
+    max-width:calc(100vw - 72px)!important;
+    height:52px!important;
+  }
+  html.theme-architecture .app-header-v2 .architecture-brand img,
+  html.theme-architecture .app-header-v2 .brand-lockup img{
+    height:52px!important;
+    max-height:52px!important;
+  }
+  html.theme-architecture .app-header-v2 .app-menu-button-v40{
+    flex-basis:40px!important;
+    width:40px!important;
+    height:40px!important;
+  }
+  .planned-progress-breakdown-v41{
+    grid-template-columns:1fr;
+  }
+  .v41-bottom-nav .bottom-item b{
+    font-size:9px!important;
+  }
+}
