@@ -6202,6 +6202,387 @@ else installArchitectureObserverV35();
   })(window.renderHome);
 })();
 
+
+/* =====================================================
+   v44 — стабильная главная, общий справочник приложения,
+   профиль без повторов, страницы чтения и уровни.
+   ===================================================== */
+(function installArchitectureHomeProfileV44(){
+  window.APP_UI_VERSION_V44 = 'v44-stable-home-profile-reading-levels-20260624';
+  window.__architectureCurrentViewV44 = 'boot';
+
+  function architectureV44Enabled(){
+    return typeof architectureModeV35 === 'function' && architectureModeV35();
+  }
+
+  function setArchitectureViewV44(view){
+    window.__architectureCurrentViewV44 = String(view || 'other');
+  }
+  window.setArchitectureViewV44 = setArchitectureViewV44;
+
+  /*
+     Таймер челленджа больше не имеет права сам открывать экран
+     «100 книг за 100 дней». На главной он только обновляет цифры.
+  */
+  function stopBooks100TimerV44(){
+    if (window.__books100TimerV44) {
+      clearInterval(window.__books100TimerV44);
+      window.__books100TimerV44 = null;
+    }
+    try {
+      if (typeof stopBooks100LiveTimerV19 === 'function') stopBooks100LiveTimerV19();
+    } catch(error) {}
+  }
+  window.stopBooks100TimerV44 = stopBooks100TimerV44;
+
+  window.startBooks100LiveTimerV19 = function(deadlineMs){
+    if (window.__books100TimerV44) clearInterval(window.__books100TimerV44);
+    var deadline = Number(deadlineMs || 0);
+    if (!deadline) return;
+    var syncing = false;
+
+    async function tick(){
+      var left = Math.max(0, deadline - Date.now());
+      document.querySelectorAll('[data-books100-timer="1"]').forEach(function(node){
+        node.textContent = typeof books100TimeLeftText === 'function' ? books100TimeLeftText(left) : '';
+      });
+      if (left > 0 || syncing) return;
+      syncing = true;
+      if (window.__books100TimerV44) {
+        clearInterval(window.__books100TimerV44);
+        window.__books100TimerV44 = null;
+      }
+      document.querySelectorAll('[data-books100-timer="1"]').forEach(function(node){ node.textContent = 'обновляем'; });
+      try {
+        if (typeof loadBooks100Index === 'function' && typeof syncBooks100StateV20 === 'function') {
+          var index = await loadBooks100Index();
+          await syncBooks100StateV20(index, false);
+        }
+      } catch(error) {
+        console.warn('BOOKS100_SILENT_TIMER_SYNC_V44', error);
+      }
+      if (window.__architectureCurrentViewV44 === 'books100' && typeof window.renderBookChallenge === 'function') {
+        window.renderBookChallenge();
+      } else {
+        document.querySelectorAll('[data-books100-timer="1"]').forEach(function(node){ node.textContent = 'окно завершено'; });
+      }
+    }
+
+    tick();
+    window.__books100TimerV44 = setInterval(tick, 15000);
+  };
+
+  /* Не позволяем фоновой синхронизации челленджа вернуть пользователя
+     обратно в раздел книг после перехода на главную или в профиль. */
+  var renderBookChallengeFromStateBeforeV44 = window.renderBookChallengeFromStateV20;
+  if (typeof renderBookChallengeFromStateBeforeV44 === 'function') {
+    window.renderBookChallengeFromStateV20 = function(){
+      if (window.__architectureCurrentViewV44 !== 'books100') return;
+      return renderBookChallengeFromStateBeforeV44.apply(this, arguments);
+    };
+  }
+
+  function wrapViewV44(name, view){
+    var before = window[name];
+    if (typeof before !== 'function' || before.__viewWrappedV44) return;
+    var wrapped = function(){
+      setArchitectureViewV44(view);
+      return before.apply(this, arguments);
+    };
+    wrapped.__viewWrappedV44 = true;
+    window[name] = wrapped;
+  }
+
+  [
+    'renderBookChallenge', 'startBookChallenge', 'openBooks100Book',
+    'renderBooks100QuizQuestion', 'finishBooks100Quiz'
+  ].forEach(function(name){ wrapViewV44(name, 'books100'); });
+
+  /* Полная инструкция охватывает всё приложение, а не один маршрут. */
+  window.globalInstructionPanelHtml = function(){
+    return `<div id="global-instruction-panel" class="global-instruction-panel v44-instruction-panel" style="display:none">
+      <div class="instruction-head"><b>Как пользоваться приложением</b><button onclick="toggleGlobalInstruction(false)" aria-label="Закрыть инструкцию">×</button></div>
+      <div class="instruction-steps">
+        <div><b>1. Главная показывает всю структуру</b><p>На главной собраны доступные и будущие блоки. Открытые разделы можно запускать сразу, а блоки в подготовке отмечены и не нажимаются.</p></div>
+        <div><b>2. Меню слева открывает разделы</b><p>Нажмите на три линии в верхнем левом углу, чтобы увидеть карту приложения, задать вопрос, предложить идею или обновить информацию.</p></div>
+        <div><b>3. Профиль хранит ваш результат</b><p>В профиле находятся общий прогресс, баллы, уровень, достижение, количество изученных страниц, завершённых тестов, саммари книг, шаблонов и сохранённых выводов.</p></div>
+        <div><b>4. Опубликованные материалы доступны для работы</b><p>В блоке «Я предприниматель» выберите вид бизнеса и нужный опубликованный материал. Нумерация показывает рекомендуемую последовательность.</p></div>
+        <div><b>5. Каждый материал переводится в действие</b><p>Изучите презентацию, пройдите тест, разберите саммари книг и откройте рабочий шаблон, чтобы применить систему к своему бизнесу.</p></div>
+        <div><b>6. Челлендж книг работает отдельно</b><p>В разделе «100 книг за 100 дней» открывается книга дня, страницы конспекта и мини-тест. Результаты добавляются в профиль и общую систему баллов.</p></div>
+        <div><b>7. Нижняя панель содержит частые действия</b><p>«Главная» возвращает к структуре, «Профиль» открывает личные результаты. «Финансовый помощник» появится после завершения разработки.</p></div>
+      </div>
+    </div>`;
+  };
+
+  /* ---------- Статистика чтения ---------- */
+  function readingUserSuffixV44(){
+    try {
+      var ids = typeof possibleIds === 'function' ? possibleIds() : [];
+      if (ids && ids[0]) return String(ids[0]);
+      var username = typeof normalizeUsername === 'function'
+        ? normalizeUsername((state.user && state.user.username) || (typeof getTelegramUser === 'function' ? getTelegramUser().username : ''))
+        : '';
+      return username || 'local';
+    } catch(error) { return 'local'; }
+  }
+  function readingTrackerKeyV44(){ return 'architecture_read_pages_v44_' + readingUserSuffixV44(); }
+  function readTrackerV44(){
+    try {
+      var parsed = JSON.parse(localStorage.getItem(readingTrackerKeyV44()) || '{}');
+      if (!parsed || typeof parsed !== 'object') parsed = {};
+      if (!parsed.challenge || typeof parsed.challenge !== 'object') parsed.challenge = {};
+      return parsed;
+    } catch(error) { return { challenge:{} }; }
+  }
+  function saveTrackerV44(data){
+    try { localStorage.setItem(readingTrackerKeyV44(), JSON.stringify(data || {challenge:{}})); } catch(error) {}
+  }
+  function markChallengePageV44(bookId, page, total){
+    if (!bookId) return;
+    var tracker = readTrackerV44();
+    var current = tracker.challenge[bookId] || { viewed:0, total:0 };
+    current.viewed = Math.max(Number(current.viewed || 0), Number(page || 0));
+    current.total = Math.max(Number(current.total || 0), Number(total || 0));
+    tracker.challenge[bookId] = current;
+    saveTrackerV44(tracker);
+  }
+  function challengeTrackedPagesV44(){
+    var tracker = readTrackerV44();
+    return Object.keys(tracker.challenge || {}).reduce(function(sum, key){
+      return sum + Math.max(0, Number(tracker.challenge[key]?.viewed || 0));
+    }, 0);
+  }
+
+  function lessonPresentationPagesV44(meta){
+    var progress = getProgress(meta.code) || {};
+    var total = Math.max(0, Number(meta.slidesCount || 0));
+    var viewed = Math.max(0, Number(progress.last_slide_number || 0));
+    if (isStageDone(meta.code,'presentation') && total) return total;
+    return total ? Math.min(total, viewed) : viewed;
+  }
+  function lessonSummaryPagesV44(meta){
+    var progress = getProgress(meta.code) || {};
+    var total = Math.max(0, Number(meta.bookScreensCount || 0));
+    var viewed = Math.max(0, Number(progress.last_book_slide_number || 0));
+    if (isStageDone(meta.code,'books') && total) return total;
+    return total ? Math.min(total, viewed) : viewed;
+  }
+  function lessonBookSummariesV44(meta){
+    if (isStageDone(meta.code,'books')) return 5;
+    var viewed = Math.max(0, Number((getProgress(meta.code) || {}).last_book_slide_number || 0));
+    return Math.max(0, Math.min(5, Math.floor(viewed / 5)));
+  }
+  function lessonPagesTotalV44(){
+    return readyCoreLessons().reduce(function(sum, meta){
+      return sum + lessonPresentationPagesV44(meta) + lessonSummaryPagesV44(meta);
+    }, 0);
+  }
+
+  async function refreshChallengePagesV44(){
+    try {
+      if (typeof loadBooks100Index !== 'function' || typeof loadBooks100Book !== 'function') return;
+      var index = await loadBooks100Index();
+      var challenge = typeof getChallengeState === 'function' ? getChallengeState() : {};
+      var passedIds = new Set([].concat(challenge.passedBookIds || []));
+      var statusMap = challenge.statusByBookId || {};
+      Object.keys(statusMap).forEach(function(id){ if (statusMap[id] && statusMap[id].status === 'passed') passedIds.add(id); });
+      var tracker = readTrackerV44();
+      var books = (index && Array.isArray(index.books)) ? index.books : [];
+
+      for (var i = 0; i < books.length; i++) {
+        var meta = books[i];
+        if (!passedIds.has(meta.id)) continue;
+        var row = tracker.challenge[meta.id] || {viewed:0,total:0};
+        var total = Number(meta.screensCount || meta.screenCount || meta.pagesCount || meta.pages || row.total || 0);
+        if (!total) {
+          try {
+            var book = await loadBooks100Book(meta);
+            total = Array.isArray(book.screens) ? book.screens.length : 0;
+          } catch(error) { total = Number(row.total || 0); }
+        }
+        if (total) tracker.challenge[meta.id] = { viewed:Math.max(Number(row.viewed || 0), total), total:total };
+      }
+      saveTrackerV44(tracker);
+      var pageNode = document.getElementById('profile-pages-value-v44');
+      if (pageNode && window.__architectureCurrentViewV44 === 'profile') {
+        pageNode.textContent = formatPoints(lessonPagesTotalV44() + challengeTrackedPagesV44());
+      }
+    } catch(error) {
+      console.warn('PROFILE_CHALLENGE_PAGES_V44', error);
+    }
+  }
+  window.refreshChallengePagesV44 = refreshChallengePagesV44;
+
+  /* Отмечаем открытую страницу челленджа. */
+  var renderBooks100ReadingBeforeV44 = window.renderBooks100Reading;
+  if (typeof renderBooks100ReadingBeforeV44 === 'function') {
+    window.renderBooks100Reading = async function(){
+      setArchitectureViewV44('books100');
+      var result = await renderBooks100ReadingBeforeV44.apply(this, arguments);
+      try {
+        var index = await loadBooks100Index();
+        var meta = books100ByDay(index, state.books100ActiveBookDay);
+        var book = meta ? await loadBooks100Book(meta) : null;
+        var total = book && Array.isArray(book.screens) ? book.screens.length : 0;
+        markChallengePageV44(meta && meta.id, Number(state.books100ScreenIndex || 0) + 1, total);
+      } catch(error) { console.warn('TRACK_BOOK_PAGE_V44', error); }
+      return result;
+    };
+  }
+
+  function readingStatsV44(){
+    var lessons = readyCoreLessons();
+    var challenge = typeof getChallengeState === 'function' ? getChallengeState() : {};
+    var passedChallengeBooks = Math.max(0, Number(challenge.passedBooks || challenge.unitsEarned || 0));
+    var presentations = lessons.filter(function(meta){ return isStageDone(meta.code,'presentation'); }).length;
+    var lessonTests = lessons.filter(function(meta){ return isStageDone(meta.code,'quiz'); }).length;
+    var templates = lessons.filter(function(meta){
+      return typeof isSelfStudyCompletedV39 === 'function' && isSelfStudyCompletedV39(meta.code);
+    }).length;
+    var lessonBooks = lessons.reduce(function(sum, meta){ return sum + lessonBookSummariesV44(meta); }, 0);
+    var insights = typeof loadInsights === 'function' ? loadInsights().length : 0;
+    return {
+      presentations:presentations,
+      pages:lessonPagesTotalV44() + challengeTrackedPagesV44(),
+      tests:lessonTests + passedChallengeBooks,
+      bookSummaries:lessonBooks + passedChallengeBooks,
+      templates:templates,
+      insights:insights
+    };
+  }
+
+  window.doneSummaryHtml = function(){
+    var stats = readingStatsV44();
+    return card('done-summary-card profile-done-compact-v43 profile-done-v44', `<div class="done-heading-v44"><div><p class="eyebrow">накопленный объём</p><h2>Что уже сделано</h2></div><p>Учитываются материалы уроков и челленджа книг.</p></div><div class="done-grid"><div><span>Презентации</span><b>${formatPoints(stats.presentations)}</b></div><div><span>Страницы</span><b id="profile-pages-value-v44">${formatPoints(stats.pages)}</b></div><div><span>Тесты</span><b>${formatPoints(stats.tests)}</b></div><div><span>Саммари книг</span><b>${formatPoints(stats.bookSummaries)}</b></div><div><span>Шаблоны</span><b>${formatPoints(stats.templates)}</b></div><div><span>Выводы</span><b>${formatPoints(stats.insights)}</b></div></div>`);
+  };
+
+  /* ---------- Уровни и достижения ---------- */
+  var LEVEL_MEANINGS_V44 = [
+    'Начинает видеть бизнес как связанную систему.',
+    'Фиксирует факты и отделяет их от мнений.',
+    'Понимает повторяющийся управленческий цикл.',
+    'Разделяет деятельность на понятные процессы.',
+    'Применяет первичную диагностику к реальным данным.',
+    'Ищет причины отклонений, а не только симптомы.',
+    'Выбирает один управленческий фокус на цикл.',
+    'Находит главное ограничение системы.',
+    'Формулирует и проверяет рабочие гипотезы.',
+    'Использует показатели для контроля решений.',
+    'Проектирует решения под найденную причину.',
+    'Регулярно применяет системы на практике.',
+    'Видит последовательный маршрут роста.',
+    'Формулирует точные управленческие выводы.',
+    'Переводит выводы в конкретные изменения.',
+    'Связывает процессы в единую операционную систему.',
+    'Выбирает стратегические приоритеты управления.',
+    'Собирает целостную архитектуру бизнес-модели.',
+    'Контролирует внедрение и корректирует курс.',
+    'Создаёт устойчивый контур системного контроля.',
+    'Строит управляемый бизнес из связанных элементов.',
+    'Управляет операционной логикой на уровне системы.',
+    'Проектирует взаимосвязи между ключевыми блоками.',
+    'Может передавать системный подход другим.',
+    'Системно управляет архитектурой бизнеса.'
+  ];
+
+  function levelGuideRowsV44(){
+    if (typeof LEGO_LEVELS === 'undefined' || !Array.isArray(LEGO_LEVELS)) return '';
+    return LEGO_LEVELS.map(function(row, index){
+      var title = typeof libraryPositioningTextV43 === 'function' ? libraryPositioningTextV43(row.title) : row.title;
+      var range = row.level === 25 ? '1000+ единиц освоения' : `${row.min}–${row.max} единиц освоения`;
+      return `<div class="level-guide-row-v44"><span>${String(row.level).padStart(2,'0')}</span><div><b>${esc(title)}</b><p>${esc(LEVEL_MEANINGS_V44[index] || '')}</p></div><em>${esc(range)}</em></div>`;
+    }).join('');
+  }
+  window.toggleLevelGuideV44 = function(force){
+    var panel = document.getElementById('level-guide-panel-v44');
+    if (!panel) return;
+    var open = force === undefined ? panel.hidden : Boolean(force);
+    panel.hidden = !open;
+    if (open) panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+  };
+  function levelDetailsCardV44(info){
+    var title = typeof libraryPositioningTextV43 === 'function' ? libraryPositioningTextV43(info.current.title) : info.current.title;
+    return card('levels-card-v44', `<div class="levels-head-v44"><div><p class="eyebrow">уровни и достижения</p><h2>${esc(title)}</h2></div><button class="level-help-v44" onclick="toggleLevelGuideV44()" aria-label="Что означают уровни">?</button></div><div class="levels-summary-v44"><div><span>Текущий уровень</span><b>${info.current.level} / 25</b></div><div><span>Единицы освоения</span><b>${formatPoints(info.units)}</b></div></div>${levelBarHtml(info)}<p class="small">${info.current.level >= 25 ? 'Открыт финальный уровень системы.' : `До следующего уровня: ${formatPoints(info.left)} единиц освоения.`}</p><div id="level-guide-panel-v44" class="level-guide-panel-v44" hidden><div class="level-guide-title-v44"><b>Что означает каждый уровень</b><button onclick="toggleLevelGuideV44(false)" aria-label="Закрыть">×</button></div>${levelGuideRowsV44()}</div>`);
+  }
+
+  /* ---------- Главная ---------- */
+  var renderHomeBeforeV44 = window.renderHome;
+  window.renderHome = function(){
+    if (!architectureV44Enabled()) return renderHomeBeforeV44();
+    setArchitectureViewV44('home');
+    var progress = globalStageProgress();
+    var points = totalPoints();
+    var titleInfo = studentTitleInfo();
+    var achievement = typeof libraryPositioningTextV43 === 'function' ? libraryPositioningTextV43(titleInfo.current.title) : titleInfo.current.title;
+    var html = `
+      ${card('hero-dashboard main-dashboard-card architecture-dashboard v40-dashboard v41-dashboard v43-dashboard v44-dashboard', `
+        <div class="architecture-dashboard-head v44-dashboard-head"><div class="v44-dashboard-copy"><div class="v44-dashboard-title-row"><h1>Общий прогресс</h1><button class="instruction-link" onclick="toggleGlobalInstruction()">как пользоваться</button></div><p>Изучено <b>${progress.done} из ${progress.total}</b> информационных этапов библиотеки.</p></div>${compactProgressRing(progress.percent)}</div>
+        <div class="architecture-metrics"><div><span>Баллы</span><b>${formatPoints(points)}</b></div><div><span>Уровень</span><b>${titleInfo.current.level} / 25</b></div><div><span>Достижение</span><b>${esc(achievement)}</b></div></div>
+        ${globalInstructionPanelHtml()}
+      `)}
+      ${card('architecture-blocks-card v40-blocks-card', `<div class="section-heading-v35"><div><p class="eyebrow">структура библиотеки</p><h2>Выберите блок</h2></div><p>Архитектуры, системы, разборы и материалы собраны в единой структуре.</p></div>${primaryRoutesHtmlV40()}${secondaryBlocksHtmlV40()}`)}
+      ${typeof safeActiveChallengeCardHtmlV24 === 'function' ? safeActiveChallengeCardHtmlV24() : ''}
+    `;
+    shell(html,'home');
+  };
+
+  /* ---------- Профиль ---------- */
+  var renderProfileBeforeV44 = window.renderProfile;
+  window.renderProfile = function(){
+    if (!architectureV44Enabled()) return renderProfileBeforeV44();
+    setArchitectureViewV44('profile');
+    var progress = globalStageProgress();
+    var points = totalPoints();
+    var titleInfo = studentTitleInfo();
+    var achievement = typeof libraryPositioningTextV43 === 'function' ? libraryPositioningTextV43(titleInfo.current.title) : titleInfo.current.title;
+    var name = state.user?.first_name || (typeof getTelegramUser === 'function' ? getTelegramUser().first_name : '') || 'Пользователь';
+    var adminBlock = isAdminMode()
+      ? card('boss-panel-card profile-admin-compact-v43', `<h2>Панель администратора</h2><p>Предпросмотр опубликованных материалов и служебные инструменты.</p><button class="btn primary" onclick="renderAdmin()">Открыть панель</button>`)
+      : '';
+    shell(`${card('profile-overview-v44', `<div class="profile-identity-v44"><p class="eyebrow">профиль</p><h1>${esc(name)}</h1></div><div class="profile-overview-layout-v44">${compactProgressRing(progress.percent)}<div class="profile-metrics-v44"><div class="profile-points-v44"><span>Всего баллов</span><b>${formatPoints(points)}</b><button class="points-help-v43" onclick="renderPointsRulesV43()" aria-label="Как начисляются баллы">?</button></div><div><span>Уровень</span><b>${titleInfo.current.level} / 25</b></div><div class="profile-achievement-v44"><span>Достижение</span><b>${esc(achievement)}</b></div></div></div><p class="profile-progress-caption-v44">Изучено <b>${progress.done} из ${progress.total}</b> информационных этапов библиотеки.</p>`)}
+      ${levelDetailsCardV44(titleInfo)}
+      ${doneSummaryHtml()}
+      ${typeof insightsProfileHtml === 'function' ? insightsProfileHtml() : ''}
+      ${consultationCardsHtml()}
+      ${adminBlock}
+      ${card('profile-support-v43', `<h2>Связь</h2>${externalButton('Задать вопрос',SUPPORT_FORM_URL,'secondary')}${externalButton('Предложить идею',IDEA_FORM_URL,'secondary')}`)}`,'profile');
+    setTimeout(refreshChallengePagesV44, 0);
+  };
+
+  /* Переходы в другие экраны отменяют право фоновой синхронизации
+     челленджа перерисовывать текущий экран. */
+  [
+    'renderLearning','renderActivityLessons','renderLessonHub','renderHomework',
+    'renderHomeworkCenter','renderAdmin','renderAdditionalMaterials'
+  ].forEach(function(name){ wrapViewV44(name, name === 'renderProfile' ? 'profile' : 'content'); });
+
+  /* Служебный переход в администрирование остаётся только у владельца
+     и находится в боковом меню, а не в профиле ученика. */
+  window.switchAdminModeFromDrawerV44 = function(){
+    closeAppDrawerV40();
+    if (!isAdminUser()) return;
+    setAppMode(isAdminMode() ? 'student' : 'admin');
+  };
+  function updateDrawerV44(){
+    var footer = document.querySelector('.app-drawer-footer-v40');
+    if (!footer) return;
+    var adminButton = isAdminUser()
+      ? `<button type="button" class="drawer-admin-v44" onclick="switchAdminModeFromDrawerV44()">${isAdminMode() ? 'Просмотр приложения' : 'Администрирование'}</button>`
+      : '';
+    footer.innerHTML = `<button type="button" onclick="openSupportFromDrawerV43()">Задать вопрос</button><button type="button" onclick="openIdeaFromDrawerV43()">Предложить идею</button><button type="button" class="drawer-refresh-v43" onclick="refreshAppInformationV43()">Обновить информацию</button>${adminButton}`;
+  }
+  window.updateDrawerV44 = updateDrawerV44;
+
+  var shellBeforeV44 = window.shell;
+  window.shell = function(content, activeTab){
+    var result = shellBeforeV44(content, activeTab);
+    setTimeout(updateDrawerV44, 60);
+    setTimeout(updateDrawerV44, 140);
+    return result;
+  };
+})();
+
+
 (function protectScreensV32(){
   const protectedNames = [
     "renderHome",

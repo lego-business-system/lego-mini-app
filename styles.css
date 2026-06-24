@@ -2680,3 +2680,452 @@ html.theme-architecture .profile-overview-v43{
     justify-self:center!important;
   }
 }
+
+/* =====================================================
+   v44 — стабильная главная, профиль, страницы и уровни
+   ===================================================== */
+
+/* Главная: без повторного названия библиотеки внутри карточки. */
+html.theme-architecture .v44-dashboard{
+  padding:17px!important;
+}
+html.theme-architecture .v44-dashboard .v44-dashboard-head{
+  grid-template-columns:minmax(0,1fr) 98px!important;
+  gap:14px!important;
+  align-items:center!important;
+}
+html.theme-architecture .v44-dashboard-copy{
+  min-width:0;
+}
+html.theme-architecture .v44-dashboard-title-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+html.theme-architecture .v44-dashboard-title-row h1{
+  margin:0!important;
+  font-size:25px!important;
+  line-height:1.12!important;
+}
+html.theme-architecture .v44-dashboard-title-row .instruction-link{
+  flex:0 0 auto!important;
+  min-height:36px!important;
+  padding:8px 12px!important;
+  border-radius:12px!important;
+  font-size:12px!important;
+  text-transform:none!important;
+  background:rgba(255,255,255,.16)!important;
+  color:#FFD36D!important;
+}
+html.theme-architecture .v44-dashboard-copy>p{
+  margin:0!important;
+  max-width:320px!important;
+  color:rgba(255,255,255,.86)!important;
+  font-size:14px!important;
+  line-height:1.45!important;
+}
+html.theme-architecture .v44-dashboard .compact-ring-wrap,
+html.theme-architecture .v44-dashboard .compact-ring-svg{
+  width:94px!important;
+  height:94px!important;
+}
+html.theme-architecture .v44-dashboard .compact-ring-center{
+  inset:15px!important;
+}
+html.theme-architecture .v44-dashboard .compact-ring-center b{
+  font-size:24px!important;
+}
+html.theme-architecture .v44-dashboard .architecture-metrics{
+  gap:9px!important;
+  margin-top:15px!important;
+}
+html.theme-architecture .v44-dashboard .architecture-metrics>div{
+  min-height:79px!important;
+  padding:11px 8px!important;
+  border-radius:15px!important;
+}
+html.theme-architecture .v44-dashboard .architecture-metrics span{
+  font-size:9.5px!important;
+  letter-spacing:.08em!important;
+}
+html.theme-architecture .v44-dashboard .architecture-metrics b{
+  margin-top:7px!important;
+  font-size:16px!important;
+  line-height:1.18!important;
+}
+html.theme-architecture .v44-dashboard .architecture-metrics>div:last-child b{
+  font-size:14px!important;
+}
+
+/* Инструкция: более широкая и читаемая карта всего приложения. */
+html.theme-architecture .v44-instruction-panel{
+  margin-top:16px!important;
+}
+html.theme-architecture .v44-instruction-panel .instruction-steps{
+  gap:9px!important;
+}
+html.theme-architecture .v44-instruction-panel .instruction-steps>div{
+  padding:12px 13px!important;
+}
+html.theme-architecture .v44-instruction-panel .instruction-steps b{
+  font-size:14px!important;
+  line-height:1.3!important;
+}
+html.theme-architecture .v44-instruction-panel .instruction-steps p{
+  font-size:13px!important;
+  line-height:1.48!important;
+}
+
+/* Профиль: имя и показатели в одной компактной карточке. */
+html.theme-architecture .profile-overview-v44{
+  padding:15px!important;
+  background:linear-gradient(180deg,#FFFFFF,#F8FBFF)!important;
+  border:1px solid #DDE5EF!important;
+}
+.profile-identity-v44{
+  margin-bottom:12px;
+  padding-bottom:10px;
+  border-bottom:1px solid #E4E9F0;
+}
+.profile-identity-v44 .eyebrow{
+  margin:0 0 3px!important;
+  color:#2F5F9F!important;
+}
+.profile-identity-v44 h1{
+  margin:0!important;
+  color:#10243A!important;
+  font-size:25px!important;
+  line-height:1.12!important;
+}
+.profile-overview-layout-v44{
+  display:grid;
+  grid-template-columns:78px minmax(0,1fr);
+  gap:11px;
+  align-items:center;
+}
+.profile-overview-v44 .compact-ring-wrap,
+.profile-overview-v44 .compact-ring-svg{
+  width:74px!important;
+  height:74px!important;
+  min-width:74px!important;
+  flex-basis:74px!important;
+  justify-self:start!important;
+}
+.profile-overview-v44 .compact-ring-center{
+  inset:12px!important;
+}
+.profile-overview-v44 .compact-ring-center b{
+  font-size:20px!important;
+}
+.profile-metrics-v44{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;
+}
+.profile-metrics-v44>div{
+  position:relative;
+  min-width:0;
+  min-height:58px;
+  padding:8px 9px;
+  border-radius:13px;
+  background:#F6F8FC;
+  border:1px solid #DDE5EF;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.profile-metrics-v44 span{
+  color:#7D8A99;
+  font-size:8.5px;
+  line-height:1.15;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.07em;
+}
+.profile-metrics-v44 b{
+  display:block;
+  margin-top:4px;
+  color:#10243A;
+  font-size:16px;
+  line-height:1.12;
+  overflow-wrap:anywhere;
+}
+.profile-metrics-v44 .profile-achievement-v44{
+  grid-column:1 / -1;
+  min-height:52px;
+}
+.profile-metrics-v44 .profile-achievement-v44 b{
+  font-size:13.5px;
+}
+.profile-points-v44{
+  padding-right:38px!important;
+}
+.profile-progress-caption-v44{
+  margin:10px 0 0!important;
+  color:#697586!important;
+  font-size:12px!important;
+  line-height:1.45!important;
+}
+
+/* Уровни и достижения. */
+.levels-card-v44{
+  padding:14px!important;
+  background:linear-gradient(180deg,#FFFFFF,#FBFCFE)!important;
+}
+.levels-head-v44{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+}
+.levels-head-v44 .eyebrow{
+  margin:0 0 4px!important;
+  color:#2F5F9F!important;
+}
+.levels-head-v44 h2{
+  margin:0!important;
+  font-size:18px!important;
+  line-height:1.22!important;
+}
+.level-help-v44{
+  position:relative;
+  flex:0 0 32px;
+  width:32px;
+  height:32px;
+  padding:0;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:#E7F0FA;
+  color:#1F4F8A;
+  border:1px solid #D8E2EE;
+  font:900 16px/1 Arial,sans-serif;
+}
+.levels-summary-v44{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-bottom:10px;
+}
+.levels-summary-v44>div{
+  padding:10px 11px;
+  border-radius:14px;
+  background:#F6F8FC;
+  border:1px solid #DDE5EF;
+}
+.levels-summary-v44 span{
+  display:block;
+  color:#7D8A99;
+  font-size:9px;
+  line-height:1.2;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.07em;
+}
+.levels-summary-v44 b{
+  display:block;
+  margin-top:4px;
+  color:#10243A;
+  font-size:17px;
+}
+.level-guide-panel-v44[hidden]{display:none!important;}
+.level-guide-panel-v44{
+  margin-top:13px;
+  padding:12px;
+  border-radius:16px;
+  background:#10243A;
+  color:#FFFFFF;
+}
+.level-guide-title-v44{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+.level-guide-title-v44 b{
+  color:#FFFFFF;
+  font-size:16px;
+}
+.level-guide-title-v44 button{
+  width:30px;
+  height:30px;
+  padding:0;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:rgba(255,255,255,.13);
+  color:#FFFFFF;
+  font-size:21px;
+  line-height:1;
+}
+.level-guide-row-v44{
+  display:grid;
+  grid-template-columns:28px minmax(0,1fr);
+  gap:9px;
+  padding:10px 0;
+  border-top:1px solid rgba(255,255,255,.11);
+}
+.level-guide-row-v44>span{
+  display:grid;
+  place-items:center;
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  background:rgba(255,255,255,.12);
+  color:#FFD36D;
+  font-size:10px;
+  font-weight:900;
+}
+.level-guide-row-v44 div{
+  min-width:0;
+}
+.level-guide-row-v44 b{
+  display:block;
+  color:#FFFFFF;
+  font-size:13px;
+  line-height:1.25;
+}
+.level-guide-row-v44 p{
+  margin:4px 0 0!important;
+  color:rgba(255,255,255,.77)!important;
+  font-size:11.5px!important;
+  line-height:1.4!important;
+}
+.level-guide-row-v44 em{
+  grid-column:2;
+  color:#FFD36D;
+  font-size:10.5px;
+  line-height:1.25;
+  font-style:normal;
+}
+
+/* Шесть показателей прочитанного объёма. */
+.profile-done-v44 .done-heading-v44{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:9px;
+}
+.profile-done-v44 .done-heading-v44 .eyebrow{
+  margin:0 0 3px!important;
+  color:#2F5F9F!important;
+}
+.profile-done-v44 .done-heading-v44 h2{
+  margin:0!important;
+}
+.profile-done-v44 .done-heading-v44>p{
+  max-width:150px;
+  margin:0!important;
+  text-align:right;
+  color:#7D8A99!important;
+  font-size:10.5px!important;
+  line-height:1.3!important;
+}
+.profile-done-v44 .done-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+}
+.profile-done-v44 .done-grid>div{
+  min-height:58px!important;
+}
+.profile-done-v44 .done-grid span{
+  font-size:8.2px!important;
+  line-height:1.15!important;
+}
+.profile-done-v44 .done-grid b{
+  font-size:19px!important;
+}
+
+.app-drawer-footer-v40 .drawer-admin-v44{
+  background:#E7F0FA!important;
+  color:#1F4F8A!important;
+  border-color:#D8E2EE!important;
+}
+
+@media(max-width:420px){
+  html.theme-architecture .v44-dashboard .v44-dashboard-head{
+    grid-template-columns:minmax(0,1fr) 86px!important;
+    gap:9px!important;
+  }
+  html.theme-architecture .v44-dashboard-title-row{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:7px;
+  }
+  html.theme-architecture .v44-dashboard-title-row h1{
+    font-size:23px!important;
+  }
+  html.theme-architecture .v44-dashboard-title-row .instruction-link{
+    min-height:34px!important;
+    padding:7px 11px!important;
+  }
+  html.theme-architecture .v44-dashboard .compact-ring-wrap,
+  html.theme-architecture .v44-dashboard .compact-ring-svg{
+    width:84px!important;
+    height:84px!important;
+  }
+  html.theme-architecture .v44-dashboard .architecture-metrics>div{
+    min-height:74px!important;
+  }
+  html.theme-architecture .v44-dashboard .architecture-metrics b{
+    font-size:15px!important;
+  }
+  html.theme-architecture .v44-dashboard .architecture-metrics>div:last-child b{
+    font-size:13px!important;
+  }
+  .profile-overview-layout-v44{
+    grid-template-columns:68px minmax(0,1fr);
+    gap:8px;
+  }
+  .profile-overview-v44 .compact-ring-wrap,
+  .profile-overview-v44 .compact-ring-svg{
+    width:66px!important;
+    height:66px!important;
+  }
+  .profile-overview-v44 .compact-ring-center{
+    inset:11px!important;
+  }
+  .profile-metrics-v44>div{
+    min-height:54px;
+    padding:7px 8px;
+  }
+  .profile-metrics-v44 b{
+    font-size:15px;
+  }
+  .profile-done-v44 .done-heading-v44{
+    display:block;
+  }
+  .profile-done-v44 .done-heading-v44>p{
+    max-width:none;
+    margin-top:4px!important;
+    text-align:left;
+  }
+}
+
+@media(max-width:350px){
+  html.theme-architecture .v44-dashboard .v44-dashboard-head{
+    grid-template-columns:1fr!important;
+  }
+  html.theme-architecture .v44-dashboard .compact-ring-wrap{
+    justify-self:start!important;
+  }
+  html.theme-architecture .v44-dashboard .architecture-metrics{
+    grid-template-columns:1fr 1fr!important;
+  }
+  html.theme-architecture .v44-dashboard .architecture-metrics>div:last-child{
+    grid-column:1 / -1!important;
+  }
+  .profile-overview-layout-v44{
+    grid-template-columns:1fr;
+  }
+  .profile-overview-v44 .compact-ring-wrap{
+    justify-self:center!important;
+  }
+  .profile-done-v44 .done-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+}
