@@ -6670,3 +6670,49 @@ window.APP_UI_VERSION_V46 = 'v46-extra-compact-progress-audit-20260624';
 
 /* v47 — compact progress composition + aligned lesson stage cards. */
 window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
+
+/* =====================================================
+   v48 — exact compact composition of the overall progress card
+   ===================================================== */
+(function installExactOverallProgressV48(){
+  window.APP_UI_VERSION_V48 = 'v48-exact-overall-progress-composition-20260625';
+
+  var renderHomeBeforeV48 = window.renderHome;
+  window.renderHome = function(){
+    /* Preserve the existing access gate and the non-Architecture theme. */
+    if (typeof hasVerifiedAccessV32 === 'function' && !hasVerifiedAccessV32()) {
+      return renderHomeBeforeV48.apply(this, arguments);
+    }
+    if (!(typeof architectureModeV35 === 'function' && architectureModeV35())) {
+      return renderHomeBeforeV48.apply(this, arguments);
+    }
+
+    if (typeof setArchitectureViewV44 === 'function') setArchitectureViewV44('home');
+
+    var progress = globalStageProgress();
+    var points = totalPoints();
+    var titleInfo = studentTitleInfo();
+    var achievement = typeof libraryPositioningTextV43 === 'function'
+      ? libraryPositioningTextV43(titleInfo.current.title)
+      : titleInfo.current.title;
+
+    var html = `
+      ${card('hero-dashboard main-dashboard-card architecture-dashboard v40-dashboard v41-dashboard v43-dashboard v44-dashboard v48-dashboard', `
+        <div class="v48-dashboard-title"><h1>Общий прогресс</h1></div>
+        <div class="v48-dashboard-action-row">
+          <button class="instruction-link v48-instruction-link" onclick="toggleGlobalInstruction()">как пользоваться</button>
+          ${compactProgressRing(progress.percent)}
+        </div>
+        <div class="v48-primary-metrics">
+          <div><span>Баллы</span><b>${formatPoints(points)}</b></div>
+          <div><span>Уровень</span><b>${titleInfo.current.level} / 25</b></div>
+        </div>
+        <div class="v48-achievement-metric"><span>Достижение</span><b>${esc(achievement)}</b></div>
+        ${globalInstructionPanelHtml()}
+      `)}
+      ${card('architecture-blocks-card v40-blocks-card', `<div class="section-heading-v35"><div><p class="eyebrow">структура библиотеки</p><h2>Выберите блок</h2></div><p>Архитектуры, системы, разборы и материалы собраны в единой структуре.</p></div>${primaryRoutesHtmlV40()}${secondaryBlocksHtmlV40()}`)}
+      ${typeof safeActiveChallengeCardHtmlV24 === 'function' ? safeActiveChallengeCardHtmlV24() : ''}
+    `;
+    shell(html, 'home');
+  };
+})();

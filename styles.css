@@ -3460,3 +3460,498 @@ html.theme-architecture .v44-instruction-panel{
     grid-template-columns:.65fr .65fr 1.7fr!important;
   }
 }
+
+
+/* =====================================================
+   v47 — compact overall progress + strict lesson stage alignment
+   ===================================================== */
+
+/* Общий прогресс: без скрытого текста и пустой вертикальной зоны. */
+html.theme-architecture .v47-dashboard{
+  min-height:0!important;
+  height:auto!important;
+  padding:12px!important;
+  display:block!important;
+}
+html.theme-architecture .v47-dashboard .v47-dashboard-head{
+  min-height:0!important;
+  height:auto!important;
+  grid-template-columns:minmax(0,1fr) 66px!important;
+  gap:10px!important;
+  align-items:center!important;
+  margin:0!important;
+}
+html.theme-architecture .v47-dashboard-copy{
+  min-width:0!important;
+  align-self:center!important;
+}
+html.theme-architecture .v47-dashboard-title-row{
+  min-height:0!important;
+  margin:0 0 7px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:8px!important;
+}
+html.theme-architecture .v47-dashboard-title-row h1{
+  margin:0!important;
+  font-size:21px!important;
+  line-height:1.08!important;
+}
+html.theme-architecture .v47-dashboard-title-row .instruction-link{
+  flex:0 0 auto!important;
+  min-height:30px!important;
+  padding:6px 9px!important;
+  font-size:10.5px!important;
+}
+html.theme-architecture .v47-progress-summary{
+  display:flex!important;
+  align-items:baseline!important;
+  flex-wrap:wrap!important;
+  gap:3px 5px!important;
+  margin:0!important;
+  color:#697586!important;
+  font-size:11px!important;
+  line-height:1.2!important;
+}
+html.theme-architecture .v47-progress-summary span,
+html.theme-architecture .v47-progress-summary em{
+  color:#697586!important;
+  font-style:normal!important;
+  font-weight:650!important;
+}
+html.theme-architecture .v47-progress-summary b{
+  color:#10243A!important;
+  font-size:13px!important;
+  font-weight:900!important;
+  white-space:nowrap!important;
+}
+html.theme-architecture .v47-dashboard .compact-ring-wrap,
+html.theme-architecture .v47-dashboard .compact-ring-svg{
+  width:64px!important;
+  height:64px!important;
+  min-width:64px!important;
+  flex-basis:64px!important;
+}
+html.theme-architecture .v47-dashboard .compact-ring-center{
+  inset:11px!important;
+}
+html.theme-architecture .v47-dashboard .compact-ring-center b{
+  font-size:16px!important;
+}
+html.theme-architecture .v47-dashboard .v47-metrics{
+  display:grid!important;
+  grid-template-columns:minmax(0,.8fr) minmax(0,.8fr) minmax(0,1.55fr)!important;
+  gap:7px!important;
+  margin:9px 0 0!important;
+  align-items:stretch!important;
+}
+html.theme-architecture .v47-dashboard .v47-metrics>div,
+html.theme-architecture .v47-dashboard .v47-metrics>div:last-child{
+  grid-column:auto!important;
+  min-width:0!important;
+  min-height:55px!important;
+  height:auto!important;
+  padding:7px 6px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  border-radius:12px!important;
+}
+html.theme-architecture .v47-dashboard .v47-metrics span{
+  margin:0!important;
+  font-size:8.5px!important;
+  line-height:1.05!important;
+  letter-spacing:.065em!important;
+}
+html.theme-architecture .v47-dashboard .v47-metrics b{
+  width:100%!important;
+  margin:4px 0 0!important;
+  font-size:14px!important;
+  line-height:1.1!important;
+  text-align:center!important;
+  overflow-wrap:anywhere!important;
+}
+html.theme-architecture .v47-dashboard .v47-metrics>div:last-child b{
+  font-size:11.5px!important;
+  line-height:1.12!important;
+  display:block!important;
+  overflow:visible!important;
+  -webkit-line-clamp:unset!important;
+}
+
+/* Этапы урока: номер, текст и статус всегда занимают строго свои колонки. */
+html.theme-architecture .stage-card-v2{
+  display:grid!important;
+  grid-template-columns:42px minmax(0,1fr) 38px!important;
+  grid-template-areas:"number copy state"!important;
+  align-items:center!important;
+  gap:12px!important;
+  min-height:92px!important;
+  padding:13px 15px!important;
+  text-align:left!important;
+}
+html.theme-architecture .stage-card-v2>span{
+  position:static!important;
+  inset:auto!important;
+  margin:0!important;
+}
+html.theme-architecture .stage-card-v2>.stage-number{
+  grid-area:number!important;
+  width:40px!important;
+  height:40px!important;
+  justify-self:start!important;
+  align-self:center!important;
+}
+html.theme-architecture .stage-card-v2>.stage-copy{
+  grid-area:copy!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  justify-content:center!important;
+  min-width:0!important;
+  width:100%!important;
+  text-align:left!important;
+}
+html.theme-architecture .stage-card-v2>.stage-copy b{
+  display:block!important;
+  width:100%!important;
+  margin:0!important;
+  color:var(--arch-navy)!important;
+  font-size:18px!important;
+  line-height:1.15!important;
+  font-weight:850!important;
+  text-align:left!important;
+  overflow-wrap:anywhere!important;
+}
+html.theme-architecture .stage-card-v2>.stage-copy p{
+  display:block!important;
+  width:100%!important;
+  margin:5px 0 0!important;
+  color:#596779!important;
+  font-size:13px!important;
+  line-height:1.35!important;
+  text-align:left!important;
+  overflow-wrap:anywhere!important;
+}
+html.theme-architecture .stage-card-v2>.stage-state{
+  grid-area:state!important;
+  width:36px!important;
+  height:36px!important;
+  justify-self:end!important;
+  align-self:center!important;
+  display:grid!important;
+  place-items:center!important;
+  font-size:20px!important;
+}
+
+@media(max-width:420px){
+  html.theme-architecture .v47-dashboard{
+    padding:11px!important;
+  }
+  html.theme-architecture .v47-dashboard .v47-dashboard-head{
+    grid-template-columns:minmax(0,1fr) 62px!important;
+    gap:8px!important;
+  }
+  html.theme-architecture .v47-dashboard-title-row h1{
+    font-size:20px!important;
+  }
+  html.theme-architecture .v47-dashboard-title-row .instruction-link{
+    min-height:29px!important;
+    padding:5px 8px!important;
+    font-size:10px!important;
+  }
+  html.theme-architecture .v47-dashboard .compact-ring-wrap,
+  html.theme-architecture .v47-dashboard .compact-ring-svg{
+    width:60px!important;
+    height:60px!important;
+    min-width:60px!important;
+    flex-basis:60px!important;
+  }
+  html.theme-architecture .v47-dashboard .v47-metrics{
+    grid-template-columns:minmax(0,.78fr) minmax(0,.78fr) minmax(0,1.55fr)!important;
+    gap:6px!important;
+    margin-top:8px!important;
+  }
+  html.theme-architecture .v47-dashboard .v47-metrics>div,
+  html.theme-architecture .v47-dashboard .v47-metrics>div:last-child{
+    grid-column:auto!important;
+    min-height:53px!important;
+    padding:7px 5px!important;
+  }
+  html.theme-architecture .stage-card-v2{
+    grid-template-columns:40px minmax(0,1fr) 36px!important;
+    gap:11px!important;
+    min-height:88px!important;
+    padding:12px 13px!important;
+  }
+  html.theme-architecture .stage-card-v2>.stage-number{
+    width:38px!important;
+    height:38px!important;
+  }
+  html.theme-architecture .stage-card-v2>.stage-copy b{
+    font-size:17px!important;
+  }
+  html.theme-architecture .stage-card-v2>.stage-copy p{
+    font-size:12.5px!important;
+  }
+  html.theme-architecture .stage-card-v2>.stage-state{
+    width:34px!important;
+    height:34px!important;
+  }
+}
+
+@media(max-width:350px){
+  html.theme-architecture .v47-dashboard .v47-dashboard-head{
+    grid-template-columns:minmax(0,1fr) 58px!important;
+  }
+  html.theme-architecture .v47-dashboard .v47-metrics{
+    grid-template-columns:1fr 1fr!important;
+  }
+  html.theme-architecture .v47-dashboard .v47-metrics>div:last-child{
+    grid-column:1 / -1!important;
+  }
+  html.theme-architecture .stage-card-v2{
+    grid-template-columns:38px minmax(0,1fr) 34px!important;
+    gap:9px!important;
+    padding:11px!important;
+  }
+}
+
+/* =====================================================
+   v48 — exact compact composition of the overall progress card
+   Title → instruction + percent → points + level → achievement.
+   ===================================================== */
+html.theme-architecture .v48-dashboard{
+  min-height:0!important;
+  height:auto!important;
+  padding:14px!important;
+  border-radius:20px!important;
+  display:block!important;
+}
+html.theme-architecture .hero-dashboard.architecture-dashboard.v48-dashboard:after{
+  display:none!important;
+}
+html.theme-architecture .v48-dashboard-title{
+  width:100%!important;
+  margin:0 0 10px!important;
+}
+html.theme-architecture .v48-dashboard-title h1{
+  width:100%!important;
+  margin:0!important;
+  color:var(--arch-navy,#10243A)!important;
+  font-size:27px!important;
+  line-height:1.08!important;
+  letter-spacing:-.025em!important;
+  text-align:left!important;
+}
+html.theme-architecture .v48-dashboard-action-row{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 84px!important;
+  align-items:center!important;
+  gap:12px!important;
+  margin:0 0 10px!important;
+}
+html.theme-architecture .v48-dashboard .v48-instruction-link{
+  width:100%!important;
+  min-height:50px!important;
+  margin:0!important;
+  padding:10px 14px!important;
+  border-radius:15px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  background:#EAF1F8!important;
+  border:1px solid #CAD8E7!important;
+  box-shadow:0 6px 14px rgba(16,36,58,.06)!important;
+  color:#1F4F8A!important;
+  font-size:14px!important;
+  line-height:1.1!important;
+  font-weight:900!important;
+  letter-spacing:.01em!important;
+  text-transform:none!important;
+  white-space:nowrap!important;
+}
+html.theme-architecture .v48-dashboard .compact-ring-wrap,
+html.theme-architecture .v48-dashboard .compact-ring-svg{
+  width:82px!important;
+  height:82px!important;
+  min-width:82px!important;
+  flex-basis:82px!important;
+  margin:0!important;
+  justify-self:end!important;
+}
+html.theme-architecture .v48-dashboard .compact-ring-svg circle{
+  stroke-width:9!important;
+}
+html.theme-architecture .v48-dashboard .compact-ring-center{
+  inset:14px!important;
+  background:#FFFFFF!important;
+  border:1px solid #DCE3EA!important;
+  box-shadow:0 3px 10px rgba(16,36,58,.06)!important;
+}
+html.theme-architecture .v48-dashboard .compact-ring-center b{
+  color:var(--arch-navy,#10243A)!important;
+  font-size:21px!important;
+  line-height:1!important;
+}
+html.theme-architecture .v48-dashboard .compact-ring-track{
+  stroke:#DCE3EA!important;
+}
+html.theme-architecture .v48-dashboard .compact-ring-value{
+  stroke:#F28C28!important;
+}
+html.theme-architecture .v48-primary-metrics{
+  display:grid!important;
+  grid-template-columns:1fr 1fr!important;
+  gap:10px!important;
+  margin:0 0 9px!important;
+}
+html.theme-architecture .v48-primary-metrics>div{
+  min-width:0!important;
+  min-height:72px!important;
+  padding:10px 12px!important;
+  border-radius:16px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  background:#FFFFFF!important;
+  border:1px solid #CBD8E5!important;
+  box-shadow:0 6px 14px rgba(16,36,58,.045)!important;
+}
+html.theme-architecture .v48-primary-metrics span,
+html.theme-architecture .v48-achievement-metric span{
+  display:block!important;
+  margin:0!important;
+  color:#718092!important;
+  font-size:10px!important;
+  line-height:1.05!important;
+  font-weight:900!important;
+  letter-spacing:.105em!important;
+  text-transform:uppercase!important;
+}
+html.theme-architecture .v48-primary-metrics b{
+  display:block!important;
+  width:100%!important;
+  margin:5px 0 0!important;
+  color:var(--arch-navy,#10243A)!important;
+  font-size:26px!important;
+  line-height:1!important;
+  font-weight:900!important;
+  text-align:center!important;
+  font-variant-numeric:tabular-nums!important;
+}
+html.theme-architecture .v48-achievement-metric{
+  width:78%!important;
+  max-width:280px!important;
+  min-height:62px!important;
+  margin:0 auto!important;
+  padding:9px 14px!important;
+  border-radius:16px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  background:#FFFFFF!important;
+  border:1px solid #CBD8E5!important;
+  box-shadow:0 6px 14px rgba(16,36,58,.045)!important;
+}
+html.theme-architecture .v48-achievement-metric b{
+  display:block!important;
+  width:100%!important;
+  margin:5px 0 0!important;
+  color:var(--arch-navy,#10243A)!important;
+  font-size:16px!important;
+  line-height:1.15!important;
+  font-weight:850!important;
+  text-align:center!important;
+  overflow-wrap:anywhere!important;
+}
+html.theme-architecture .v48-dashboard .v44-instruction-panel{
+  margin-top:10px!important;
+}
+
+@media(max-width:420px){
+  html.theme-architecture .v48-dashboard{
+    padding:13px!important;
+  }
+  html.theme-architecture .v48-dashboard-title{
+    margin-bottom:9px!important;
+  }
+  html.theme-architecture .v48-dashboard-title h1{
+    font-size:25px!important;
+  }
+  html.theme-architecture .v48-dashboard-action-row{
+    grid-template-columns:minmax(0,1fr) 78px!important;
+    gap:10px!important;
+    margin-bottom:9px!important;
+  }
+  html.theme-architecture .v48-dashboard .v48-instruction-link{
+    min-height:48px!important;
+    padding:9px 11px!important;
+    font-size:13px!important;
+  }
+  html.theme-architecture .v48-dashboard .compact-ring-wrap,
+  html.theme-architecture .v48-dashboard .compact-ring-svg{
+    width:76px!important;
+    height:76px!important;
+    min-width:76px!important;
+    flex-basis:76px!important;
+  }
+  html.theme-architecture .v48-dashboard .compact-ring-center{
+    inset:13px!important;
+  }
+  html.theme-architecture .v48-dashboard .compact-ring-center b{
+    font-size:20px!important;
+  }
+  html.theme-architecture .v48-primary-metrics{
+    gap:9px!important;
+    margin-bottom:8px!important;
+  }
+  html.theme-architecture .v48-primary-metrics>div{
+    min-height:68px!important;
+    padding:9px 10px!important;
+  }
+  html.theme-architecture .v48-primary-metrics b{
+    font-size:24px!important;
+  }
+  html.theme-architecture .v48-achievement-metric{
+    width:80%!important;
+    min-height:58px!important;
+    padding:8px 12px!important;
+  }
+  html.theme-architecture .v48-achievement-metric b{
+    font-size:15px!important;
+  }
+}
+
+@media(max-width:350px){
+  html.theme-architecture .v48-dashboard-title h1{
+    font-size:23px!important;
+  }
+  html.theme-architecture .v48-dashboard-action-row{
+    grid-template-columns:minmax(0,1fr) 72px!important;
+    gap:8px!important;
+  }
+  html.theme-architecture .v48-dashboard .compact-ring-wrap,
+  html.theme-architecture .v48-dashboard .compact-ring-svg{
+    width:70px!important;
+    height:70px!important;
+    min-width:70px!important;
+    flex-basis:70px!important;
+  }
+  html.theme-architecture .v48-primary-metrics>div{
+    min-height:64px!important;
+  }
+  html.theme-architecture .v48-primary-metrics b{
+    font-size:22px!important;
+  }
+  html.theme-architecture .v48-achievement-metric{
+    width:86%!important;
+  }
+}
