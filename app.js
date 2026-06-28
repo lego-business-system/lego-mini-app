@@ -29,7 +29,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v54-finance-student-lock-and-lesson-viewport-20260628";
+const APP_CACHE_VERSION = "v55-finance-admin-mode-hard-lock-20260628";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -7712,5 +7712,274 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
   document.addEventListener('DOMContentLoaded', function(){
     setTimeout(patchFinanceUiV54, 0);
     setTimeout(patchFinanceUiV54, 300);
+  });
+})();
+
+
+/* =====================================================
+   v55 — Финансовый помощник: жёсткая блокировка в просмотре ученика,
+   пересборка бокового меню и возврат на главную
+   ===================================================== */
+(function installFinanceHardStudentLockV55(){
+  window.APP_UI_VERSION_V55 = 'v55-finance-admin-mode-hard-lock-20260628';
+
+  function financeIsAdminModeV55(){
+    try { return typeof isAdminMode === 'function' && isAdminMode() === true; }
+    catch(e) { return false; }
+  }
+  window.financeIsAdminModeV55 = financeIsAdminModeV55;
+
+  function financeStudentLockedV55(){
+    alert('Финансовый помощник пока закрыт для учеников. Проверка материалов доступна только в режиме администрирования.');
+    if (typeof renderHome === 'function') renderHome();
+  }
+  window.financeStudentLockedV55 = financeStudentLockedV55;
+
+  // Перекрываем старые проверки v49/v50/v52/v54: доступ не по факту админ-пользователя,
+  // а только при явно включённом режиме администрирования.
+  window.financeAdminCanOpenV50 = financeIsAdminModeV55;
+  window.financeAdminCanOpenV52 = financeIsAdminModeV55;
+  window.financeAdminModeCanOpenV54 = financeIsAdminModeV55;
+  window.forceAdminModeV52 = function(){ return financeIsAdminModeV55(); };
+  window.ensureFinanceAdminModeV50 = function(){ return financeIsAdminModeV55(); };
+
+  // Добавляем финансовый помощник в общий список закрытых блоков для режима ученика.
+  try {
+    if (Array.isArray(window.studentLockedBlocksV41) && !window.studentLockedBlocksV41.includes('Финансовый помощник')) {
+      window.studentLockedBlocksV41.push('Финансовый помощник');
+    }
+  } catch(e) {}
+
+  function financeIconV55(){
+    return `<span class="arch-nav-icon"><svg class="arch-nav-svg" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V9M10 20V4M16 20v-7M22 20H2"/><path d="m4 7 5-3 5 5 6-6"/></svg></span>`;
+  }
+  function iconV55(key){
+    if (key === 'finance') return financeIconV55();
+    if (typeof architectureNavIconV35 === 'function') return `<span class="arch-nav-icon">${architectureNavIconV35(key)}</span>`;
+    if (key === 'home') return '<span>⌂</span>';
+    if (key === 'profile') return '<span>○</span>';
+    return '<span>•</span>';
+  }
+
+  function renderFinanceAssistantHubV55(){
+    if (!financeIsAdminModeV55()) return financeStudentLockedV55();
+    const html = `
+      ${card('blue-card-v2 finance-hero-v49', `<p class="eyebrow">финансовый помощник</p><h1>Финансовый помощник</h1><p>Административный предпросмотр материалов. Для учеников блок остаётся закрытым до отдельного запуска.</p>`)}
+      ${card('', `<h2>Выберите раздел помощника</h2><div class="finance-hub-grid-v49">
+        <button class="finance-hub-card-v49 active" onclick="renderFinanceModuleHome()"><b>Финансовый модуль</b><p>11 разделов, 62 урока, первые 4 урока полностью наполнены текстом, итоговая диагностика стоит в конце первого раздела.</p><em>открыть</em></button>
+        <button class="finance-hub-card-v49" onclick="renderFinanceAnalytics()"><b>Моя аналитика</b><p>Черновой контур для будущей аналитики бизнеса: ввод фактов, показатели и первичные выводы.</p><em>каркас</em></button>
+        <button class="finance-hub-card-v49" onclick="renderFinanceTemplates()"><b>Готовые шаблоны</b><p>Место для будущих таблиц, шаблонов и инструментов финансового модуля.</p><em>скоро</em></button>
+      </div><button class="btn secondary" onclick="renderHome()">← Вернуться на главную</button>`)}
+    `;
+    shell(html, 'finance');
+  }
+
+  function openFinanceAssistantV55(){
+    if (!financeIsAdminModeV55()) return financeStudentLockedV55();
+    return renderFinanceAssistantHubV55();
+  }
+
+  window.openFinanceAssistantV55 = openFinanceAssistantV55;
+  window.openFinanceAssistantV54 = openFinanceAssistantV55;
+  window.openFinanceAssistantV52 = openFinanceAssistantV55;
+  window.openFinanceAssistantV50 = openFinanceAssistantV55;
+  window.renderFinancialAssistant = openFinanceAssistantV55;
+  window.renderMyBusiness = openFinanceAssistantV55;
+  try { openFinanceAssistantV54 = openFinanceAssistantV55; } catch(e) {}
+  try { openFinanceAssistantV52 = openFinanceAssistantV55; } catch(e) {}
+  try { openFinanceAssistantV50 = openFinanceAssistantV55; } catch(e) {}
+  try { renderFinancialAssistant = openFinanceAssistantV55; } catch(e) {}
+  try { renderMyBusiness = openFinanceAssistantV55; } catch(e) {}
+
+  function bottomNavV55(active){
+    if (typeof hasVerifiedAccessV32 === 'function' && !hasVerifiedAccessV32()) return '';
+    const home = `<button class="bottom-item ${active==='home'?'active':''}" onclick="renderHome()">${iconV55('home')}<b>Главная</b></button>`;
+    const finance = financeIsAdminModeV55()
+      ? `<button class="bottom-item ${active==='finance'?'active':''} finance-bottom-item-v55" onclick="openFinanceAssistantV55()">${iconV55('finance')}<b>Финансовый помощник</b></button>`
+      : `<button class="bottom-item finance-bottom-item-v55 finance-bottom-locked-v55 is-disabled-v41" type="button" disabled aria-disabled="true" title="Раздел пока закрыт">${iconV55('finance')}<b>Финансовый помощник</b><small>закрыто</small></button>`;
+    const profile = `<button class="bottom-item ${active==='profile'?'active':''}" onclick="renderProfile()">${iconV55('profile')}<b>Профиль</b></button>`;
+    return `<nav class="bottom-nav-v2 v41-bottom-nav v55-bottom-nav" aria-label="Основное меню">${home}${finance}${profile}</nav>`;
+  }
+  window.bottomNav = bottomNavV55;
+  try { bottomNav = bottomNavV55; } catch(e) {}
+
+  function isStudentViewV55(){ return !financeIsAdminModeV55(); }
+  function blockCardV55(title, text, adminStatus, action, cls, studentLocked){
+    const locked = Boolean(studentLocked) && isStudentViewV55();
+    const finalAction = locked ? '' : (action || '');
+    const finalStatus = locked ? 'в подготовке' : adminStatus;
+    const finalCls = (cls || '') + (locked ? ' student-block-locked-v41' : '');
+    return renderMainBlockCard(title, text, finalStatus, finalAction, finalCls);
+  }
+  function financeHomeCardV55(){
+    if (financeIsAdminModeV55()) {
+      return `<button data-finance-main-v55="1" class="track-card active compact-card finance-main-card-v55" onclick="openFinanceAssistantV55()"><b>Финансовый помощник</b><p>Финансовый модуль, аналитика и готовые шаблоны. Доступ открыт только в режиме администрирования.</p><em>доступно администратору</em></button>`;
+    }
+    return `<button data-finance-main-v55="1" class="track-card disabled compact-card finance-main-card-v55 student-block-locked-v41" type="button" disabled aria-disabled="true"><b>Финансовый помощник</b><p>Финансовый модуль, аналитика и готовые шаблоны. Для учеников блок пока закрыт.</p><em>закрыто</em></button>`;
+  }
+
+  // Полностью пересобираем вторую сетку блоков, чтобы старые активные карточки финансового помощника
+  // больше не могли проскочить через обёртки v49/v52/v54.
+  window.secondaryBlocksHtmlV40 = function(){
+    const forumOpen = financeIsAdminModeV55() || (typeof forumVisibleInNavigationV38 === 'function' && forumVisibleInNavigationV38());
+    const forumStatus = forumOpen ? 'тестирование' : 'в подготовке';
+    const forumAction = forumOpen ? 'openForumBlockV40()' : '';
+    return `<div class="secondary-track-grid-v22 architecture-secondary-tracks-v40">
+      ${blockCardV55('Бизнес-форум','Вопросы по системам, обсуждение практических ситуаций и обмен опытом участников.',forumStatus,forumAction,'compact-card',true)}
+      ${blockCardV55('100 книг за 100 дней','Ежедневный челлендж: одна книга, 24 часа, мини-тест, единица освоения и баллы серии.','доступно','renderBookChallenge()','active compact-card',false)}
+      ${blockCardV55('Газета','Новости бизнеса и приложения в формате цифровых газетных выпусков.','скоро','renderNewspaperV40()','soon compact-card',true)}
+      ${blockCardV55('Предпринимательские статьи','Отдельные материалы, наблюдения, заметки и практические тексты для предпринимателей.','скоро','renderEntrepreneurArticlesV40()','soon compact-card',true)}
+      ${blockCardV55('Прямые разборы','Формат разборов бизнес-ситуаций, решений, ограничений и управленческих ошибок.','скоро','renderDirectReviewsV40()','soon compact-card',true)}
+      ${blockCardV55('Что посмотреть','Подборки видео, фильмов, лекций и материалов для расширения управленческого кругозора.','скоро','renderWatchV40()','soon compact-card',true)}
+      ${blockCardV55('Дополнительные материалы','Отдельные уроки, разборы и материалы, которые дополняют основную библиотеку.','скоро','renderAdditionalMaterials()','soon compact-card',true)}
+      ${blockCardV55('VIP уровень','Расширенные разборы, инструменты и закрытые возможности.','в разработке','renderVipV40()','soon compact-card',true)}
+      ${financeHomeCardV55()}
+    </div>`;
+  };
+  try { secondaryBlocksHtmlV40 = window.secondaryBlocksHtmlV40; } catch(e) {}
+
+  function drawerItemsV55(){
+    const student = isStudentViewV55();
+    const lock = function(action){ return student ? '' : action; };
+    const lockedStatus = function(status){ return student ? 'в подготовке' : status; };
+    return [
+      {title:'Я предприниматель',status:'доступно',action:'renderLearning()',locked:false},
+      {title:'Нет своего бизнеса',status:lockedStatus('скоро'),action:lock('renderNoBusinessV40()'),locked:student},
+      {title:'Я сотрудник',status:lockedStatus('скоро'),action:lock('renderEmployeeRouteV40()'),locked:student},
+      {title:'Бизнес-форум',status:lockedStatus('тестирование'),action:lock('openForumBlockV40()'),locked:student},
+      {title:'100 книг за 100 дней',status:'доступно',action:'renderBookChallenge()',locked:false},
+      {title:'Газета',status:lockedStatus('скоро'),action:lock('renderNewspaperV40()'),locked:student},
+      {title:'Предпринимательские статьи',status:lockedStatus('скоро'),action:lock('renderEntrepreneurArticlesV40()'),locked:student},
+      {title:'Прямые разборы',status:lockedStatus('скоро'),action:lock('renderDirectReviewsV40()'),locked:student},
+      {title:'Что посмотреть',status:lockedStatus('скоро'),action:lock('renderWatchV40()'),locked:student},
+      {title:'Дополнительные материалы',status:lockedStatus('скоро'),action:lock('renderAdditionalMaterials()'),locked:student},
+      {title:'VIP уровень',status:lockedStatus('в разработке'),action:lock('renderVipV40()'),locked:student},
+      {title:'Финансовый помощник',status:financeIsAdminModeV55() ? 'доступно администратору' : 'закрыто',action:financeIsAdminModeV55() ? 'openFinanceAssistantV55()' : '',locked:!financeIsAdminModeV55(),finance:true}
+    ];
+  }
+
+  function drawerFooterHtmlV55(){
+    const adminButton = (typeof isAdminUser === 'function' && isAdminUser())
+      ? `<button type="button" class="drawer-admin-v44" onclick="switchAdminModeFromDrawerV55()">${financeIsAdminModeV55() ? 'Просмотр приложения' : 'Администрирование'}</button>`
+      : '';
+    return `<button type="button" onclick="openSupportFromDrawerV43()">Задать вопрос</button><button type="button" onclick="openIdeaFromDrawerV43()">Предложить идею</button><button type="button" class="drawer-refresh-v43" onclick="refreshAppInformationV43()">Обновить информацию</button>${adminButton}`;
+  }
+
+  function appDrawerHtmlV55(){
+    return `<div class="app-drawer-overlay-v40" id="app-drawer-overlay-v40" onclick="closeAppDrawerV40()" aria-hidden="true">
+      <aside class="app-drawer-v40" role="dialog" aria-modal="true" aria-label="Все разделы приложения" onclick="event.stopPropagation()">
+        <div class="app-drawer-head-v40"><div><p>АРХИТЕКТУРА</p><span>Все разделы</span></div><button onclick="closeAppDrawerV40()" aria-label="Закрыть меню">×</button></div>
+        <div class="app-drawer-list-v40">${drawerItemsV55().map(function(item,index){
+          const n = String(index + 1).padStart(2,'0');
+          const attrs = item.locked ? 'type="button" disabled aria-disabled="true"' : `onclick="closeAppDrawerV40(); ${item.action}"`;
+          const cls = item.locked ? 'student-locked-v41' : '';
+          const arrow = item.locked ? '•' : '›';
+          return `<button class="${cls}" ${attrs}><span class="app-drawer-number-v40">${n}</span><span class="app-drawer-copy-v40"><b>${esc(item.title)}</b><small>${esc(item.status)}</small></span><span class="app-drawer-arrow-v40">${arrow}</span></button>`;
+        }).join('')}</div>
+        <div class="app-drawer-footer-v40">${drawerFooterHtmlV55()}</div>
+      </aside>
+    </div>`;
+  }
+
+  window.switchAdminModeFromDrawerV55 = function(){
+    if (typeof closeAppDrawerV40 === 'function') closeAppDrawerV40();
+    if (!(typeof isAdminUser === 'function' && isAdminUser())) return;
+    if (typeof setAppMode === 'function') setAppMode(financeIsAdminModeV55() ? 'student' : 'admin');
+  };
+  window.switchAdminModeFromDrawerV44 = window.switchAdminModeFromDrawerV55;
+
+  window.installAppDrawerV40 = function(){
+    if (typeof architectureV40Enabled === 'function' && !architectureV40Enabled()) return;
+    const shellRoot = document.querySelector('.app-shell-v2');
+    const header = document.querySelector('.app-header-v2');
+    if (!shellRoot || !header) return;
+    if (!header.querySelector('.app-menu-button-v40')) {
+      const menuButton = document.createElement('button');
+      menuButton.className = 'app-menu-button-v40';
+      menuButton.setAttribute('aria-label','Открыть все разделы');
+      menuButton.innerHTML = '<span></span><span></span><span></span>';
+      menuButton.onclick = window.openAppDrawerV40;
+      header.insertBefore(menuButton, header.firstChild);
+    }
+    const old = document.getElementById('app-drawer-overlay-v40');
+    if (old) old.remove();
+    shellRoot.insertAdjacentHTML('beforeend', appDrawerHtmlV55());
+  };
+  try { installAppDrawerV40 = window.installAppDrawerV40; } catch(e) {}
+
+  window.openAppDrawerV40 = function(){
+    window.installAppDrawerV40();
+    const overlay = document.getElementById('app-drawer-overlay-v40');
+    if (!overlay) return;
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden','false');
+    document.body.classList.add('app-drawer-open-v40');
+  };
+  try { openAppDrawerV40 = window.openAppDrawerV40; } catch(e) {}
+
+  // После переключения режима пересобираем меню с нуля, чтобы не оставался старый активный пункт.
+  const setAppModeBeforeV55 = window.setAppMode || (typeof setAppMode === 'function' ? setAppMode : null);
+  if (typeof setAppModeBeforeV55 === 'function' && !window.__setAppModeWrappedV55) {
+    window.__setAppModeWrappedV55 = true;
+    window.setAppMode = function(mode){
+      const result = setAppModeBeforeV55.apply(this, arguments);
+      try { const old = document.getElementById('app-drawer-overlay-v40'); if (old) old.remove(); } catch(e) {}
+      setTimeout(function(){ if (typeof renderHome === 'function') renderHome(); }, 0);
+      return result;
+    };
+    try { setAppMode = window.setAppMode; } catch(e) {}
+  }
+
+  function patchFinanceCardsV55(){
+    document.querySelectorAll('[data-finance-main-v49="1"], [data-finance-main-v50="1"], [data-finance-main-v52="1"], [data-finance-main-v54="1"], .finance-home-card-v49, .finance-main-card-v52, [data-finance-assistant-v50="1"], [data-finance-assistant-v52="1"], [data-finance-assistant-v54="1"]').forEach(function(node){
+      // Удаляем только старые вставки. Новые v55 создаются через secondaryBlocksHtmlV40 и drawerItemsV55.
+      node.remove();
+    });
+  }
+
+  const shellBeforeV55 = window.shell;
+  if (typeof shellBeforeV55 === 'function') {
+    window.shell = function(content, activeTab){
+      const text = String(content || '');
+      const financeScreen = text.indexOf('finance-hero-v49') !== -1 || text.indexOf('finance-hub-grid-v49') !== -1 || text.indexOf('finance-section-list-v49') !== -1 || text.indexOf('finance-lesson-card-v49') !== -1 || text.indexOf('finance-slide-card-v53') !== -1 || text.indexOf('finance-cover-card-v53') !== -1;
+      const result = shellBeforeV55.call(this, content, financeScreen ? 'finance' : activeTab);
+      setTimeout(patchFinanceCardsV55, 0);
+      setTimeout(patchFinanceCardsV55, 180);
+      setTimeout(patchFinanceCardsV55, 360);
+      return result;
+    };
+    try { shell = window.shell; } catch(e) {}
+  }
+
+  const renderHomeBeforeV55 = window.renderHome;
+  if (typeof renderHomeBeforeV55 === 'function') {
+    window.renderHome = function(){
+      const result = renderHomeBeforeV55.apply(this, arguments);
+      setTimeout(function(){
+        patchFinanceCardsV55();
+        if (typeof installAppDrawerV40 === 'function') installAppDrawerV40();
+      }, 0);
+      setTimeout(function(){
+        patchFinanceCardsV55();
+        if (typeof installAppDrawerV40 === 'function') installAppDrawerV40();
+      }, 180);
+      setTimeout(function(){
+        patchFinanceCardsV55();
+        if (typeof installAppDrawerV40 === 'function') installAppDrawerV40();
+      }, 360);
+      return result;
+    };
+    try { renderHome = window.renderHome; } catch(e) {}
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){
+      patchFinanceCardsV55();
+      if (typeof installAppDrawerV40 === 'function') installAppDrawerV40();
+    }, 200);
+    setTimeout(function(){
+      patchFinanceCardsV55();
+      if (typeof installAppDrawerV40 === 'function') installAppDrawerV40();
+    }, 420);
   });
 })();
