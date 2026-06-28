@@ -5278,3 +5278,20 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
 .finance-cover-grid-v64,.finance-final-grid-v64{display:grid;gap:10px}.finance-cover-line-v64,.finance-final-grid-v64>div{padding:13px;border-radius:16px;background:var(--lego-gray-100,#F2F5F9);border:1px solid var(--lego-border,#DDE5EF)}.finance-cover-line-v64 span{display:block;margin-bottom:5px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;color:var(--lego-gray-500,#7D8A99)}.finance-cover-line-v64 p,.finance-final-grid-v64 p{margin:0}.finance-screen-counter-v64{margin-top:12px;text-align:center;color:var(--lego-gray-500,#7D8A99);font-size:12px;font-weight:900}
 .finance-slide-card-v64{background:#fff;border-radius:20px;padding:16px;margin-bottom:12px;box-shadow:var(--lego-shadow,0 10px 30px rgba(7,27,53,.08));border:1px solid var(--lego-border,#DDE5EF)}.finance-slide-card-v64 h1{margin-bottom:12px}.finance-image-placeholder-v64{min-height:190px;display:grid;place-items:center;text-align:center;border-radius:18px;background:linear-gradient(135deg,#071B35,#0B2748);color:#fff;margin:0 0 14px;padding:20px}.finance-image-placeholder-v64 b{display:block;color:#fff;font-size:20px}.finance-image-placeholder-v64 p{color:rgba(255,255,255,.78);margin:6px 0 0}.finance-learning-block-v64,.finance-impact-matrix-v64>div,.finance-situation-list-v64>div{padding:13px;border-radius:16px;background:#F6F8FC;border:1px solid #DDE5EF;margin:10px 0}.finance-learning-block-v64.main{background:#FFF3C8;border-color:rgba(246,195,67,.45)}.finance-learning-block-v64.error{background:#FFE8D2;border-color:rgba(242,140,40,.32)}.finance-learning-block-v64.conclusion{background:#DFF8F4;border-color:rgba(22,168,154,.28)}.finance-learning-block-v64 b,.finance-impact-matrix-v64 span{display:block;margin-bottom:5px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;color:var(--lego-gray-500,#7D8A99)}.finance-learning-block-v64 p,.finance-impact-matrix-v64 p,.finance-situation-list-v64 p{margin:0}.finance-slide-body-v64 h3{margin-top:0}.finance-slide-body-v64 p{line-height:1.58;color:#263852}.finance-impact-matrix-v64{display:grid;gap:10px;margin:12px 0}.finance-impact-matrix-v64>div{background:#EEF3F8}.finance-situation-flow-v64{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.finance-situation-flow-v64 b{flex:1 1 100%;color:var(--lego-navy,#071B35)}.finance-situation-flow-v64 span{padding:7px 10px;border-radius:999px;background:#E7F0FA;color:#1F4F8A;font-size:12px;font-weight:900}.finance-progress-v64{margin-top:14px;padding:12px;border-radius:16px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18)}.finance-progress-head-v64{display:flex;justify-content:space-between;gap:10px}.finance-progress-head-v64 span{font-size:12px;text-transform:uppercase;letter-spacing:.07em;font-weight:900;color:rgba(255,255,255,.75)}.finance-progress-head-v64 b{color:#fff}.finance-progress-v64 p{margin:8px 0 0;color:rgba(255,255,255,.82)!important;font-size:13px}
 @media(min-width:640px){.finance-hub-grid-v64{grid-template-columns:repeat(3,1fr)}.finance-section-list-v64{grid-template-columns:repeat(2,1fr)}.finance-impact-matrix-v64{grid-template-columns:repeat(3,1fr)}}
+
+/* =====================================================
+   v69 — Finance trainer link screen
+   ===================================================== */
+.finance-trainer-warning-v69{
+  padding:14px;
+  margin:10px 0 12px;
+  border-radius:18px;
+  background:var(--lego-yellow-soft,#FFF3C8);
+  border:1px solid rgba(246,195,67,.48);
+}
+.finance-trainer-warning-v69 b{display:block;color:var(--lego-navy,#071B35);font-size:16px;margin-bottom:5px;}
+.finance-trainer-warning-v69 p{margin:0;color:var(--lego-gray-700,#4D5B6B);font-size:14px;line-height:1.45;}
+.finance-trainer-actions-v69{margin-top:12px;}
+.finance-copy-label-v69{display:block;margin-top:12px;}
+.finance-copy-label-v69 span{display:block;margin-bottom:6px;color:var(--lego-navy,#071B35);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;}
+.finance-copy-label-v69 input{font-size:12px;color:var(--lego-gray-700,#4D5B6B);background:#fff;}
