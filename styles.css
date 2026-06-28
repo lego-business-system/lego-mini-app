@@ -5218,185 +5218,63 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
 }
 
 /* =====================================================
-   v60 — financial module route fix UI
+   v60 — Финансовый помощник: маршрут модуль → раздел → уроки
    ===================================================== */
-.finance-hub-grid-v60,
-.finance-section-list-v60{
+.finance-hub-grid-v60{display:grid;gap:10px}.finance-hub-card-v60{width:100%;padding:15px;border-radius:18px;background:#fff;border:1px solid #DDE5EF;text-align:left;box-shadow:0 8px 20px rgba(7,27,53,.05)}.finance-hub-card-v60.active{background:linear-gradient(180deg,#fff,#FFF8E6);border-color:rgba(246,195,67,.55)}.finance-hub-card-v60 b{display:block;color:#071B35;font-size:17px;margin-bottom:6px}.finance-hub-card-v60 p{margin:0 0 8px;font-size:14px;line-height:1.45;color:#4D5B6B}.finance-hub-card-v60 em{display:inline-flex;padding:6px 9px;border-radius:999px;background:#E7F0FA;color:#1F4F8A;font-size:11px;font-style:normal;font-weight:900;text-transform:uppercase}.finance-toolbar-v60{display:grid;gap:8px;margin-bottom:12px}.finance-toolbar-v60 .btn{margin:0}.finance-module-map-v60{display:grid;gap:10px;margin:10px 0 16px}.finance-module-map-v60>div,.finance-empty-v60{padding:13px;border-radius:16px;background:#F6F8FC;border:1px solid #DDE5EF}.finance-module-map-v60 b,.finance-empty-v60 b{display:block;color:#071B35;font-size:15px;margin-bottom:5px}.finance-module-map-v60 p,.finance-empty-v60 p{margin:0;color:#4D5B6B;font-size:14px;line-height:1.45}.finance-quick-open-v60{background:linear-gradient(180deg,#fff,#FFF8E6)!important;border-color:rgba(246,195,67,.55)!important}.finance-quick-open-v60 .btn{margin-top:12px}.finance-progress-v60{margin-top:13px;padding:13px;border-radius:16px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18)}.finance-progress-v60.passed{background:rgba(22,168,154,.16);border-color:rgba(22,168,154,.34)}.finance-progress-head-v60{display:flex;justify-content:space-between;align-items:center;gap:10px}.finance-progress-head-v60 span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;color:rgba(255,255,255,.72)!important}.finance-progress-head-v60 b{font-size:15px;color:#fff!important;white-space:nowrap}.finance-progress-v60 p{margin:8px 0 0!important;color:rgba(255,255,255,.82)!important;font-size:13px;line-height:1.42}.finance-section-grid-v60{display:grid;gap:10px}.finance-section-card-v60{display:block;width:100%;padding:14px;border-radius:18px;background:#fff;border:1px solid #DDE5EF;box-shadow:0 8px 20px rgba(7,27,53,.05);text-align:left}.finance-section-card-v60.locked{opacity:.68;background:#F6F8FC}.finance-section-card-v60 span{display:inline-flex;padding:5px 9px;border-radius:999px;background:#E7F0FA;color:#1F4F8A;font-size:11px;font-weight:900;text-transform:uppercase}.finance-section-card-v60 em{float:right;color:#7D8A99;font-size:11px;font-weight:900;font-style:normal}.finance-section-card-v60 b{clear:both;display:block;margin:10px 0 6px;color:#071B35;font-size:17px;line-height:1.25}.finance-section-card-v60 p{margin:0 0 8px;color:#4D5B6B;font-size:14px;line-height:1.45}.finance-section-card-v60 small{display:block;color:#7D8A99;font-size:12px;line-height:1.35}.finance-section-card-v60 .btn{margin-top:11px}.finance-test-row-v60{background:linear-gradient(180deg,#fff,#F8FBFF)!important;border-color:rgba(47,95,159,.22)!important}.finance-trainer-row-v60{background:linear-gradient(180deg,#fff,#FFF8E6)!important;border-color:rgba(246,195,67,.45)!important}.finance-lesson-row-v60.locked{opacity:.6}@media(min-width:640px){.finance-hub-grid-v60,.finance-module-map-v60,.finance-section-grid-v60{grid-template-columns:1fr 1fr}.finance-toolbar-v60{grid-template-columns:auto auto;justify-content:start}}@media(max-width:420px){.finance-progress-head-v60{display:block}.finance-progress-head-v60 b{display:block;margin-top:4px;white-space:normal}.finance-section-card-v60 em{float:none;display:block;margin-top:7px}}
+
+
+
+/* =====================================================
+   v62 — hard final finance route UI
+   ===================================================== */
+.finance-hub-grid-v62{display:grid;gap:12px}.finance-hub-card-v62{width:100%;min-height:145px;padding:16px;border-radius:18px;background:#fff;border:1px solid var(--lego-border);box-shadow:0 8px 20px rgba(7,27,53,.05);text-align:left}.finance-hub-card-v62.active{background:linear-gradient(135deg,#fff,var(--lego-yellow-soft));border-color:rgba(246,195,67,.7)}.finance-hub-card-v62 b{display:block;color:var(--lego-navy);font-size:18px;margin-bottom:6px}.finance-hub-card-v62 p{margin:0 0 10px}.finance-hub-card-v62 em{display:inline-flex;padding:6px 10px;border-radius:999px;background:var(--lego-steel-light);color:var(--lego-steel-2);font-style:normal;font-size:12px;font-weight:900}.finance-quick-open-v62{border-color:rgba(246,195,67,.45);background:linear-gradient(180deg,#fff,#fffaf0)}.finance-module-map-v62{display:grid;gap:10px;margin:10px 0 16px}.finance-module-map-v62>div{padding:12px;border-radius:16px;background:var(--lego-gray-100);border:1px solid var(--lego-border)}.finance-module-map-v62 b{display:block;color:var(--lego-steel-2);font-size:18px}.finance-module-map-v62 p{margin:4px 0 0;font-size:14px}.finance-section-list-v62{display:grid;gap:10px}.finance-section-tile-v62{width:100%;padding:15px;border-radius:18px;background:#fff;border:1px solid var(--lego-border);box-shadow:0 8px 20px rgba(7,27,53,.05);text-align:left}.finance-section-tile-v62.locked{opacity:.58;background:var(--lego-gray-100);box-shadow:none}.finance-section-tile-head-v62,.finance-section-tile-bottom-v62{display:flex;justify-content:space-between;gap:10px;align-items:center}.finance-section-tile-head-v62 span{padding:5px 9px;border-radius:999px;background:var(--lego-steel-light);color:var(--lego-steel-2);font-size:11px;font-weight:900;text-transform:uppercase}.finance-section-tile-head-v62 em{font-style:normal;color:var(--lego-gray-500);font-size:12px;font-weight:900}.finance-section-tile-v62 h3{margin:10px 0 7px}.finance-section-tile-v62 p{margin:0 0 10px}.finance-section-tile-bottom-v62 b{color:var(--lego-navy)}.finance-section-tile-bottom-v62 span{color:var(--lego-steel-2);font-weight:900}.finance-progress-v62{margin-top:14px;padding:12px;border-radius:16px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18)}.finance-progress-head-v62{display:flex;justify-content:space-between;gap:10px}.finance-progress-head-v62 span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.72)!important;font-weight:900}.finance-progress-head-v62 b{color:#fff!important}.finance-progress-v62 p{margin:8px 0 0;color:rgba(255,255,255,.82)!important;font-size:13px}.finance-lesson-list-v62{margin-top:12px}.finance-lesson-row-v62,.finance-test-row-v62,.finance-trainer-row-v62{margin-bottom:8px}.finance-summary-grid-v62{display:grid;gap:10px}.finance-summary-grid-v62>div{padding:12px;border-radius:16px;background:var(--lego-gray-100);border:1px solid var(--lego-border)}.finance-summary-grid-v62 span{display:block;margin-bottom:5px;color:var(--lego-steel-2);font-size:11px;text-transform:uppercase;font-weight:900;letter-spacing:.08em}.finance-summary-grid-v62 p{margin:0;font-size:14px;line-height:1.45}@media(min-width:640px){.finance-hub-grid-v62{grid-template-columns:repeat(3,1fr)}.finance-module-map-v62,.finance-summary-grid-v62{grid-template-columns:1fr 1fr}}
+
+/* =====================================================
+   v63 — clean finance module route + lesson text polish
+   ===================================================== */
+.finance-hub-grid-v63{display:grid;gap:10px}.finance-hub-card-v63{width:100%;padding:16px;border-radius:18px;background:#fff;border:1px solid var(--lego-border);box-shadow:0 8px 20px rgba(7,27,53,.05);text-align:left}.finance-hub-card-v63 b{display:block;color:var(--lego-navy);font-size:18px;margin-bottom:6px}.finance-hub-card-v63 p{margin:0 0 10px;font-size:14px;line-height:1.45}.finance-hub-card-v63 em{display:inline-flex;padding:6px 10px;border-radius:999px;background:var(--lego-steel-light);color:var(--lego-steel-2);font-style:normal;font-size:12px;font-weight:900}.finance-hub-card-v63.active{background:linear-gradient(135deg,#fff,var(--lego-yellow-soft));border-color:rgba(246,195,67,.65)}
+.finance-section-list-v63{display:grid;gap:10px}.finance-section-tile-v63{width:100%;padding:16px;border-radius:18px;text-align:left;background:#fff;border:1px solid var(--lego-border);box-shadow:0 8px 20px rgba(7,27,53,.05)}.finance-section-tile-v63.locked{opacity:.58;filter:grayscale(.1)}.finance-section-tile-v63 h3{margin:10px 0 7px;font-size:18px;line-height:1.25;color:var(--lego-navy)}.finance-section-tile-v63 p{margin:0;color:var(--lego-gray-700);font-size:14px;line-height:1.45}.finance-section-tile-head-v63,.finance-section-tile-bottom-v63{display:flex;align-items:center;justify-content:space-between;gap:10px}.finance-section-tile-head-v63 span{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--lego-gray-500);font-weight:900}.finance-section-tile-head-v63 em{font-style:normal;padding:6px 9px;border-radius:999px;background:var(--lego-steel-light);color:var(--lego-steel-2);font-size:11px;font-weight:900;text-transform:uppercase}.finance-section-tile-v63.locked .finance-section-tile-head-v63 em{background:var(--lego-gray-200);color:var(--lego-gray-500)}.finance-section-tile-bottom-v63{margin-top:12px;padding-top:10px;border-top:1px solid var(--lego-border)}.finance-section-tile-bottom-v63 b{color:var(--lego-navy);font-size:14px}.finance-section-tile-bottom-v63 span{color:var(--lego-steel);font-weight:900;font-size:13px}.finance-section-tile-v63.locked .finance-section-tile-bottom-v63 span{color:var(--lego-gray-500)}
+.finance-toolbar-v63{display:grid;gap:8px;margin-bottom:12px}.finance-progress-v63{margin-top:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18)}.finance-progress-head-v63{display:flex;justify-content:space-between;gap:10px;align-items:center}.finance-progress-head-v63 span{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.72)!important;font-weight:900}.finance-progress-head-v63 b{font-size:16px;color:#fff!important}.finance-progress-v63 p{margin:8px 0 0!important;color:rgba(255,255,255,.86)!important;font-size:13px!important;line-height:1.4!important}
+.finance-cover-card-v63,.finance-slide-card-v63{background:#fff}.finance-cover-grid-v63{display:grid;gap:10px}.finance-cover-line-v63{padding:12px;border-radius:16px;background:#F6F8FC;border:1px solid #DDE5EF}.finance-cover-line-v63 span{display:block;margin-bottom:4px;color:#7D8A99;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:900}.finance-cover-line-v63 p{margin:0;color:#263852;line-height:1.5}.finance-screen-counter-v63{margin-top:14px;text-align:center;color:#7D8A99;font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}.finance-image-placeholder-v63{min-height:190px;border-radius:18px;background:linear-gradient(135deg,#EEF3F8,#fff);border:1px dashed #BFCBDC;display:flex;align-items:center;justify-content:center;text-align:center;padding:18px;margin:12px 0}.finance-image-placeholder-v63 b{display:block;color:#071B35;font-size:18px}.finance-image-placeholder-v63 p{margin:6px 0 0;color:#7D8A99;font-size:13px}.finance-slide-body-v63 p{font-size:15px;line-height:1.62;color:#263852;margin:0 0 13px}.finance-learning-block-v63{padding:13px;border-radius:16px;margin:12px 0;border:1px solid #DDE5EF}.finance-learning-block-v63 b{display:block;color:#071B35;margin-bottom:5px}.finance-learning-block-v63 p{margin:0;color:#4D5B6B;line-height:1.48}.finance-learning-block-v63.main{background:#FFF3C8;border-color:rgba(246,195,67,.45)}.finance-learning-block-v63.error{background:#FFE8D2;border-color:rgba(242,140,40,.32)}.finance-learning-block-v63.conclusion{background:#DFF8F4;border-color:rgba(22,168,154,.30)}.finance-impact-matrix-v63{padding:13px;border-radius:16px;background:#EEF3F8;border:1px solid #DDE5EF;margin:12px 0}.finance-impact-matrix-v63>b{display:block;color:#071B35;margin-bottom:8px}.finance-impact-matrix-v63 p{margin:6px 0;color:#263852;font-size:14px;line-height:1.45}.finance-final-grid-v63{display:grid;gap:10px}.finance-final-grid-v63>div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:10px;align-items:start;padding:12px;border-radius:16px;background:#F6F8FC;border:1px solid #DDE5EF}.finance-final-grid-v63 b{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#E7F0FA;color:#1F4F8A;font-size:12px}.finance-final-grid-v63 p{margin:0;color:#263852;line-height:1.5}.finance-situation-flow-v63{display:flex;flex-wrap:wrap;gap:8px;padding:12px;margin-bottom:12px;border-radius:16px;background:#FFF3C8;border:1px solid rgba(246,195,67,.45)}.finance-situation-flow-v63>b{width:100%;color:#071B35;margin-bottom:2px}.finance-situation-flow-v63 span{padding:7px 9px;border-radius:999px;background:#fff;color:#1F4F8A;font-size:12px;font-weight:900;border:1px solid #DDE5EF}.finance-summary-grid-v63{display:grid;gap:10px}.finance-summary-grid-v63>div{padding:13px;border-radius:16px;background:#F6F8FC;border:1px solid #DDE5EF}.finance-summary-grid-v63 span{display:block;color:#7D8A99;text-transform:uppercase;letter-spacing:.08em;font-size:11px;font-weight:900;margin-bottom:5px}.finance-summary-grid-v63 p{margin:0;color:#263852;line-height:1.5}
+@media(max-width:420px){.finance-section-tile-head-v63,.finance-section-tile-bottom-v63{align-items:flex-start;flex-direction:column}.finance-image-placeholder-v63{min-height:150px}.finance-final-grid-v63>div{grid-template-columns:1fr}.finance-toolbar-v63 .btn{margin-top:0}}
+
+
+/* =====================================================
+   v64 — active clean route guard
+   ===================================================== */
+.finance-section-card-v63{
+  width:100%;
   display:grid;
-  grid-template-columns:1fr;
-  gap:10px;
-}
-.finance-hub-card-v60{
-  width:100%;
+  grid-template-columns:44px minmax(0,1fr);
+  gap:12px;
   text-align:left;
-}
-.finance-hub-card-v60 em,
-.finance-section-button-v60 em{
-  display:inline-flex;
-  width:max-content;
-  padding:6px 10px;
-  border-radius:999px;
-  background:#E7F0FA;
-  color:#1F4F8A;
-  font-style:normal;
-  font-size:12px;
-  font-weight:900;
-  letter-spacing:.02em;
-}
-.finance-quick-open-v60{
-  border-color:rgba(246,195,67,.45)!important;
-  background:linear-gradient(180deg,#fff,#FFF8E6)!important;
-}
-.finance-section-button-v60{
-  width:100%;
-  display:block;
-  text-align:left;
-  padding:16px;
-  border-radius:20px;
-  background:#fff;
-  border:1px solid #DDE5EF;
-  box-shadow:0 8px 20px rgba(7,27,53,.06);
-}
-.finance-section-button-v60.open{
-  border-color:rgba(47,95,159,.28);
-}
-.finance-section-button-v60.locked{
-  opacity:.68;
-  background:#F6F8FC;
-}
-.finance-section-button-head-v60{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  margin-bottom:10px;
-}
-.finance-section-button-head-v60 span{
-  color:#7D8A99;
-  font-size:12px;
-  font-weight:900;
-  text-transform:uppercase;
-  letter-spacing:.08em;
-}
-.finance-section-button-v60 b{
-  display:block;
-  margin-bottom:7px;
-  color:#071B35;
-  font-size:18px;
-  line-height:1.22;
-}
-.finance-section-button-v60 p{
-  margin:0 0 10px;
-  font-size:14px;
-  line-height:1.45;
-  color:#4D5B6B;
-}
-.finance-section-button-v60 small{
-  display:block;
-  margin-bottom:10px;
-  color:#7D8A99;
-  font-size:12px;
-  line-height:1.35;
-  font-weight:800;
-}
-.finance-section-button-v60 strong{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  min-height:38px;
-  padding:9px 12px;
-  border-radius:12px;
-  background:#2F5F9F;
-  color:#fff;
-  font-size:13px;
-  font-weight:900;
-}
-.finance-section-button-v60.locked strong{
-  background:#E7ECF3;
-  color:#7D8A99;
-}
-.finance-progress-v60{
-  margin:12px 0;
-  padding:12px;
-  border-radius:16px;
-  background:#F6F8FC;
-  border:1px solid #DDE5EF;
-}
-.finance-progress-v60.passed{
-  background:#DFF8F4;
-  border-color:rgba(22,168,154,.30);
-}
-.finance-progress-head-v60{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-}
-.finance-progress-head-v60 span{
-  font-size:12px;
-  text-transform:uppercase;
-  letter-spacing:.07em;
-  color:#7D8A99;
-  font-weight:900;
-}
-.finance-progress-head-v60 b{
-  color:#071B35;
-  font-size:15px;
-}
-.finance-progress-v60 p{
-  margin:8px 0 0;
-  font-size:13px;
-  line-height:1.42;
-}
-.finance-empty-v60{
-  padding:16px;
+  padding:15px;
   border-radius:18px;
-  background:#F6F8FC;
-  border:1px dashed #DDE5EF;
+  border:1px solid var(--lego-border,#DDE5EF);
+  background:#fff;
+  box-shadow:0 8px 22px rgba(7,27,53,.06);
 }
-.finance-empty-v60 b{
-  display:block;
-  color:#071B35;
-  margin-bottom:5px;
-}
-@media(min-width:640px){
-  .finance-hub-grid-v60,
-  .finance-section-list-v60{grid-template-columns:1fr 1fr;}
-}
-
-
-/* =====================================================
-   v61 — clean financial module route
-   ===================================================== */
-.finance-hub-hero-v61 .small{opacity:.88!important;}
-.finance-section-list-v61{display:grid;gap:10px;margin-top:12px;}
-.finance-section-card-v61{position:relative;}
-.finance-section-card-v61 strong{display:none!important;}
-.finance-section-card-v61 small{margin-bottom:0!important;}
-.finance-section-card-v61.open:after{content:'›';position:absolute;right:16px;bottom:15px;width:28px;height:28px;border-radius:999px;background:#E7F0FA;color:#1F4F8A;display:grid;place-items:center;font-size:22px;font-weight:900;line-height:1;}
-.finance-section-card-v61.locked:after{content:'•';position:absolute;right:16px;bottom:15px;width:28px;height:28px;border-radius:999px;background:#E7ECF3;color:#7D8A99;display:grid;place-items:center;font-size:18px;font-weight:900;line-height:1;}
-.finance-lesson-list-v61{margin-top:10px;}
-.finance-lesson-row-v61,.finance-test-row-v61,.finance-trainer-row-v61{min-height:76px;}
-.finance-module-hero-v61 p.small{margin-top:6px!important;}
-@media(max-width:420px){.finance-section-card-v61.open:after,.finance-section-card-v61.locked:after{position:static;margin-top:8px;}}
+.finance-section-card-v63.locked{opacity:.56;filter:grayscale(.12)}
+.finance-section-card-v63:active{transform:scale(.99)}
+.finance-section-card-number-v63{width:44px;height:44px;border-radius:15px;background:var(--lego-steel-light,#E7F0FA);color:var(--lego-steel,#2F5F9F);font-weight:900;display:grid;place-items:center}
+.finance-section-card-v63 b{display:block;color:var(--lego-navy,#071B35);font-size:16px;line-height:1.25;margin-bottom:5px}
+.finance-section-card-v63 p{font-size:13px;line-height:1.45;margin:0 0 10px;color:var(--lego-gray-700,#4D5B6B)}
+.finance-section-card-bottom-v63{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:9px;border-top:1px solid var(--lego-border,#DDE5EF)}
+.finance-section-card-bottom-v63 span{font-size:12px;font-weight:900;color:var(--lego-gray-500,#7D8A99)}
+.finance-section-card-bottom-v63 em{font-style:normal;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:var(--lego-steel,#2F5F9F)}
+.finance-section-list-v63,.finance-hub-grid-v63,.finance-lesson-list-v63{display:grid;gap:10px}
 
 /* =====================================================
-   v61 — Финансовый модуль: чистый маршрут без быстрых переходов и карты
+   v64 — финальная чистка финансового модуля
    ===================================================== */
-.finance-hub-hero-v61 p.small,
-.finance-module-hero-v61 p.small{opacity:.88}
-.finance-section-list-v61{display:grid;gap:10px;margin-top:12px}
-.finance-section-card-v61{width:100%;text-align:left;padding:15px;border-radius:18px;background:#fff;border:1px solid var(--lego-border);box-shadow:0 8px 20px rgba(7,27,53,.05);display:grid;gap:8px;transition:transform .14s ease,border-color .14s ease,box-shadow .14s ease}
-.finance-section-card-v61:active{transform:scale(.99)}
-.finance-section-card-v61.open{border-color:rgba(47,95,159,.30)}
-.finance-section-card-v61.locked{opacity:.62;background:#F6F8FC;box-shadow:none}
-.finance-section-card-top-v61{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.finance-section-card-top-v61 span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;color:var(--lego-gray-500)}
-.finance-section-card-top-v61 em{font-style:normal;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:var(--lego-steel-2);background:var(--lego-steel-light);padding:6px 9px;border-radius:999px;white-space:nowrap}
-.finance-section-card-v61.locked .finance-section-card-top-v61 em{background:var(--lego-gray-200);color:var(--lego-gray-500)}
-.finance-section-card-v61 b{font-size:17px;line-height:1.25;color:var(--lego-navy)}
-.finance-section-card-v61 p{margin:0;font-size:14px;line-height:1.45;color:var(--lego-gray-700)}
-.finance-section-card-v61 small{font-size:12px;line-height:1.3;color:var(--lego-gray-500);font-weight:800}
-.finance-toolbar-v61{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:12px}
-.finance-toolbar-v61 .btn{margin:0}
-@media(min-width:640px){.finance-section-list-v61{grid-template-columns:1fr 1fr}.finance-toolbar-v61{grid-template-columns:1fr 1fr}}
+.finance-hub-grid-v64,.finance-section-list-v64{display:grid;gap:10px}
+.finance-hub-card-v64,.finance-section-card-v64{width:100%;padding:16px;border-radius:18px;background:#fff;border:1px solid var(--lego-border,#DDE5EF);box-shadow:0 8px 20px rgba(7,27,53,.05);text-align:left}
+.finance-hub-card-v64.active,.finance-section-card-v64.open{background:linear-gradient(135deg,#fff,var(--lego-yellow-soft,#FFF3C8));border-color:rgba(246,195,67,.62)}
+.finance-section-card-v64.locked{opacity:.62;filter:grayscale(.12)}
+.finance-hub-card-v64 b,.finance-section-card-v64 h3{display:block;margin:0 0 7px;color:var(--lego-navy,#071B35);font-size:18px;line-height:1.25}
+.finance-hub-card-v64 p,.finance-section-card-v64 p{margin:0 0 10px;font-size:14px;line-height:1.45}
+.finance-hub-card-v64 em,.finance-section-card-head-v64 em{display:inline-flex;padding:6px 10px;border-radius:999px;background:var(--lego-steel-light,#E7F0FA);color:var(--lego-steel-2,#1F4F8A);font-style:normal;font-size:12px;font-weight:900}
+.finance-section-card-head-v64,.finance-section-card-bottom-v64{display:flex;align-items:center;justify-content:space-between;gap:12px}.finance-section-card-head-v64{margin-bottom:10px}.finance-section-card-head-v64 span{font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;color:var(--lego-gray-500,#7D8A99)}.finance-section-card-bottom-v64{padding-top:10px;border-top:1px solid var(--lego-border,#DDE5EF)}.finance-section-card-bottom-v64 b{color:var(--lego-navy,#071B35)}.finance-section-card-bottom-v64 span{font-size:22px;color:var(--lego-steel,#2F5F9F);font-weight:900}
+.finance-cover-grid-v64,.finance-final-grid-v64{display:grid;gap:10px}.finance-cover-line-v64,.finance-final-grid-v64>div{padding:13px;border-radius:16px;background:var(--lego-gray-100,#F2F5F9);border:1px solid var(--lego-border,#DDE5EF)}.finance-cover-line-v64 span{display:block;margin-bottom:5px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;color:var(--lego-gray-500,#7D8A99)}.finance-cover-line-v64 p,.finance-final-grid-v64 p{margin:0}.finance-screen-counter-v64{margin-top:12px;text-align:center;color:var(--lego-gray-500,#7D8A99);font-size:12px;font-weight:900}
+.finance-slide-card-v64{background:#fff;border-radius:20px;padding:16px;margin-bottom:12px;box-shadow:var(--lego-shadow,0 10px 30px rgba(7,27,53,.08));border:1px solid var(--lego-border,#DDE5EF)}.finance-slide-card-v64 h1{margin-bottom:12px}.finance-image-placeholder-v64{min-height:190px;display:grid;place-items:center;text-align:center;border-radius:18px;background:linear-gradient(135deg,#071B35,#0B2748);color:#fff;margin:0 0 14px;padding:20px}.finance-image-placeholder-v64 b{display:block;color:#fff;font-size:20px}.finance-image-placeholder-v64 p{color:rgba(255,255,255,.78);margin:6px 0 0}.finance-learning-block-v64,.finance-impact-matrix-v64>div,.finance-situation-list-v64>div{padding:13px;border-radius:16px;background:#F6F8FC;border:1px solid #DDE5EF;margin:10px 0}.finance-learning-block-v64.main{background:#FFF3C8;border-color:rgba(246,195,67,.45)}.finance-learning-block-v64.error{background:#FFE8D2;border-color:rgba(242,140,40,.32)}.finance-learning-block-v64.conclusion{background:#DFF8F4;border-color:rgba(22,168,154,.28)}.finance-learning-block-v64 b,.finance-impact-matrix-v64 span{display:block;margin-bottom:5px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;color:var(--lego-gray-500,#7D8A99)}.finance-learning-block-v64 p,.finance-impact-matrix-v64 p,.finance-situation-list-v64 p{margin:0}.finance-slide-body-v64 h3{margin-top:0}.finance-slide-body-v64 p{line-height:1.58;color:#263852}.finance-impact-matrix-v64{display:grid;gap:10px;margin:12px 0}.finance-impact-matrix-v64>div{background:#EEF3F8}.finance-situation-flow-v64{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.finance-situation-flow-v64 b{flex:1 1 100%;color:var(--lego-navy,#071B35)}.finance-situation-flow-v64 span{padding:7px 10px;border-radius:999px;background:#E7F0FA;color:#1F4F8A;font-size:12px;font-weight:900}.finance-progress-v64{margin-top:14px;padding:12px;border-radius:16px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18)}.finance-progress-head-v64{display:flex;justify-content:space-between;gap:10px}.finance-progress-head-v64 span{font-size:12px;text-transform:uppercase;letter-spacing:.07em;font-weight:900;color:rgba(255,255,255,.75)}.finance-progress-head-v64 b{color:#fff}.finance-progress-v64 p{margin:8px 0 0;color:rgba(255,255,255,.82)!important;font-size:13px}
+@media(min-width:640px){.finance-hub-grid-v64{grid-template-columns:repeat(3,1fr)}.finance-section-list-v64{grid-template-columns:repeat(2,1fr)}.finance-impact-matrix-v64{grid-template-columns:repeat(3,1fr)}}
