@@ -11970,3 +11970,515 @@ try { window.financeSection1ImageCountV66 = window.financeSection1ImageCountV65;
   document.addEventListener('click', function(){ setTimeout(clearFinanceArtifactsV72, 0); }, true);
   document.addEventListener('DOMContentLoaded', function(){ setTimeout(clearFinanceArtifactsV72, 300); });
 })();
+
+/* =====================================================
+   v74 — финальная правка финансового маршрута: только 11 разделов, без быстрого перехода/карты, прямая ссылка на тренажёр
+   ===================================================== */
+(function(){
+  const TRAINER_URL = 'https://docs.google.com/spreadsheets/d/1WsPb_DHt3ksIpCAZIMxgMDuSojIbztbV_5tthhdJ3Eg/edit?gid=972184137#gid=972184137';
+  window.APP_UI_VERSION_V74 = 'v74-finance-no-quick-no-map-direct-trainer-20260628';
+  window.FINANCE_SECTION1_TRAINER_URL_V74 = TRAINER_URL;
+
+  const SECTIONS = [
+    { id:1, title:'Финансовое мышление собственника', desc:'Базовая логика: деньги, выручка, прибыль, ОПиУ, ОДДС, баланс, управленческий учёт и экономический двигатель бизнеса.', status:'доступно' },
+    { id:2, title:'Выручка, продажи и unit-экономика', desc:'Как возникает выручка, из каких драйверов она состоит и почему продажа сама по себе не гарантирует прибыльность.', status:'после диагностики раздела 1' },
+    { id:3, title:'ОПиУ и прибыльность', desc:'Себестоимость, маржа, расходы, EBITDA, чистая прибыль и ошибки, которые искажают финансовый результат.', status:'закрыто' },
+    { id:4, title:'Безубыточность, масштабирование и операционный рычаг', desc:'Минимальный объём продаж для выживания, запас прочности и эффект постоянных расходов.', status:'закрыто' },
+    { id:5, title:'ОДДС, деньги и ликвидность', desc:'Почему прибыль не равна деньгам, где возникают кассовые разрывы и как управлять платёжеспособностью.', status:'закрыто' },
+    { id:6, title:'Баланс и остатки', desc:'Активы, обязательства, капитал, авансы, основные средства и мосты остатков.', status:'закрыто' },
+    { id:7, title:'Долг, налоги, ФОТ и собственник', desc:'Кредиты, проценты, налоги, команда и личные деньги собственника.', status:'закрыто' },
+    { id:8, title:'Планирование, прогнозирование и инвестиции', desc:'План-факт, драйверное бюджетирование, сценарии, стресс-тесты и инвестиции.', status:'закрыто' },
+    { id:9, title:'Метрики, диагностика и дашборд', desc:'Система показателей, диагностика бизнеса и экран собственника.', status:'закрыто' },
+    { id:10, title:'Отраслевые финансы', desc:'Финансы услуг, торговли, производства, проектов, логистики и HoReCa.', status:'закрыто' },
+    { id:11, title:'Финансовая система и управление', desc:'Политика учёта, статьи, закрытие месяца, роли, контроль и регулярная система управления.', status:'закрыто' }
+  ];
+  const LESSONS = [
+    { id:1, title:'Деньги, прибыль и выручка: почему предприниматель ошибается', note:'18 слайдов' },
+    { id:2, title:'Финансовая карта бизнеса', note:'22 слайда' },
+    { id:3, title:'Управленческий учёт против бухгалтерии', note:'22 слайда' },
+    { id:4, title:'Экономика бизнес-модели', note:'32 слайда' }
+  ];
+
+  function h(value){ return typeof esc === 'function' ? esc(value) : String(value ?? '').replace(/[&<>'"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[c]; }); }
+  function C(cls, html){ return typeof card === 'function' ? card(cls, html) : `<section class="card-v2 ${cls || ''}">${html}</section>`; }
+  function show(html, tab){ return typeof shell === 'function' ? shell(html, tab || 'finance') : (document.getElementById('app').innerHTML = html); }
+  function admin(){ return typeof isAdminMode === 'function' && isAdminMode(); }
+  function requireAdmin(){
+    if (admin()) return true;
+    show(C('result-bad-v2 finance-locked-v74', `<p class="eyebrow">финансовый помощник</p><h1>Раздел закрыт</h1><p>В режиме просмотра ученика финансовый помощник пока недоступен. Для проверки материалов нужно вручную включить режим администрирования.</p><button class="btn secondary" onclick="renderHome()">← Вернуться на главную</button>`), 'finance');
+    return false;
+  }
+  function progress(){ try { return JSON.parse(localStorage.getItem('architecture_finance_progress_v49') || '{}') || {}; } catch(e){ return {}; } }
+  function section1Passed(){ const p = progress(); return Boolean(p.section1TestPassed) || (Number(p.section1TestScore || 0) >= 24 && Number(p.section1TestTotal || 30) >= 30); }
+  function canOpen(id){ id = Number(id || 1); if (id === 1) return true; if (id === 2) return section1Passed(); return false; }
+  function locked(id){ alert(Number(id) === 2 ? 'Раздел 2 откроется после прохождения итоговой диагностики Раздела 1 минимум на 80%.' : 'Этот раздел откроется после прохождения диагностики предыдущих разделов.'); }
+
+  function normalizeText(text){
+    return String(text || '')
+      .replace(/(?:О\s*){2,}ДДС/g, 'ОДДС')
+      .replace(/О\s+ДДС/g, 'ОДДС')
+      .replace(/\bОПУ\b/g, 'ОПиУ')
+      .replace(/предпринимательа/g, 'предпринимателя')
+      .replace(/предпринимательу/g, 'предпринимателю')
+      .replace(/предпринимательом/g, 'предпринимателем')
+      .replace(/у предприниматель\b/g, 'у предпринимателя');
+  }
+  function normalizeDom(root){
+    const scope = root || document.getElementById('app') || document.body;
+    if (!scope || !document.createTreeWalker || typeof NodeFilter === 'undefined') return;
+    const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, null);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(function(node){ const next = normalizeText(node.nodeValue); if (next !== node.nodeValue) node.nodeValue = next; });
+  }
+  function cleanLegacy(){
+    document.querySelectorAll('[class*="finance-quick-open"],[class*="finance-module-map"]').forEach(function(el){ el.remove(); });
+    document.querySelectorAll('.card-v2, section, div').forEach(function(el){
+      const h2 = el.querySelector && el.querySelector('h2');
+      const text = h2 && h2.textContent ? h2.textContent.trim().toLowerCase() : '';
+      if (text === 'быстрый переход' || text === 'карта финансового модуля') {
+        const box = h2.closest('.card-v2') || h2.parentElement;
+        if (box) box.remove();
+      }
+    });
+    normalizeDom();
+  }
+  function after(){ setTimeout(cleanLegacy, 0); setTimeout(cleanLegacy, 80); setTimeout(cleanLegacy, 300); }
+
+  function renderFinancialAssistantV74(){
+    if (!requireAdmin()) return;
+    show(`${C('blue-card-v2 finance-hero-v74', `<p class="eyebrow">финансовый помощник</p><h1>Финансовый помощник</h1><p>Рабочая зона финансового контура приложения. Здесь находятся финансовый модуль, будущая аналитика и готовые шаблоны.</p>`)}${C('', `<h2>Выберите блок</h2><div class="finance-hub-grid-v64"><button class="finance-hub-card-v62 active" onclick="renderFinanceModuleHome()"><b>Финансовый модуль</b><p>Учебная программа по финансовой архитектуре бизнеса.</p><em>открыть</em></button><button class="finance-hub-card-v62" onclick="renderFinanceAnalytics()"><b>Моя аналитика</b><p>Будущий контур личных показателей, отчётов и управленческих выводов.</p><em>каркас</em></button><button class="finance-hub-card-v62" onclick="renderFinanceTemplates()"><b>Готовые шаблоны</b><p>Будущая библиотека таблиц и финансовых инструментов.</p><em>готовится</em></button></div><button class="btn secondary" onclick="renderHome()">← Вернуться на главную</button>`)}`, 'finance');
+    after();
+  }
+
+  function sectionRow(section){
+    const open = canOpen(section.id);
+    return `<button class="lesson-row-v2 finance-section-row-v74 ${open ? '' : 'locked'}" onclick="${open ? `renderFinanceSection(${section.id})` : `financeLockedSectionNotice(${section.id})`}"><div><b>${String(section.id).padStart(2,'0')}. ${h(section.title)}</b><p>${h(section.desc)}</p><p class="small"><b>Статус:</b> ${h(open ? section.status : section.status)}</p></div><span>${open ? '→' : '🔒'}</span></button>`;
+  }
+  function renderFinanceModuleHomeV74(){
+    if (!requireAdmin()) return;
+    show(`${C('blue-card-v2 finance-hero-v74', `<p class="eyebrow">финансовый модуль</p><h1>Финансовая архитектура бизнеса</h1><p>Модуль показывает, как операции бизнеса превращаются в выручку, прибыль, деньги, остатки, баланс, метрики и решения собственника.</p>`)}${C('', `<div class="finance-toolbar-v64"><button class="btn secondary" onclick="renderFinancialAssistant()">← К финансовому помощнику</button></div><h2>11 разделов</h2><div class="lesson-list-v2 finance-section-list-v74">${SECTIONS.map(sectionRow).join('')}</div>`)}`, 'finance');
+    after();
+  }
+
+  function renderFinanceSectionV74(sectionId){
+    if (!requireAdmin()) return;
+    const id = Number(sectionId || 1);
+    if (!canOpen(id)) return locked(id);
+    const section = SECTIONS.find(function(x){ return x.id === id; }) || SECTIONS[0];
+    if (id !== 1) {
+      show(`${C('blue-card-v2 finance-section-hero-v74', `<p class="eyebrow">раздел ${id}</p><h1>${h(section.title)}</h1><p>${h(section.desc)}</p>`)}${C('', `<div class="finance-toolbar-v64"><button class="btn secondary" onclick="renderFinanceModuleHome()">← К разделам</button></div><p>Материалы этого раздела будут добавлены следующим этапом.</p>`)}`, 'finance');
+      after();
+      return;
+    }
+    const lessons = LESSONS.map(function(lesson){ return `<button class="lesson-row-v2" onclick="renderFinanceLesson(${lesson.id}, true)"><div><b>${lesson.id}. ${h(lesson.title)}</b><p>${h(lesson.note)} · открыть урок</p></div><span>→</span></button>`; }).join('');
+    const extras = `<button class="lesson-row-v2" onclick="startFinanceSection1Test(true)"><div><b>Итоговая диагностика раздела 1</b><p>30 вопросов. Следующий раздел открывается при результате 80%+.</p></div><span>→</span></button><button class="lesson-row-v2" onclick="renderFinanceTrainerSection1()"><div><b>Финтренажёр раздела 1</b><p>Google Sheets-тренажёр для закрепления материала первого раздела.</p></div><span>→</span></button>`;
+    show(`${C('blue-card-v2 finance-section-hero-v74', `<p class="eyebrow">раздел 1</p><h1>${h(section.title)}</h1><p>${h(section.desc)}</p>`)}${C('', `<div class="finance-toolbar-v64"><button class="btn secondary" onclick="renderFinanceModuleHome()">← К разделам</button><button class="btn secondary" onclick="renderFinancialAssistant()">К помощнику</button></div><h2>Уроки и закрепление раздела</h2><div class="lesson-list-v2 finance-lesson-list-v74">${lessons}${extras}</div>`)}`, 'finance');
+    after();
+  }
+
+  function renderFinanceLessonV74(lessonId, full){
+    if (!requireAdmin()) return;
+    if (typeof window.renderFinanceLessonV71 === 'function') return window.renderFinanceLessonV71(lessonId, full !== false);
+    if (typeof window.renderFinanceLessonV72 === 'function') return window.renderFinanceLessonV72(lessonId, full !== false);
+    if (typeof window.renderFinanceLessonV49 === 'function') return window.renderFinanceLessonV49(lessonId, full !== false);
+    alert('Урок временно не найден в загруженной версии app.js.');
+  }
+
+  function renderFinanceTrainerSection1V74(){
+    if (!requireAdmin()) return;
+    show(`${C('blue-card-v2 finance-hero-v74 finance-trainer-hero-v74', `<p class="eyebrow">раздел 1 · практика</p><h1>Финтренажёр раздела 1</h1><p>Таблица для закрепления первого раздела: деньги, выручка, прибыль, авансы, кредиты, дебиторка, активы, обязательства, ОПиУ, ОДДС и баланс.</p>`)}${C('', `<div class="finance-toolbar-v64"><button class="btn secondary" onclick="renderFinanceSection(1)">← К разделу 1</button><button class="btn secondary" onclick="renderFinanceModuleHome()">К финансовому модулю</button></div><h2>Как работать с таблицей</h2><div class="list-clean finance-trainer-instruction-v74"><div><b>1. Открыть финтренажёр</b><p>Нажмите кнопку ниже и откройте таблицу в Google Sheets.</p></div><div><b>2. Сохранить себе</b><p>В Google Sheets создайте личную копию через меню <b>Файл → Создать копию</b>, чтобы работать в своём файле и не трогать исходник.</p></div><div><b>3. Пройти задания</b><p>Работайте внутри таблицы по инструкции: разбирайте операции, определяйте финансовый смысл, влияние на ОПиУ, ОДДС и баланс.</p></div></div><div class="finance-trainer-link-box-v70"><span>Ссылка на финтренажёр</span><p>${h(TRAINER_URL)}</p></div><a class="btn primary" href="${TRAINER_URL}" target="_blank" rel="noopener">Открыть финтренажёр</a><button class="btn secondary" onclick="renderFinanceSection(1)">← Вернуться к урокам раздела</button>`)}`, 'finance');
+    after();
+  }
+
+  function renderFinanceAnalyticsV74(){
+    if (!requireAdmin()) return;
+    show(`${C('blue-card-v2 finance-hero-v74', `<p class="eyebrow">моя аналитика</p><h1>Моя аналитика</h1><p>Будущий контур личных показателей бизнеса.</p>`)}${C('', `<p>Раздел пока оставлен как каркас. Его нужно подключать после утверждения финансового ядра.</p><button class="btn secondary" onclick="renderFinancialAssistant()">← К финансовому помощнику</button>`)}`, 'finance');
+    after();
+  }
+  function renderFinanceTemplatesV74(){
+    if (!requireAdmin()) return;
+    show(`${C('blue-card-v2 finance-hero-v74', `<p class="eyebrow">готовые шаблоны</p><h1>Готовые шаблоны</h1><p>Будущая библиотека таблиц и инструментов.</p>`)}${C('', `<div class="list-clean"><div><b>ОПиУ</b><p>Шаблоны отчёта о прибыли и убытках.</p></div><div><b>ОДДС</b><p>Шаблоны движения денежных средств и платёжного календаря.</p></div><div><b>Баланс</b><p>Шаблоны остатков, активов и обязательств.</p></div></div><button class="btn secondary" onclick="renderFinancialAssistant()">← К финансовому помощнику</button>`)}`, 'finance');
+    after();
+  }
+
+  window.renderFinancialAssistantV74 = renderFinancialAssistantV74;
+  window.renderFinanceModuleHomeV74 = renderFinanceModuleHomeV74;
+  window.renderFinanceSectionV74 = renderFinanceSectionV74;
+  window.renderFinanceTrainerSection1V74 = renderFinanceTrainerSection1V74;
+  window.renderFinanceLessonV74 = renderFinanceLessonV74;
+  window.renderFinanceAnalyticsV74 = renderFinanceAnalyticsV74;
+  window.renderFinanceTemplatesV74 = renderFinanceTemplatesV74;
+  window.financeLockedSectionNoticeV74 = locked;
+
+  ['renderFinancialAssistant','renderMyBusiness','renderFinancialAssistantV49','renderFinancialAssistantV57','renderFinancialAssistantV60','renderFinancialAssistantV62','renderFinancialAssistantV64','renderFinancialAssistantV71','renderFinancialAssistantV72','renderFinancialAssistantV73'].forEach(function(name){ window[name] = renderFinancialAssistantV74; });
+  ['renderFinanceModuleHome','renderFinanceModuleHomeV49','renderFinanceModuleHome57','renderFinanceModuleHome59','renderFinanceModuleHome60','renderFinanceModuleHome62','renderFinanceModuleHome64','renderFinanceModuleHome71','renderFinanceModuleHome72','renderFinanceModuleHomeV72','renderFinanceModuleHomeV73'].forEach(function(name){ window[name] = renderFinanceModuleHomeV74; });
+  ['renderFinanceSection','renderFinanceSectionV49','renderFinanceSection57','renderFinanceSection59','renderFinanceSection60','renderFinanceSection62','renderFinanceSection64','renderFinanceSection71','renderFinanceSection72','renderFinanceSectionV72','renderFinanceSectionV73'].forEach(function(name){ window[name] = renderFinanceSectionV74; });
+  ['renderFinanceTrainerSection1','renderFinanceSection1Trainer','renderFinanceTrainerSection1V49','renderFinanceTrainerSection1V57','renderFinanceTrainerSection1V60','renderFinanceTrainerSection1V62','renderFinanceTrainerSection1V64','renderFinanceTrainerSection1V71','renderFinanceTrainerSection1V72','renderFinanceTrainerSection1V73'].forEach(function(name){ window[name] = renderFinanceTrainerSection1V74; });
+  window.renderFinanceLesson = renderFinanceLessonV74;
+  window.renderFinanceAnalytics = renderFinanceAnalyticsV74;
+  window.renderFinanceTemplates = renderFinanceTemplatesV74;
+  window.financeLockedSectionNotice = locked;
+  window.cleanFinanceRouteV74 = cleanLegacy;
+
+  try { renderFinancialAssistant = renderFinancialAssistantV74; } catch(e) {}
+  try { renderFinanceModuleHome = renderFinanceModuleHomeV74; } catch(e) {}
+  try { renderFinanceSection = renderFinanceSectionV74; } catch(e) {}
+  try { renderFinanceTrainerSection1 = renderFinanceTrainerSection1V74; } catch(e) {}
+
+  document.addEventListener('click', function(){ setTimeout(cleanLegacy, 0); setTimeout(cleanLegacy, 80); }, true);
+  document.addEventListener('DOMContentLoaded', function(){ setTimeout(cleanLegacy, 300); });
+  try { new MutationObserver(function(){ cleanLegacy(); }).observe(document.documentElement, { childList:true, subtree:true }); } catch(e) {}
+})();
+
+/* =====================================================
+   v74 HARD FINAL — no quick transition, no module map, direct trainer link.
+   This block intentionally stays at the very end and overrides every older finance route.
+   ===================================================== */
+(function installFinanceHardFinalV74(){
+  const TRAINER_URL = 'https://docs.google.com/spreadsheets/d/1WsPb_DHt3ksIpCAZIMxgMDuSojIbztbV_5tthhdJ3Eg/edit?gid=972184137#gid=972184137';
+  const DEFAULT_SECTIONS = [
+    {id:1,title:'Финансовое мышление собственника',description:'Базовая логика: деньги, выручка, прибыль, ОПиУ, ОДДС, баланс, авансы, кредиты, дебиторка и экономический двигатель бизнеса.'},
+    {id:2,title:'Выручка, продажи и unit-экономика',description:'Как возникает выручка, из каких драйверов она состоит и почему продажа сама по себе ещё не гарантирует прибыльность.'},
+    {id:3,title:'ОПиУ и прибыльность',description:'Себестоимость, валовая маржа, расходы, EBITDA, чистая прибыль и ошибки, которые искажают финансовый результат.'},
+    {id:4,title:'Безубыточность, масштабирование и операционный рычаг',description:'Минимальный объём продаж для выживания, запас прочности и эффект постоянных расходов при росте или падении бизнеса.'},
+    {id:5,title:'ОДДС, деньги и ликвидность',description:'Почему прибыль не равна деньгам, где возникают кассовые разрывы и как управлять платёжеспособностью.'},
+    {id:6,title:'Баланс и остатки',description:'Активы, обязательства, капитал, авансы, основные средства и мосты остатков как основа управленческой картины.'},
+    {id:7,title:'Долг, налоги, ФОТ и собственник',description:'Кредиты, проценты, налоги, команда и личные деньги собственника.'},
+    {id:8,title:'Планирование, прогнозирование и инвестиции',description:'План-факт, драйверное бюджетирование, сценарии, стресс-тесты, инвестиции и источники финансирования роста.'},
+    {id:9,title:'Метрики, диагностика и дашборд',description:'Система показателей, диагностика бизнеса и логика экрана собственника.'},
+    {id:10,title:'Отраслевые финансы',description:'Финансы услуг, торговли, производства, проектов, логистики и HoReCa устроены по-разному.'},
+    {id:11,title:'Финансовая система и управление',description:'Регулярная система управления: политика учёта, статьи, закрытие месяца, роли, контроль и стадии бизнеса.'}
+  ];
+  function esc74(v){
+    if (typeof esc === 'function') return esc(clean74(v));
+    return clean74(v).replace(/[&<>'"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[c]; });
+  }
+  function clean74(v){
+    return String(v ?? '')
+      .replace(/О{2,}\s*ДДС/g,'ОДДС')
+      .replace(/О\s+ДДС/g,'ОДДС')
+      .replace(/(^|[^А-Яа-яЁёA-Za-z0-9])ДДС(?=$|[^А-Яа-яЁёA-Za-z0-9])/g,'$1ОДДС')
+      .replace(/ОПУ/g,'ОПиУ')
+      .replace(/у предприниматель\b/gi,'у предпринимателя')
+      .replace(/предпринимательа/gi,'предпринимателя')
+      .replace(/предпринимательу/gi,'предпринимателю')
+      .replace(/предпринимательом/gi,'предпринимателем')
+      .replace(/почему предпринимателя ошибается/gi,'почему предприниматель ошибается');
+  }
+  function card74(cls, html){ return typeof card === 'function' ? card(cls, html) : `<section class="card-v2 ${cls||''}">${html}</section>`; }
+  function shell74(html, tab){
+    const out = clean74(html);
+    if (typeof shell === 'function') shell(out, tab || 'finance');
+    else { const root = document.getElementById('app'); if (root) root.innerHTML = out; }
+    setTimeout(cleanDom74, 0);
+    setTimeout(cleanDom74, 100);
+  }
+  function admin74(){ return typeof isAdminMode === 'function' && isAdminMode(); }
+  function requireAdmin74(){
+    if (admin74()) return true;
+    if (typeof shell === 'function' && typeof card === 'function') shell(card('result-bad-v2', `<h1>Финансовый помощник закрыт</h1><p>Раздел пока доступен только в режиме администрирования. Включите администрирование вручную, если нужно проверить материалы.</p><button class="btn secondary" onclick="renderHome()">← На главную</button>`), 'home');
+    else alert('Финансовый помощник пока доступен только в режиме администрирования.');
+    return false;
+  }
+  function userKey74(){ try { const ids = typeof possibleIds === 'function' ? possibleIds() : []; return ids[0] || 'local'; } catch(e){ return 'local'; } }
+  function passSection1_74(){
+    try {
+      const keys = ['architecture_finance_module_progress_v49_' + userKey74(), 'architecture_finance_section_1_test_v1', 'finance_section1_test_v1'];
+      for (const key of keys) {
+        const raw = localStorage.getItem(key); if (!raw) continue;
+        const p = JSON.parse(raw);
+        const score = Number(p.section1TestScore ?? p.score ?? 0);
+        const total = Number(p.section1TestTotal ?? p.total ?? 30);
+        const pct = Number(p.percent ?? p.scorePercent ?? (total ? score/total*100 : 0));
+        if (p.section1TestPassed === true || pct >= 80 || (total && score/total >= .8)) return true;
+      }
+    } catch(e) {}
+    return false;
+  }
+  function canSection74(id){ id = Number(id || 1); if (id === 1) return true; if (id === 2) return passSection1_74(); return false; }
+  function locked74(id){ alert(Number(id) === 2 ? 'Раздел 2 откроется после итоговой диагностики Раздела 1 на 80%+.' : 'Этот раздел откроется после диагностики предыдущих разделов.'); }
+  function sections74(){
+    const arr = Array.isArray(window.FINANCE_MODULE_SECTIONS_DATA_V57) ? window.FINANCE_MODULE_SECTIONS_DATA_V57 : [];
+    return arr.length >= 11 ? arr.slice(0,11).map(function(x,i){ return {id:Number(x.id||i+1), title:x.title||DEFAULT_SECTIONS[i].title, description:x.description||DEFAULT_SECTIONS[i].description}; }) : DEFAULT_SECTIONS;
+  }
+  function cleanDom74(){
+    try {
+      const root = document.getElementById('app');
+      if (!root) return;
+      root.querySelectorAll('.finance-quick-open-v59,.finance-quick-open-v60,.finance-quick-open-v62,.finance-quick-open-v71,.finance-quick-open-v72,.finance-module-map-v60,.finance-module-map-v62,.finance-module-map-v71,.finance-module-map-v72').forEach(function(el){ el.remove(); });
+      root.querySelectorAll('h1,h2,h3,b,p,span,small,em,button,a').forEach(function(el){
+        if (el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) el.textContent = clean74(el.textContent);
+        const t = clean74(el.textContent || '').trim().toLowerCase();
+        if (t === 'быстрый переход' || t === 'карта финансового модуля') {
+          const box = el.closest('.card-v2') || el.parentElement;
+          if (box) box.remove();
+        }
+      });
+    } catch(e) {}
+  }
+  function renderFinancialAssistantV74(){
+    if (!requireAdmin74()) return;
+    shell74(`${card74('blue-card-v2 finance-hero-v74', `<p class="eyebrow">финансовый помощник</p><h1>Финансовый помощник</h1><p>Рабочая зона финансового контура приложения.</p>`)}${card74('', `<h2>Выберите блок</h2><div class="finance-hub-grid-v64"><button class="finance-hub-card-v62 active" onclick="renderFinanceModuleHomeV74()"><b>Финансовый модуль</b><p>Учебная программа по финансовой архитектуре бизнеса.</p><em>открыть</em></button><button class="finance-hub-card-v62" onclick="renderFinanceAnalyticsV74()"><b>Моя аналитика</b><p>Будущий контур личных показателей и управленческих выводов.</p><em>каркас</em></button><button class="finance-hub-card-v62" onclick="renderFinanceTemplatesV74()"><b>Готовые шаблоны</b><p>Будущая библиотека таблиц и финансовых инструментов.</p><em>готовится</em></button></div><button class="btn secondary" onclick="renderHome()">← Вернуться на главную</button>`)}`, 'finance');
+  }
+  function sectionRow74(sec){
+    const open = canSection74(sec.id);
+    return `<button class="lesson-row-v2 finance-section-row-v74 ${open?'':'locked'}" onclick="${open ? `renderFinanceSectionV74(${sec.id})` : `financeLockedSectionNoticeV74(${sec.id})`}"><div><b>${String(sec.id).padStart(2,'0')}. ${esc74(sec.title)}</b><p>${esc74(sec.description)}</p><p class="small"><b>Статус:</b> ${open ? 'доступно' : 'закрыто'}</p></div><span>${open?'→':'🔒'}</span></button>`;
+  }
+  function renderFinanceModuleHomeV74(){
+    if (!requireAdmin74()) return;
+    shell74(`${card74('blue-card-v2 finance-hero-v74', `<p class="eyebrow">финансовый модуль</p><h1>Финансовый модуль</h1><p>Выберите раздел для прохождения.</p>`)}${card74('', `<div class="finance-toolbar-v64"><button class="btn secondary" onclick="renderFinancialAssistantV74()">← К финансовому помощнику</button></div><h2>11 разделов</h2><div class="lesson-list-v2 finance-section-list-v74">${sections74().map(sectionRow74).join('')}</div>`)}`, 'finance');
+  }
+  function renderFinanceSectionV74(id){
+    if (!requireAdmin74()) return;
+    id = Number(id || 1);
+    if (!canSection74(id)) return locked74(id);
+    const sec = sections74().find(function(x){ return Number(x.id) === id; }) || sections74()[0];
+    if (id !== 1) return shell74(`${card74('blue-card-v2 finance-section-hero-v74', `<p class="eyebrow">раздел ${id}</p><h1>${esc74(sec.title)}</h1><p>${esc74(sec.description)}</p>`)}${card74('', `<div class="finance-toolbar-v64"><button class="btn secondary" onclick="renderFinanceModuleHomeV74()">← К разделам</button></div><p>Материалы этого раздела будут добавлены следующим этапом.</p>`)}`, 'finance');
+    const lessons = [
+      [1,'Деньги, прибыль и выручка: почему предприниматель ошибается','18 слайдов'],
+      [2,'Финансовая карта бизнеса','22 слайда'],
+      [3,'Управленческий учёт против бухгалтерии','22 слайда'],
+      [4,'Экономика бизнес-модели','32 слайда']
+    ].map(function(row){ return `<button class="lesson-row-v2" onclick="renderFinanceLessonV74(${row[0]},0)"><div><b>${row[0]}. ${esc74(row[1])}</b><p>${esc74(row[2])}</p></div><span>→</span></button>`; }).join('');
+    const extras = `<button class="lesson-row-v2" onclick="startFinanceSection1Test(true)"><div><b>Итоговая диагностика раздела 1</b><p>30 вопросов. Раздел 2 открывается при результате 80%+.</p></div><span>→</span></button><button class="lesson-row-v2" onclick="renderFinanceTrainerSection1V74()"><div><b>Финтренажёр раздела 1</b><p>Таблица для закрепления материала первого раздела.</p></div><span>→</span></button>`;
+    shell74(`${card74('blue-card-v2 finance-section-hero-v74', `<p class="eyebrow">раздел 1</p><h1>${esc74(sec.title)}</h1><p>${esc74(sec.description)}</p>`)}${card74('', `<div class="finance-toolbar-v64"><button class="btn secondary" onclick="renderFinanceModuleHomeV74()">← К разделам</button></div><h2>Уроки и закрепление</h2><div class="lesson-list-v2 finance-lesson-list-v74">${lessons}${extras}</div>`)}`, 'finance');
+  }
+  function renderFinanceLessonV74(id, index){
+    if (!requireAdmin74()) return;
+    if (typeof window.renderFinanceLesson64 === 'function') return window.renderFinanceLesson64(Number(id), Number(index || 0));
+    if (typeof window.renderFinanceLesson63 === 'function') return window.renderFinanceLesson63(Number(id), Number(index || 0));
+    if (typeof window.renderFinanceLessonV71 === 'function') return window.renderFinanceLessonV71(Number(id), Number(index || 0));
+    alert('Урок не найден в текущей сборке app.js.');
+  }
+  function renderFinanceTrainerSection1V74(){
+    if (!requireAdmin74()) return;
+    shell74(`${card74('blue-card-v2 finance-hero-v74 finance-trainer-hero-v74', `<p class="eyebrow">раздел 1 · практика</p><h1>Финтренажёр раздела 1</h1><p>Таблица для закрепления материала первого раздела.</p>`)}${card74('', `<div class="finance-toolbar-v64"><button class="btn secondary" onclick="renderFinanceSectionV74(1)">← К разделу 1</button></div><h2>Как пройти тренажёр</h2><div class="list-clean"><div><b>1. Открыть таблицу</b><p>Нажмите кнопку ниже и откройте финтренажёр в Google Таблицах.</p></div><div><b>2. Сохранить себе копию</b><p>В открытой таблице выберите: <b>Файл → Создать копию</b>. Работать нужно в своей копии, чтобы исходный шаблон не менялся.</p></div><div><b>3. Пройти задания</b><p>Внутри таблицы есть инструкция и задания по материалу первого раздела.</p></div></div><div class="finance-trainer-link-box-v70"><span>Ссылка на финтренажёр</span><p>${esc74(TRAINER_URL)}</p></div><a class="btn primary" href="${TRAINER_URL}" target="_blank" rel="noopener">Открыть финтренажёр в Google Таблицах</a><button class="btn secondary" onclick="renderFinanceSectionV74(1)">← Вернуться к урокам раздела</button>`)}`, 'finance');
+  }
+  function renderFinanceAnalyticsV74(){ if (!requireAdmin74()) return; shell74(`${card74('blue-card-v2 finance-hero-v74', `<p class="eyebrow">моя аналитика</p><h1>Моя аналитика</h1><p>Раздел пока оставлен как каркас.</p>`)}${card74('', `<button class="btn secondary" onclick="renderFinancialAssistantV74()">← К финансовому помощнику</button>`)}`, 'finance'); }
+  function renderFinanceTemplatesV74(){ if (!requireAdmin74()) return; shell74(`${card74('blue-card-v2 finance-hero-v74', `<p class="eyebrow">готовые шаблоны</p><h1>Готовые шаблоны</h1><p>Будущая библиотека таблиц и финансовых инструментов.</p>`)}${card74('', `<button class="btn secondary" onclick="renderFinancialAssistantV74()">← К финансовому помощнику</button>`)}`, 'finance'); }
+  function bind74(name, fn){ window[name] = fn; try { eval(name + ' = fn'); } catch(e) {} }
+  ['renderFinancialAssistant','renderFinancialAssistantV49','renderFinancialAssistantV50','renderFinancialAssistantV52','renderFinancialAssistantV55','renderFinancialAssistantV57','renderFinancialAssistantV60','renderFinancialAssistantV62','renderFinancialAssistantV64','renderFinancialAssistantV71','renderFinancialAssistantV72','renderFinancialAssistantV73','renderMyBusiness'].forEach(function(n){ bind74(n, renderFinancialAssistantV74); });
+  ['renderFinanceModuleHome','renderFinanceModuleHomeV49','renderFinanceModuleHome57','renderFinanceModuleHome59','renderFinanceModuleHome60','renderFinanceModuleHome62','renderFinanceModuleHome64','renderFinanceModuleHome71','renderFinanceModuleHome72','renderFinanceModuleHome73','renderFinanceModuleHomeV71','renderFinanceModuleHomeV72','renderFinanceModuleHomeV73'].forEach(function(n){ bind74(n, renderFinanceModuleHomeV74); });
+  ['renderFinanceSection','renderFinanceSection57','renderFinanceSection59','renderFinanceSection60','renderFinanceSection62','renderFinanceSection64','renderFinanceSection71','renderFinanceSection72','renderFinanceSection73','renderFinanceSectionV71','renderFinanceSectionV72','renderFinanceSectionV73'].forEach(function(n){ bind74(n, renderFinanceSectionV74); });
+  ['renderFinanceTrainerSection1','renderFinanceSection1Trainer','renderFinanceTrainerSection1V71','renderFinanceTrainerSection1V72','renderFinanceTrainerSection1V73'].forEach(function(n){ bind74(n, renderFinanceTrainerSection1V74); });
+  bind74('renderFinanceAnalytics', renderFinanceAnalyticsV74); bind74('renderFinanceTemplates', renderFinanceTemplatesV74); bind74('financeLockedSectionNotice', locked74); bind74('financeLockedSectionNoticeV74', locked74);
+  window.FINANCE_SECTION1_TRAINER_URL_FINAL = TRAINER_URL;
+  try {
+    const oldShell = shell;
+    if (!window.__financeShellPatchedV74 && typeof oldShell === 'function') {
+      window.__financeShellPatchedV74 = true;
+      window.shell = function(content, activeTab){ oldShell.call(this, clean74(content), activeTab); setTimeout(cleanDom74,0); setTimeout(cleanDom74,100); };
+      try { shell = window.shell; } catch(e) {}
+    }
+  } catch(e) {}
+  document.addEventListener('click', function(){ setTimeout(cleanDom74,0); }, true);
+  document.addEventListener('DOMContentLoaded', function(){ setTimeout(cleanDom74,200); });
+  setTimeout(cleanDom74, 0);
+})();
+
+/* =====================================================
+   v74 — FINAL ROUTE LOCK: finance module only 11 sections + direct trainer link
+   ===================================================== */
+(function installFinanceRouteV74(){
+  window.APP_UI_VERSION_V74 = 'v74-finance-only-sections-direct-trainer-20260628';
+
+  const TRAINER_URL_V74 = 'https://docs.google.com/spreadsheets/d/1WsPb_DHt3ksIpCAZIMxgMDuSojIbztbV_5tthhdJ3Eg/edit?gid=972184137#gid=972184137';
+  [
+    'FINANCE_SECTION1_TRAINER_URL_V49','FINANCE_SECTION1_TRAINER_URL_V57','FINANCE_SECTION1_TRAINER_URL_V58','FINANCE_SECTION1_TRAINER_URL_V60',
+    'FINANCE_SECTION1_TRAINER_URL_V61','FINANCE_SECTION1_TRAINER_URL_V62','FINANCE_SECTION1_TRAINER_URL_V63','FINANCE_SECTION1_TRAINER_URL_V64',
+    'FINANCE_SECTION1_TRAINER_URL_V72','FINANCE_SECTION1_TRAINER_URL_V73','FINANCE_SECTION1_TRAINER_EDIT_URL_V69','FINANCE_SECTION1_TRAINER_EDIT_URL_V70',
+    'FINANCE_SECTION1_TRAINER_EDIT_URL_V71','FINANCE_SECTION1_TRAINER_COPY_URL_V69','FINANCE_SECTION1_TRAINER_COPY_URL_V70','FINANCE_SECTION1_TRAINER_COPY_URL_V71','FINANCE_SECTION1_TRAINER_COPY_URL_V72'
+  ].forEach(function(key){ window[key] = TRAINER_URL_V74; });
+
+  function cleanTextV74(value){
+    return String(value ?? '')
+      .replace(/[ОO0]{2,}\s*ДДС/g, 'ОДДС')
+      .replace(/[ОO0]\s+ДДС/g, 'ОДДС')
+      .replace(/О\s+ОДДС/g, 'ОДДС')
+      .replace(/ООДДС/g, 'ОДДС')
+      .replace(/ОООДДС/g, 'ОДДС')
+      .replace(/ООООДДС/g, 'ОДДС')
+      .replace(/\bОПУ\b/g, 'ОПиУ')
+      .replace(/предпринимательа/g, 'предпринимателя')
+      .replace(/предпринимательу/g, 'предпринимателю')
+      .replace(/предпринимательом/g, 'предпринимателем')
+      .replace(/у предприниматель\b/g, 'у предпринимателя')
+      .replace(/почему предпринимателя ошибается/g, 'почему предприниматель ошибается');
+  }
+  function h(value){
+    const text = cleanTextV74(value);
+    if (typeof esc === 'function') return esc(text);
+    return String(text).replace(/[&<>'"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[c]; });
+  }
+  function C(cls, html){ return typeof card === 'function' ? card(cls, html) : `<section class="card-v2 ${cls || ''}">${html}</section>`; }
+  function show(html, tab){
+    const out = cleanTextV74(String(html || ''));
+    if (typeof shell === 'function') shell(out, tab || 'finance');
+    else {
+      const app = document.getElementById('app');
+      if (app) app.innerHTML = out;
+    }
+    setTimeout(normalizeFinanceDomV74, 0);
+  }
+  function isAdminActiveV74(){ try { return typeof isAdminMode === 'function' && isAdminMode() === true; } catch(e){ return false; } }
+  function requireAdminV74(){
+    if (isAdminActiveV74()) return true;
+    show(C('result-bad-v2 finance-locked-v74', `<p class="eyebrow">финансовый помощник</p><h1>Раздел закрыт</h1><p>Финансовый помощник пока закрыт в режиме просмотра ученика. Для проверки материалов вручную включите режим администрирования.</p><button class="btn secondary" onclick="renderHome()">← Вернуться на главную</button>`), 'finance');
+    return false;
+  }
+
+  const SECTIONS_V74 = [
+    { id:1, title:'Финансовое мышление собственника', desc:'Базовая логика: деньги, выручка, прибыль, ОПиУ, ОДДС, баланс, обязательства и решения собственника.', status:'доступно' },
+    { id:2, title:'Выручка, продажи и unit-экономика', desc:'Как возникает выручка, из каких драйверов она состоит и почему продажа сама по себе не гарантирует прибыльность.', status:'закрыто' },
+    { id:3, title:'ОПиУ и прибыльность', desc:'Себестоимость, маржа, расходы, EBITDA, чистая прибыль и ошибки, которые искажают финансовый результат.', status:'закрыто' },
+    { id:4, title:'Безубыточность, масштабирование и операционный рычаг', desc:'Минимальный объём продаж для выживания, запас прочности и эффект постоянных расходов.', status:'закрыто' },
+    { id:5, title:'ОДДС, деньги и ликвидность', desc:'Почему прибыль не равна деньгам, где возникают кассовые разрывы и как управлять платёжеспособностью.', status:'закрыто' },
+    { id:6, title:'Баланс и остатки', desc:'Активы, обязательства, капитал, авансы, основные средства и мосты остатков.', status:'закрыто' },
+    { id:7, title:'Долг, налоги, ФОТ и собственник', desc:'Кредиты, проценты, налоги, команда и личные деньги собственника.', status:'закрыто' },
+    { id:8, title:'Планирование, прогнозирование и инвестиции', desc:'План-факт, драйверное бюджетирование, сценарии, стресс-тесты и инвестиции.', status:'закрыто' },
+    { id:9, title:'Метрики, диагностика и дашборд', desc:'Система показателей, диагностика бизнеса и экран собственника.', status:'закрыто' },
+    { id:10, title:'Отраслевые финансы', desc:'Финансы услуг, торговли, производства, проектов, логистики и HoReCa.', status:'закрыто' },
+    { id:11, title:'Финансовая система и управление', desc:'Политика учёта, статьи, закрытие месяца, роли, контроль и регулярная система управления.', status:'закрыто' }
+  ];
+  const LESSONS_V74 = [
+    { id:1, title:'Деньги, прибыль и выручка: почему предприниматель ошибается', note:'18 слайдов' },
+    { id:2, title:'Финансовая карта бизнеса', note:'22 слайда' },
+    { id:3, title:'Управленческий учёт против бухгалтерии', note:'22 слайда' },
+    { id:4, title:'Экономика бизнес-модели', note:'32 слайда' }
+  ];
+
+  function progressV74(){
+    const keys = ['architecture_finance_progress_v49','architecture_finance_module_progress_v49_local','finance_progress_v49'];
+    for (const key of keys) {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(key) || '{}');
+        if (parsed && Object.keys(parsed).length) return parsed;
+      } catch(e) {}
+    }
+    return {};
+  }
+  function section1PassedV74(){
+    const p = progressV74();
+    return Boolean(p.section1TestPassed) || (Number(p.section1TestScore || 0) >= 24 && Number(p.section1TestTotal || 30) >= 30);
+  }
+  function canOpenSectionV74(id){
+    id = Number(id || 1);
+    if (id === 1) return true;
+    if (id === 2) return section1PassedV74();
+    return false;
+  }
+  function lockedNoticeV74(id){
+    alert(Number(id) === 2 ? 'Раздел 2 откроется после итоговой диагностики Раздела 1 минимум на 80%.' : 'Этот раздел откроется после прохождения предыдущих разделов.');
+  }
+  function sectionRowV74(sec){
+    const open = canOpenSectionV74(sec.id);
+    return `<button class="lesson-row-v2 finance-section-row-v74 ${open ? '' : 'locked'}" onclick="${open ? `renderFinanceSectionV74(${sec.id})` : `financeLockedSectionNoticeV74(${sec.id})`}"><div><b>${String(sec.id).padStart(2,'0')}. ${h(sec.title)}</b><p>${h(sec.desc)}</p><p class="small"><b>Статус:</b> ${h(open ? (sec.id === 1 ? 'доступно' : 'открыто') : sec.status)}</p></div><span>${open ? '→' : '🔒'}</span></button>`;
+  }
+
+  function renderFinancialAssistantV74(){
+    if (!requireAdminV74()) return;
+    show(`${C('blue-card-v2 finance-hero-v74', `<p class="eyebrow">финансовый помощник</p><h1>Финансовый помощник</h1><p>Рабочая зона финансового контура приложения.</p>`)}${C('', `<h2>Выберите блок</h2><div class="finance-hub-grid-v64"><button class="finance-hub-card-v62 active" onclick="renderFinanceModuleHomeV74()"><b>Финансовый модуль</b><p>11 разделов финансовой архитектуры бизнеса.</p><em>открыть</em></button><button class="finance-hub-card-v62" onclick="renderFinanceAnalyticsV74()"><b>Моя аналитика</b><p>Будущий контур личных показателей и отчётов.</p><em>каркас</em></button><button class="finance-hub-card-v62" onclick="renderFinanceTemplatesV74()"><b>Готовые шаблоны</b><p>Будущая библиотека таблиц и финансовых инструментов.</p><em>готовится</em></button></div><button class="btn secondary" onclick="renderHome()">← Вернуться на главную</button>`)}`, 'finance');
+  }
+  function renderFinanceModuleHomeV74(){
+    if (!requireAdminV74()) return;
+    show(`${C('blue-card-v2 finance-hero-v74', `<p class="eyebrow">финансовый модуль</p><h1>Финансовый модуль</h1><p>Выберите раздел.</p>`)}${C('', `<div class="finance-toolbar-v64"><button class="btn secondary" onclick="renderFinancialAssistantV74()">← К финансовому помощнику</button></div><h2>11 разделов</h2><div class="lesson-list-v2 finance-section-list-v74">${SECTIONS_V74.map(sectionRowV74).join('')}</div>`)}`, 'finance');
+  }
+  function renderFinanceSectionV74(sectionId){
+    if (!requireAdminV74()) return;
+    const id = Number(sectionId || 1);
+    if (!canOpenSectionV74(id)) return lockedNoticeV74(id);
+    const sec = SECTIONS_V74.find(function(x){ return x.id === id; }) || SECTIONS_V74[0];
+    if (id !== 1) {
+      show(`${C('blue-card-v2 finance-section-hero-v74', `<p class="eyebrow">раздел ${id}</p><h1>${h(sec.title)}</h1><p>${h(sec.desc)}</p>`)}${C('', `<div class="finance-toolbar-v64"><button class="btn secondary" onclick="renderFinanceModuleHomeV74()">← К разделам</button></div><p>Материалы этого раздела будут добавлены следующим этапом.</p>`)}`, 'finance');
+      return;
+    }
+    const lessons = LESSONS_V74.map(function(lesson){ return `<button class="lesson-row-v2" onclick="renderFinanceLessonV74(${lesson.id}, 0)"><div><b>${lesson.id}. ${h(lesson.title)}</b><p>${h(lesson.note)}</p></div><span>→</span></button>`; }).join('');
+    const extras = `<button class="lesson-row-v2" onclick="startFinanceSection1Test(true)"><div><b>Итоговая диагностика раздела 1</b><p>30 вопросов. Раздел 2 открывается при результате 80%+.</p></div><span>→</span></button><button class="lesson-row-v2" onclick="renderFinanceTrainerSection1V74()"><div><b>Финтренажёр раздела 1</b><p>Таблица для закрепления материала первого раздела.</p></div><span>→</span></button>`;
+    show(`${C('blue-card-v2 finance-section-hero-v74', `<p class="eyebrow">раздел 1</p><h1>${h(sec.title)}</h1><p>${h(sec.desc)}</p>`)}${C('', `<div class="finance-toolbar-v64"><button class="btn secondary" onclick="renderFinanceModuleHomeV74()">← К разделам</button></div><h2>Уроки и закрепление</h2><div class="lesson-list-v2 finance-lesson-list-v74">${lessons}${extras}</div>`)}`, 'finance');
+  }
+  function renderFinanceLessonV74(lessonId, full){
+    if (!requireAdminV74()) return;
+    const candidates = [window.renderFinanceLessonV71, window.renderFinanceLessonV64, window.renderFinanceLessonV62, window.renderFinanceLessonV49];
+    for (let i = 0; i < candidates.length; i++) {
+      if (typeof candidates[i] === 'function' && candidates[i] !== renderFinanceLessonV74) {
+        candidates[i](lessonId, Number(full || 0));
+        setTimeout(normalizeFinanceDomV74, 0);
+        return;
+      }
+    }
+    alert('Урок не найден в текущей сборке app.js.');
+  }
+  function renderFinanceTrainerSection1V74(){
+    if (!requireAdminV74()) return;
+    show(`${C('blue-card-v2 finance-hero-v74 finance-trainer-hero-v74', `<p class="eyebrow">раздел 1 · практика</p><h1>Финтренажёр раздела 1</h1><p>Таблица для закрепления материала первого раздела.</p>`)}${C('', `<div class="finance-toolbar-v64"><button class="btn secondary" onclick="renderFinanceSectionV74(1)">← К разделу 1</button></div><h2>Как пройти финтренажёр</h2><div class="list-clean"><div><b>1. Открыть таблицу</b><p>Нажмите кнопку ниже и перейдите в Google Таблицу.</p></div><div><b>2. Сохранить себе рабочую версию</b><p>В самой Google Таблице создайте копию для работы: <b>Файл → Создать копию</b>.</p></div><div><b>3. Пройти задания</b><p>Следуйте инструкции внутри таблицы и выполняйте задания по материалу первого раздела.</p></div></div><div class="finance-trainer-link-box-v70"><span>Ссылка на финтренажёр</span><p>${h(TRAINER_URL_V74)}</p></div><a class="btn primary" href="${TRAINER_URL_V74}" target="_blank" rel="noopener">Открыть финтренажёр</a><button class="btn secondary" onclick="renderFinanceSectionV74(1)">← Вернуться к урокам раздела</button>`)}`, 'finance');
+  }
+  function renderFinanceAnalyticsV74(){
+    if (!requireAdminV74()) return;
+    show(`${C('blue-card-v2 finance-hero-v74', `<p class="eyebrow">моя аналитика</p><h1>Моя аналитика</h1><p>Раздел пока оставлен как каркас.</p>`)}${C('', `<button class="btn secondary" onclick="renderFinancialAssistantV74()">← К финансовому помощнику</button>`)}`, 'finance');
+  }
+  function renderFinanceTemplatesV74(){
+    if (!requireAdminV74()) return;
+    show(`${C('blue-card-v2 finance-hero-v74', `<p class="eyebrow">готовые шаблоны</p><h1>Готовые шаблоны</h1><p>Будущая библиотека таблиц и финансовых инструментов.</p>`)}${C('', `<button class="btn secondary" onclick="renderFinancialAssistantV74()">← К финансовому помощнику</button>`)}`, 'finance');
+  }
+  function normalizeFinanceDomV74(){
+    const root = document.getElementById('app');
+    if (!root) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let node;
+    while ((node = walker.nextNode())) {
+      const fixed = cleanTextV74(node.nodeValue || '');
+      if (fixed !== node.nodeValue) node.nodeValue = fixed;
+    }
+    const text = (root.textContent || '').toLowerCase();
+    if ((text.includes('быстрый переход') || text.includes('карта финансового модуля')) && !window.__financeV74Redraw) {
+      window.__financeV74Redraw = true;
+      setTimeout(function(){ window.__financeV74Redraw = false; renderFinanceModuleHomeV74(); }, 0);
+    }
+  }
+  function bind(name, fn){ window[name] = fn; try { eval(name + ' = fn'); } catch(e) {} }
+  [
+    'renderFinancialAssistant','renderFinancialAssistantV50','renderFinancialAssistantV52','renderFinancialAssistantV55','renderFinancialAssistantV57','renderFinancialAssistantV60','renderFinancialAssistantV62','renderFinancialAssistantV64','renderFinancialAssistantV71','renderFinancialAssistantV72','renderFinancialAssistantV73','renderMyBusiness'
+  ].forEach(function(name){ bind(name, renderFinancialAssistantV74); });
+  [
+    'renderFinanceModuleHome','renderFinanceModuleHomeV49','renderFinanceModuleHome57','renderFinanceModuleHome59','renderFinanceModuleHome60','renderFinanceModuleHome62','renderFinanceModuleHome64','renderFinanceModuleHome71','renderFinanceModuleHomeV71','renderFinanceModuleHomeV72','renderFinanceModuleHomeV73'
+  ].forEach(function(name){ bind(name, renderFinanceModuleHomeV74); });
+  [
+    'renderFinanceSection','renderFinanceSection57','renderFinanceSection59','renderFinanceSection60','renderFinanceSection62','renderFinanceSection64','renderFinanceSection71','renderFinanceSectionV71','renderFinanceSectionV72','renderFinanceSectionV73'
+  ].forEach(function(name){ bind(name, renderFinanceSectionV74); });
+  [
+    'renderFinanceTrainerSection1','renderFinanceSection1Trainer','renderFinanceTrainerSection1_62','renderFinanceTrainerSection1_64','renderFinanceTrainerSection1_69','renderFinanceTrainerSection1_70','renderFinanceTrainerSection1_71','renderFinanceTrainerSection1V71','renderFinanceTrainerSection1V72','renderFinanceTrainerSection1V73'
+  ].forEach(function(name){ bind(name, renderFinanceTrainerSection1V74); });
+  bind('renderFinanceAnalytics', renderFinanceAnalyticsV74);
+  bind('renderFinanceAnalyticsV72', renderFinanceAnalyticsV74);
+  bind('renderFinanceAnalyticsV73', renderFinanceAnalyticsV74);
+  bind('renderFinanceTemplates', renderFinanceTemplatesV74);
+  bind('renderFinanceTemplatesV72', renderFinanceTemplatesV74);
+  bind('renderFinanceTemplatesV73', renderFinanceTemplatesV74);
+  bind('financeLockedSectionNotice', lockedNoticeV74);
+  bind('financeLockedSectionNoticeV72', lockedNoticeV74);
+  bind('financeLockedSectionNoticeV73', lockedNoticeV74);
+
+  window.renderFinancialAssistantV74 = renderFinancialAssistantV74;
+  window.renderFinanceModuleHomeV74 = renderFinanceModuleHomeV74;
+  window.renderFinanceSectionV74 = renderFinanceSectionV74;
+  window.renderFinanceLessonV74 = renderFinanceLessonV74;
+  window.renderFinanceTrainerSection1V74 = renderFinanceTrainerSection1V74;
+  window.normalizeFinanceDomV74 = normalizeFinanceDomV74;
+
+  try {
+    const originalShell = shell;
+    if (typeof originalShell === 'function' && !window.__financeShellPatchedV74) {
+      window.__financeShellPatchedV74 = true;
+      window.shell = function(content, activeTab){
+        originalShell(cleanTextV74(content), activeTab);
+        setTimeout(normalizeFinanceDomV74, 0);
+      };
+      try { shell = window.shell; } catch(e) {}
+    }
+  } catch(e) {}
+
+  document.addEventListener('click', function(){ setTimeout(normalizeFinanceDomV74, 0); }, true);
+  document.addEventListener('DOMContentLoaded', function(){ setTimeout(normalizeFinanceDomV74, 300); });
+  setTimeout(normalizeFinanceDomV74, 0);
+})();
