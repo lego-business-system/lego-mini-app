@@ -29,7 +29,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v55-finance-admin-mode-hard-lock-20260628";
+const APP_CACHE_VERSION = "v56-finance-slide-editorial-structure-20260628";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -7248,6 +7248,381 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
   }
 
   window.renderFinanceLesson = renderFinanceLessonV53;
+
+  /* =====================================================
+     v56 — Финансовый модуль: редакторская структура уроков
+     ===================================================== */
+  function financeCleanLearningCopyV56(value){
+    let out = String(value || '').trim();
+    if (!out) return '';
+    out = out.replace(/\s+/g, ' ');
+    out = out.replace(/ОПУ/g, 'ОПиУ');
+    out = out.replace(/(^|[^А-Яа-яA-Za-z0-9])ДДС(?=$|[^А-Яа-яA-Za-z0-9])/g, '$1ОДДС');
+    out = out.replace(/Результат ученика\s*:/gi, 'Основной вывод:');
+    out = out.replace(/Тест после урока\s*:\s*не используется\.?/gi, '');
+    out = out.replace(/Практическая таблица[^.]*\.?/gi, '');
+    out = out.replace(/Рекомендуемая длительность урока\s*:[^.]*\.?/gi, '');
+    out = out.replace(/сквозной кейс на\s*1\s*000\s*000\s*₽/gi, 'сквозной кейс');
+
+    const phraseMap = [
+      [/Ученик разбирает/gi, 'Разбирается'],
+      [/ученик разбирает/gi, 'разбирается'],
+      [/Ученик определяет/gi, 'Определяется'],
+      [/ученик определяет/gi, 'определяется'],
+      [/Ученик видит/gi, 'Формируется видение того,'],
+      [/ученик видит/gi, 'формируется видение того,'],
+      [/Ученик понимает/gi, 'Формируется понимание того,'],
+      [/ученик понимает/gi, 'формируется понимание того,'],
+      [/Ученик перестаёт/gi, 'Предприниматель перестаёт'],
+      [/ученик перестаёт/gi, 'предприниматель перестаёт'],
+      [/Ученик начинает/gi, 'Формируется переход к тому, чтобы'],
+      [/ученик начинает/gi, 'формируется переход к тому, чтобы'],
+      [/Ученик умеет/gi, 'Формируется навык'],
+      [/ученик умеет/gi, 'формируется навык'],
+      [/Ученик получает/gi, 'Формируется'],
+      [/ученик получает/gi, 'формируется']
+    ];
+    phraseMap.forEach(function(pair){ out = out.replace(pair[0], pair[1]); });
+    out = out.replace(/\bУченик\b/g, 'Предприниматель');
+    out = out.replace(/\bученик\b/g, 'предприниматель');
+    out = out.replace(/\bученика\b/g, 'предпринимателя');
+    out = out.replace(/\bученику\b/g, 'предпринимателю');
+    out = out.replace(/\bучеником\b/g, 'предпринимателем');
+    out = out.replace(/\bученики\b/g, 'предприниматели');
+    out = out.replace(/\s+([,.!?;:])/g, '$1').trim();
+    return out;
+  }
+
+  function financeLessonFormatV56(lesson, parsed){
+    const id = Number(lesson.id);
+    const formats = {
+      1: 'Теоретическое объяснение, разбор финансовых понятий, сквозной кейс, сравнение влияния на ОПиУ, ОДДС и баланс.',
+      2: 'Теоретическое объяснение, схема финансовой карты, сквозной кейс одного месяца, разбор через ОПиУ, ОДДС, баланс и метрики.',
+      3: 'Сравнительные схемы, разбор бухгалтерского, налогового и управленческого контуров, кейс расхождения прибыли и кассового риска.',
+      4: 'Теория, отраслевые схемы, формулы драйверов, сравнительный кейс и диагностика экономического двигателя бизнеса.'
+    };
+    if (formats[id]) return formats[id];
+    return financeCleanLearningCopyV56(lesson.content || 'Теория, кейс, типовые ошибки и управленческий вывод.');
+  }
+
+  function financeLessonMainTaskV56(lesson){
+    const id = Number(lesson.id);
+    const tasks = {
+      1: 'Разрушить базовый финансовый миф предпринимателя: деньги на счёте не равны прибыли, а поступление денег не всегда является выручкой.',
+      2: 'Показать бизнес как систему, где операции превращаются в выручку, деньги — в денежный поток, остатки — в баланс, а метрики — в решения.',
+      3: 'Отделить управленческую финансовую систему собственника от бухгалтерского и налогового учёта.',
+      4: 'Показать, за счёт чего конкретный бизнес зарабатывает и где у него возникает главное финансовое ограничение.'
+    };
+    return tasks[id] || financeCleanLearningCopyV56(lesson.objective || 'Раскрыть финансовую логику темы через предпринимательский кейс.');
+  }
+
+  function financeLessonMainOutputV56(lesson){
+    const id = Number(lesson.id);
+    const outputs = {
+      1: 'Предприниматель перестаёт оценивать бизнес только по остатку денег и разделяет три финансовые реальности: заработал ли бизнес, пришли ли деньги, что изменилось в активах и обязательствах.',
+      2: 'Финансы бизнеса перестают выглядеть как одна таблица кассы. Одна операция начинает читаться через прибыльность, движение денег, остатки и управленческие метрики.',
+      3: 'Бухгалтерия, налоги и управленческий учёт перестают смешиваться. Каждый контур получает свою задачу, а собственник видит, какие данные нужны для решений.',
+      4: 'Бизнес начинает читаться не абстрактно, а через экономический двигатель: выручку, маржу, мощность, оборачиваемость, повторяемость и главное ограничение модели.'
+    };
+    return outputs[id] || financeCleanLearningCopyV56(lesson.result || 'Формируется управленческий вывод по теме.');
+  }
+
+  function parseFinanceLessonScreensV56(lesson){
+    const content = Array.isArray(lesson && lesson.fullContent) ? lesson.fullContent : [];
+    const slides = [];
+    const introRaw = [];
+    const finalRaw = [];
+    let mode = 'intro';
+    let current = null;
+    let submode = 'text';
+
+    content.forEach(function(item){
+      const raw = String(item || '').trim();
+      if (!raw) return;
+      if (/^Слайд\s+\d+\./i.test(raw)) {
+        mode = 'slide';
+        submode = 'text';
+        current = { title: financeCleanLearningCopyV56(raw), text: [], visualBrief: [] };
+        slides.push(current);
+        return;
+      }
+      if (/^Итоговая логика урока$/i.test(raw)) {
+        mode = 'final';
+        current = null;
+        submode = 'text';
+        return;
+      }
+      if (mode === 'intro') {
+        if (/^Урок\s+\d+\./i.test(raw) || /^Общая структура урока$/i.test(raw) || /^Рекомендуемая длительность урока\s*:/i.test(raw) || /^Тест после урока\s*:/i.test(raw) || /^Практическая таблица/i.test(raw)) return;
+        introRaw.push(financeCleanLearningCopyV56(raw));
+        return;
+      }
+      if (mode === 'slide') {
+        if (/^Что показать на слайде$/i.test(raw)) { submode = 'visual'; return; }
+        if (/^Текст под слайдом$/i.test(raw)) { submode = 'text'; return; }
+        if (!current) return;
+        if (submode === 'visual') { current.visualBrief.push(financeCleanLearningCopyV56(raw)); return; }
+        current.text.push(financeCleanLearningCopyV56(raw));
+        return;
+      }
+      if (mode === 'final') finalRaw.push(financeCleanLearningCopyV56(raw));
+    });
+    return { introRaw: introRaw.filter(Boolean), slides: slides, finalRaw: finalRaw.filter(Boolean) };
+  }
+
+  function financeSlideCleanTitleV56(title){
+    return financeCleanLearningCopyV56(String(title || '').replace(/^Слайд\s+\d+\.\s*/i, '').trim());
+  }
+
+  function financeFirstSentenceV56(text){
+    const clean = financeCleanLearningCopyV56(text || '');
+    const m = clean.match(/^(.{20,220}?[.!?])\s/);
+    return m ? m[1] : clean.slice(0, 190) + (clean.length > 190 ? '…' : '');
+  }
+
+  function financeSlideMainThoughtV56(lesson, slide){
+    const id = Number(lesson.id);
+    const title = financeSlideCleanTitleV56(slide.title).toLowerCase();
+    const all = (title + ' ' + (slide.text || []).join(' ')).toLowerCase();
+    if (all.includes('аванс')) return 'Аванс улучшает деньги сегодня, но создаёт обязательство на будущую работу.';
+    if (all.includes('кредит')) return 'Кредит увеличивает кассу, но не создаёт выручку и прибыль.';
+    if (all.includes('дебитор')) return 'Выручка может быть заработана раньше, чем деньги пришли на счёт.';
+    if (all.includes('оборуд') || all.includes('актив')) return 'Покупка актива уменьшает деньги сразу, но не должна полностью ломать прибыль месяца.';
+    if (all.includes('расход') && all.includes('плат')) return 'Расход уменьшает финансовый результат, платёж уменьшает деньги: это разные события.';
+    if (all.includes('выруч')) return 'Выручка возникает от переданной клиенту ценности, а не от самого факта поступления денег.';
+    if (all.includes('прибыл')) return 'Прибыль показывает результат периода, но не гарантирует наличие денег.';
+    if (all.includes('баланс')) return 'Баланс показывает, что у бизнеса есть и кому он должен на конкретную дату.';
+    if (all.includes('оддс') || all.includes('денежн')) return 'ОДДС показывает движение денег, но не заменяет анализ прибыли и баланса.';
+    if (id === 3 && all.includes('бухгалтер')) return 'Бухгалтерия может быть корректной, но не обязана быть системой управления бизнесом.';
+    if (id === 3 && all.includes('налог')) return 'Налоговый контур отвечает за обязательства перед государством, а не за полную управленческую картину.';
+    if (id === 3 && all.includes('управлен')) return 'Управленческий учёт нужен для решений, а не для формальной отчётности.';
+    if (id === 4 && all.includes('услуг')) return 'Услуги зарабатывают через время, загрузку, чек, ФОТ и повторяемость.';
+    if (id === 4 && all.includes('торгов')) return 'Торговля зарабатывает не оборотом, а маржой на обороте и скоростью возврата денег из товара.';
+    if (id === 4 && all.includes('производ')) return 'Производство связывает прибыль с мощностью, себестоимостью, браком и деньгами в цикле.';
+    if (id === 4 && all.includes('проект')) return 'Проект может быть прибыльным по смете и тяжёлым по деньгам из-за этапов и сроков оплат.';
+    if (id === 4 && all.includes('логист')) return 'Логистика считается через рейс, километр, загрузку, топливо, простой и маржу маршрута.';
+    if (id === 4 && (all.includes('horeca') || all.includes('ресторан') || all.includes('кафе'))) return 'HoReCa нельзя оценивать только по посадке: прибыль создают меню, food cost, labor cost и скорость обслуживания.';
+    if (id === 4 && all.includes('одинаковая выруч')) return 'Одинаковая выручка не означает одинаковую экономику, риски и решения.';
+    if ((slide.text || []).length) return financeFirstSentenceV56(slide.text[0]);
+    return 'Слайд раскрывает один управленческий принцип финансового мышления.';
+  }
+
+  function financeSlideTrapV56(lesson, slide){
+    const id = Number(lesson.id);
+    const title = financeSlideCleanTitleV56(slide.title).toLowerCase();
+    const all = (title + ' ' + (slide.text || []).join(' ')).toLowerCase();
+    if (all.includes('аванс')) return 'Потратить аванс как свободную прибыль и забыть, что услугу ещё нужно оказать.';
+    if (all.includes('кредит')) return 'Назвать кредит выручкой и принять долговые деньги за заработанный результат.';
+    if (all.includes('дебитор')) return 'Считать прибыль деньгами, когда клиент ещё не оплатил долг.';
+    if (all.includes('оборуд') || all.includes('актив')) return 'Списать крупную покупку в расход одного месяца и исказить прибыль.';
+    if (all.includes('расход') && all.includes('плат')) return 'Считать любой платёж расходом и любой расход фактическим уходом денег.';
+    if (all.includes('выруч')) return 'Признать выручку только потому, что деньги поступили на счёт.';
+    if (all.includes('прибыл')) return 'Оценивать бизнес по прибыли без проверки денег, обязательств и остатков.';
+    if (id === 3) return 'Требовать от бухгалтерии ответа на вопросы, для которых нужна управленческая система.';
+    if (id === 4 && all.includes('выруч')) return 'Сравнивать разные бизнесы только по обороту и не видеть их ограничения.';
+    if (id === 4) return 'Искать рост продаж, когда настоящее ограничение находится в марже, мощности или денежном цикле.';
+    return 'Сделать вывод по одной цифре и не проверить её через остальные финансовые экраны.';
+  }
+
+  function financeSlideTakeawayV56(lesson, slide){
+    const id = Number(lesson.id);
+    const title = financeSlideCleanTitleV56(slide.title).toLowerCase();
+    const all = (title + ' ' + (slide.text || []).join(' ')).toLowerCase();
+    if (all.includes('аванс')) return 'Авансы нужно отдельно видеть в ОДДС и балансе: деньги пришли, но обязательство осталось.';
+    if (all.includes('кредит')) return 'Кредит читается через финансовый поток, долг, проценты и будущую нагрузку, а не через выручку.';
+    if (all.includes('дебитор')) return 'Дебиторку нужно контролировать как мост между заработанной выручкой и реальными деньгами.';
+    if (all.includes('оборуд') || all.includes('актив')) return 'Крупные покупки нужно разделять на денежный платёж, актив баланса и будущую амортизацию.';
+    if (all.includes('расход') && all.includes('плат')) return 'Для каждой операции нужно отдельно определить: это расход периода, платёж, актив или погашение обязательства.';
+    if (all.includes('матриц') || all.includes('вариант')) return 'Одна сумма должна раскладываться по трём экранам: ОПиУ, ОДДС и баланс.';
+    if (id === 2) return 'Финансовая карта работает только тогда, когда операция сохраняет смысл во всех связанных отчётах.';
+    if (id === 3) return 'Бухгалтерский, налоговый и управленческий контуры нужно связывать, но не смешивать.';
+    if (id === 4) return 'Перед решением о росте нужно определить двигатель модели, главное ограничение и метрику контроля.';
+    return 'Сначала определяется экономический смысл операции, затем её влияние на ОПиУ, ОДДС и баланс.';
+  }
+
+  function financeLessonChapterBeforeSlideV56(lesson, slideIndex){
+    const id = Number(lesson.id);
+    const n = Number(slideIndex);
+    if (id === 2 && n === 15) return { title:'Кейс месяца', text:'Один и тот же месяц разбирается через ОПиУ, ОДДС, баланс и метрики. Здесь теория превращается в карту управленческого анализа.' };
+    if (id === 3 && n === 8) return { title:'Кейс конфликта отчётов', text:'Бухгалтерская прибыль и кассовый риск рассматриваются не как спор, а как две разные финансовые реальности.' };
+    if (id === 4) {
+      if (n === 0) return { title:'Глава 1. Экономический двигатель', text:'Базовая логика: как бизнес превращает спрос, ресурсы и выполнение в прибыль и деньги.' };
+      if (n === 6) return { title:'Глава 2. Драйверы модели', text:'Выручка, маржа, мощность, оборачиваемость и повторные продажи рассматриваются как управляемые механизмы.' };
+      if (n === 11) return { title:'Глава 3. Отраслевые модели', text:'Услуги, торговля, производство, проекты, логистика и HoReCa имеют разные ограничения и разные метрики.' };
+      if (n === 23) return { title:'Глава 4. Сравнительный кейс', text:'Одинаковая выручка разбирается на разных бизнесах, чтобы показать различие экономической логики.' };
+      if (n === 28) return { title:'Глава 5. Диагностика', text:'Финальный блок собирает двигатель модели, главную метрику, смертельную метрику и связь с финансовой системой.' };
+    }
+    return null;
+  }
+
+  function financeBuildLessonScreensV56(lesson, parsed){
+    const screens = [{ type:'cover' }];
+    (parsed.slides || []).forEach(function(slide, idx){
+      const chapter = financeLessonChapterBeforeSlideV56(lesson, idx);
+      if (chapter) screens.push({ type:'chapter', chapter:chapter });
+      screens.push({ type:'slide', slide:slide, slideIndex:idx });
+    });
+    screens.push({ type:'final' });
+    return screens;
+  }
+
+  function financeLessonCoverScreenHtmlV56(lesson, parsed, totalScreens){
+    const slidesCount = (parsed.slides || []).length;
+    const rows = [
+      ['Количество слайдов', `${slidesCount}.`],
+      ['Формат урока', financeLessonFormatV56(lesson, parsed)],
+      ['Главная задача', financeLessonMainTaskV56(lesson)],
+      ['Основной вывод', financeLessonMainOutputV56(lesson)]
+    ];
+    const grid = rows.map(function(row){ return `<div class="finance-cover-line-v53 finance-cover-line-v56"><span>${esc(row[0])}</span><p>${esc(row[1])}</p></div>`; }).join('');
+    return `${card('blue-card-v2 finance-hero-v49 finance-lesson-cover-v53 finance-lesson-cover-v56', `<p class="eyebrow">раздел ${Number(lesson.sectionId)} · урок ${Number(lesson.id)}</p><h1>${esc(lesson.title)}</h1><p>Титульная структура перед основной последовательностью слайдов.</p>`)}${card('finance-cover-card-v53 finance-cover-card-v56', `<h2>Титульный лист урока</h2><div class="finance-cover-grid-v53 finance-cover-grid-v56">${grid}</div><div class="finance-screen-counter-v53">Экран 1 из ${Number(totalScreens)}</div>`)}`;
+  }
+
+  function financeParagraphsHtmlV56(lines){
+    return (lines || []).map(function(line){ return `<p>${esc(financeCleanLearningCopyV56(line))}</p>`; }).join('');
+  }
+
+  function financeLessonChapterScreenHtmlV56(lesson, chapter, screenIndex, totalScreens){
+    return `${card('blue-card-v2 finance-chapter-card-v56 finance-slide-card-v53', `<p class="eyebrow">структура урока</p><h1>${esc(chapter.title)}</h1><p>${esc(chapter.text)}</p><div class="finance-screen-counter-v53">Экран ${screenIndex + 1} из ${totalScreens}</div>`)}`;
+  }
+
+
+  function financeImpactMatrixHtmlV56(lesson, slide){
+    const title = financeSlideCleanTitleV56(slide.title).toLowerCase();
+    const all = (title + ' ' + (slide.text || []).join(' ')).toLowerCase();
+    let rows = null;
+    if (all.includes('кредит')) rows = [
+      'Выручка не возникает. Проценты позже могут стать расходом.',
+      'Финансовое поступление сейчас и будущие платежи по долгу.',
+      'Деньги увеличиваются, долг увеличивается.'
+    ];
+    else if (all.includes('аванс') || all.includes('абонемент') || all.includes('сертификат') || all.includes('предоплат')) rows = [
+      'Выручка признаётся по мере оказания услуги или поставки товара.',
+      'Деньги поступили сейчас.',
+      'Деньги увеличиваются, обязательство перед клиентом увеличивается.'
+    ];
+    else if (all.includes('дебитор')) rows = [
+      'Выручка уже признана.',
+      'Поступления пока нет; при оплате будет денежный приток.',
+      'Дебиторка увеличивается; при оплате деньги растут, дебиторка снижается.'
+    ];
+    else if (all.includes('оборуд') || all.includes('актив') || all.includes('capex') || all.includes('основн')) rows = [
+      'Расход появляется постепенно через амортизацию.',
+      'Инвестиционный платёж уменьшает деньги сразу.',
+      'Деньги уменьшаются, актив увеличивается.'
+    ];
+    else if (all.includes('погашение тела') || all.includes('тело кредита')) rows = [
+      'Тело долга не является расходом периода.',
+      'Финансовый платёж уменьшает деньги.',
+      'Деньги уменьшаются, долг уменьшается.'
+    ];
+    else if (all.includes('настоящая выручка') || all.includes('уже оказан') || all.includes('клиент оплатил услугу')) rows = [
+      'Выручка возникает, затем считается прибыль после расходов.',
+      'Операционное поступление увеличивает деньги.',
+      'Деньги растут; капитал меняется через финансовый результат.'
+    ];
+    else if (all.includes('вклад собственника')) rows = [
+      'Выручка не возникает.',
+      'Финансовое поступление поддерживает кассу.',
+      'Деньги растут, капитал или займ собственника растёт.'
+    ];
+    if (!rows) return '';
+    return `<div class="finance-impact-matrix-v56"><div><span>ОПиУ</span><p>${esc(rows[0])}</p></div><div><span>ОДДС</span><p>${esc(rows[1])}</p></div><div><span>Баланс</span><p>${esc(rows[2])}</p></div></div>`;
+  }
+
+  function financeLessonSlideScreenHtmlV56(lesson, slide, slideNumber, slidesTotal, screenIndex, totalScreens){
+    const title = financeSlideCleanTitleV56(slide.title);
+    const body = financeParagraphsHtmlV56(slide.text) || '<p>Текст слайда будет добавлен после редакторской проверки.</p>';
+    const mainThought = financeSlideMainThoughtV56(lesson, slide);
+    const trap = financeSlideTrapV56(lesson, slide);
+    const takeaway = financeSlideTakeawayV56(lesson, slide);
+    const matrix = financeImpactMatrixHtmlV56(lesson, slide);
+    return `${card('finance-slide-card-v53 finance-slide-card-v56', `<p class="eyebrow">слайд ${slideNumber} из ${slidesTotal}</p><h1>${esc(title)}</h1><div class="finance-image-placeholder-v53 finance-image-placeholder-v56"><div><b>Место для изображения</b><p>Изображение будет подключено после генерации визуалов.</p></div></div><div class="finance-main-thought-v56"><span>Главная мысль</span><p>${esc(mainThought)}</p></div><div class="finance-slide-body-v53 finance-slide-body-v56"><h3>Объяснение</h3>${body}</div><div class="finance-lesson-callouts-v56"><div><span>Типовая ошибка</span><p>${esc(trap)}</p></div><div><span>Управленческий вывод</span><p>${esc(takeaway)}</p></div></div>${matrix}<div class="finance-screen-counter-v53">Экран ${screenIndex + 1} из ${totalScreens}</div>`)}`;
+  }
+
+  function financeLessonFinalTakeawaysV56(lesson){
+    const id = Number(lesson.id);
+    const map = {
+      1: [
+        'Деньги на счёте показывают факт наличия средств, но не доказывают прибыль.',
+        'Выручка возникает после передачи ценности клиенту, а не после любого поступления денег.',
+        'Аванс, кредит, возврат дебиторки и вклад собственника имеют разные последствия для ОПиУ, ОДДС и баланса.',
+        'Перед выводом по бизнесу сначала определяется финансовый смысл операции.'
+      ],
+      2: [
+        'ОПиУ отвечает за прибыльность периода.',
+        'ОДДС отвечает за движение денег и платёжеспособность.',
+        'Баланс показывает активы, обязательства и капитал на дату.',
+        'Метрики нужны не для красоты дашборда, а для диагностики и управленческого решения.'
+      ],
+      3: [
+        'Бухгалтерия нужна для корректности, документов и обязательной отчётности.',
+        'Налоговый учёт нужен для расчёта обязательств перед государством.',
+        'Управленческий учёт нужен для решений собственника: прибыль, деньги, остатки, риски и действия.',
+        'Прибыль по отчёту и кассовый риск могут одновременно быть правдой.'
+      ],
+      4: [
+        'Одинаковая выручка не означает одинаковый бизнес.',
+        'Каждая модель имеет свой двигатель: спрос, конверсия, чек, маржа, мощность, денежный цикл и повторяемость.',
+        'Услуги, торговля, производство, проекты, логистика и HoReCa требуют разных метрик и разных решений.',
+        'Перед масштабированием нужно найти главное финансовое ограничение модели.'
+      ]
+    };
+    return map[id] || [financeLessonMainOutputV56(lesson)];
+  }
+
+  function financeLessonFinalScreenHtmlV56(lesson, parsed, screenIndex, totalScreens){
+    const takeaways = financeLessonFinalTakeawaysV56(lesson);
+    const cards = takeaways.map(function(text, idx){ return `<div><b>${String(idx + 1).padStart(2,'0')}</b><p>${esc(text)}</p></div>`; }).join('');
+    return `${card('blue-card-v2 finance-final-card-v53 finance-final-card-v56', `<p class="eyebrow">итоговая логика</p><h1>Итоговая логика урока</h1><p>Финальный смысловой вывод без обращения к ученику.</p>`)}${card('', `<h2>Что должно остаться после урока</h2><div class="finance-final-grid-v56">${cards}</div><div class="finance-screen-counter-v53">Экран ${screenIndex + 1} из ${totalScreens}</div>`)}`;
+  }
+
+  function financeSummaryLessonHtmlV56(lesson){
+    return `<div class="finance-summary-grid-v49 finance-summary-grid-v56">
+      <div><span>Задача урока</span><p>${esc(financeCleanLearningCopyV56(lesson.objective || 'Будет раскрыто позже.'))}</p></div>
+      <div><span>Ключевое содержание</span><p>${esc(financeCleanLearningCopyV56(lesson.content || 'Будет раскрыто позже.'))}</p></div>
+      <div><span>Кейс</span><p>${esc(financeCleanLearningCopyV56(lesson.case || 'Будет раскрыто позже.'))}</p></div>
+      <div><span>Основной вывод</span><p>${esc(financeCleanLearningCopyV56(lesson.result || 'Будет раскрыто позже.'))}</p></div>
+    </div>`;
+  }
+
+  function financeLessonNavV56(lesson, index, total){
+    const prevDisabled = index <= 0;
+    const isLast = index >= total - 1;
+    const prevAction = `renderFinanceLesson(${Number(lesson.id)}, ${Math.max(0, index - 1)})`;
+    const nextAction = isLast ? `renderFinanceSection(${Number(lesson.sectionId)})` : `renderFinanceLesson(${Number(lesson.id)}, ${index + 1})`;
+    const nextText = isLast ? 'К урокам раздела' : 'Далее';
+    return `<div class="nav-panel-v2 nav-panel-v2-three finance-lesson-nav-v53 finance-lesson-nav-v56"><button class="btn secondary" onclick="renderFinanceSection(${Number(lesson.sectionId)})">К разделу</button><button class="btn secondary" ${prevDisabled ? 'disabled' : ''} onclick="${prevAction}">Назад</button><button class="btn primary" onclick="${nextAction}">${nextText}</button></div>`;
+  }
+
+  function renderFinanceLessonV56(lessonId, screenIndex){
+    if (!requireFinanceAdminV49()) return;
+    const lesson = getFinanceLessonV49(lessonId);
+    if (!lesson) return renderFinanceModuleHomeV49();
+    if (!financeCanOpenSectionV49(lesson.sectionId)) return financeLockedSectionNoticeV49();
+    state.financeLessonId = Number(lesson.id);
+    const hasFull = Array.isArray(lesson.fullContent) && lesson.fullContent.length;
+    if (!hasFull) {
+      const html = `${card('blue-card-v2 finance-hero-v49', `<p class="eyebrow">раздел ${Number(lesson.sectionId)} · урок ${Number(lesson.id)}</p><h1>${esc(lesson.title)}</h1><p>${esc(financeCleanLearningCopyV56(lesson.objective || ''))}</p>`)}${card('', `<div class="finance-toolbar-v49"><button class="btn secondary" onclick="renderFinanceSection(${Number(lesson.sectionId)})">← К урокам раздела</button></div>${financeSummaryLessonHtmlV56(lesson)}`)}`;
+      shell(html, 'finance');
+      return;
+    }
+    const parsed = parseFinanceLessonScreensV56(lesson);
+    const screens = financeBuildLessonScreensV56(lesson, parsed);
+    const total = screens.length;
+    const index = Math.max(0, Math.min(Number(screenIndex || 0), total - 1));
+    state.financeLessonScreenIndex = index;
+    const current = screens[index];
+    let body = '';
+    if (current.type === 'cover') body = financeLessonCoverScreenHtmlV56(lesson, parsed, total);
+    if (current.type === 'chapter') body = financeLessonChapterScreenHtmlV56(lesson, current.chapter, index, total);
+    if (current.type === 'slide') body = financeLessonSlideScreenHtmlV56(lesson, current.slide, current.slideIndex + 1, parsed.slides.length, index, total);
+    if (current.type === 'final') body = financeLessonFinalScreenHtmlV56(lesson, parsed, index, total);
+    shell(`${financeLessonNavV56(lesson, index, total)}${body}`, 'finance');
+  }
+
+  window.renderFinanceLesson = renderFinanceLessonV56;
+
 })();
 
 /* =====================================================

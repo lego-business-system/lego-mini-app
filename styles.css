@@ -4447,3 +4447,209 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
 @media(max-width:350px){
   .finance-lesson-nav-v53{grid-template-columns:1fr!important;}
 }
+
+
+/* =====================================================
+   v56 — finance lesson editorial structure
+   ===================================================== */
+.finance-lesson-nav-v56{
+  top: 76px !important;
+  margin-bottom: 10px !important;
+}
+.finance-cover-card-v56 h2{
+  margin-bottom: 12px !important;
+}
+.finance-cover-grid-v56{
+  gap: 10px !important;
+}
+.finance-cover-line-v56{
+  display: grid !important;
+  gap: 5px !important;
+  padding: 13px !important;
+  border-radius: 16px !important;
+  background: #F6F8FC !important;
+  border: 1px solid #DDE5EF !important;
+}
+.finance-cover-line-v56 span{
+  display:block !important;
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+  text-transform: uppercase !important;
+  letter-spacing: .08em !important;
+  font-weight: 900 !important;
+  color: #2F5F9F !important;
+}
+.finance-cover-line-v56 p{
+  margin: 0 !important;
+  color: #263852 !important;
+  font-size: 14px !important;
+  line-height: 1.48 !important;
+}
+.finance-slide-card-v56 h1{
+  font-size: 24px !important;
+  line-height: 1.18 !important;
+  margin-bottom: 12px !important;
+}
+.finance-image-placeholder-v56{
+  min-height: 168px !important;
+  margin-bottom: 12px !important;
+}
+.finance-main-thought-v56{
+  padding: 13px 14px !important;
+  border-radius: 16px !important;
+  margin: 0 0 12px !important;
+  background: #FFF3C8 !important;
+  border: 1px solid rgba(246,195,67,.52) !important;
+}
+.finance-main-thought-v56 span,
+.finance-lesson-callouts-v56 span{
+  display:block !important;
+  margin-bottom: 5px !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: .08em !important;
+  font-weight: 900 !important;
+  color: #1F4F8A !important;
+}
+.finance-main-thought-v56 p{
+  margin: 0 !important;
+  color: #071B35 !important;
+  font-size: 15px !important;
+  line-height: 1.48 !important;
+  font-weight: 800 !important;
+}
+.finance-slide-body-v56{
+  padding-top: 2px !important;
+}
+.finance-slide-body-v56 h3{
+  margin: 0 0 8px !important;
+  font-size: 15px !important;
+  line-height: 1.25 !important;
+  text-transform: uppercase !important;
+  letter-spacing: .07em !important;
+  color: #2F5F9F !important;
+}
+.finance-slide-body-v56 p{
+  font-size: 15px !important;
+  line-height: 1.62 !important;
+  margin-bottom: 12px !important;
+}
+.finance-lesson-callouts-v56{
+  display: grid !important;
+  gap: 10px !important;
+  margin-top: 12px !important;
+}
+.finance-lesson-callouts-v56 > div{
+  padding: 13px !important;
+  border-radius: 16px !important;
+  border: 1px solid #DDE5EF !important;
+  background: #F6F8FC !important;
+}
+.finance-lesson-callouts-v56 > div:first-child{
+  background: #FFE8D2 !important;
+  border-color: rgba(242,140,40,.32) !important;
+}
+.finance-lesson-callouts-v56 > div p{
+  margin: 0 !important;
+  color: #263852 !important;
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+}
+.finance-chapter-card-v56{
+  min-height: 310px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+}
+.finance-chapter-card-v56 h1{
+  font-size: 28px !important;
+  line-height: 1.12 !important;
+}
+.finance-chapter-card-v56 p{
+  font-size: 16px !important;
+  line-height: 1.55 !important;
+}
+.finance-final-grid-v56{
+  display:grid !important;
+  gap: 10px !important;
+  margin-top: 10px !important;
+}
+.finance-final-grid-v56 > div{
+  display:grid !important;
+  grid-template-columns: 42px minmax(0,1fr) !important;
+  gap: 10px !important;
+  padding: 13px !important;
+  border-radius: 16px !important;
+  background: #F6F8FC !important;
+  border: 1px solid #DDE5EF !important;
+}
+.finance-final-grid-v56 b{
+  width: 34px !important;
+  height: 34px !important;
+  display:grid !important;
+  place-items:center !important;
+  border-radius: 50% !important;
+  background:#2F5F9F !important;
+  color:#fff !important;
+  font-size: 13px !important;
+}
+.finance-final-grid-v56 p{
+  margin: 0 !important;
+  color: #263852 !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+.finance-summary-grid-v56 span{
+  color: #1F4F8A !important;
+}
+@media(max-width:420px){
+  .finance-lesson-nav-v56{
+    top: 72px !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 6px !important;
+    padding: 6px !important;
+  }
+  .finance-lesson-nav-v56 .btn{
+    min-height: 40px !important;
+    padding: 8px 8px !important;
+    font-size: 12px !important;
+  }
+  .finance-image-placeholder-v56{min-height: 142px !important;}
+  .finance-chapter-card-v56{min-height: 250px !important;}
+  .finance-chapter-card-v56 h1{font-size: 24px !important;}
+}
+
+/* =====================================================
+   v56.1 — finance impact matrix on operational slides
+   ===================================================== */
+.finance-impact-matrix-v56{
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  gap:8px !important;
+  margin:12px 0 2px !important;
+}
+.finance-impact-matrix-v56 > div{
+  padding:12px 13px !important;
+  border-radius:15px !important;
+  background:#E7F0FA !important;
+  border:1px solid rgba(47,95,159,.22) !important;
+}
+.finance-impact-matrix-v56 span{
+  display:block !important;
+  margin-bottom:5px !important;
+  font-size:11px !important;
+  line-height:1.2 !important;
+  text-transform:uppercase !important;
+  letter-spacing:.08em !important;
+  font-weight:900 !important;
+  color:#1F4F8A !important;
+}
+.finance-impact-matrix-v56 p{
+  margin:0 !important;
+  color:#263852 !important;
+  font-size:14px !important;
+  line-height:1.45 !important;
+}
+@media(min-width:640px){
+  .finance-impact-matrix-v56{grid-template-columns:repeat(3,1fr) !important;}
+}
