@@ -84,7 +84,7 @@ function isAdminUser() {
 }
 function isAdminMode() { return isAdminUser() && state.appMode === "admin"; }
 function setAppMode(mode) {
-  if (mode === "admin" && !isAdminUser()) { alert("Режим Босса доступен только владельцу."); return; }
+  if (mode === "admin" && !isAdminUser()) { alert("Режим администрирования доступен только владельцу."); return; }
   state.appMode = mode;
   localStorage.setItem("lego_app_mode", mode);
   renderHome();
@@ -212,7 +212,7 @@ function shell(content, activeTab) {
   const root = $("app");
   if (!root) return;
   const modeButton = isAdminUser()
-    ? `<button class="mode-pill ${isAdminMode() ? "admin" : "student-preview"}" onclick="renderProfile()">${isAdminMode() ? "Админ" : "Режим ученика"}</button>`
+    ? `<button class="mode-pill ${isAdminMode() ? "admin" : "student-preview"}" onclick="renderProfile()">${isAdminMode() ? "Администрирование" : "Режим ученика"}</button>`
     : "";
   root.innerHTML = `
     <div class="app-shell-v2">
@@ -409,7 +409,7 @@ function activityIntroText(act) {
 
 function renderLearning() {
   const html = `
-    ${card('blue-card-v2', `<h1>Я предприниматель</h1><p>Сначала выбирается вид деятельности. После выбора откроется маршрут из 10 уроков внутри конкретного направления.</p>${isAdminMode() ? '<p class="small admin-note">Режим Босса: после выбора направления будут доступны все уроки.</p>' : ''}`)}
+    ${card('blue-card-v2', `<h1>Я предприниматель</h1><p>Сначала выбирается вид деятельности. После выбора откроется маршрут из 10 уроков внутри конкретного направления.</p>${isAdminMode() ? '<p class="small admin-note">Режим администрирования: после выбора направления будут доступны все уроки.</p>' : ''}`)}
     <div class="activity-grid-v2">
       ${state.catalog.activities.map(a=>{
         const info = getActivityProgressInfo(a.key);
@@ -655,12 +655,12 @@ function renderProfile(){
   const activeMeta = getLessonMeta(state.selectedLessonCode) || nextLessonMeta();
   const activeScore = activeMeta ? lessonScore(activeMeta.code) : 0;
   const adminBlock = isAdminUser()
-    ? card('', `<h2>Режим работы</h2><p>Этот блок виден только администратору. У обычного участника переключателя режима и админ-панели нет.</p><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Просмотр как ученик</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Админ</button></div><p class="small">Проверка администратора идёт по Telegram ID / username и роли, которую возвращает проверка доступа.</p>`)
+    ? card('', `<h2>Режим работы</h2><p>Этот блок виден только администратору. У обычного участника переключателя режима и админ-панели нет.</p><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Просмотр как ученик</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Администрирование</button></div><p class="small">Проверка администратора идёт по Telegram ID / username и роли, которую возвращает проверка доступа.</p>`)
     : '';
-  shell(`${card('blue-card-v2', `<h1>Профиль</h1><p>${esc(state.user?.first_name || 'Пользователь')} · ${isAdminUser()?'Босс Л.Е.Г.О':'участник'}</p>`)}${card('', `<h2>Баллы и общий прогресс</h2><p>Общие баллы и общий прогресс хранятся здесь, чтобы не дублировать их внутри каждого направления.</p>${progressRing(total,'общий','по всем урокам')}<div class="profile-score-grid"><div><span>Всего баллов</span><b>${totalScore}</b></div><div><span>Текущий урок</span><b>${activeScore} / 100</b></div></div>`)}${adminBlock}${card('', `<h2>Поддержка</h2>${externalButton('Задать вопрос',SUPPORT_FORM_URL,'secondary')}${externalButton('Предложить идею',IDEA_FORM_URL,'secondary')}${isAdminUser()?actionButton('Панель Босса Л.Е.Г.О','renderAdmin()','primary'):''}`)}`,'profile');
+  shell(`${card('blue-card-v2', `<h1>Профиль</h1><p>${esc(state.user?.first_name || 'Пользователь')} · ${isAdminUser()?'Администратор':'участник'}</p>`)}${card('', `<h2>Баллы и общий прогресс</h2><p>Общие баллы и общий прогресс хранятся здесь, чтобы не дублировать их внутри каждого направления.</p>${progressRing(total,'общий','по всем урокам')}<div class="profile-score-grid"><div><span>Всего баллов</span><b>${totalScore}</b></div><div><span>Текущий урок</span><b>${activeScore} / 100</b></div></div>`)}${adminBlock}${card('', `<h2>Поддержка</h2>${externalButton('Задать вопрос',SUPPORT_FORM_URL,'secondary')}${externalButton('Предложить идею',IDEA_FORM_URL,'secondary')}${isAdminUser()?actionButton('Панель администратора','renderAdmin()','primary'):''}`)}`,'profile');
 }
-function renderAdmin(){ if(!isAdminUser()){alert('Нет прав администратора.'); return;} shell(`${card('blue-card-v2', `<h1>Панель Босса Л.Е.Г.О</h1><p>Полный доступ ко всем урокам, предпросмотр контента и проверка ДЗ.</p>`)}${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${state.catalog.lessons.map(l=>`<button class="lesson-row-v2" onclick="openLesson('${l.code}')"><div><b>${esc(l.code)} · ${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${l.slidesCount} слайдов · ${l.quizCount} вопросов · ${l.bookScreensCount} саммари</p></div><span>→</span></button>`).join('')}</div>`)}${card('', `<h2>Проверка ДЗ</h2><input id="admin-target-user" placeholder="Telegram ID или username ученика"><textarea id="admin-review-comment" placeholder="Комментарий проверяющего"></textarea><button class="btn primary" onclick="adminApproveTargetUser()">Принять ДЗ</button><button class="btn secondary" onclick="adminRejectTargetUser()">Отправить на доработку</button>`)}`,'profile'); }
-async function adminReview(action){ const target=$('admin-target-user')?.value.trim(); const comment=$('admin-review-comment')?.value.trim(); if(!target){alert('Укажите ученика.'); return;} if(action==='reject_homework'&&!comment){alert('Для доработки нужен комментарий.'); return;} if(!tg||!tg.initData){alert('Админ-проверка работает внутри Telegram WebApp.'); return;} const res=await fetch(ADMIN_REVIEW_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData,lessonCode:state.selectedLessonCode,targetUser:target,action,comment,checkedAt:nowIso(),homeworkScore:70})}); const out=await res.json().catch(()=>({})); alert(out.ok?'Готово. Статус обновлён.':('Ошибка: '+(out.reason||out.error||'неизвестно'))); }
+function renderAdmin(){ if(!isAdminUser()){alert('Нет прав администратора.'); return;} shell(`${card('blue-card-v2', `<h1>Панель администратора</h1><p>Полный доступ ко всем урокам, предпросмотр контента и проверка ДЗ.</p>`)}${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${state.catalog.lessons.map(l=>`<button class="lesson-row-v2" onclick="openLesson('${l.code}')"><div><b>${esc(l.code)} · ${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${l.slidesCount} слайдов · ${l.quizCount} вопросов · ${l.bookScreensCount} саммари</p></div><span>→</span></button>`).join('')}</div>`)}${card('', `<h2>Проверка ДЗ</h2><input id="admin-target-user" placeholder="Telegram ID или username ученика"><textarea id="admin-review-comment" placeholder="Комментарий проверяющего"></textarea><button class="btn primary" onclick="adminApproveTargetUser()">Принять ДЗ</button><button class="btn secondary" onclick="adminRejectTargetUser()">Отправить на доработку</button>`)}`,'profile'); }
+async function adminReview(action){ const target=$('admin-target-user')?.value.trim(); const comment=$('admin-review-comment')?.value.trim(); if(!target){alert('Укажите ученика.'); return;} if(action==='reject_homework'&&!comment){alert('Для доработки нужен комментарий.'); return;} if(!tg||!tg.initData){alert('Администраторская проверка работает внутри Telegram WebApp.'); return;} const res=await fetch(ADMIN_REVIEW_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData,lessonCode:state.selectedLessonCode,targetUser:target,action,comment,checkedAt:nowIso(),homeworkScore:70})}); const out=await res.json().catch(()=>({})); alert(out.ok?'Готово. Статус обновлён.':('Ошибка: '+(out.reason||out.error||'неизвестно'))); }
 function adminApproveTargetUser(){ adminReview('approve_homework'); }
 function adminRejectTargetUser(){ adminReview('reject_homework'); }
 
@@ -710,7 +710,7 @@ function shell(content, activeTab) {
   const root = $("app");
   if (!root) return;
   const modeButton = isAdminUser()
-    ? `<button class="mode-pill ${isAdminMode() ? "admin" : "student-preview"}" onclick="renderProfile()">${isAdminMode() ? "Админ" : "Режим ученика"}</button>`
+    ? `<button class="mode-pill ${isAdminMode() ? "admin" : "student-preview"}" onclick="renderProfile()">${isAdminMode() ? "Администрирование" : "Режим ученика"}</button>`
     : "";
   root.innerHTML = `
     <div class="app-shell-v2">
@@ -871,7 +871,7 @@ function entrepreneurCurrentStepCard() {
 }
 function renderLearning() {
   const html = `
-    ${card('blue-card-v2', `<h1>Я предприниматель</h1><p>Сначала выбирается вид деятельности. После выбора откроется маршрут из 10 уроков внутри конкретного направления.</p>${isAdminMode() ? '<p class="small admin-note">Режим Босса: после выбора направления будут доступны все уроки.</p>' : ''}`)}
+    ${card('blue-card-v2', `<h1>Я предприниматель</h1><p>Сначала выбирается вид деятельности. После выбора откроется маршрут из 10 уроков внутри конкретного направления.</p>${isAdminMode() ? '<p class="small admin-note">Режим администрирования: после выбора направления будут доступны все уроки.</p>' : ''}`)}
     ${entrepreneurCurrentStepCard()}
     <div class="activity-grid-v2 activity-grid-only">
       ${state.catalog.activities.map(a=>{
@@ -1008,9 +1008,9 @@ function renderProfile(){
   const activeMeta = getLessonMeta(state.selectedLessonCode) || nextLessonMeta();
   const lp = activeMeta ? lessonStageProgressInfo(activeMeta.code) : {done:0,total:0,percent:0};
   const adminBlock = isAdminUser()
-    ? card('', `<h2>Режим работы</h2><p>Этот блок виден только администратору. У обычного участника переключателя режима и админ-панели нет.</p><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Просмотр как ученик</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Админ</button></div><p class="small">Проверка администратора идёт по Telegram ID / username и роли, которую возвращает проверка доступа.</p>`)
+    ? card('', `<h2>Режим работы</h2><p>Этот блок виден только администратору. У обычного участника переключателя режима и админ-панели нет.</p><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Просмотр как ученик</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Администрирование</button></div><p class="small">Проверка администратора идёт по Telegram ID / username и роли, которую возвращает проверка доступа.</p>`)
     : '';
-  shell(`${card('blue-card-v2', `<h1>Профиль</h1><p>${esc(state.user?.first_name || 'Пользователь')} · ${isAdminUser()?'Босс Л.Е.Г.О':'участник'}</p>`)}${card('', `<h2>Прогресс и баллы</h2><p>Прогресс считается по этапам доступных уроков. Баллы используются отдельно как мотивационная система.</p>${progressRing(gp.percent,'общий',`${gp.done} из ${gp.total || 0} этапов`)}<div class="profile-score-grid"><div><span>Всего баллов</span><b>${formatPoints(totalScore)}</b></div><div><span>Текущий урок</span><b>${lp.done} / ${lp.total}</b></div><div><span>Консультация</span><b>${consultationCostText()}</b></div><div><span>Готовые уроки</span><b>${readyCoreLessons().length}</b></div></div>`)}${adminBlock}${card('', `<h2>Поддержка</h2>${externalButton('Задать вопрос',SUPPORT_FORM_URL,'secondary')}${externalButton('Предложить идею',IDEA_FORM_URL,'secondary')}${externalButton('Получить консультацию — '+consultationCostText(),CONSULTATION_FORM_URL,'primary')}${isAdminUser()?actionButton('Панель Босса Л.Е.Г.О','renderAdmin()','primary'):''}`)}`,'profile');
+  shell(`${card('blue-card-v2', `<h1>Профиль</h1><p>${esc(state.user?.first_name || 'Пользователь')} · ${isAdminUser()?'Администратор':'участник'}</p>`)}${card('', `<h2>Прогресс и баллы</h2><p>Прогресс считается по этапам доступных уроков. Баллы используются отдельно как мотивационная система.</p>${progressRing(gp.percent,'общий',`${gp.done} из ${gp.total || 0} этапов`)}<div class="profile-score-grid"><div><span>Всего баллов</span><b>${formatPoints(totalScore)}</b></div><div><span>Текущий урок</span><b>${lp.done} / ${lp.total}</b></div><div><span>Консультация</span><b>${consultationCostText()}</b></div><div><span>Готовые уроки</span><b>${readyCoreLessons().length}</b></div></div>`)}${adminBlock}${card('', `<h2>Поддержка</h2>${externalButton('Задать вопрос',SUPPORT_FORM_URL,'secondary')}${externalButton('Предложить идею',IDEA_FORM_URL,'secondary')}${externalButton('Получить консультацию — '+consultationCostText(),CONSULTATION_FORM_URL,'primary')}${isAdminUser()?actionButton('Панель администратора','renderAdmin()','primary'):''}`)}`,'profile');
 }
 
 
@@ -1046,7 +1046,7 @@ const LEGO_LEVELS = [
   { level: 25, min: 1000, max: Infinity, title: "Мастер Л.Е.Г.О" }
 ];
 
-function adminLabel() { return "Босс Л.Е.Г.О"; }
+function adminLabel() { return "Администратор"; }
 function studentRoleLabel() { return isAdminUser() ? adminLabel() : "Ученик Л.Е.Г.О"; }
 function consultationCostText() { return formatPoints(CONSULTATION_COST) + " баллов"; }
 function isLessonFullyCompleted(meta) {
@@ -1181,7 +1181,7 @@ function shell(content, activeTab) {
   const root = $("app");
   if (!root) return;
   const modeButton = isAdminUser()
-    ? `<button class="mode-pill ${isAdminMode() ? "admin" : "student-preview"}" onclick="renderProfile()">${isAdminMode() ? "Босс" : "Режим ученика"}</button>`
+    ? `<button class="mode-pill ${isAdminMode() ? "admin" : "student-preview"}" onclick="renderProfile()">${isAdminMode() ? "Администрирование" : "Режим ученика"}</button>`
     : "";
   root.innerHTML = `
     <div class="app-shell-v2">
@@ -1399,13 +1399,13 @@ function renderProfile(){
   const lp = activeMeta ? lessonStageProgressInfo(activeMeta.code) : {done:0,total:0,percent:0};
   const titleInfo = studentTitleInfo();
   const adminBlock = isAdminUser()
-    ? card('boss-panel-card', `<h2>Панель Босса Л.Е.Г.О</h2><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Просмотр как ученик</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Режим Босса</button></div><p class="small">Панель управления, проверка ДЗ и полный предпросмотр уроков доступны только владельцу системы.</p>${actionButton('Открыть панель Босса','renderAdmin()','primary')}`)
+    ? card('boss-panel-card', `<h2>Панель администратора</h2><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Просмотр как ученик</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Режим администрирования</button></div><p class="small">Панель управления, проверка ДЗ и полный предпросмотр уроков доступны только владельцу системы.</p>${actionButton('Открыть панель администратора','renderAdmin()','primary')}`)
     : '';
   shell(`${card('blue-card-v2', `<h1>Профиль</h1><p>${esc(state.user?.first_name || 'Пользователь')} · ${studentRoleLabel()}</p>`)}${titleCardHtml()}${card('', `<h2>Прогресс и баллы</h2>${progressRing(gp.percent,'общий',`${gp.done} из ${gp.total || 0} этапов`)}<div class="profile-score-grid"><div><span>Всего баллов</span><b>${formatPoints(points)}</b></div><div><span>Текущий урок</span><b>${lp.done} / ${lp.total}</b></div><div><span>Учебные единицы</span><b>${formatPoints(titleInfo.units)}</b></div><div><span>Готовые уроки</span><b>${readyCoreLessons().length}</b></div></div>`)}${doneSummaryHtml()}${insightsProfileHtml()}${adminBlock}${consultationCardsHtml(points)}${card('', `<h2>Поддержка</h2>${externalButton('Задать вопрос',SUPPORT_FORM_URL,'secondary')}${externalButton('Предложить идею',IDEA_FORM_URL,'secondary')}`)}`,'profile');
 }
 function renderAdmin(){
-  if(!isAdminUser()){ alert('Нет прав Босса Л.Е.Г.О.'); return; }
-  shell(`${card('blue-card-v2', `<h1>Панель Босса Л.Е.Г.О</h1><p>Полный доступ ко всем урокам, предпросмотр контента и проверка ДЗ.</p>`)}${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${state.catalog.lessons.map(l=>`<button class="lesson-row-v2" onclick="openLesson('${l.code}')"><div><b>${esc(l.code)} · ${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${l.slidesCount} слайдов · ${l.quizCount} вопросов · ${l.bookScreensCount} саммари</p></div><span>→</span></button>`).join('')}</div>`)}${card('', `<h2>Проверка ДЗ</h2><input id="admin-target-user" placeholder="Telegram ID или username ученика"><textarea id="admin-review-comment" placeholder="Комментарий проверяющего"></textarea><button class="btn primary" onclick="adminApproveTargetUser()">Принять ДЗ</button><button class="btn secondary" onclick="adminRejectTargetUser()">Отправить на доработку</button>`)}`,'profile');
+  if(!isAdminUser()){ alert('Нет прав администратора.'); return; }
+  shell(`${card('blue-card-v2', `<h1>Панель администратора</h1><p>Полный доступ ко всем урокам, предпросмотр контента и проверка ДЗ.</p>`)}${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${state.catalog.lessons.map(l=>`<button class="lesson-row-v2" onclick="openLesson('${l.code}')"><div><b>${esc(l.code)} · ${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${l.slidesCount} слайдов · ${l.quizCount} вопросов · ${l.bookScreensCount} саммари</p></div><span>→</span></button>`).join('')}</div>`)}${card('', `<h2>Проверка ДЗ</h2><input id="admin-target-user" placeholder="Telegram ID или username ученика"><textarea id="admin-review-comment" placeholder="Комментарий проверяющего"></textarea><button class="btn primary" onclick="adminApproveTargetUser()">Принять ДЗ</button><button class="btn secondary" onclick="adminRejectTargetUser()">Отправить на доработку</button>`)}`,'profile');
 }
 
 
@@ -1452,7 +1452,7 @@ function lessonTimelineHtml(code) {
 }
 function homeworkReviewNoticeHtml(code) {
   if (isStageDone(code,'homeworkSubmitted') && !isStageDone(code,'homeworkVerified')) {
-    return `<div class="homework-review-notice"><b>Домашнее задание на проверке</b><p>Работа отправлена ${shortDate(stageCompletedDate(code,'homeworkSubmitted'))}. После проверки Босс Л.Е.Г.О примет ДЗ или вернёт его на доработку.</p></div>`;
+    return `<div class="homework-review-notice"><b>Домашнее задание на проверке</b><p>Работа отправлена ${shortDate(stageCompletedDate(code,'homeworkSubmitted'))}. После проверки Администратор примет ДЗ или вернёт его на доработку.</p></div>`;
   }
   if (isStageDone(code,'homeworkVerified')) {
     return `<div class="homework-review-notice accepted"><b>Домашнее задание принято</b><p>Проверка завершена ${shortDate(stageCompletedDate(code,'homeworkVerified'))}. Урок засчитан.</p></div>`;
@@ -1557,7 +1557,7 @@ function saveSharedInsightDraft(entry) {
   list.unshift(entry);
   localStorage.setItem(key, JSON.stringify(list.slice(0, 100)));
 }
-async function sendInsightToBoss(entry) {
+async function sendInsightToAdmin(entry) {
   if (!entry.shared) return { ok: true, skipped: true };
   if (!tg || !tg.initData) return { ok: false, localOnly: true, reason: 'TELEGRAM_ONLY' };
   try {
@@ -1592,10 +1592,10 @@ async function saveLessonInsight() {
   saveInsights(list.slice(0, 100));
   if (entry.shared) {
     saveSharedInsightDraft(entry);
-    const result = await sendInsightToBoss(entry);
+    const result = await sendInsightToAdmin(entry);
     if (!result.ok) {
       console.warn('INSIGHT_SHARE_LOCAL_ONLY', result);
-      alert('Вывод сохранён и отмечен для передачи Боссу Л.Е.Г.О. Для автоматической передачи нужно подключить функцию save-insight в Supabase.');
+      alert('Вывод сохранён и отмечен для передачи администратору. Для автоматической передачи нужно подключить функцию save-insight в Supabase.');
     }
   }
   if (input) input.value = '';
@@ -1603,7 +1603,7 @@ async function saveLessonInsight() {
 }
 function lessonInsightCard() {
   const list = loadInsights().filter(x => x.lessonCode === state.selectedLessonCode).slice(0,3);
-  return card('insight-card', `<h2>Мой вывод по уроку</h2><p>Сохраняйте здесь главный вывод или короткие заметки по уроку. Это поможет вернуться к мысли перед ДЗ и следующим действием.</p><textarea id="lesson-insight-input" rows="3" placeholder="Например: главное ограничение сейчас не в потоке, а в переходе заявки в оплату..."></textarea><label class="share-insight-check"><input type="checkbox" id="lesson-insight-share"><span>Поделиться этим выводом с Боссом Л.Е.Г.О</span></label><button class="btn primary" onclick="saveLessonInsight()">Сохранить вывод</button>${list.length ? `<div class="insight-list-mini">${list.map(x=>`<div><b>${shortDate(x.createdAt)}${x.shared ? ' · отправить Боссу' : ''}</b><p>${esc(x.text)}</p></div>`).join('')}</div>` : ''}`);
+  return card('insight-card', `<h2>Мой вывод по уроку</h2><p>Сохраняйте здесь главный вывод или короткие заметки по уроку. Это поможет вернуться к мысли перед ДЗ и следующим действием.</p><textarea id="lesson-insight-input" rows="3" placeholder="Например: главное ограничение сейчас не в потоке, а в переходе заявки в оплату..."></textarea><label class="share-insight-check"><input type="checkbox" id="lesson-insight-share"><span>Поделиться этим выводом с администратором</span></label><button class="btn primary" onclick="saveLessonInsight()">Сохранить вывод</button>${list.length ? `<div class="insight-list-mini">${list.map(x=>`<div><b>${shortDate(x.createdAt)}${x.shared ? ' · отправить администратору' : ''}</b><p>${esc(x.text)}</p></div>`).join('')}</div>` : ''}`);
 }
 
 function renderLessonHub() {
@@ -1647,7 +1647,7 @@ function consultationCardsHtml(points) {
 }
 function insightsProfileHtml() {
   const list = loadInsights().slice(0, 8);
-  return card('insight-card', `<h2>Мои выводы</h2><p>Короткие управленческие выводы и заметки, которые вы сохранили внутри уроков.</p>${list.length ? `<div class="insight-list">${list.map(x=>`<div><div><b>${esc(x.activityTitle || '')} · ${esc(x.lessonTitle || x.lessonCode)}</b><span>${shortDate(x.createdAt)}${x.shared ? ' · отмечено для Босса Л.Е.Г.О' : ''}</span><p>${esc(x.text)}</p></div><button onclick="deleteInsight('${x.id}')">×</button></div>`).join('')}</div>` : '<p class="small">Пока выводов нет. Откройте урок и сохраните первый вывод после презентации или саммари.</p>'}`);
+  return card('insight-card', `<h2>Мои выводы</h2><p>Короткие управленческие выводы и заметки, которые вы сохранили внутри уроков.</p>${list.length ? `<div class="insight-list">${list.map(x=>`<div><div><b>${esc(x.activityTitle || '')} · ${esc(x.lessonTitle || x.lessonCode)}</b><span>${shortDate(x.createdAt)}${x.shared ? ' · отмечено для администратора' : ''}</span><p>${esc(x.text)}</p></div><button onclick="deleteInsight('${x.id}')">×</button></div>`).join('')}</div>` : '<p class="small">Пока выводов нет. Откройте урок и сохраните первый вывод после презентации или саммари.</p>'}`);
 }
 
 function businessEntriesKey(){
@@ -1717,7 +1717,7 @@ function renderProfile(){
   const lp = activeMeta ? lessonStageProgressInfo(activeMeta.code) : {done:0,total:0,percent:0};
   const titleInfo = studentTitleInfo();
   const adminBlock = isAdminUser()
-    ? card('boss-panel-card', `<h2>Панель Босса Л.Е.Г.О</h2><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Просмотр как ученик</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Режим Босса</button></div><p class="small">Панель управления, проверка ДЗ и полный предпросмотр уроков доступны только владельцу системы.</p>${actionButton('Открыть панель Босса','renderAdmin()','primary')}`)
+    ? card('boss-panel-card', `<h2>Панель администратора</h2><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Просмотр как ученик</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Режим администрирования</button></div><p class="small">Панель управления, проверка ДЗ и полный предпросмотр уроков доступны только владельцу системы.</p>${actionButton('Открыть панель администратора','renderAdmin()','primary')}`)
     : '';
   shell(`${card('blue-card-v2 profile-head-card', `<h1>Профиль</h1><p class="profile-name-line">${esc(state.user?.first_name || 'Пользователь')} · ${studentRoleLabel()}</p>`)}${titleCardHtml()}${card('', `<h2>Прогресс и баллы</h2>${progressRing(gp.percent,'общий',`${gp.done} из ${gp.total || 0}`)}<div class="profile-score-grid"><div><span>Всего баллов</span><b>${formatPoints(points)}</b></div><div><span>Текущий урок</span><b>${lp.percent}%</b></div><div><span>Учебные единицы</span><b>${formatPoints(titleInfo.units)}</b></div><div><span>Готовые уроки</span><b>${readyCoreLessons().length}</b></div></div>`)}${doneSummaryHtml()}${insightsProfileHtml()}${adminBlock}${consultationCardsHtml(points)}${card('', `<h2>Поддержка</h2>${externalButton('Задать вопрос',SUPPORT_FORM_URL,'secondary')}${externalButton('Предложить идею',IDEA_FORM_URL,'secondary')}`)}${myBusinessCardHtml()}`,'profile');
 }
@@ -1802,7 +1802,7 @@ function homeworkReviewNoticeHtml(code) {
   const submittedAt = stageCompletedDate(code,'homeworkSubmitted');
   const verifiedAt = stageCompletedDate(code,'homeworkVerified');
   if (isStageDone(code,'homeworkSubmitted') && !isStageDone(code,'homeworkVerified')) {
-    return `<div class="homework-review-notice"><b>Домашнее задание на проверке</b><p>Работа отправлена ${shortDate(submittedAt)}. После проверки Босс Л.Е.Г.О примет ДЗ или вернёт его на доработку.</p></div>`;
+    return `<div class="homework-review-notice"><b>Домашнее задание на проверке</b><p>Работа отправлена ${shortDate(submittedAt)}. После проверки Администратор примет ДЗ или вернёт его на доработку.</p></div>`;
   }
   if (isStageDone(code,'homeworkVerified')) {
     return `<div class="homework-review-notice accepted"><b>Домашнее задание принято</b><p>Проверка завершена ${shortDate(verifiedAt)}. Урок засчитан.</p></div>`;
@@ -2028,7 +2028,7 @@ function books100StatusForBook(bookMeta, ch){
   return 'закрыто';
 }
 function books100Card(bookMeta, ch, admin){
-  const status = admin ? 'доступно Боссу' : books100StatusForBook(bookMeta, ch);
+  const status = admin ? 'доступно администратору' : books100StatusForBook(bookMeta, ch);
   const locked = !admin && !canOpenBooks100BookForStudent(bookMeta, ch);
   const img = bookMeta.coverImage || `assets/challenges/books100/${String(bookMeta.day).padStart(3,'0')}/screen_01.png`;
   return `<button class="books100-book-card ${locked ? 'locked' : ''}" ${locked ? 'disabled' : `onclick="openBooks100Book(${Number(bookMeta.day)}, ${admin ? 'true' : 'false'})"`}>
@@ -2048,7 +2048,7 @@ async function renderBookChallenge(){
     const index = await loadBooks100Index();
     const ch = await getBooks100StateNormalized();
     if (isAdminMode()) {
-      const html = `${card('blue-card-v2 books100-hero', `<p class="eyebrow">режим Босса</p><h1>100 книг за 100 дней</h1><p>В режиме Босса все загруженные книги открыты для просмотра без таймера, без блокировок и без начисления баллов.</p>`)}
+      const html = `${card('blue-card-v2 books100-hero', `<p class="eyebrow">режим администратора</p><h1>100 книг за 100 дней</h1><p>В режиме администратора все загруженные книги открыты для просмотра без таймера, без блокировок и без начисления баллов.</p>`)}
       ${card('', `<h2>Загруженные книги</h2><p class="small">Сейчас подключено: ${index.books.length}. По мере добавления book_006.json и далее список расширится автоматически.</p><div class="books100-list">${index.books.map(b=>books100Card(b, ch, true)).join('')}</div><div class="grid-v2"><button class="btn secondary" onclick="resetBooks100Challenge()">Сбросить тестовое состояние</button><button class="btn secondary" onclick="forceBooks100Miss()">Сымитировать пропуск суток</button></div>`)}
       ${card('', `<button class="btn secondary" onclick="renderHome()">На главную</button>`)} `;
       shell(html,'home');
@@ -2188,7 +2188,7 @@ async function finishBooks100Quiz(){
     }
   }
   if (state.books100AdminPreview) {
-    resultNotice = `<p>Это режим Босса Л.Е.Г.О. Баллы, серия и учебные единицы не изменяются.</p>`;
+    resultNotice = `<p>Это режим администратора. Баллы, серия и учебные единицы не изменяются.</p>`;
   }
   const msg = passed
     ? `<h1>Книга зачтена</h1><p>Результат: <b>${score}/${quiz.length}</b>. Проходной уровень: <b>${passScore}/${quiz.length}</b>.</p>${resultNotice}`
@@ -2230,8 +2230,8 @@ function renderHome() {
 }
 
 function renderAdmin(){
-  if(!isAdminUser()){ alert('Нет прав Босса Л.Е.Г.О.'); return; }
-  shell(`${card('blue-card-v2', `<h1>Панель Босса Л.Е.Г.О</h1><p>Полный доступ ко всем урокам, предпросмотр контента, книги челленджа и проверка ДЗ.</p>`)}${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${state.catalog.lessons.map(l=>`<button class="lesson-row-v2" onclick="openLesson('${l.code}')"><div><b>${esc(l.code)} · ${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${l.slidesCount} слайдов · ${l.quizCount} вопросов · ${l.bookScreensCount} саммари</p></div><span>→</span></button>`).join('')}</div>`)}${card('', `<h2>Книги челленджа</h2><p>В режиме Босса все загруженные книги доступны для просмотра без таймера и без начисления баллов.</p><button class="btn primary" onclick="renderBookChallenge()">Открыть книги челленджа</button>`)}${card('', `<h2>Проверка ДЗ</h2><input id="admin-target-user" placeholder="Telegram ID или username ученика"><textarea id="admin-review-comment" placeholder="Комментарий проверяющего"></textarea><button class="btn primary" onclick="adminApproveTargetUser()">Принять ДЗ</button><button class="btn secondary" onclick="adminRejectTargetUser()">Отправить на доработку</button>`)}`,'profile');
+  if(!isAdminUser()){ alert('Нет прав администратора.'); return; }
+  shell(`${card('blue-card-v2', `<h1>Панель администратора</h1><p>Полный доступ ко всем урокам, предпросмотр контента, книги челленджа и проверка ДЗ.</p>`)}${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${state.catalog.lessons.map(l=>`<button class="lesson-row-v2" onclick="openLesson('${l.code}')"><div><b>${esc(l.code)} · ${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${l.slidesCount} слайдов · ${l.quizCount} вопросов · ${l.bookScreensCount} саммари</p></div><span>→</span></button>`).join('')}</div>`)}${card('', `<h2>Книги челленджа</h2><p>В режиме администратора все загруженные книги доступны для просмотра без таймера и без начисления баллов.</p><button class="btn primary" onclick="renderBookChallenge()">Открыть книги челленджа</button>`)}${card('', `<h2>Проверка ДЗ</h2><input id="admin-target-user" placeholder="Telegram ID или username ученика"><textarea id="admin-review-comment" placeholder="Комментарий проверяющего"></textarea><button class="btn primary" onclick="adminApproveTargetUser()">Принять ДЗ</button><button class="btn secondary" onclick="adminRejectTargetUser()">Отправить на доработку</button>`)}`,'profile');
 }
 
 
@@ -2309,13 +2309,13 @@ async function startBookChallenge(){
   renderBookChallenge();
 }
 async function resetBooks100Challenge(){
-  if (!isAdminMode()) return alert("Сброс доступен только Боссу Л.Е.Г.О.");
+  if (!isAdminMode()) return alert("Сброс доступен только администратору.");
   if (!confirm("Сбросить своё тестовое состояние челленджа?")) return;
   try { await books100ApiV18("reset", {}); } catch(e){ console.error(e); }
   state.books100ServerState = null; localStorage.removeItem(BOOKS100_STORAGE_KEY); renderBookChallenge();
 }
 async function forceBooks100Miss(){
-  if (!isAdminMode()) return alert("Тест пропуска доступен только Боссу Л.Е.Г.О.");
+  if (!isAdminMode()) return alert("Тест пропуска доступен только администратору.");
   const index = await loadBooks100Index();
   try { await books100ApiV18("force_miss", { books: books100BooksPayloadV18(index) }); } catch(e){ console.error(e); alert("Не удалось сымитировать пропуск."); }
   renderBookChallenge();
@@ -2328,7 +2328,7 @@ function books100StatusForBook(bookMeta, ch){
   return "закрыто";
 }
 function books100Card(bookMeta, ch, admin){
-  const status = admin ? "доступно Боссу" : books100StatusForBook(bookMeta, ch);
+  const status = admin ? "доступно администратору" : books100StatusForBook(bookMeta, ch);
   const open = admin || status === "зачтено" || status === "открыто сегодня";
   const img = bookMeta.coverImage || `assets/challenges/books100/${String(bookMeta.day).padStart(3,"0")}/screen_01.png`;
   return `<button class="books100-book-card ${open?'':'locked'} ${status==='зачтено'?'passed':''} ${status==='пропущено'?'missed':''}" ${open?`onclick="openBooks100Book(${Number(bookMeta.day)}, ${admin?'true':'false'})"`:'disabled'}>
@@ -2352,7 +2352,7 @@ async function renderBookChallenge(){
     const index = await loadBooks100Index();
     if (isAdminMode()){
       const ch = await getBooks100StateNormalized();
-      shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">режим Босса</p><h1>100 книг за 100 дней</h1><p>Все загруженные книги открыты для просмотра без таймера, блокировок и начисления баллов.</p>`)}
+      shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">режим администратора</p><h1>100 книг за 100 дней</h1><p>Все загруженные книги открыты для просмотра без таймера, блокировок и начисления баллов.</p>`)}
         ${card('', `<h2>Загруженные книги</h2><p class="small">Подключено: ${index.books.length}. Здесь проверяется текст, картинки и мини-тесты.</p><div class="books100-list">${index.books.map(b=>books100Card(b,ch,true)).join('')}</div><div class="grid-v2"><button class="btn secondary" onclick="resetBooks100Challenge()">Сбросить своё тестовое состояние</button><button class="btn secondary" onclick="forceBooks100Miss()">Сымитировать пропуск суток</button></div>`)}
         ${card('', `<button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
       return;
@@ -2441,7 +2441,7 @@ async function finishBooks100Quiz(){
   const passScore = Number(book.passScore || Math.ceil(quiz.length*.8));
   const passed = score >= passScore;
   let resultNotice = "";
-  if (state.books100AdminPreview){ resultNotice = `<p>Это режим Босса Л.Е.Г.О. Баллы, серия и учебные единицы не изменяются.</p>`; }
+  if (state.books100AdminPreview){ resultNotice = `<p>Это режим администратора. Баллы, серия и учебные единицы не изменяются.</p>`; }
   else {
     try{
       const data = await books100ApiV18("quiz_completed", { book: books100BookPayloadV18(bookMeta), books: books100BooksPayloadV18(index), score, total: quiz.length, passed, answers: state.books100Answers });
@@ -2576,7 +2576,7 @@ async function renderBookChallenge(){
     const index = await loadBooks100Index();
     if (isAdminMode()){
       const ch = await getBooks100StateNormalized();
-      shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">режим Босса</p><h1>100 книг за 100 дней</h1><p>Все загруженные книги открыты для просмотра без таймера, блокировок и начисления баллов.</p>`)}
+      shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">режим администратора</p><h1>100 книг за 100 дней</h1><p>Все загруженные книги открыты для просмотра без таймера, блокировок и начисления баллов.</p>`)}
         ${card('', `<h2>Загруженные книги</h2><p class="small">Подключено: ${index.books.length}. Здесь проверяется текст, картинки и мини-тесты.</p><div class="books100-list">${index.books.map(b=>books100Card(b,ch,true)).join('')}</div><div class="grid-v2"><button class="btn secondary" onclick="resetBooks100Challenge()">Сбросить своё тестовое состояние</button><button class="btn secondary" onclick="forceBooks100Miss()">Сымитировать пропуск суток</button></div>`)}
         ${card('', `<button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
       return;
@@ -2610,7 +2610,7 @@ async function finishBooks100Quiz(){
   const passed = score >= passScore;
   let resultNotice = "";
   if (state.books100AdminPreview){
-    resultNotice = `<p>Это режим Босса Л.Е.Г.О. Баллы, серия и учебные единицы не изменяются.</p>`;
+    resultNotice = `<p>Это режим администратора. Баллы, серия и учебные единицы не изменяются.</p>`;
   } else {
     try{
       const data = await books100ApiV18("quiz_completed", { book: books100BookPayloadV18(bookMeta), books: books100BooksPayloadV18(index), score, total: quiz.length, passed, answers: state.books100Answers });
@@ -2794,7 +2794,7 @@ function books100StatusForBook(bookMeta, ch){
   return "закрыто";
 }
 function books100Card(bookMeta, ch, admin){
-  const status = admin ? "доступно Боссу" : books100StatusForBook(bookMeta, ch);
+  const status = admin ? "доступно администратору" : books100StatusForBook(bookMeta, ch);
   const open = admin || status === "зачтено" || status === "открыто сегодня";
   const day = String(bookMeta.day || "").padStart(3,"0");
   return `<button class="books100-book-card books100-book-card-fast ${open?'':'locked'} ${status==='зачтено'?'passed':''} ${status==='пропущено'?'missed':''}" ${open?`onclick="openBooks100Book(${Number(bookMeta.day)}, ${admin?'true':'false'})"`:'disabled'}>
@@ -2812,7 +2812,7 @@ function books100VisibleStudentBooksV20(index, ch){
 }
 function renderBookChallengeFromStateV20(index, ch, syncing, errorText){
   if(isAdminMode()){
-    shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">режим Босса</p><h1>100 книг за 100 дней</h1><p>Все загруженные книги открыты для просмотра без таймера, блокировок и начисления баллов. Список показывается без тяжёлых обложек, чтобы открываться быстро.</p>`)}
+    shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">режим администратора</p><h1>100 книг за 100 дней</h1><p>Все загруженные книги открыты для просмотра без таймера, блокировок и начисления баллов. Список показывается без тяжёлых обложек, чтобы открываться быстро.</p>`)}
       ${card('', `<h2>Загруженные книги</h2><p class="small">Подключено: ${(index.books||[]).length}. Здесь проверяется текст, картинки и мини-тесты. Обложки не грузятся в списке — изображения открываются внутри книги.</p><div class="books100-list">${(index.books||[]).map(b=>books100Card(b,ch,true)).join('')}</div><div class="grid-v2"><button class="btn secondary" onclick="resetBooks100Challenge()">Сбросить своё тестовое состояние</button><button class="btn secondary" onclick="forceBooks100Miss()">Сымитировать пропуск суток</button></div>`)}
       ${card('', `<button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
     return;
@@ -2867,7 +2867,7 @@ async function startBookChallenge(){
   }
 }
 async function resetBooks100Challenge(){
-  if(!isAdminMode()) return alert("Сброс доступен только Боссу Л.Е.Г.О.");
+  if(!isAdminMode()) return alert("Сброс доступен только администратору.");
   if(!confirm("Сбросить своё тестовое состояние челленджа?")) return;
   try{ await books100ApiV20("reset", {}, { timeoutMs: 10000 }); }catch(e){ console.error(e); }
   state.books100ServerState = null;
@@ -2875,7 +2875,7 @@ async function resetBooks100Challenge(){
   renderBookChallenge();
 }
 async function forceBooks100Miss(){
-  if(!isAdminMode()) return alert("Тест пропуска доступен только Боссу Л.Е.Г.О.");
+  if(!isAdminMode()) return alert("Тест пропуска доступен только администратору.");
   try{
     const index = await loadBooks100Index();
     await books100ApiV20("force_miss", { books: books100BooksPayloadV18(index) }, { timeoutMs: 10000 });
@@ -3207,7 +3207,7 @@ function lessonTimelineHtml(code) {
 function homeworkReviewNoticeHtml(code) {
   const hw = homeworkStateV24(code);
   if (hw.key === "review") return `<div class="homework-review-notice"><b>Домашнее задание на проверке</b><p>Работа отправлена ${shortDate(stageCompletedDate(code,'homeworkSubmitted'))}. После проверки появится статус: принято или нужна доработка.</p></div>`;
-  if (hw.key === "revision") return `<div class="homework-review-notice revision"><b>Домашнее задание на доработке</b><p>Проверьте комментарий Босса Л.Е.Г.О, уточните вывод и отправьте форму повторно.</p></div>`;
+  if (hw.key === "revision") return `<div class="homework-review-notice revision"><b>Домашнее задание на доработке</b><p>Проверьте комментарий администратора, уточните вывод и отправьте форму повторно.</p></div>`;
   if (hw.key === "accepted") return `<div class="homework-review-notice accepted"><b>Домашнее задание принято</b><p>Проверка завершена ${shortDate(stageCompletedDate(code,'homeworkVerified'))}. Урок засчитан.</p></div>`;
   return '';
 }
@@ -3584,7 +3584,7 @@ function lessonTimelineHtml(code) {
 function homeworkReviewNoticeHtml(code) {
   const hw = homeworkStateV24(code);
   if (hw === 'review') {
-    return `<div class="homework-review-notice"><b>Домашнее задание на проверке</b><p>Работа отправлена ${shortDate(stageCompletedDate(code,'homeworkSubmitted'))}. После проверки Босс Л.Е.Г.О примет ДЗ или вернёт его на доработку.</p></div>`;
+    return `<div class="homework-review-notice"><b>Домашнее задание на проверке</b><p>Работа отправлена ${shortDate(stageCompletedDate(code,'homeworkSubmitted'))}. После проверки Администратор примет ДЗ или вернёт его на доработку.</p></div>`;
   }
   if (hw === 'revision') {
     const p = getProgress(code);
@@ -3972,14 +3972,14 @@ function adminLessonOptionsV25(){
   return (state.catalog?.lessons || []).map(l => `<option value="${esc(l.code)}" ${l.code===state.selectedLessonCode?'selected':''}>${esc(l.code)} · ${esc(l.activityTitle)} · ${esc(l.title)}</option>`).join('');
 }
 function renderAdmin(){
-  if(!isAdminUser()){ alert('Нет прав Босса Л.Е.Г.О.'); return; }
-  shell(`${card('blue-card-v2', `<h1>Панель Босса Л.Е.Г.О</h1><p>Проверка ДЗ теперь привязана к конкретному уроку. Сначала найдите работы ученика или выберите урок вручную.</p>`)}
+  if(!isAdminUser()){ alert('Нет прав администратора.'); return; }
+  shell(`${card('blue-card-v2', `<h1>Панель администратора</h1><p>Проверка ДЗ теперь привязана к конкретному уроку. Сначала найдите работы ученика или выберите урок вручную.</p>`)}
     ${card('', `<h2>Проверка ДЗ</h2><p class="small">Комментарий сохраняется внутри статуса ДЗ. Telegram-сообщение ученику появится только после отдельного подключения бота уведомлений.</p><input id="admin-target-user" placeholder="Telegram ID или username ученика"><select id="admin-lesson-code" class="admin-select-v25">${adminLessonOptionsV25()}</select><textarea id="admin-review-comment" placeholder="Комментарий проверяющего. Для доработки обязателен."></textarea><div class="grid-v2"><button class="btn secondary" onclick="adminLoadHomeworkQueueV25()">Найти ДЗ ученика</button><button class="btn secondary" onclick="adminLoadHomeworkQueueV25('all')">Показать все ДЗ на проверке</button><button class="btn primary" onclick="adminReviewManualV25('approve_homework')">Принять выбранный урок</button><button class="btn secondary" onclick="adminReviewManualV25('reject_homework')">Вернуть выбранный урок на доработку</button></div><div id="admin-homework-queue" class="admin-homework-queue-v25"></div>`) }
     ${card('', `<h2>100 книг за 100 дней</h2><p>Можно восстановить зачёты из успешных попыток теста, если после обновлений часть статусов стала отображаться неверно.</p><div class="grid-v2"><button class="btn primary" onclick="books100AdminRepairAllV25()">Проверить и восстановить зачёты книг</button><button class="btn secondary" onclick="renderBookChallenge()">Открыть книги челленджа</button></div>`)}
     ${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${state.catalog.lessons.map(l=>`<button class="lesson-row-v2" onclick="openLesson('${l.code}')"><div><b>${esc(l.code)} · ${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${l.slidesCount} слайдов · ${l.quizCount} вопросов · ${l.bookScreensCount} саммари</p></div><span>→</span></button>`).join('')}</div>`)}`,'profile');
 }
 async function adminApiV25(payload){
-  if(!tg || !tg.initData) throw new Error('Админ-проверка работает только внутри Telegram WebApp.');
+  if(!tg || !tg.initData) throw new Error('Администраторская проверка работает только внутри Telegram WebApp.');
   const res = await fetch(ADMIN_REVIEW_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({ initData: tg.initData }, payload || {})) });
   const out = await res.json().catch(()=>({}));
   if(!res.ok || !out.ok) throw new Error(out.reason || out.details || out.error || 'ADMIN_REVIEW_FAILED');
@@ -4030,7 +4030,7 @@ async function adminReviewManualV25(action){
   }catch(e){ alert('Ошибка: ' + (e.message||e)); }
 }
 async function books100AdminRepairAllV25(){
-  if(!isAdminMode()) return alert('Доступно только в режиме Босса Л.Е.Г.О.');
+  if(!isAdminMode()) return alert('Доступно только в режиме администратора.');
   if(!confirm('Проверить все зачёты книг и восстановить статусы из успешных попыток теста?')) return;
   try{
     const index = await loadBooks100Index();
@@ -4200,7 +4200,7 @@ function shell(content, activeTab) {
 
   const allowNav = hasVerifiedAccessV32();
   const modeButton = allowNav && isAdminUser()
-    ? `<button class="mode-pill ${isAdminMode() ? "admin" : "student-preview"}" onclick="renderProfile()">${isAdminMode() ? "Босс" : "Режим ученика"}</button>`
+    ? `<button class="mode-pill ${isAdminMode() ? "admin" : "student-preview"}" onclick="renderProfile()">${isAdminMode() ? "Администрирование" : "Режим ученика"}</button>`
     : "";
 
   root.innerHTML = `
@@ -4442,7 +4442,7 @@ var legacyRenderLearningV35 = window.renderLearning;
 window.renderLearning = function(){
   if (!architectureModeV35()) return legacyRenderLearningV35();
   var html = `
-    ${card('blue-card-v2 architecture-section-head', `<p class="eyebrow">маршрут собственника</p><h1>Я предприниматель</h1><p>Выберите вид деятельности. Внутри каждого направления — последовательный путь из уроков, тестов, саммари и практических заданий.</p>${isAdminMode() ? '<p class="small admin-note">Режим администратора: доступны все подготовленные материалы.</p>' : ''}`)}
+    ${card('blue-card-v2 architecture-section-head', `<p class="eyebrow">маршрут собственника</p><h1>Я предприниматель</h1><p>Выберите вид деятельности. Внутри каждого направления — последовательный путь из уроков, тестов, саммари и практических заданий.</p>${isAdminMode() ? '<p class="small admin-note">Режим администрирования: доступны все подготовленные материалы.</p>' : ''}`)}
     ${typeof entrepreneurCurrentStepCard === 'function' ? entrepreneurCurrentStepCard() : ''}
     <div class="activity-grid-v2 architecture-activity-grid">
       ${(state.catalog?.activities || []).map(function(a){
@@ -4577,17 +4577,17 @@ window.checkAccess = async function(){
 function architectureReplaceTextV35(value){
   var out = String(value || '');
   var pairs = [
-    [/Панель Босса Л\.Е\.Г\.О\.?/g, 'Панель администратора'],
-    [/Боссу Л\.Е\.Г\.О\.?/g, 'администратору'],
-    [/Босса Л\.Е\.Г\.О\.?/g, 'администратора'],
-    [/Босс Л\.Е\.Г\.О\.?/g, 'Администратор'],
+    [/Панель администратора Л\.Е\.Г\.О\.?/g, 'Панель администратора'],
+    [/администратору Л\.Е\.Г\.О\.?/g, 'администратору'],
+    [/администратора Л\.Е\.Г\.О\.?/g, 'администратора'],
+    [/Администратор Л\.Е\.Г\.О\.?/g, 'Администратор'],
     [/Ученик Л\.Е\.Г\.О\.?/g, 'Участник'],
     [/Мастер Л\.Е\.Г\.О\.?/g, 'Мастер системного управления'],
-    [/Режим Босса/g, 'Режим администратора'],
-    [/Боссу/g, 'администратору'],
-    [/Босса/g, 'администратора'],
-    [/Боссом/g, 'администратором'],
-    [/Босс/g, 'Администратор'],
+    [/Режим администрирования/g, 'Режим администрирования'],
+    [/администратору/g, 'администратору'],
+    [/администратора/g, 'администратора'],
+    [/администратором/g, 'администратором'],
+    [/Администратор/g, 'Администратор'],
     [/Л\.Е\.Г\.О\./g, 'АРХИТЕКТУРА'],
     [/Л\.Е\.Г\.О/g, 'АРХИТЕКТУРА'],
     [/система внедрения управленческих изменений/gi, 'Библиотека бизнес-систем']
@@ -5715,8 +5715,8 @@ else installArchitectureObserverV35();
     var progressCard = document.getElementById('progress-rules-card-v40');
     if (progressCard) progressCard.remove();
     content.querySelectorAll('.my-business-card').forEach(function(cardNode){ cardNode.remove(); });
-    var bossText = content.querySelector('.boss-panel-card p.small');
-    if (bossText) bossText.textContent = 'Панель управления и предпросмотр контента доступны только владельцу системы.';
+    var adminText = content.querySelector('.boss-panel-card p.small');
+    if (adminText) adminText.textContent = 'Панель управления и предпросмотр контента доступны только владельцу системы.';
     var scoreGrid = content.querySelector('.profile-score-grid');
     if (scoreGrid) {
       Array.from(scoreGrid.children).forEach(function(metric){
@@ -6790,7 +6790,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
     return `<button class="btn secondary" onclick="${action || 'renderFinancialAssistant()'}">${esc(label || 'Назад')}</button>`;
   }
 
-  function requireFinanceBossV49(){
+  function requireFinanceAdminV49(){
     if (financeCanOpenAssistantV49()) return true;
     alert('Финансовый помощник пока закрыт для учеников.');
     if (typeof renderProfile === 'function') renderProfile();
@@ -6809,7 +6809,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
   }
 
   function renderFinancialAssistantV49(){
-    if (!requireFinanceBossV49()) return;
+    if (!requireFinanceAdminV49()) return;
     const html = `
       ${card('blue-card-v2 finance-hero-v49', `<p class="eyebrow">финансовый помощник</p><h1>Финансовый помощник</h1><p>Сейчас открыт административный контур. Для учеников блок остаётся закрытым до отдельного запуска.</p>${financeProgressPillV49()}`)}
       ${card('', `<h2>Выберите раздел помощника</h2><div class="finance-hub-grid-v49">
@@ -6838,7 +6838,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
   }
 
   function renderFinanceModuleHomeV49(){
-    if (!requireFinanceBossV49()) return;
+    if (!requireFinanceAdminV49()) return;
     const progress = loadFinanceProgressV49();
     const html = `
       ${card('blue-card-v2 finance-hero-v49', `<p class="eyebrow">финансовый модуль</p><h1>Финансовая архитектура бизнеса</h1><p>Модуль собран из 11 разделов общей структуры. Сейчас полностью вставлен первый раздел: 4 урока с полным текстом и итоговая диагностика.</p>${financeProgressPillV49()}`)}
@@ -6856,7 +6856,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
   }
 
   function renderFinanceSectionV49(sectionId){
-    if (!requireFinanceBossV49()) return;
+    if (!requireFinanceAdminV49()) return;
     const section = getFinanceSectionV49(sectionId);
     if (!section) return renderFinanceModuleHomeV49();
     if (!financeCanOpenSectionV49(section.id)) return financeLockedSectionNoticeV49();
@@ -6902,7 +6902,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
   }
 
   function renderFinanceLessonV49(lessonId){
-    if (!requireFinanceBossV49()) return;
+    if (!requireFinanceAdminV49()) return;
     const lesson = getFinanceLessonV49(lessonId);
     if (!lesson) return renderFinanceModuleHomeV49();
     if (!financeCanOpenSectionV49(lesson.sectionId)) return financeLockedSectionNoticeV49();
@@ -6916,14 +6916,14 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
   }
 
   function startFinanceSection1TestV49(reset){
-    if (!requireFinanceBossV49()) return;
+    if (!requireFinanceAdminV49()) return;
     state.financeQuizIndex = 0;
     state.financeQuizAnswers = reset ? {} : (state.financeQuizAnswers || {});
     renderFinanceTestQuestionV49();
   }
 
   function renderFinanceTestQuestionV49(){
-    if (!requireFinanceBossV49()) return;
+    if (!requireFinanceAdminV49()) return;
     const total = FINANCE_SECTION1_TEST_V49.length;
     state.financeQuizIndex = Math.max(0, Math.min(Number(state.financeQuizIndex || 0), total - 1));
     const q = FINANCE_SECTION1_TEST_V49[state.financeQuizIndex];
@@ -7014,7 +7014,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
   }
 
   function renderFinanceAnalyticsV49(){
-    if (!requireFinanceBossV49()) return;
+    if (!requireFinanceAdminV49()) return;
     const html = `
       ${card('blue-card-v2 finance-hero-v49', `<p class="eyebrow">моя аналитика</p><h1>Моя аналитика</h1><p>Здесь будет личная аналитика бизнеса ученика. Сейчас оставлен аккуратный каркас, чтобы не смешивать учебный модуль с недоделанными расчётами.</p>`)}
       ${card('', `<h2>Каркас аналитики</h2><div class="finance-summary-grid-v49"><div><span>Данные</span><p>Ежедневные факты бизнеса: выручка, расходы, деньги, заявки, продажи.</p></div><div><span>Отчёты</span><p>ОПиУ, ДДС, баланс и метрики будут подключаться после утверждения логики финансового помощника.</p></div><div><span>Риск</span><p>Пока нельзя давать ученику расчёты без полной проверки модели, иначе приложение начнёт подсказывать по неполному финансовому ядру.</p></div><div><span>Следующий шаг</span><p>После внедрения учебного модуля отдельно подключить ввод фактов, отчёты и диагностику.</p></div></div><button class="btn secondary" onclick="renderFinancialAssistant()">← К финансовому помощнику</button>`)}
@@ -7023,7 +7023,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
   }
 
   function renderFinanceTemplatesV49(){
-    if (!requireFinanceBossV49()) return;
+    if (!requireFinanceAdminV49()) return;
     const html = `
       ${card('blue-card-v2 finance-hero-v49', `<p class="eyebrow">готовые шаблоны</p><h1>Готовые шаблоны</h1><p>Раздел подготовлен как место для будущих финансовых инструментов.</p>`)}
       ${card('', `<h2>Что будет внутри</h2><div class="list-clean"><div><b>Шаблоны под виды бизнеса</b><p>Услуги, торговля, производство, проекты, логистика и HoReCa.</p></div><div><b>Финансовые инструменты</b><p>ОПиУ, ДДС, баланс, платёжный календарь, точка безубыточности и прогноз.</p></div><div><b>Учебные тренажёры</b><p>Таблицы и кейсы, которые помогают закреплять уроки финансового модуля.</p></div></div><button class="btn secondary" onclick="renderFinancialAssistant()">← К финансовому помощнику</button>`)}
@@ -7035,8 +7035,8 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
     const admin = financeCanOpenAssistantV49();
     return renderMainBlockCard(
       'Финансовый помощник',
-      'Финансовый модуль, аналитика и готовые шаблоны. Сейчас открыт только в режиме Босса.',
-      admin ? 'доступно Боссу' : 'закрыто',
+      'Финансовый модуль, аналитика и готовые шаблоны. Сейчас открыт только в режиме администратора.',
+      admin ? 'доступно администратору' : 'закрыто',
       admin ? 'renderFinancialAssistant()' : '',
       (admin ? 'active ' : 'soon ') + 'compact-card finance-home-card-v49'
     );
@@ -7070,4 +7070,122 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
   window.selectFinanceTestAnswer = selectFinanceTestAnswerV49;
   window.prevFinanceTestQuestion = prevFinanceTestQuestionV49;
   window.finishFinanceSection1Test = finishFinanceSection1TestV49;
+})();
+
+/* =====================================================
+   v51 — Финансовый помощник: терминология администратора, нижняя панель и 12-й пункт меню
+   ===================================================== */
+(function installFinancialAssistantNavigationV50(){
+  window.APP_UI_VERSION_V50 = 'v51-finance-admin-terminology-20260628';
+
+  function financeIconV50(){
+    return `<svg class="arch-nav-svg" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V9M10 20V4M16 20v-7M22 20H2"/><path d="m4 7 5-3 5 5 6-6"/></svg>`;
+  }
+
+  function navIconV50(key){
+    if (key === 'finance') return `<span class="arch-nav-icon">${financeIconV50()}</span>`;
+    if (typeof architectureNavIconV35 === 'function') return `<span class="arch-nav-icon">${architectureNavIconV35(key)}</span>`;
+    return '<span class="arch-nav-icon">•</span>';
+  }
+
+  function financeAdminCanOpenV50(){
+    return typeof isAdminUser === 'function' && isAdminUser();
+  }
+  window.financeAdminCanOpenV50 = financeAdminCanOpenV50;
+
+  function ensureFinanceAdminModeV50(){
+    if (!financeAdminCanOpenV50()) return false;
+    if (typeof isAdminMode === 'function' && isAdminMode()) return true;
+    try {
+      if (typeof state !== 'undefined') state.appMode = 'admin';
+      localStorage.setItem('lego_app_mode', 'admin');
+    } catch(e) {}
+    return true;
+  }
+  window.ensureFinanceAdminModeV50 = ensureFinanceAdminModeV50;
+
+  const renderFinancialAssistantBeforeV50 = window.renderFinancialAssistant;
+  window.openFinanceAssistantV50 = function(){
+    if (!ensureFinanceAdminModeV50()) {
+      alert('Финансовый помощник пока закрыт для учеников.');
+      if (typeof renderHome === 'function') renderHome();
+      return;
+    }
+    if (typeof renderFinancialAssistantBeforeV50 === 'function') return renderFinancialAssistantBeforeV50();
+    alert('Финансовый помощник не найден в текущей сборке.');
+  };
+
+  window.renderFinancialAssistant = function(){
+    return window.openFinanceAssistantV50();
+  };
+  window.renderMyBusiness = window.openFinanceAssistantV50;
+
+  const bottomNavBeforeV50 = window.bottomNav;
+  window.bottomNav = function(active){
+    const architectureOn = typeof architectureV41Enabled === 'function'
+      ? architectureV41Enabled()
+      : (typeof architectureModeV35 === 'function' ? architectureModeV35() : true);
+    if (!architectureOn && typeof bottomNavBeforeV50 === 'function') return bottomNavBeforeV50(active);
+    if (typeof hasVerifiedAccessV32 === 'function' && !hasVerifiedAccessV32()) return '';
+
+    function item(key,label,fn,icon){
+      return `<button class="bottom-item ${active===key?'active':''}" onclick="safeNavigateV32('${fn}')">${icon}<b>${label}</b></button>`;
+    }
+    const home = item('home','Главная','renderHome',navIconV50('home'));
+    const profile = item('profile','Профиль','renderProfile',navIconV50('profile'));
+    const finance = financeAdminCanOpenV50()
+      ? `<button class="bottom-item ${active==='finance'?'active':''} finance-bottom-item-v50" onclick="safeNavigateV32('openFinanceAssistantV50')">${navIconV50('finance')}<b>Финансовый помощник</b></button>`
+      : `<button class="bottom-item is-disabled-v41 finance-bottom-item-v50 finance-bottom-locked-v50" type="button" disabled aria-disabled="true" title="Раздел в подготовке">${navIconV50('finance')}<b>Финансовый помощник</b><small>закрыто</small></button>`;
+    return `<nav class="bottom-nav-v2 v41-bottom-nav v50-bottom-nav" aria-label="Основное меню">${home}${finance}${profile}</nav>`;
+  };
+
+  function financeDrawerButtonHtmlV50(index){
+    const n = String(index || 12).padStart(2,'0');
+    if (financeAdminCanOpenV50()) {
+      return `<button data-finance-assistant-v50="1" class="finance-drawer-item-v50" onclick="closeAppDrawerV40(); openFinanceAssistantV50()"><span class="app-drawer-number-v40">${n}</span><span class="app-drawer-copy-v40"><b>Финансовый помощник</b><small>доступно администратору</small></span><span class="app-drawer-arrow-v40">›</span></button>`;
+    }
+    return `<button data-finance-assistant-v50="1" class="finance-drawer-item-v50 student-locked-v41" type="button" disabled aria-disabled="true"><span class="app-drawer-number-v40">${n}</span><span class="app-drawer-copy-v40"><b>Финансовый помощник</b><small>закрыто</small></span><span class="app-drawer-arrow-v40">•</span></button>`;
+  }
+
+  function insertFinanceDrawerItemV50(){
+    const list = document.querySelector('.app-drawer-list-v40');
+    if (!list) return;
+    const existing = list.querySelector('[data-finance-assistant-v50="1"]');
+    if (existing) existing.remove();
+    const index = list.children.length + 1;
+    list.insertAdjacentHTML('beforeend', financeDrawerButtonHtmlV50(index));
+  }
+  window.insertFinanceDrawerItemV50 = insertFinanceDrawerItemV50;
+
+  const installDrawerBeforeV50 = window.installAppDrawerV40;
+  if (typeof installDrawerBeforeV50 === 'function') {
+    window.installAppDrawerV40 = function(){
+      const result = installDrawerBeforeV50.apply(this, arguments);
+      setTimeout(insertFinanceDrawerItemV50, 0);
+      setTimeout(insertFinanceDrawerItemV50, 80);
+      return result;
+    };
+  }
+
+  const openDrawerBeforeV50 = window.openAppDrawerV40;
+  if (typeof openDrawerBeforeV50 === 'function') {
+    window.openAppDrawerV40 = function(){
+      const result = openDrawerBeforeV50.apply(this, arguments);
+      setTimeout(insertFinanceDrawerItemV50, 0);
+      setTimeout(insertFinanceDrawerItemV50, 80);
+      return result;
+    };
+  }
+
+  const shellBeforeV50 = window.shell;
+  if (typeof shellBeforeV50 === 'function') {
+    window.shell = function(content, activeTab){
+      const text = String(content || '');
+      const isFinanceScreen = text.indexOf('finance-hero-v49') !== -1 || text.indexOf('finance-hub-grid-v49') !== -1 || text.indexOf('finance-section-list-v49') !== -1;
+      const result = shellBeforeV50.call(this, content, isFinanceScreen ? 'finance' : activeTab);
+      setTimeout(insertFinanceDrawerItemV50, 0);
+      setTimeout(insertFinanceDrawerItemV50, 120);
+      return result;
+    };
+  }
 })();

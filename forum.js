@@ -340,7 +340,7 @@ async function renderBusinessForum() {
     const accepted = forumRulesAccepted(bootstrap);
     const isBossUi = forumIsBossMode();
     const bossNote = isBossUi
-      ? `<div class="forum-boss-note"><b>Режим администратора</b><span>Административные функции и публикации доступны без временных ограничений.</span></div>`
+      ? `<div class="forum-boss-note"><b>Режим администрирования</b><span>Административные функции и публикации доступны без временных ограничений.</span></div>`
       : "";
     const locked = accepted ? "" : "locked";
     const disabled = accepted ? "" : "disabled";

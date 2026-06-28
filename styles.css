@@ -4172,3 +4172,41 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
     text-align:left;
   }
 }
+
+/* =====================================================
+   v50 — financial assistant navigation polish
+   ===================================================== */
+.v50-bottom-nav{
+  grid-template-columns:repeat(3,1fr)!important;
+}
+.finance-bottom-item-v50 .arch-nav-svg{
+  width:22px;
+  height:22px;
+}
+.finance-bottom-locked-v50{
+  opacity:.52;
+  cursor:not-allowed;
+}
+.finance-bottom-locked-v50 small{
+  display:block;
+  margin-top:1px;
+  font-size:9px;
+  line-height:1;
+  color:var(--lego-gray-500,#7D8A99);
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  font-weight:900;
+}
+.finance-drawer-item-v50{
+  border-top:1px solid rgba(7,27,53,.08)!important;
+}
+.finance-drawer-item-v50 .app-drawer-copy-v40 b{
+  color:var(--lego-navy,#071B35);
+}
+.finance-drawer-item-v50:not(:disabled) .app-drawer-number-v40,
+.finance-drawer-item-v50:not(:disabled) .app-drawer-arrow-v40{
+  color:var(--lego-steel,#2F5F9F)!important;
+}
+.finance-drawer-item-v50:not(:disabled) .app-drawer-copy-v40 small{
+  color:var(--lego-steel,#2F5F9F)!important;
+}
