@@ -4258,3 +4258,103 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
   opacity:.55;
   cursor:not-allowed;
 }
+
+/* =====================================================
+   v53 — financial lesson presentation screens
+   ===================================================== */
+.finance-lesson-nav-v53{
+  top:78px;
+}
+.finance-lesson-cover-v53 h1{
+  margin-bottom:10px!important;
+}
+.finance-cover-card-v53{
+  background:linear-gradient(180deg,#fff,#F8FBFF);
+}
+.finance-cover-grid-v53{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+}
+.finance-cover-line-v53{
+  padding:13px 14px;
+  border-radius:16px;
+  background:#F6F8FC;
+  border:1px solid var(--lego-border,#DDE5EF);
+}
+.finance-cover-line-v53 span{
+  display:block;
+  margin-bottom:5px;
+  color:var(--lego-steel-2,#1F4F8A);
+  font-size:11px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.finance-cover-line-v53 p{
+  margin:0;
+  color:var(--lego-gray-900,#18212F);
+  font-size:15px;
+  line-height:1.48;
+}
+.finance-slide-card-v53{
+  background:#fff;
+}
+.finance-slide-card-v53 h1{
+  font-size:25px;
+  line-height:1.18;
+  margin-bottom:14px;
+}
+.finance-image-placeholder-v53{
+  min-height:230px;
+  border-radius:20px;
+  margin:8px 0 16px;
+  display:grid;
+  place-items:center;
+  text-align:center;
+  padding:22px;
+  background:linear-gradient(135deg,#EEF3F8,#FFFFFF);
+  border:1px dashed rgba(47,95,159,.35);
+}
+.finance-image-placeholder-v53 b{
+  display:block;
+  color:var(--lego-navy,#071B35);
+  font-size:20px;
+  margin-bottom:6px;
+}
+.finance-image-placeholder-v53 p{
+  max-width:310px;
+  margin:0 auto;
+  color:var(--lego-gray-500,#7D8A99);
+  font-size:14px;
+  line-height:1.45;
+}
+.finance-slide-body-v53{
+  display:grid;
+  gap:12px;
+}
+.finance-slide-body-v53 p{
+  margin:0;
+  color:#263852;
+  font-size:16px;
+  line-height:1.62;
+}
+.finance-screen-counter-v53{
+  margin-top:16px;
+  padding-top:12px;
+  border-top:1px solid var(--lego-border,#DDE5EF);
+  color:var(--lego-gray-500,#7D8A99);
+  font-size:12px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.finance-final-card-v53{
+  margin-top:0;
+}
+@media(max-width:420px){
+  .finance-lesson-nav-v53{top:76px;grid-template-columns:1fr!important;}
+  .finance-slide-card-v53 h1{font-size:23px;}
+  .finance-image-placeholder-v53{min-height:190px;}
+  .finance-slide-body-v53 p{font-size:15px;line-height:1.58;}
+}

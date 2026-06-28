@@ -7070,6 +7070,184 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
   window.selectFinanceTestAnswer = selectFinanceTestAnswerV49;
   window.prevFinanceTestQuestion = prevFinanceTestQuestionV49;
   window.finishFinanceSection1Test = finishFinanceSection1TestV49;
+
+  /* =====================================================
+     v53 — Финансовый модуль: титульный лист и слайды урока
+     ===================================================== */
+  function financeNormalizeCopyV53(value){
+    let out = String(value || '').trim();
+    if (!out) return '';
+    out = out.replace(/Результат ученика\s*:/gi, 'Основной вывод:');
+    out = out.replace(/результат ученика\s*:/gi, 'Основной вывод:');
+    out = out.replace(/Ученик/g, 'Предприниматель');
+    out = out.replace(/ученик/g, 'предприниматель');
+    out = out.replace(/Ученика/g, 'Предпринимателя');
+    out = out.replace(/ученика/g, 'предпринимателя');
+    out = out.replace(/Ученику/g, 'Предпринимателю');
+    out = out.replace(/ученику/g, 'предпринимателю');
+    out = out.replace(/Ученики/g, 'Предприниматели');
+    out = out.replace(/ученики/g, 'предприниматели');
+    out = out.replace(/В этом уроке мы разложим одну простую ситуацию на несколько финансовых смыслов\./g, 'В рамках урока одна простая ситуация раскладывается на несколько финансовых смыслов.');
+    out = out.replace(/в этом уроке мы разложим одну простую ситуацию на несколько финансовых смыслов\./g, 'в рамках урока одна простая ситуация раскладывается на несколько финансовых смыслов.');
+    out = out.replace(/сквозной кейс на 1\s*000\s*000\s*₽/gi, 'сквозной кейс');
+    return out;
+  }
+
+  function financeShouldSkipIntroLineV53(line){
+    return /^Урок\s+\d+\./i.test(line)
+      || /^Общая структура урока$/i.test(line)
+      || /^Рекомендуемая длительность урока\s*:/i.test(line)
+      || /^Тест после урока\s*:/i.test(line)
+      || /^Практическая таблица/i.test(line);
+  }
+
+  function financeNormalizedIntroLineV53(line){
+    const raw = String(line || '').trim();
+    if (/^Формат урока\s*:/i.test(raw)) {
+      if (/Деньги, прибыль и выручка/i.test(raw) || /сквозной кейс на 1\s*000\s*000/i.test(raw)) {
+        return 'Формат урока: теоретическое объяснение, разбор финансовых понятий, сквозной кейс, сравнение влияния на ОПиУ, ОДДС и баланс.';
+      }
+    }
+    return financeNormalizeCopyV53(raw);
+  }
+
+  function parseFinanceLessonScreensV53(lesson){
+    const content = Array.isArray(lesson && lesson.fullContent) ? lesson.fullContent : [];
+    const intro = [];
+    const slides = [];
+    const finalLines = [];
+    let mode = 'intro';
+    let currentSlide = null;
+    let skipVisual = false;
+    let textStarted = false;
+
+    content.forEach(function(item){
+      const raw = String(item || '').trim();
+      if (!raw) return;
+
+      if (/^Слайд\s+\d+\./i.test(raw)) {
+        mode = 'slide';
+        skipVisual = false;
+        textStarted = false;
+        currentSlide = { title: financeNormalizeCopyV53(raw), text: [] };
+        slides.push(currentSlide);
+        return;
+      }
+
+      if (/^Итоговая логика урока$/i.test(raw)) {
+        mode = 'final';
+        currentSlide = null;
+        skipVisual = false;
+        textStarted = false;
+        return;
+      }
+
+      if (mode === 'intro') {
+        if (financeShouldSkipIntroLineV53(raw)) return;
+        const introLine = financeNormalizedIntroLineV53(raw);
+        if (introLine) intro.push(introLine);
+        return;
+      }
+
+      if (mode === 'slide') {
+        if (/^Что показать на слайде$/i.test(raw)) {
+          skipVisual = true;
+          textStarted = false;
+          return;
+        }
+        if (/^Текст под слайдом$/i.test(raw)) {
+          skipVisual = false;
+          textStarted = true;
+          return;
+        }
+        if (skipVisual && !textStarted) return;
+        if (!currentSlide) return;
+        currentSlide.text.push(financeNormalizeCopyV53(raw));
+        return;
+      }
+
+      if (mode === 'final') {
+        if (financeShouldSkipIntroLineV53(raw)) return;
+        finalLines.push(financeNormalizeCopyV53(raw));
+      }
+    });
+
+    return { intro: intro, slides: slides, finalLines: finalLines };
+  }
+
+  function financeSlideShortTitleV53(title){
+    return financeNormalizeCopyV53(String(title || '').replace(/^Слайд\s+\d+\.\s*/i, '').trim());
+  }
+
+  function financeIntroLineHtmlV53(line){
+    const text = financeNormalizeCopyV53(line);
+    const m = text.match(/^([^:]{3,80}):\s*(.*)$/);
+    if (m) {
+      return `<div class="finance-cover-line-v53"><span>${esc(m[1])}</span><p>${esc(m[2])}</p></div>`;
+    }
+    return `<div class="finance-cover-line-v53 wide"><p>${esc(text)}</p></div>`;
+  }
+
+  function financeLessonCoverScreenHtmlV53(lesson, parsed, totalScreens){
+    const introHtml = (parsed.intro || []).map(financeIntroLineHtmlV53).join('');
+    return `${card('blue-card-v2 finance-hero-v49 finance-lesson-cover-v53', `<p class="eyebrow">раздел ${Number(lesson.sectionId)} · урок ${Number(lesson.id)}</p><h1>${esc(lesson.title)}</h1><p>Титульная структура урока перед основной последовательностью слайдов.</p>`)}${card('finance-cover-card-v53', `<h2>Структура урока</h2><div class="finance-cover-grid-v53">${introHtml}</div><div class="finance-screen-counter-v53">Экран 1 из ${Number(totalScreens)}</div>`)}`;
+  }
+
+  function financeLessonSlideScreenHtmlV53(lesson, slide, slideNumber, slidesTotal, screenIndex, totalScreens){
+    const body = (slide.text || []).map(function(line){ return `<p>${esc(line)}</p>`; }).join('') || '<p>Текст слайда будет добавлен после редакторской проверки.</p>';
+    return `${card('finance-slide-card-v53', `<p class="eyebrow">слайд ${slideNumber} из ${slidesTotal}</p><h1>${esc(financeSlideShortTitleV53(slide.title))}</h1><div class="finance-image-placeholder-v53"><div><b>Место для изображения</b><p>Изображение будет подключено после генерации визуалов.</p></div></div><div class="finance-slide-body-v53">${body}</div><div class="finance-screen-counter-v53">Экран ${screenIndex + 1} из ${totalScreens}</div>`)}`;
+  }
+
+  function financeLessonFinalScreenHtmlV53(lesson, lines, screenIndex, totalScreens){
+    const body = (lines || []).map(function(line){ return `<p>${esc(line)}</p>`; }).join('') || '<p>Итоговая логика урока будет добавлена после редакторской проверки.</p>';
+    return `${card('blue-card-v2 finance-final-card-v53', `<p class="eyebrow">итоговая логика</p><h1>Итоговая логика урока</h1><p>Финальный смысловой вывод по теме без обращения к ученику.</p>`)}${card('', `<div class="finance-slide-body-v53">${body}</div><div class="finance-screen-counter-v53">Экран ${screenIndex + 1} из ${totalScreens}</div>`)}`;
+  }
+
+  function financeLessonSummaryHtmlV53(lesson){
+    return `<div class="finance-summary-grid-v49">
+      <div><span>Задача урока</span><p>${esc(financeNormalizeCopyV53(lesson.objective || 'Будет раскрыто позже.'))}</p></div>
+      <div><span>Ключевое содержание</span><p>${esc(financeNormalizeCopyV53(lesson.content || 'Будет раскрыто позже.'))}</p></div>
+      <div><span>Кейс</span><p>${esc(financeNormalizeCopyV53(lesson.case || 'Будет раскрыто позже.'))}</p></div>
+      <div><span>Основной вывод</span><p>${esc(financeNormalizeCopyV53(lesson.result || 'Будет раскрыто позже.'))}</p></div>
+    </div>`;
+  }
+
+  function financeLessonNavV53(lesson, index, total){
+    const prevDisabled = index <= 0;
+    const isLast = index >= total - 1;
+    const prevAction = `renderFinanceLesson(${Number(lesson.id)}, ${Math.max(0, index - 1)})`;
+    const nextAction = isLast ? `renderFinanceSection(${Number(lesson.sectionId)})` : `renderFinanceLesson(${Number(lesson.id)}, ${index + 1})`;
+    const nextText = isLast ? 'К урокам раздела' : 'Далее';
+    return `<div class="nav-panel-v2 nav-panel-v2-three finance-lesson-nav-v53"><button class="btn secondary" onclick="renderFinanceSection(${Number(lesson.sectionId)})">К разделу</button><button class="btn secondary" ${prevDisabled ? 'disabled' : ''} onclick="${prevAction}">Назад</button><button class="btn primary" onclick="${nextAction}">${nextText}</button></div>`;
+  }
+
+  function renderFinanceLessonV53(lessonId, screenIndex){
+    if (!requireFinanceAdminV49()) return;
+    const lesson = getFinanceLessonV49(lessonId);
+    if (!lesson) return renderFinanceModuleHomeV49();
+    state.financeLessonId = Number(lesson.id);
+    const parsed = parseFinanceLessonScreensV53(lesson);
+    const hasFull = Array.isArray(lesson.fullContent) && lesson.fullContent.length;
+    if (!hasFull) {
+      const html = `${card('blue-card-v2 finance-hero-v49', `<p class="eyebrow">раздел ${Number(lesson.sectionId)} · урок ${Number(lesson.id)}</p><h1>${esc(lesson.title)}</h1><p>${esc(financeNormalizeCopyV53(lesson.objective || ''))}</p>`)}${card('', `<div class="finance-toolbar-v49"><button class="btn secondary" onclick="renderFinanceSection(${Number(lesson.sectionId)})">← К урокам раздела</button></div>${financeLessonSummaryHtmlV53(lesson)}`)}`;
+      shell(html, 'finance');
+      return;
+    }
+
+    const screens = [{ type:'cover' }].concat((parsed.slides || []).map(function(slide, i){ return { type:'slide', slide:slide, slideIndex:i }; }));
+    if ((parsed.finalLines || []).length) screens.push({ type:'final' });
+    const total = screens.length;
+    const index = Math.max(0, Math.min(Number(screenIndex || 0), total - 1));
+    state.financeLessonScreenIndex = index;
+    const current = screens[index];
+    let body = '';
+    if (current.type === 'cover') body = financeLessonCoverScreenHtmlV53(lesson, parsed, total);
+    if (current.type === 'slide') body = financeLessonSlideScreenHtmlV53(lesson, current.slide, current.slideIndex + 1, parsed.slides.length, index, total);
+    if (current.type === 'final') body = financeLessonFinalScreenHtmlV53(lesson, parsed.finalLines, index, total);
+    shell(`${financeLessonNavV53(lesson, index, total)}${body}`, 'finance');
+  }
+
+  window.renderFinanceLesson = renderFinanceLessonV53;
 })();
 
 /* =====================================================
