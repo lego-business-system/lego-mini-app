@@ -29,7 +29,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v69-finance-trainer-link-copy-flow-20260628";
+const APP_CACHE_VERSION = "v69-finance-trainer-link-20260628";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -11103,99 +11103,184 @@ try { window.financeSection1ImageCountV66 = window.financeSection1ImageCountV65;
   };
 })();
 
-
 /* =====================================================
-   v69 — Финтренажёр раздела 1: ссылка, копирование и понятный маршрут
+   v69 — Финтренажёр раздела 1: подключена Google Sheets ссылка и нормальный путь копирования
    ===================================================== */
 (function installFinanceTrainerLinkV69(){
-  window.APP_UI_VERSION_V69 = 'v69-finance-trainer-link-copy-flow-20260628';
+  window.APP_UI_VERSION_V69 = 'v69-finance-trainer-link-20260628';
 
-  const TRAINER_SHEET_ID_V69 = '1WsPb_DHt3ksIpCAZIMxgMDuSojIbztbV_5tthhdJ3Eg';
-  const TRAINER_GID_V69 = '972184137';
-  const TRAINER_EDIT_URL_V69 = 'https://docs.google.com/spreadsheets/d/' + TRAINER_SHEET_ID_V69 + '/edit?gid=' + TRAINER_GID_V69 + '#gid=' + TRAINER_GID_V69;
-  const TRAINER_COPY_URL_V69 = 'https://docs.google.com/spreadsheets/d/' + TRAINER_SHEET_ID_V69 + '/copy';
+  const TRAINER_EDIT_URL = 'https://docs.google.com/spreadsheets/d/1WsPb_DHt3ksIpCAZIMxgMDuSojIbztbV_5tthhdJ3Eg/edit?gid=972184137#gid=972184137';
+  const TRAINER_COPY_URL = 'https://docs.google.com/spreadsheets/d/1WsPb_DHt3ksIpCAZIMxgMDuSojIbztbV_5tthhdJ3Eg/copy';
 
-  window.FINANCE_SECTION1_TRAINER_EDIT_URL_V69 = TRAINER_EDIT_URL_V69;
-  window.FINANCE_SECTION1_TRAINER_COPY_URL_V69 = TRAINER_COPY_URL_V69;
+  // Совместимость со старыми слоями v57–v64, которые читают разные переменные.
+  window.FINANCE_SECTION1_TRAINER_URL_V57 = TRAINER_EDIT_URL;
+  window.FINANCE_SECTION1_TRAINER_URL_V58 = TRAINER_EDIT_URL;
+  window.FINANCE_SECTION1_TRAINER_URL_V62 = TRAINER_EDIT_URL;
+  window.FINANCE_SECTION1_TRAINER_URL_V63 = TRAINER_EDIT_URL;
+  window.FINANCE_SECTION1_TRAINER_URL_V64 = TRAINER_EDIT_URL;
+  window.FINANCE_SECTION1_TRAINER_EDIT_URL_V69 = TRAINER_EDIT_URL;
+  window.FINANCE_SECTION1_TRAINER_COPY_URL_V69 = TRAINER_COPY_URL;
 
-  // Совместимость со старыми слоями v57–v64, где ссылка читалась из разных переменных.
-  window.FINANCE_SECTION1_TRAINER_URL_V57 = TRAINER_EDIT_URL_V69;
-  window.FINANCE_SECTION1_TRAINER_URL_V58 = TRAINER_EDIT_URL_V69;
-  window.FINANCE_SECTION1_TRAINER_URL_V60 = TRAINER_EDIT_URL_V69;
-  window.FINANCE_SECTION1_TRAINER_URL_V61 = TRAINER_EDIT_URL_V69;
-  window.FINANCE_SECTION1_TRAINER_URL_V62 = TRAINER_EDIT_URL_V69;
-  window.FINANCE_SECTION1_TRAINER_URL_V63 = TRAINER_EDIT_URL_V69;
-  window.FINANCE_SECTION1_TRAINER_URL_V64 = TRAINER_EDIT_URL_V69;
-
-  function feV69(value){
-    if (typeof esc === 'function') return esc(value);
-    return String(value ?? '').replace(/[&<>'"]/g, function(c){
-      return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[c];
-    });
-  }
-
-  function adminModeV69(){
+  function adminMode(){
     try { return typeof isAdminMode === 'function' && isAdminMode() === true; }
-    catch(e) { return false; }
+    catch(e){ return false; }
   }
-
-  function renderFinanceLockedV69(){
-    const html = card('result-bad-v2 finance-locked-v69', '<p class="eyebrow">финансовый помощник</p><h1>Раздел закрыт</h1><p>Финансовый помощник пока закрыт в режиме просмотра ученика. Для проверки материалов нужно вручную включить режим администрирования.</p><button class="btn secondary" onclick="renderHome()">← Вернуться на главную</button>');
-    shell(html, 'finance');
+  function safeEsc(value){
+    return typeof esc === 'function'
+      ? esc(value)
+      : String(value ?? '').replace(/[&<>'"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[c]; });
   }
-
-  window.copyFinanceTrainerLinkV69 = async function(kind){
-    const url = kind === 'edit' ? TRAINER_EDIT_URL_V69 : TRAINER_COPY_URL_V69;
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(url);
-      } else {
-        const input = document.createElement('input');
-        input.value = url;
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand('copy');
-        document.body.removeChild(input);
-      }
-      alert('Ссылка скопирована.');
-    } catch(e) {
-      alert('Не удалось скопировать автоматически. Зажмите поле со ссылкой и скопируйте вручную.');
+  function renderLocked(){
+    if (typeof shell === 'function' && typeof card === 'function') {
+      shell(card('result-bad-v2 finance-locked-v69', '<p class="eyebrow">финтренажёр</p><h1>Раздел закрыт</h1><p>Финтренажёр пока закрыт в режиме просмотра ученика. Для проверки материалов нужно вручную включить режим администрирования.</p><button class="btn secondary" onclick="renderHome()">← Вернуться на главную</button>'), 'finance');
+    } else {
+      alert('Финтренажёр пока закрыт в режиме просмотра ученика.');
     }
-  };
+  }
+  function copyText(value, successText){
+    const text = String(value || '').trim();
+    if (!text) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function(){ alert(successText || 'Ссылка скопирована.'); }).catch(function(){ prompt('Скопируйте ссылку:', text); });
+    } else {
+      prompt('Скопируйте ссылку:', text);
+    }
+  }
 
-  function renderFinanceTrainerSection1V69(){
-    if (!adminModeV69()) return renderFinanceLockedV69();
+  window.openFinanceTrainerOriginalV69 = function(){ window.open(TRAINER_EDIT_URL, '_blank'); };
+  window.openFinanceTrainerCopyV69 = function(){ window.open(TRAINER_COPY_URL, '_blank'); };
+  window.copyFinanceTrainerOriginalV69 = function(){ copyText(TRAINER_EDIT_URL, 'Ссылка на исходную таблицу скопирована.'); };
+  window.copyFinanceTrainerCopyV69 = function(){ copyText(TRAINER_COPY_URL, 'Ссылка для создания копии скопирована.'); };
 
+  function renderTrainer(){
+    if (!adminMode()) return renderLocked();
     const html = `
-      ${card('blue-card-v2 finance-hero-v69', `<p class="eyebrow">раздел 1 · практика</p><h1>Финтренажёр раздела 1</h1><p>Таблица закрепляет первые четыре урока финансового модуля: деньги, выручку, прибыль, ОПиУ, ОДДС, баланс, управленческий учёт и экономический двигатель бизнеса.</p>`)}
-      ${card('', `<div class="finance-toolbar-v64"><button class="btn secondary" onclick="renderFinanceSection(1)">← К урокам раздела 1</button><button class="btn secondary" onclick="renderFinanceModuleHome()">К разделам</button></div>
-        <h2>Как правильно начать работу</h2>
-        <div class="finance-trainer-warning-v69"><b>Важно</b><p>Исходная таблица открывается как шаблон для просмотра. Заполнять её напрямую нельзя: нужно сначала создать личную копию на своём Google Диске.</p></div>
-        <div class="list-clean finance-trainer-steps-v69">
-          <div><b>1. Создать личную копию</b><p>Нажмите кнопку «Создать личную копию таблицы». Google откроет экран копирования файла. Подтвердите создание копии — после этого таблица станет вашей рабочей версией.</p></div>
-          <div><b>2. Если открылся исходник</b><p>Если Google открыл обычный просмотр вместо копирования, используйте путь: <b>Файл → Создать копию</b>. Работать нужно только в своей копии.</p></div>
-          <div><b>3. Прочитать инструкцию внутри</b><p>Начните с листа «Главная». В таблице указан порядок: Кейсы → Операции → Числовые_кейсы → Модель → Отчёт → Разбор_ошибок.</p></div>
-          <div><b>4. Заполнять только рабочие поля</b><p>Вносите ответы только в выделенные поля на листах Кейсы, Операции, Числовые_кейсы и Модель. Служебные листы проверки, банки заданий, справочники и методику не меняйте.</p></div>
-          <div><b>5. Сверить результат</b><p>После прохождения откройте лист «Отчёт» и разбор ошибок. Финтренажёр нужен для закрепления материала; следующий раздел открывает не тренажёр, а итоговая диагностика раздела 1 в приложении.</p></div>
+      ${card('blue-card-v2 finance-hero-v64 finance-trainer-hero-v69', `<p class="eyebrow">раздел 1 · практика</p><h1>Финтренажёр раздела 1</h1><p>Таблица для дополнительного закрепления первого раздела. Здесь отрабатывается главная цепочка: операция → финансовый смысл → ОПиУ → ОДДС → баланс → управленческий вывод.</p>`)}
+      ${card('', `<div class="finance-toolbar-v64"><button class="btn secondary" onclick="renderFinanceSection64(1)">← К разделу 1</button><button class="btn secondary" onclick="renderFinanceModuleHome64()">К финансовому модулю</button></div>
+        <h2>Как пользоваться таблицей</h2>
+        <div class="list-clean finance-trainer-instruction-v69">
+          <div><b>1. Сначала открыть исходную таблицу</b><p>Откройте файл Google Sheets по ссылке ниже и посмотрите структуру: лист инструкции, задания, проверка и итоговый результат.</p></div>
+          <div><b>2. Обязательно создать личную копию</b><p>По прямой ссылке нельзя нормально проходить тренажёр как рабочий шаблон. Нужно сохранить новую копию себе в Google Диск: <b>Файл → Создать копию</b>. После этого ответы, расчёты и отметки будут сохраняться в личной версии.</p></div>
+          <div><b>3. Прочитать инструкцию внутри таблицы</b><p>Перед заполнением нужно открыть лист с инструкцией. Там будет порядок прохождения, правила ввода и подсказки по статусам.</p></div>
+          <div><b>4. Пройти тренажёр по материалу Раздела 1</b><p>Задача — не просто заполнить ячейки, а закрепить различие денег, выручки, прибыли, авансов, кредитов, дебиторки, активов, обязательств, ОПиУ, ОДДС и баланса.</p></div>
         </div>
-        <div class="grid-v2 finance-trainer-actions-v69">
-          <a class="btn primary" href="${feV69(TRAINER_COPY_URL_V69)}" target="_blank" rel="noopener">Создать личную копию таблицы</a>
-          <a class="btn secondary" href="${feV69(TRAINER_EDIT_URL_V69)}" target="_blank" rel="noopener">Открыть исходную таблицу</a>
-          <button class="btn secondary" onclick="copyFinanceTrainerLinkV69('copy')">Скопировать ссылку для создания копии</button>
-        </div>
-        <label class="finance-copy-label-v69"><span>Ссылка на копирование</span><input readonly value="${feV69(TRAINER_COPY_URL_V69)}" onclick="this.select(); copyFinanceTrainerLinkV69('copy')"></label>
-      `)}
+        <div class="finance-trainer-link-box-v69"><span>Исходная таблица</span><p>${safeEsc(TRAINER_EDIT_URL)}</p></div>
+        <div class="grid-v2 finance-trainer-actions-v69"><button class="btn primary" onclick="openFinanceTrainerOriginalV69()">Открыть исходную таблицу</button><button class="btn secondary" onclick="openFinanceTrainerCopyV69()">Создать копию сразу</button><button class="btn secondary" onclick="copyFinanceTrainerOriginalV69()">Скопировать ссылку</button></div>
+        <div class="finance-trainer-warning-v69"><b>Важно</b><p>Оригинальную таблицу не нужно заполнять. Рабочий вариант — только личная копия. Если кнопка «Создать копию сразу» не сработает из-за доступа Google, откройте исходную таблицу и вручную выберите: <b>Файл → Создать копию</b>.</p></div>
+        <button class="btn secondary" onclick="renderFinanceSection64(1)">← Вернуться к урокам раздела</button>`)}
     `;
     shell(html, 'finance');
   }
 
-  window.renderFinanceTrainerSection1 = renderFinanceTrainerSection1V69;
-  window.renderFinanceSection1Trainer = renderFinanceTrainerSection1V69;
-  window.renderFinanceTrainerSection1_64 = renderFinanceTrainerSection1V69;
-  window.renderFinanceTrainerSection1_63 = renderFinanceTrainerSection1V69;
-  window.renderFinanceTrainerSection1_62 = renderFinanceTrainerSection1V69;
-  window.renderFinanceTrainerSection1V58 = renderFinanceTrainerSection1V69;
-  window.renderFinanceTrainerSection1V57 = renderFinanceTrainerSection1V69;
-  try { renderFinanceTrainerSection1 = renderFinanceTrainerSection1V69; } catch(e) {}
-  try { renderFinanceSection1Trainer = renderFinanceTrainerSection1V69; } catch(e) {}
+  window.renderFinanceTrainerSection1_69 = renderTrainer;
+  window.renderFinanceTrainerSection1_64 = renderTrainer;
+  window.renderFinanceTrainerSection1_63 = renderTrainer;
+  window.renderFinanceTrainerSection1 = renderTrainer;
+  window.renderFinanceSection1Trainer = renderTrainer;
+
+  try { renderFinanceTrainerSection1_64 = renderTrainer; } catch(e) {}
+  try { renderFinanceTrainerSection1_63 = renderTrainer; } catch(e) {}
+  try { renderFinanceTrainerSection1 = renderTrainer; } catch(e) {}
+  try { renderFinanceSection1Trainer = renderTrainer; } catch(e) {}
+})();
+
+
+
+/* =====================================================
+   v70 — Финтренажёр раздела 1: ссылка, копия, путь прохождения и контроль нормальной работы
+   ===================================================== */
+(function installFinanceTrainerCopyFlowV70(){
+  window.APP_UI_VERSION_V70 = 'v70-finance-trainer-link-and-copy-flow-20260628';
+
+  const TRAINER_EDIT_URL = 'https://docs.google.com/spreadsheets/d/1WsPb_DHt3ksIpCAZIMxgMDuSojIbztbV_5tthhdJ3Eg/edit?gid=972184137#gid=972184137';
+  const TRAINER_COPY_URL = 'https://docs.google.com/spreadsheets/d/1WsPb_DHt3ksIpCAZIMxgMDuSojIbztbV_5tthhdJ3Eg/copy';
+
+  // Прокидываем ссылку во все старые слои, чтобы ни один прежний обработчик не показывал «ссылка будет добавлена».
+  window.FINANCE_SECTION1_TRAINER_URL_V57 = TRAINER_EDIT_URL;
+  window.FINANCE_SECTION1_TRAINER_URL_V58 = TRAINER_EDIT_URL;
+  window.FINANCE_SECTION1_TRAINER_URL_V60 = TRAINER_EDIT_URL;
+  window.FINANCE_SECTION1_TRAINER_URL_V61 = TRAINER_EDIT_URL;
+  window.FINANCE_SECTION1_TRAINER_URL_V62 = TRAINER_EDIT_URL;
+  window.FINANCE_SECTION1_TRAINER_URL_V63 = TRAINER_EDIT_URL;
+  window.FINANCE_SECTION1_TRAINER_URL_V64 = TRAINER_EDIT_URL;
+  window.FINANCE_SECTION1_TRAINER_EDIT_URL_V70 = TRAINER_EDIT_URL;
+  window.FINANCE_SECTION1_TRAINER_COPY_URL_V70 = TRAINER_COPY_URL;
+
+  function canOpenFinanceAdmin(){
+    try { return typeof isAdminMode === 'function' && isAdminMode() === true; }
+    catch(e){ return false; }
+  }
+  function h(value){
+    if (typeof esc === 'function') return esc(value);
+    return String(value ?? '').replace(/[&<>'"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[c]; });
+  }
+  function goBackToSection(){
+    if (typeof renderFinanceSection64 === 'function') return renderFinanceSection64(1);
+    if (typeof renderFinanceSection === 'function') return renderFinanceSection(1);
+    if (typeof renderFinanceModuleHome64 === 'function') return renderFinanceModuleHome64();
+    if (typeof renderHome === 'function') return renderHome();
+  }
+  function goFinanceModule(){
+    if (typeof renderFinanceModuleHome64 === 'function') return renderFinanceModuleHome64();
+    if (typeof renderFinanceModuleHome === 'function') return renderFinanceModuleHome();
+    if (typeof renderHome === 'function') return renderHome();
+  }
+  function copyValue(value, message){
+    const text = String(value || '').trim();
+    if (!text) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function(){ alert(message || 'Ссылка скопирована.'); }).catch(function(){ prompt('Скопируйте ссылку:', text); });
+    } else {
+      prompt('Скопируйте ссылку:', text);
+    }
+  }
+
+  window.openFinanceTrainerOriginalV70 = function(){ window.open(TRAINER_EDIT_URL, '_blank'); };
+  window.openFinanceTrainerCopyV70 = function(){ window.open(TRAINER_COPY_URL, '_blank'); };
+  window.copyFinanceTrainerOriginalV70 = function(){ copyValue(TRAINER_EDIT_URL, 'Ссылка на исходную таблицу скопирована.'); };
+  window.copyFinanceTrainerCopyV70 = function(){ copyValue(TRAINER_COPY_URL, 'Ссылка для создания личной копии скопирована.'); };
+  window.backFinanceTrainerSectionV70 = goBackToSection;
+  window.backFinanceTrainerModuleV70 = goFinanceModule;
+
+  function renderLocked(){
+    const html = '<p class="eyebrow">финтренажёр</p><h1>Раздел закрыт</h1><p>Финтренажёр пока закрыт в режиме просмотра ученика. Для проверки материалов нужно вручную включить режим администрирования.</p><button class="btn secondary" onclick="renderHome()">← Вернуться на главную</button>';
+    if (typeof shell === 'function' && typeof card === 'function') shell(card('result-bad-v2 finance-locked-v70', html), 'finance');
+    else alert('Финтренажёр пока закрыт в режиме просмотра ученика.');
+  }
+
+  function renderTrainer(){
+    if (!canOpenFinanceAdmin()) return renderLocked();
+    const html = `
+      ${card('blue-card-v2 finance-hero-v64 finance-trainer-hero-v70', `<p class="eyebrow">раздел 1 · практика</p><h1>Финтренажёр раздела 1</h1><p>Таблица для закрепления первого раздела: деньги, выручка, прибыль, авансы, кредиты, дебиторка, активы, обязательства, ОПиУ, ОДДС и баланс.</p>`)}
+      ${card('', `<div class="finance-toolbar-v64"><button class="btn secondary" onclick="backFinanceTrainerSectionV70()">← К разделу 1</button><button class="btn secondary" onclick="backFinanceTrainerModuleV70()">К финансовому модулю</button></div>
+        <h2>Порядок работы с таблицей</h2>
+        <div class="list-clean finance-trainer-instruction-v70">
+          <div><b>1. Открыть исходную таблицу</b><p>Сначала можно открыть исходный файл и посмотреть структуру тренажёра. Внутри есть листы: инструкция, кейсы, операции, числовые задания, модель, проверка, отчёт и разбор ошибок.</p></div>
+          <div><b>2. Сохранить личную копию</b><p>Исходный файл нельзя использовать как рабочую таблицу. Нужно создать свою копию: <b>Файл → Создать копию</b>, либо нажать кнопку «Создать личную копию» ниже.</p></div>
+          <div><b>3. Работать только в своей копии</b><p>Заполняются только рабочие поля тренажёра. Проверочные листы, справочники и формулы лучше не трогать, иначе автоматическая проверка может сломаться.</p></div>
+          <div><b>4. Пройти задания по Разделу 1</b><p>Маршрут: кейсы → операции → числовые кейсы → модель → отчёт → разбор ошибок. Главная задача — не угадать ответы, а закрепить финансовую классификацию операций.</p></div>
+          <div><b>5. Использовать отчёт как обратную связь</b><p>После прохождения смотреть итоговый процент, критические ошибки и лист «Разбор_ошибок». Нормальный уровень — от 85%, ниже 70% материал лучше пройти заново.</p></div>
+        </div>
+        <div class="finance-trainer-link-box-v70"><span>Исходная таблица</span><p>${h(TRAINER_EDIT_URL)}</p></div>
+        <div class="finance-trainer-link-box-v70 copy"><span>Ссылка для копирования</span><p>${h(TRAINER_COPY_URL)}</p></div>
+        <div class="grid-v2 finance-trainer-actions-v70"><button class="btn primary" onclick="openFinanceTrainerCopyV70()">Создать личную копию</button><button class="btn secondary" onclick="openFinanceTrainerOriginalV70()">Открыть исходную таблицу</button><button class="btn secondary" onclick="copyFinanceTrainerCopyV70()">Скопировать ссылку на копию</button></div>
+        <div class="finance-trainer-warning-v70"><b>Важно</b><p>Оригинал должен оставаться чистым. Если Google не откроет экран копирования, откройте исходную таблицу и вручную выберите: <b>Файл → Создать копию</b>. Для нормальной работы у пользователя должен быть вход в Google-аккаунт и доступ хотя бы на просмотр исходного файла.</p></div>
+        <button class="btn secondary" onclick="backFinanceTrainerSectionV70()">← Вернуться к урокам раздела</button>`)}
+    `;
+    shell(html, 'finance');
+  }
+
+  // Финально перебиваем все старые имена обработчиков финтренажёра.
+  window.renderFinanceTrainerSection1_70 = renderTrainer;
+  window.renderFinanceTrainerSection1_69 = renderTrainer;
+  window.renderFinanceTrainerSection1_64 = renderTrainer;
+  window.renderFinanceTrainerSection1_63 = renderTrainer;
+  window.renderFinanceTrainerSection1_62 = renderTrainer;
+  window.renderFinanceTrainerSection1 = renderTrainer;
+  window.renderFinanceSection1Trainer = renderTrainer;
+  try { renderFinanceTrainerSection1_69 = renderTrainer; } catch(e) {}
+  try { renderFinanceTrainerSection1_64 = renderTrainer; } catch(e) {}
+  try { renderFinanceTrainerSection1_63 = renderTrainer; } catch(e) {}
+  try { renderFinanceTrainerSection1 = renderTrainer; } catch(e) {}
+  try { renderFinanceSection1Trainer = renderTrainer; } catch(e) {}
 })();

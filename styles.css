@@ -5280,18 +5280,52 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
 @media(min-width:640px){.finance-hub-grid-v64{grid-template-columns:repeat(3,1fr)}.finance-section-list-v64{grid-template-columns:repeat(2,1fr)}.finance-impact-matrix-v64{grid-template-columns:repeat(3,1fr)}}
 
 /* =====================================================
-   v69 — Finance trainer link screen
+   v69 — Финтренажёр раздела 1: ссылка, копирование, предупреждение
    ===================================================== */
-.finance-trainer-warning-v69{
-  padding:14px;
-  margin:10px 0 12px;
-  border-radius:18px;
-  background:var(--lego-yellow-soft,#FFF3C8);
-  border:1px solid rgba(246,195,67,.48);
-}
-.finance-trainer-warning-v69 b{display:block;color:var(--lego-navy,#071B35);font-size:16px;margin-bottom:5px;}
-.finance-trainer-warning-v69 p{margin:0;color:var(--lego-gray-700,#4D5B6B);font-size:14px;line-height:1.45;}
-.finance-trainer-actions-v69{margin-top:12px;}
-.finance-copy-label-v69{display:block;margin-top:12px;}
-.finance-copy-label-v69 span{display:block;margin-bottom:6px;color:var(--lego-navy,#071B35);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;}
-.finance-copy-label-v69 input{font-size:12px;color:var(--lego-gray-700,#4D5B6B);background:#fff;}
+.finance-trainer-hero-v69 p:not(.eyebrow){color:rgba(255,255,255,.86)!important;}
+.finance-trainer-instruction-v69{margin:10px 0 14px;}
+.finance-trainer-instruction-v69 > div{background:#F8FBFF;border-color:rgba(47,95,159,.18);}
+.finance-trainer-link-box-v69{margin:12px 0;padding:13px;border-radius:16px;background:#F6F8FC;border:1px solid #DDE5EF;overflow:hidden;}
+.finance-trainer-link-box-v69 span{display:block;margin-bottom:5px;color:#1F4F8A;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;}
+.finance-trainer-link-box-v69 p{margin:0;color:#4D5B6B;font-size:12px;line-height:1.45;word-break:break-all;}
+.finance-trainer-actions-v69{margin:10px 0 12px;}
+.finance-trainer-warning-v69{margin:12px 0;padding:13px;border-radius:16px;background:#FFF3C8;border:1px solid rgba(246,195,67,.48);}
+.finance-trainer-warning-v69 b{display:block;margin-bottom:5px;color:#071B35;font-size:15px;}
+.finance-trainer-warning-v69 p{margin:0;color:#4D5B6B;font-size:14px;line-height:1.45;}
+@media(min-width:640px){.finance-trainer-actions-v69{grid-template-columns:1fr 1fr 1fr;}}
+
+/* =====================================================
+   v70 — Finance trainer copy flow
+   ===================================================== */
+.finance-trainer-hero-v70 p:not(.eyebrow){color:rgba(255,255,255,.86)!important;}
+.finance-toolbar-v70{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.finance-toolbar-v70 .btn{margin:0;}
+.finance-trainer-instruction-v70{margin:10px 0 14px;}
+.finance-trainer-instruction-v70 > div{background:#F8FBFF;border-color:rgba(47,95,159,.18);}
+.finance-trainer-link-box-v70{margin:12px 0;padding:13px;border-radius:16px;background:#F6F8FC;border:1px solid #DDE5EF;overflow:hidden;}
+.finance-trainer-link-box-v70 span{display:block;margin-bottom:5px;color:#1F4F8A;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;}
+.finance-trainer-link-box-v70 p{margin:0;color:#4D5B6B;font-size:12px;line-height:1.45;word-break:break-all;}
+.finance-trainer-actions-v70{margin:10px 0 12px;}
+.finance-trainer-warning-v70{margin:12px 0;padding:13px;border-radius:16px;background:#FFF3C8;border:1px solid rgba(246,195,67,.48);}
+.finance-trainer-warning-v70 b{display:block;margin-bottom:5px;color:#071B35;font-size:15px;}
+.finance-trainer-warning-v70 p{margin:0;color:#4D5B6B;font-size:14px;line-height:1.45;}
+@media(min-width:640px){.finance-trainer-actions-v70{grid-template-columns:1fr 1fr 1fr;}}
+@media(max-width:420px){.finance-toolbar-v70{grid-template-columns:1fr;}}
+
+
+/* =====================================================
+   v70 — Финтренажёр раздела 1: инструкция, копия и предупреждение
+   ===================================================== */
+.finance-trainer-hero-v70 p:not(.eyebrow){color:rgba(255,255,255,.86)!important;}
+.finance-trainer-instruction-v70{margin:10px 0 14px;}
+.finance-trainer-instruction-v70>div{background:#F8FBFF;border-color:rgba(47,95,159,.18);}
+.finance-trainer-instruction-v70 b{color:#071B35;}
+.finance-trainer-link-box-v70{margin:12px 0;padding:13px;border-radius:16px;background:#F6F8FC;border:1px solid #DDE5EF;overflow:hidden;}
+.finance-trainer-link-box-v70.copy{background:#FFF8E6;border-color:rgba(246,195,67,.45);}
+.finance-trainer-link-box-v70 span{display:block;margin-bottom:5px;color:#1F4F8A;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;}
+.finance-trainer-link-box-v70 p{margin:0;color:#4D5B6B;font-size:12px;line-height:1.45;word-break:break-all;}
+.finance-trainer-actions-v70{margin:10px 0 12px;}
+.finance-trainer-warning-v70{margin:12px 0;padding:13px;border-radius:16px;background:#FFF3C8;border:1px solid rgba(246,195,67,.48);}
+.finance-trainer-warning-v70 b{display:block;margin-bottom:5px;color:#071B35;font-size:15px;}
+.finance-trainer-warning-v70 p{margin:0;color:#4D5B6B;font-size:14px;line-height:1.45;}
+@media(min-width:640px){.finance-trainer-actions-v70{grid-template-columns:1fr 1fr 1fr;}}
