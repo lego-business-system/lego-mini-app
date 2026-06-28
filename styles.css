@@ -4358,3 +4358,92 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
   .finance-image-placeholder-v53{min-height:190px;}
   .finance-slide-body-v53 p{font-size:15px;line-height:1.58;}
 }
+
+
+/* =====================================================
+   v54 — finance lock state and compact lesson viewport
+   ===================================================== */
+.v54-bottom-nav .finance-bottom-locked-v54,
+.finance-main-card-v54:disabled,
+.finance-drawer-item-v54:disabled{
+  cursor:not-allowed!important;
+  opacity:.58!important;
+}
+.finance-main-card-v54:disabled:active,
+.finance-bottom-locked-v54:active,
+.finance-drawer-item-v54:disabled:active{
+  transform:none!important;
+}
+.finance-lesson-nav-v53{
+  position:sticky!important;
+  top:calc(68px + env(safe-area-inset-top))!important;
+  z-index:35!important;
+  margin-bottom:8px!important;
+  padding:6px!important;
+  border-radius:16px!important;
+}
+.finance-lesson-nav-v53 .btn{
+  min-height:42px!important;
+  margin:0!important;
+  padding:9px 10px!important;
+  font-size:14px!important;
+}
+.finance-lesson-cover-v53{
+  padding:13px!important;
+  margin-bottom:8px!important;
+}
+.finance-lesson-cover-v53 h1{
+  font-size:22px!important;
+  line-height:1.18!important;
+  margin-bottom:6px!important;
+}
+.finance-lesson-cover-v53 p:not(.eyebrow){
+  margin-bottom:0!important;
+  font-size:13px!important;
+  line-height:1.35!important;
+}
+.finance-cover-card-v53{
+  padding:13px!important;
+}
+.finance-cover-card-v53 h2{
+  margin-bottom:8px!important;
+  font-size:18px!important;
+  line-height:1.2!important;
+}
+.finance-cover-grid-v53{
+  gap:8px!important;
+}
+.finance-cover-line-v53{
+  padding:10px 11px!important;
+  border-radius:14px!important;
+}
+.finance-cover-line-v53 span{
+  margin-bottom:3px!important;
+  font-size:10px!important;
+}
+.finance-cover-line-v53 p{
+  font-size:14px!important;
+  line-height:1.38!important;
+}
+.finance-screen-counter-v53{
+  margin-top:10px!important;
+  padding-top:8px!important;
+}
+@media(max-width:420px){
+  .finance-lesson-nav-v53{
+    top:calc(64px + env(safe-area-inset-top))!important;
+    grid-template-columns:1fr 1fr 1fr!important;
+    gap:5px!important;
+  }
+  .finance-lesson-nav-v53 .btn{
+    min-height:39px!important;
+    padding:8px 6px!important;
+    font-size:12px!important;
+    border-radius:12px!important;
+  }
+  .finance-lesson-cover-v53 h1{font-size:20px!important;}
+  .finance-cover-line-v53 p{font-size:13px!important;line-height:1.35!important;}
+}
+@media(max-width:350px){
+  .finance-lesson-nav-v53{grid-template-columns:1fr!important;}
+}
