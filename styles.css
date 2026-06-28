@@ -3955,3 +3955,220 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
     width:86%!important;
   }
 }
+
+
+
+/* =====================================================
+   v49 — Финансовый помощник: модуль, разделы, тест
+   ===================================================== */
+.finance-hero-v49 .finance-status-pill{
+  margin-top:14px;
+}
+.finance-status-pill{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 14px;
+  border-radius:16px;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.18);
+}
+.finance-status-pill span{
+  color:#fff!important;
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  font-weight:900;
+}
+.finance-status-pill b{
+  color:#fff!important;
+  font-size:14px;
+  text-align:right;
+}
+.card-v2:not(.blue-card-v2):not(.hero-dashboard) .finance-status-pill{
+  background:#F6F8FC;
+  border-color:#DDE5EF;
+}
+.card-v2:not(.blue-card-v2):not(.hero-dashboard) .finance-status-pill span,
+.card-v2:not(.blue-card-v2):not(.hero-dashboard) .finance-status-pill b{
+  color:#071B35!important;
+}
+.finance-status-pill.passed{
+  background:rgba(22,168,154,.22);
+  border-color:rgba(22,168,154,.36);
+}
+.finance-status-pill.locked{
+  background:rgba(246,195,67,.16);
+  border-color:rgba(246,195,67,.32);
+}
+.finance-hub-grid-v49,
+.finance-section-list-v49{
+  display:grid;
+  gap:10px;
+}
+.finance-hub-card-v49,
+.finance-section-card-v49{
+  width:100%;
+  padding:16px;
+  border-radius:18px;
+  background:#fff;
+  border:1px solid var(--lego-border);
+  box-shadow:0 8px 20px rgba(7,27,53,.05);
+  text-align:left;
+}
+.finance-hub-card-v49.active,
+.finance-section-card-v49:not(.locked):active{
+  border-color:rgba(47,95,159,.34);
+}
+.finance-hub-card-v49 b,
+.finance-section-card-v49 b{
+  display:block;
+  color:var(--lego-navy);
+  font-size:18px;
+  line-height:1.25;
+  margin-bottom:6px;
+}
+.finance-hub-card-v49 p,
+.finance-section-card-v49 p{
+  margin:0 0 10px;
+  font-size:14px;
+  line-height:20px;
+  color:var(--lego-gray-700);
+}
+.finance-hub-card-v49 em,
+.finance-section-card-v49 em{
+  display:inline-flex;
+  align-items:center;
+  padding:6px 10px;
+  border-radius:999px;
+  background:var(--lego-steel-light);
+  color:var(--lego-steel-2);
+  font-size:12px;
+  font-style:normal;
+  font-weight:900;
+}
+.finance-section-card-v49>div>span{
+  display:block;
+  margin-bottom:5px;
+  color:var(--lego-steel-2);
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  font-weight:900;
+}
+.finance-section-card-v49.locked{
+  opacity:.64;
+  cursor:not-allowed;
+  background:#F6F8FC;
+  box-shadow:none;
+}
+.finance-section-card-v49.locked em{
+  background:#E7ECF3;
+  color:#7D8A99;
+}
+.finance-toolbar-v49{
+  margin-bottom:12px;
+}
+.finance-lesson-row-v49.finance-test-row-v49{
+  background:linear-gradient(135deg,#FFF8E6,#fff);
+  border-color:rgba(246,195,67,.50);
+}
+.finance-lesson-text-v49{
+  display:grid;
+  gap:0;
+}
+.finance-lesson-text-v49 p{
+  font-size:15px;
+  line-height:1.62;
+  margin:0 0 12px;
+  color:#263852;
+}
+.finance-slide-title-v49{
+  margin:22px 0 10px!important;
+  padding-top:14px;
+  border-top:1px solid #DDE5EF;
+  color:#071B35!important;
+}
+.finance-part-title-v49{
+  margin:18px 0 10px!important;
+  color:#071B35!important;
+}
+.finance-mini-head-v49{
+  display:inline-flex;
+  width:auto;
+  margin:8px 0 8px!important;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#E7F0FA;
+  color:#1F4F8A!important;
+  font-size:12px!important;
+  line-height:1.2!important;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  font-weight:900;
+}
+.finance-summary-grid-v49{
+  display:grid;
+  gap:10px;
+}
+.finance-summary-grid-v49>div{
+  padding:13px;
+  border-radius:16px;
+  background:#F6F8FC;
+  border:1px solid #DDE5EF;
+}
+.finance-summary-grid-v49 span{
+  display:block;
+  margin-bottom:5px;
+  color:#1F4F8A;
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  font-weight:900;
+}
+.finance-summary-grid-v49 p{
+  margin:0;
+  font-size:14px;
+  line-height:1.5;
+}
+.finance-question-case-v49{
+  margin:0 0 12px;
+  padding:12px;
+  border-radius:16px;
+  background:#FFF3C8;
+  border:1px solid rgba(246,195,67,.42);
+  color:#4D3B08;
+  font-size:14px;
+  line-height:1.5;
+  font-weight:700;
+}
+.finance-quiz-card-v49 h2{
+  line-height:1.25;
+}
+.finance-review-v49 .review-row.critical{
+  border-color:rgba(217,74,74,.45);
+  box-shadow:0 0 0 1px rgba(217,74,74,.12) inset;
+}
+.finance-home-card-v49.track-card.disabled,
+.finance-home-card-v49:disabled{
+  opacity:.68;
+  cursor:not-allowed;
+}
+@media(min-width:640px){
+  .finance-hub-grid-v49{
+    grid-template-columns:repeat(3,1fr);
+  }
+  .finance-section-list-v49{
+    grid-template-columns:repeat(2,1fr);
+  }
+}
+@media(max-width:420px){
+  .finance-status-pill{
+    display:grid;
+    gap:5px;
+  }
+  .finance-status-pill b{
+    text-align:left;
+  }
+}
