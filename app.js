@@ -17,6 +17,7 @@ const CONSULTATION_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeRSsxQa
 
 const HOMEWORK_SHEET_URLS = {
   "ENT-TR-01": "https://docs.google.com/spreadsheets/d/1wgmWpz1unczwuP5Pzy8j48I9rBVrSKV972brtxxdSSE/edit?gid=2085500086#gid=2085500086",
+  "ENT-TR-02": "https://docs.google.com/spreadsheets/d/1536b3X9gdhfw7OLkn6K_Msi9QDDtNONMmQ5fLBkPF6c/edit?gid=2114225953#gid=2114225953",
   "ENT-SV-01": "https://docs.google.com/spreadsheets/d/1GWtLkxXM-gBhPTh5ywfEZubQeI0U5A3sL3lD07vSCt8/edit?gid=1775915904#gid=1775915904",
   "ENT-PR-01": "https://docs.google.com/spreadsheets/d/1x8BPmDvz3AYTqhcOWc_eEHU4OTBBK5Un3DcFNv1Ljkc/edit?gid=595169054#gid=595169054",
   "ENT-BD-01": "https://docs.google.com/spreadsheets/d/1Qe4LN3CgfI0PyHLctWHWgRypV4FxJbKxGgV4sXjgjHY/edit?gid=159267392#gid=159267392",
@@ -29,7 +30,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v91-research-points-engine-20260629";
+const APP_CACHE_VERSION = "v92-trade-l02-homework-links-20260629";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -6052,10 +6053,11 @@ else installArchitectureObserverV35();
     var tableUrl = homeworkSheetUrl(code, hw);
     var exampleUrl = hw.exampleUrl || hw.exampleSheetUrl || hw.sampleUrl || hw.exampleFileUrl || '';
     var tableJson = JSON.stringify(String(tableUrl || '#'));
+    var tableLabel = hw.buttonLabel || 'Открыть рабочий шаблон';
     var statusPanel = completed ? `<div class="self-study-completed-panel"><b>Материал завершён</b><p>К рабочему шаблону можно возвращаться и дополнять его в любое время.</p></div>` : '';
     shell(`${card('blue-card-v2 self-study-hero', `<p class="eyebrow">применение системы</p><h1>${esc(typeof selfStudyReplaceTextV39 === 'function' ? selfStudyReplaceTextV39(hw.title || 'Самостоятельная работа') : (hw.title || 'Самостоятельная работа'))}</h1><p>Откройте рабочий шаблон, заполните его по своему бизнесу и зафиксируйте управленческий вывод.</p>`)}
       ${homeworkReviewNoticeHtml(code)}
-      ${card('', `${instruction}<div class="grid-v2"><button class="btn primary" onclick='openSelfStudyTemplateV43(${tableJson})'>Открыть рабочий шаблон</button>${exampleUrl ? externalButton('Открыть заполненный пример',exampleUrl,'secondary') : ''}</div>${statusPanel}<div class="grid-v2 self-study-nav"><button class="btn secondary" onclick="renderLessonHub()">← Вернуться к уроку</button><button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К материалам направления</button></div>`)}
+      ${card('', `${instruction}<div class="grid-v2"><button class="btn primary" onclick='openSelfStudyTemplateV43(${tableJson})'>${esc(tableLabel)}</button>${exampleUrl ? externalButton(hw.exampleButtonLabel || 'Открыть пример заполнения',exampleUrl,'secondary') : ''}</div>${statusPanel}<div class="grid-v2 self-study-nav"><button class="btn secondary" onclick="renderLessonHub()">← Вернуться к уроку</button><button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К материалам направления</button></div>`)}
       ${isAdminMode() ? card('', `<details class="admin-details"><summary>Служебное ТЗ таблицы и критерии</summary><h3>ТЗ таблицы</h3><pre class="text-pre">${esc(hw.tableTzText || 'ТЗ таблицы будет добавлено позже.')}</pre><h3>Критерии самопроверки</h3><pre class="text-pre">${esc(hw.gradingText || '')}</pre></details>`) : ''}`,'homework');
   };
   window.renderHomeworkStatus = function(){ return renderHomework(); };
@@ -7802,7 +7804,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
    v91 — исследовательские баллы: 1 новое действие = 1 балл
    ===================================================== */
 (function installResearchPointsV91(){
-  window.APP_UI_VERSION_V91 = 'v91-research-points-engine-20260629';
+  window.APP_UI_VERSION_V91 = 'v92-trade-l02-homework-links-20260629';
   try { window.APP_UI_VERSION_V89 = window.APP_UI_VERSION_V91; } catch(e) {}
   try { if (typeof LEGO_V24_CACHE_VERSION !== 'undefined') LEGO_V24_CACHE_VERSION = window.APP_UI_VERSION_V91; } catch(e) {}
   try { contentVersionV24 = function(){ return window.APP_UI_VERSION_V91; }; window.contentVersionV24 = contentVersionV24; } catch(e) {}
