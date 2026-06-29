@@ -29,7 +29,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v86-finance-student-open-manual-callouts-20260629";
+const APP_CACHE_VERSION = "v91-research-points-engine-20260629";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -7795,4 +7795,185 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
   window.canOpenLesson = canOpenLesson;
 
   if (state && state.catalog) patchTradeLesson2CatalogV89(state.catalog);
+})();
+
+
+/* =====================================================
+   v91 — исследовательские баллы: 1 новое действие = 1 балл
+   ===================================================== */
+(function installResearchPointsV91(){
+  window.APP_UI_VERSION_V91 = 'v91-research-points-engine-20260629';
+  try { window.APP_UI_VERSION_V89 = window.APP_UI_VERSION_V91; } catch(e) {}
+  try { if (typeof LEGO_V24_CACHE_VERSION !== 'undefined') LEGO_V24_CACHE_VERSION = window.APP_UI_VERSION_V91; } catch(e) {}
+  try { contentVersionV24 = function(){ return window.APP_UI_VERSION_V91; }; window.contentVersionV24 = contentVersionV24; } catch(e) {}
+
+  const RP_STORAGE_PREFIX = 'architecture_research_point_events_v91_';
+  const RP_POINTS = 1;
+
+  function rpUserSuffix(){
+    try {
+      const ids = typeof possibleIds === 'function' ? possibleIds() : [];
+      if (ids && ids[0]) return String(ids[0]).replace(/[^a-zA-Z0-9_-]/g, '_');
+      const names = typeof possibleUsernames === 'function' ? possibleUsernames() : [];
+      if (names && names[0]) return String(names[0]).replace(/[^a-zA-Z0-9_-]/g, '_');
+      const user = typeof getTelegramUser === 'function' ? getTelegramUser() : {};
+      if (user && user.id) return String(user.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+      if (user && user.username) return String(user.username).replace(/[^a-zA-Z0-9_-]/g, '_');
+    } catch(e) {}
+    return 'local';
+  }
+  function rpKey(){ return RP_STORAGE_PREFIX + rpUserSuffix(); }
+  function rpRead(){ try { const data = JSON.parse(localStorage.getItem(rpKey()) || '{}'); return data && typeof data === 'object' ? data : {}; } catch(e) { return {}; } }
+  function rpWrite(map){ try { localStorage.setItem(rpKey(), JSON.stringify(map || {})); } catch(e) {} }
+  function rpCanAward(){
+    try { if (typeof hasVerifiedAccessV32 === 'function' && !hasVerifiedAccessV32()) return false; } catch(e) {}
+    try { if (state && state.access === false) return false; } catch(e) {}
+    try { if (typeof isAdminMode === 'function' && isAdminMode()) return false; } catch(e) {}
+    return true;
+  }
+  function rpPad(v, size){ return String(Number(v || 0)).padStart(size || 3, '0'); }
+  function rpNow(){ return typeof nowIso === 'function' ? nowIso() : new Date().toISOString(); }
+  function rpLessonCode(){ try { return state && state.selectedLessonCode ? String(state.selectedLessonCode) : ''; } catch(e) { return ''; } }
+  function rpFormat(v){ return typeof formatPoints === 'function' ? formatPoints(Number(v || 0)) : String(Number(v || 0)); }
+  function rpCard(cls, html){ return typeof card === 'function' ? card(cls, html) : '<section class="card-v2 ' + (cls || '') + '">' + html + '</section>'; }
+  function rpShell(html, tab){ if (typeof shell === 'function') return shell(html, tab || 'profile'); const el = document.getElementById('app'); if (el) el.innerHTML = html; }
+
+  function rpRemoteSave(record){
+    try {
+      if (!tg || !tg.initData || !SAVE_PROGRESS_URL) return;
+      const lessonCode = (record && record.payload && record.payload.lessonCode) || (state && state.selectedLessonCode) || null;
+      fetch(SAVE_PROGRESS_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ initData:tg.initData, lessonCode, event:'research_point_awarded', payload:record })
+      }).catch(function(){});
+    } catch(e) {}
+  }
+
+  function awardResearchPointOnce(eventKey, eventType, payload){
+    const key = String(eventKey || '').trim().replace(/\s+/g, '_');
+    if (!key) return { awarded:false, reason:'EMPTY_EVENT_KEY' };
+    if (!rpCanAward()) return { awarded:false, reason:'NOT_ALLOWED' };
+    const map = rpRead();
+    if (map[key]) return { awarded:false, reason:'ALREADY_AWARDED' };
+    const record = { eventKey:key, eventType:String(eventType || 'research_event'), points:RP_POINTS, payload:Object.assign({}, payload || {}), createdAt:rpNow() };
+    map[key] = record;
+    rpWrite(map);
+    rpRemoteSave(record);
+    try { window.dispatchEvent(new CustomEvent('architecture:research-point-awarded', { detail:record })); } catch(e) {}
+    return { awarded:true, event:record };
+  }
+  function getResearchPointEvents(){ return rpRead(); }
+  function getResearchPointsTotal(){ const map = rpRead(); return Object.keys(map).reduce(function(sum,k){ return sum + Number((map[k] && map[k].points) || 0); }, 0); }
+  function getResearchEventsCount(){ return Object.keys(rpRead()).length; }
+  function getResearchCountByPrefix(prefix){ const map = rpRead(); return Object.keys(map).filter(function(k){ return k.indexOf(prefix) === 0; }).length; }
+
+  window.awardResearchPointOnceV91 = awardResearchPointOnce;
+  window.getResearchPointEventsV91 = getResearchPointEvents;
+  window.getResearchPointsTotalV91 = getResearchPointsTotal;
+  window.getResearchEventsCountV91 = getResearchEventsCount;
+
+  function bindGlobal(name, fn){ window[name] = fn; try { eval(name + ' = window["' + name + '"];'); } catch(e) {} }
+  bindGlobal('totalPoints', function(){ return getResearchPointsTotal(); });
+
+  function wrapBefore(name, before){
+    const original = window[name];
+    if (typeof original !== 'function' || original.__researchWrappedV91) return;
+    const wrapped = function(){ try { before && before.apply(this, arguments); } catch(e){ console.warn('RP_BEFORE_' + name, e); } return original.apply(this, arguments); };
+    wrapped.__researchWrappedV91 = true;
+    bindGlobal(name, wrapped);
+  }
+  function wrapAfter(name, after){
+    const original = window[name];
+    if (typeof original !== 'function' || original.__researchWrappedAfterV91) return;
+    const wrapped = function(){
+      const args = Array.prototype.slice.call(arguments);
+      const result = original.apply(this, arguments);
+      Promise.resolve(result).finally(function(){ try { after && after.apply(null, args); } catch(e){ console.warn('RP_AFTER_' + name, e); } });
+      return result;
+    };
+    wrapped.__researchWrappedAfterV91 = true;
+    bindGlobal(name, wrapped);
+  }
+
+  wrapBefore('renderHome', function(){ awardResearchPointOnce('app:first_open', 'app_first_open', { screen:'home' }); });
+  wrapBefore('renderProfile', function(){ awardResearchPointOnce('profile:first_open', 'profile_open', { screen:'profile' }); });
+  wrapBefore('renderLearning', function(){ awardResearchPointOnce('module:entrepreneur', 'module_open', { module:'entrepreneur' }); });
+  wrapBefore('renderBookChallenge', function(){ awardResearchPointOnce('module:books100', 'module_open', { module:'books100' }); });
+
+  wrapBefore('renderActivityLessons', function(key){ const activityKey = String(key || (state && state.selectedActivityKey) || '').trim(); if (activityKey) awardResearchPointOnce('activity:' + activityKey, 'activity_open', { activityKey }); });
+
+  wrapAfter('openLesson', function(code){ const lessonCode = String(code || '').trim(); if (!lessonCode) return; try { if (state && state.selectedLessonCode !== lessonCode) return; } catch(e) {} awardResearchPointOnce('lesson:' + lessonCode, 'lesson_open', { lessonCode }); });
+  wrapBefore('startSlides', function(){ const code = rpLessonCode(); if (code) awardResearchPointOnce('lesson_part:' + code + ':presentation', 'lesson_part_open', { lessonCode:code, part:'presentation' }); });
+  wrapAfter('renderSlide', function(){ const code = rpLessonCode(); const slideNo = Number((state && state.slideIndex) || 0) + 1; if (code && slideNo > 0) awardResearchPointOnce('slide:' + code + ':' + rpPad(slideNo, 3), 'slide_open', { lessonCode:code, slideNo }); });
+  wrapBefore('startQuiz', function(){ const code = rpLessonCode(); if (code) awardResearchPointOnce('quiz_open:' + code, 'quiz_open', { lessonCode:code }); });
+  wrapBefore('startBooks', function(){ const code = rpLessonCode(); if (code) awardResearchPointOnce('lesson_part:' + code + ':books', 'lesson_part_open', { lessonCode:code, part:'books' }); });
+  wrapAfter('renderBook', function(){ const code = rpLessonCode(); const screenNo = Number((state && state.bookIndex) || 0) + 1; if (code && screenNo > 0) awardResearchPointOnce('summary:' + code + ':' + rpPad(screenNo, 3), 'summary_page_open', { lessonCode:code, screenNo }); });
+  wrapBefore('renderHomework', function(){
+    const code = rpLessonCode();
+    if (!code) return;
+    let canOpen = false;
+    try { canOpen = Boolean((typeof isAdminMode === 'function' && isAdminMode()) || (typeof isStageDone === 'function' && isStageDone(code,'books')) || (typeof isSelfStudyCompletedV39 === 'function' && isSelfStudyCompletedV39(code))); } catch(e) {}
+    if (canOpen) awardResearchPointOnce('lesson_part:' + code + ':homework', 'lesson_part_open', { lessonCode:code, part:'homework' });
+  });
+  wrapBefore('openSelfStudyTemplateV43', function(url){ const code = rpLessonCode(); const target = String(url || '').trim(); if (code && target && target !== '#') awardResearchPointOnce('homework_link:' + code, 'homework_link_open', { lessonCode:code, url:target }); });
+
+  ['openFinanceAssistantV81','openFinanceV82','renderFinancialAssistantV77','renderFinancialAssistant'].forEach(function(name){ wrapBefore(name, function(){ awardResearchPointOnce('module:finance_assistant', 'module_open', { module:'finance_assistant' }); }); });
+  ['renderFinanceModuleHomeV77','renderFinanceModuleHome'].forEach(function(name){ wrapBefore(name, function(){ awardResearchPointOnce('block:finance_assistant:finance_module', 'block_open', { module:'finance_assistant', block:'finance_module' }); }); });
+  ['renderFinanceSectionV77','renderFinanceSection'].forEach(function(name){ wrapBefore(name, function(sectionId){ const id = Number(sectionId || 1); awardResearchPointOnce('finance_section:' + rpPad(id, 2), 'finance_section_open', { module:'finance_assistant', sectionId:id }); }); });
+  ['renderFinanceLessonV77','renderFinanceLesson'].forEach(function(name){
+    const original = window[name];
+    if (typeof original !== 'function' || original.__researchFinanceLessonV91) return;
+    const wrapped = function(sectionId, lessonId, screenIndex){
+      const s = Number(sectionId || 1), l = Number(lessonId || 1), idx = Number(screenIndex || 0);
+      const fCode = 'FIN-S' + rpPad(s, 2) + '-L' + rpPad(l, 2);
+      awardResearchPointOnce('lesson:' + fCode, 'lesson_open', { module:'finance_assistant', sectionId:s, lessonId:l, lessonCode:fCode });
+      const result = original.apply(this, arguments);
+      setTimeout(function(){
+        try {
+          const slideCard = document.querySelector('.finance-slide-card-v83, .finance-slide-card-v77');
+          if (!slideCard) return;
+          const eyebrow = slideCard.querySelector('.eyebrow');
+          const text = eyebrow ? String(eyebrow.textContent || '') : '';
+          const match = text.match(/слайд\s+(\d+)/i);
+          const slideNo = match ? Number(match[1]) : (idx > 0 ? idx : 0);
+          if (slideNo > 0) awardResearchPointOnce('slide:' + fCode + ':' + rpPad(slideNo, 3), 'slide_open', { module:'finance_assistant', sectionId:s, lessonId:l, lessonCode:fCode, slideNo });
+        } catch(e) {}
+      }, 0);
+      return result;
+    };
+    wrapped.__researchFinanceLessonV91 = true;
+    bindGlobal(name, wrapped);
+  });
+  ['startFinanceSection1TestV77','startFinanceSection1Test'].forEach(function(name){ wrapBefore(name, function(){ awardResearchPointOnce('quiz_open:FIN-S01', 'quiz_open', { module:'finance_assistant', sectionId:1 }); }); });
+  ['renderFinanceTrainerSection1V77','renderFinanceTrainerSection1'].forEach(function(name){ wrapBefore(name, function(){ awardResearchPointOnce('lesson_part:FIN-S01:trainer', 'lesson_part_open', { module:'finance_assistant', sectionId:1, part:'trainer' }); }); });
+
+  document.addEventListener('click', function(e){
+    try {
+      const link = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+      if (!link) return;
+      const href = String(link.getAttribute('href') || link.href || '').trim();
+      if (!href || href === '#' || href.indexOf('docs.google.com/spreadsheets') === -1) return;
+      if (href.indexOf('1WsPb_DHt3ksIpCAZIMxgMDuSojIbztbV_5tthhdJ3Eg') !== -1) { awardResearchPointOnce('homework_link:FIN-S01:trainer', 'homework_link_open', { module:'finance_assistant', sectionId:1, url:href }); return; }
+      const code = rpLessonCode();
+      if (code) awardResearchPointOnce('homework_link:' + code, 'homework_link_open', { lessonCode:code, url:href });
+    } catch(err) {}
+  }, true);
+
+  function renderResearchPointsRules(){
+    const total = getResearchPointsTotal();
+    const opened = getResearchEventsCount();
+    const slides = getResearchCountByPrefix('slide:');
+    const summaries = getResearchCountByPrefix('summary:');
+    rpShell(`${rpCard('blue-card-v2 progress-rules-hero-v40 research-rules-hero-v91', `<p class="eyebrow">баллы библиотеки</p><h1>Как начисляются баллы</h1><p>Баллы начисляются за исследование библиотеки бизнес-систем: за первое открытие новых модулей, блоков, уроков, слайдов, тестов, саммари и рабочих материалов.</p>`)}
+      ${rpCard('', `<h2>Главное правило</h2><p>Каждое новое действие даёт <b>1 балл</b> только один раз за всё время. Повторное открытие уже изученного элемента баллы не добавляет.</p><div class="score-rule-grid-v40"><div><span>+1</span><b>Первый вход</b></div><div><span>+1</span><b>Модуль</b></div><div><span>+1</span><b>Блок</b></div><div><span>+1</span><b>Урок</b></div><div><span>+1</span><b>Слайд</b></div><div><span>+1</span><b>Тест</b></div><div><span>+1</span><b>Саммари</b></div><div><span>+1</span><b>Рабочий материал</b></div></div>`)}
+      ${rpCard('', `<h2>Текущий счёт</h2><div class="profile-score-grid"><div><span>Всего баллов</span><b>${rpFormat(total)}</b></div><div><span>Открыто элементов</span><b>${rpFormat(opened)}</b></div><div><span>Слайды</span><b>${rpFormat(slides)}</b></div><div><span>Саммари</span><b>${rpFormat(summaries)}</b></div></div><p class="small">Баллы показывают активность исследования библиотеки. Понимание материала по-прежнему проверяется тестами, тренажёрами и практическими заданиями.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`, 'profile');
+  }
+  bindGlobal('renderResearchPointsRulesV91', renderResearchPointsRules);
+  bindGlobal('renderPointsRulesV43', renderResearchPointsRules);
+  bindGlobal('renderPointsRulesV42', renderResearchPointsRules);
+  bindGlobal('renderPointsRulesV41', renderResearchPointsRules);
+  bindGlobal('renderProgressRulesV40', renderResearchPointsRules);
+
+  setTimeout(function(){ awardResearchPointOnce('app:first_open', 'app_first_open', { source:'startup' }); }, 600);
 })();
