@@ -5514,3 +5514,21 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
   .finance-slide-image-v83{min-height:130px!important;}
   .finance-slide-body-v83 p{font-size:14px!important;}
 }
+
+
+/* v86: закрытые карточки внутри финансового помощника */
+.finance-hub-card-v49.is-locked-finance,
+.finance-hub-card-v49.is-locked-finance:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+  filter: grayscale(0.15);
+  pointer-events: none;
+}
+.finance-hub-card-v49.is-locked-finance em {
+  background: rgba(120, 120, 120, 0.12);
+  color: rgba(40, 48, 64, 0.72);
+}
+.finance-hub-card-v49.is-locked-finance b,
+.finance-hub-card-v49.is-locked-finance p {
+  color: rgba(40, 48, 64, 0.72);
+}
