@@ -5532,3 +5532,60 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
 .finance-hub-card-v49.is-locked-finance p {
   color: rgba(40, 48, 64, 0.72);
 }
+
+
+/* v87 — callouts for published entrepreneur lessons */
+.slide-callouts-v87{
+  display:grid;
+  gap:12px;
+  margin-top:18px;
+}
+.slide-callout-v87{
+  border:1px solid rgba(15,45,71,.13);
+  border-radius:18px;
+  padding:14px 16px;
+  background:#fffaf0;
+  box-shadow:0 10px 22px rgba(15,45,71,.06);
+}
+.slide-callout-v87 span{
+  display:block;
+  margin-bottom:6px;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:#0f2d47;
+}
+.slide-callout-v87 p{
+  margin:0;
+  line-height:1.55;
+}
+.slide-callout-v87.thought{background:#f7fbff;border-color:rgba(15,45,71,.16)}
+.slide-callout-v87.error{background:#fff4e8;border-color:rgba(229,122,31,.28)}
+.slide-callout-v87.conclusion{background:#f3fbf2;border-color:rgba(49,136,76,.24)}
+.book-practical-v87{
+  margin-top:16px;
+  padding:14px 16px;
+  border-radius:18px;
+  background:#f7fbff;
+  border:1px solid rgba(15,45,71,.14);
+}
+.book-practical-v87 b{
+  display:block;
+  margin-bottom:6px;
+  color:#0f2d47;
+}
+.book-practical-v87 p{margin:0;}
+.mini-table-v87{
+  margin:12px 0;
+  padding:12px 14px;
+  border-radius:14px;
+  background:#fff;
+  border:1px solid rgba(15,45,71,.12);
+  overflow:auto;
+}
+.mini-table-v87 p{
+  margin:4px 0;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size:12px;
+}

@@ -7689,3 +7689,110 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
     };
   }
 })();
+
+
+/* =====================================================
+   v89 — clean Trade lesson 2 publication: buyer flow, native content/lessons path
+   Adds ENT-TR-02 into "Я предприниматель → Торговля",
+   removes sequential dependency between published lessons,
+   and connects the lesson JSON/images by stable paths.
+   ===================================================== */
+(function installTradeLesson2V89(){
+  window.APP_UI_VERSION_V89 = 'v89-trade-l02-clean-native-path-20260629';
+  var TRADE_L02_CODE_V89 = 'ENT-TR-02';
+  var TRADE_L02_CONTENT_URL_V89 = 'content/lessons/ENT-TR-02.json';
+  var TRADE_L02_META_V89 = {
+    code: TRADE_L02_CODE_V89,
+    number: 2,
+    activityKey: 'trade',
+    activityTitle: 'Торговля',
+    title: 'Поток покупателей: от дефицита к управляемому росту',
+    description: 'Как понять, является ли поток покупателей ограничением, рассчитать экономику визита и запустить управляемый эксперимент роста.',
+    status: 'ready',
+    slidesCount: 50,
+    quizCount: 18,
+    bookScreensCount: 54,
+    contentUrl: TRADE_L02_CONTENT_URL_V89
+  };
+
+  try {
+    if (typeof LEGO_V24_CACHE_VERSION !== 'undefined') LEGO_V24_CACHE_VERSION = window.APP_UI_VERSION_V89;
+  } catch(e) {}
+  try {
+    contentVersionV24 = function(){ return window.APP_UI_VERSION_V89; };
+  } catch(e) {}
+
+  function patchTradeLesson2CatalogV89(catalog){
+    if (!catalog) return catalog;
+    catalog.activities = Array.isArray(catalog.activities) ? catalog.activities : [];
+    catalog.lessons = Array.isArray(catalog.lessons) ? catalog.lessons : [];
+    var trade = catalog.activities.find(function(a){ return a && a.key === 'trade'; });
+    if (!trade) {
+      catalog.activities.push({ key:'trade', title:'Торговля', description:'Система управления торговым бизнесом: поток, конверсия, чек, маржа, запасы и деньги.' });
+    }
+    var idx = catalog.lessons.findIndex(function(l){ return l && l.code === TRADE_L02_CODE_V89; });
+    if (idx >= 0) catalog.lessons[idx] = Object.assign({}, catalog.lessons[idx], TRADE_L02_META_V89);
+    else catalog.lessons.push(Object.assign({}, TRADE_L02_META_V89));
+    catalog.lessons.sort(function(a,b){
+      if (String(a.activityKey) !== String(b.activityKey)) return String(a.activityKey).localeCompare(String(b.activityKey));
+      return Number(a.number || 0) - Number(b.number || 0);
+    });
+    return catalog;
+  }
+  window.patchTradeLesson2CatalogV89 = patchTradeLesson2CatalogV89;
+
+  var loadCatalogBeforeTradeL02V89 = typeof loadCatalog === 'function' ? loadCatalog : null;
+  if (loadCatalogBeforeTradeL02V89) {
+    loadCatalog = async function(){
+      var catalog = await loadCatalogBeforeTradeL02V89.apply(this, arguments);
+      state.catalog = patchTradeLesson2CatalogV89(catalog);
+      return state.catalog;
+    };
+    window.loadCatalog = loadCatalog;
+  }
+
+  var loadLessonBeforeTradeL02V89 = typeof loadLesson === 'function' ? loadLesson : null;
+  if (loadLessonBeforeTradeL02V89) {
+    loadLesson = async function(code){
+      if (String(code) === TRADE_L02_CODE_V89) {
+        var cached = state.lessonCache && state.lessonCache[TRADE_L02_CODE_V89];
+        if (cached && cached.__version === window.APP_UI_VERSION_V89) return cached;
+        var response = await fetch(TRADE_L02_CONTENT_URL_V89 + '?v=' + encodeURIComponent(window.APP_UI_VERSION_V89), { cache:'no-cache' });
+        if (!response.ok) throw new Error('TRADE_L02_CONTENT_LOAD_FAILED');
+        var data = await response.json();
+        data.__version = window.APP_UI_VERSION_V89;
+        state.lessonCache[TRADE_L02_CODE_V89] = data;
+        return data;
+      }
+      return loadLessonBeforeTradeL02V89.apply(this, arguments);
+    };
+    window.loadLesson = loadLesson;
+  }
+
+  var readyFirstBeforeTradeL02V89 = typeof readyFirstLessonCodesV24 === 'function' ? readyFirstLessonCodesV24 : null;
+  if (readyFirstBeforeTradeL02V89) {
+    readyFirstLessonCodesV24 = function(){
+      var list = readyFirstBeforeTradeL02V89.apply(this, arguments) || [];
+      return Array.from(new Set(list.concat([TRADE_L02_CODE_V89])));
+    };
+    window.readyFirstLessonCodesV24 = readyFirstLessonCodesV24;
+  }
+
+  var isLessonPreparedBeforeTradeL02V89 = typeof isLessonPrepared === 'function' ? isLessonPrepared : null;
+  if (isLessonPreparedBeforeTradeL02V89) {
+    isLessonPrepared = function(meta){
+      if (meta && meta.code === TRADE_L02_CODE_V89) return true;
+      return isLessonPreparedBeforeTradeL02V89.apply(this, arguments);
+    };
+    window.isLessonPrepared = isLessonPrepared;
+  }
+
+  canOpenLesson = function(meta){
+    if (!meta) return false;
+    if (typeof isAdminMode === 'function' && isAdminMode()) return true;
+    return typeof isLessonPrepared === 'function' ? Boolean(isLessonPrepared(meta)) : String(meta.status || '').toLowerCase() === 'ready';
+  };
+  window.canOpenLesson = canOpenLesson;
+
+  if (state && state.catalog) patchTradeLesson2CatalogV89(state.catalog);
+})();
