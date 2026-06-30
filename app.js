@@ -592,7 +592,7 @@ function doneSummaryHtml() {
   const hw = lessons.filter(l => isStageDone(l.code,'homeworkVerified')).length;
   const insights = loadInsights().length;
   const ch = getChallengeState();
-  return card('done-summary-card', `<h2>Что уже сделано</h2><div class="done-grid"><div><span>Презентации</span><b>${presentation}</b></div><div><span>Тесты</span><b>${quiz}</b></div><div><span>Саммари</span><b>${books}</b></div><div><span>Принятые ДЗ</span><b>${hw}</b></div><div><span>Книги челленджа</span><b>${Number(ch.passedBooks || 0)}</b></div><div><span>Мои выводы</span><b>${insights}</b></div></div>`);
+  return card('done-summary-card', `<h2>Что уже сделано</h2><div class="done-grid"><div><span>Презентации</span><b>${presentation}</b></div><div><span>Тесты</span><b>${quiz}</b></div><div><span>Саммари</span><b>${books}</b></div><div><span>Принятые ДЗ</span><b>${hw}</b></div><div><span>Топ-100 книг</span><b>${Number(ch.passedBooks || 0)}</b></div><div><span>Мои выводы</span><b>${insights}</b></div></div>`);
 }
 /* removed obsolete duplicate function insightsProfileHtml in v95 cleanup */
 /* removed obsolete duplicate function consultationCardsHtml in v95 cleanup */
@@ -622,8 +622,8 @@ function titleHelpHtml() {
   const rows = LEGO_LEVELS.map(row => `<div><b>${row.level}. ${esc(row.title)}</b><span>${row.level === 25 ? '1000+ учебных единиц' : `${row.min}–${row.max} учебных единиц`}</span></div>`).join('');
   return `<div id="title-help-panel" class="title-help-panel" style="display:none">
     <div class="title-help-head"><b>Как работает уровень</b><button onclick="toggleTitleHelp(false)" aria-label="Закрыть">×</button></div>
-    <p>Уровень показывает накопленный учебный опыт. Учебные единицы начисляются за полностью закрытые уроки, книги челленджа после мини-теста, дополнительные материалы и специальные задания.</p>
-    <p>В челлендже одна книга после пройденного теста даёт +1 учебную единицу. Баллы начисляются отдельно и могут тратиться на возможности внутри системы.</p>
+    <p>Уровень показывает накопленный учебный опыт. Учебные единицы начисляются за полностью закрытые уроки, книги из блока «Топ-100 книг для бизнеса» после мини-теста, дополнительные материалы и специальные задания.</p>
+    <p>В блоке «Топ-100 книг для бизнеса» книги открыты сразу, а прочитанные саммари отмечаются в профиле.</p>
     <p>Достижение «Мастер Л.Е.Г.О» открывается после 1000 учебных единиц. На последнем уровне будет доступен суперсекретный бонус.</p>
     <div class="level-help-list">${rows}</div>
   </div>`;
@@ -842,7 +842,7 @@ function pickLatestDateValue() {
 
 
 /* =====================================================
-   v17 — 100 книг за 100 дней: запуск челленджа, админ-просмотр, книга дня, мини-тест
+   v17 — Топ-100 книг для бизнеса: запуск книжный блока, админ-просмотр, саммари книги, мини-тест
    ===================================================== */
 
 const BOOKS100_INDEX_URL = "content/challenges/books100/index.json";
@@ -956,7 +956,7 @@ async function startBooks100Challenge(){
     unitsEarned: 0,
     passedBookIds: [],
     missedBookIds: [],
-    currentBookTitle: firstBook ? firstBook.title : "книга дня",
+    currentBookTitle: firstBook ? firstBook.title : "саммари книги",
     todayStage: "саммари не открыто"
   });
   renderBookChallenge();
@@ -1044,7 +1044,7 @@ function books100CurrentStateCardV18(ch, currentBook, ms){
   const btn = currentBook ? (passed
     ? `<button class="btn secondary" onclick="openBooks100Book(${Number(currentBook.day)}, false)">Открыть зачтённую книгу</button>`
     : `<button class="btn primary" onclick="openBooks100Book(${Number(currentBook.day)}, false)">Открыть книгу дня</button>`) : "";
-  return `<div class="books100-current"><div><p class="eyebrow">книга дня</p><h2>${esc(currentBook ? currentBook.title : 'Следующие книги готовятся')}</h2><p>${esc(currentBook ? (currentBook.author||'') : 'Добавьте следующие книги в content/challenges/books100/.')}</p><p class="small">${note}</p></div>${btn}</div>`;
+  return `<div class="books100-current"><div><p class="eyebrow">саммари книги</p><h2>${esc(currentBook ? currentBook.title : 'Следующие книги готовятся')}</h2><p>${esc(currentBook ? (currentBook.author||'') : 'Добавьте следующие книги в content/challenges/books100/.')}</p><p class="small">${note}</p></div>${btn}</div>`;
 }
 /* removed obsolete duplicate function renderBookChallenge in v95 cleanup */
 /* removed obsolete duplicate function openBooks100Book in v95 cleanup */
@@ -1059,7 +1059,7 @@ async function renderBooks100Reading(){
   const screen = screens[i] || {};
   const total = screens.length || 1;
   const image = screen.image || `assets/challenges/books100/${String(book.day).padStart(3,'0')}/screen_${String(i+1).padStart(2,'0')}.png`;
-  const nav = `<div class="nav-panel-v2 nav-panel-v2-three"><button class="btn secondary" onclick="renderBookChallenge()">К челленджу</button><button class="btn secondary" ${i===0?'disabled':''} onclick="prevBooks100Screen()">Назад</button><button class="btn primary" onclick="nextBooks100Screen()">${i===total-1?'К мини-тесту':'Далее'}</button></div>`;
+  const nav = `<div class="nav-panel-v2 nav-panel-v2-three"><button class="btn secondary" onclick="renderBookChallenge()">К списку книг</button><button class="btn secondary" ${i===0?'disabled':''} onclick="prevBooks100Screen()">Назад</button><button class="btn primary" onclick="nextBooks100Screen()">${i===total-1?'К мини-тесту':'Далее'}</button></div>`;
   shell(`${nav}<div class="media-counter">Книга: ${esc(book.title)} · слайд ${i+1}/${total}</div><div class="media-box-v2"><img src="${image}?v=${BOOKS100_CACHE_VERSION_V18}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><div class="image-missing-v2" style="display:none"><b>Слайд ${i+1}</b><p>Иллюстрация в подготовке.</p></div></div>${books100ScreenTextHtml(book,screen)}`,'home');
 }
 async function startBooks100Quiz(){
@@ -1076,7 +1076,7 @@ async function renderBooks100QuizQuestion(){
   const i = Math.max(0, Math.min(state.books100QuestionIndex, quiz.length-1));
   state.books100QuestionIndex = i;
   const q = quiz[i]; const selected = state.books100Answers[i];
-  const nav = `<div class="nav-panel-v2 nav-panel-v2-three"><button class="btn secondary" onclick="renderBookChallenge()">К челленджу</button><button class="btn secondary" ${i===0?'disabled':''} onclick="prevBooks100Question()">Назад</button><button class="btn secondary" onclick="renderBooks100Reading()">К саммари</button></div>`;
+  const nav = `<div class="nav-panel-v2 nav-panel-v2-three"><button class="btn secondary" onclick="renderBookChallenge()">К списку книг</button><button class="btn secondary" ${i===0?'disabled':''} onclick="prevBooks100Question()">Назад</button><button class="btn secondary" onclick="renderBooks100Reading()">К саммари</button></div>`;
   shell(`${nav}<div class="quiz-card-v2 books100-quiz-card"><p class="eyebrow">Мини-тест · вопрос ${i+1}/${quiz.length}</p><h2>${esc(q.q)}</h2><p class="small">Выберите управленчески точный вариант. Ответы близкие по смыслу: тест проверяет применение книги.</p>${(q.a||[]).map((a,idx)=>`<button class="option-v2 ${Number(selected)===idx?'selected':''}" onclick="selectBooks100Answer(${idx})">${quizOptionLabel(idx)}. ${esc(a)}</button>`).join('')}</div>`,'home');
 }
 function selectBooks100Answer(i){
@@ -1173,7 +1173,7 @@ function activeChallengeCardHtml(){
   if (!books100IsStartedV19(ch)) return "";
   const ms = books100RemainingMs(ch);
   const reward = books100RewardForCurrent(ch);
-  const html = card('challenge-active-card', `<p class="eyebrow">ежедневная задача</p><h2>100 книг за 100 дней</h2><div class="challenge-grid"><div><span>День</span><b>${Number(ch.currentDay||1)} / 100</b></div><div><span>Осталось</span>${books100TimerHtmlV19(ch, ms)}</div><div><span>Серия</span><b>${Number(ch.streak||0)} подряд</b></div><div><span>Награда</span><b>${formatPoints(books100RewardForCurrent(ch))} баллов</b></div></div><p><b>Книга:</b> ${esc(ch.currentBookTitle||'книга дня')}</p><p><b>Этап:</b> ${esc(ch.todayStage||'саммари не открыто')}</p><button class="btn primary" onclick="renderBookChallenge()">Продолжить челлендж</button>`);
+  const html = card('challenge-active-card', `<p class="eyebrow">библиотека книг</p><h2>Топ-100 книг для бизнеса</h2><div class="challenge-grid"><div><span>День</span><b>${Number(ch.currentDay||1)} / 100</b></div><div><span>Осталось</span>${books100TimerHtmlV19(ch, ms)}</div><div><span>Статус</span><b>${Number(ch.streak||0)} подряд</b></div><div><span>Награда</span><b>${formatPoints(books100RewardForCurrent(ch))} баллов</b></div></div><p><b>Книга:</b> ${esc(ch.currentBookTitle||'саммари книги')}</p><p><b>Этап:</b> ${esc(ch.todayStage||'саммари не открыто')}</p><button class="btn primary" onclick="renderBookChallenge()">Продолжить чтение</button>`);
   setTimeout(()=>startBooks100LiveTimerV19(new Date(ch.dayStartedAt).getTime() + books100DayMs()), 0);
   return html;
 }
@@ -1199,7 +1199,7 @@ async function finishBooks100Quiz(){
   const passed = score >= passScore;
   let resultNotice = "";
   if (state.books100AdminPreview){
-    resultNotice = `<p>Это режим администратора. Баллы, серия и учебные единицы не изменяются.</p>`;
+    resultNotice = `<p>Это режим администратора. Баллы, статус и учебные единицы не изменяются.</p>`;
   } else {
     try{
       const data = await books100ApiV18("quiz_completed", { book: books100BookPayloadV18(bookMeta), books: books100BooksPayloadV18(index), score, total: quiz.length, passed, answers: state.books100Answers });
@@ -1217,7 +1217,7 @@ async function finishBooks100Quiz(){
   const msg = passed
     ? `<h1>Книга зачтена</h1><p>Результат: <b>${score}/${quiz.length}</b>. Проходной уровень: <b>${passScore}/${quiz.length}</b>.</p>${resultNotice}`
     : `<h1>Мини-тест не пройден</h1><p>Результат: <b>${score}/${quiz.length}</b>. Проходной уровень: <b>${passScore}/${quiz.length}</b>.</p><p>Лучше спокойно вернуться к саммари, перечитать ключевые слайды и пройти тест повторно до окончания 24 часов.</p>${resultNotice}`;
-  shell(`${card(passed?'result-ok-v2':'result-bad-v2', `${msg}<div class="grid-v2">${passed?'<button class="btn primary" onclick="renderBookChallenge()">К челленджу</button>':'<button class="btn primary" onclick="renderBooks100Reading()">Вернуться к саммари</button><button class="btn secondary" onclick="startBooks100Quiz()">Пройти тест заново</button>'}<button class="btn secondary" onclick="renderHome()">На главную</button></div>`)}${card('',books100QuizReviewHtml(book))}`,'home');
+  shell(`${card(passed?'result-ok-v2':'result-bad-v2', `${msg}<div class="grid-v2">${passed?'<button class="btn primary" onclick="renderBookChallenge()">К списку книг</button>':'<button class="btn primary" onclick="renderBooks100Reading()">Вернуться к саммари</button><button class="btn secondary" onclick="startBooks100Quiz()">Пройти тест заново</button>'}<button class="btn secondary" onclick="renderHome()">На главную</button></div>`)}${card('',books100QuizReviewHtml(book))}`,'home');
 }
 
 
@@ -1401,22 +1401,22 @@ function books100VisibleStudentBooksV20(index, ch){
 }
 function renderBookChallengeFromStateV20(index, ch, syncing, errorText){
   if(isAdminMode()){
-    shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">режим администратора</p><h1>100 книг за 100 дней</h1><p>Все загруженные книги открыты для просмотра без таймера, блокировок и начисления баллов. Список показывается без тяжёлых обложек, чтобы открываться быстро.</p>`)}
+    shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">режим администратора</p><h1>Топ-100 книг для бизнеса</h1><p>Все загруженные книги открыты для просмотра без таймера, блокировок и начисления баллов. Список показывается без тяжёлых обложек, чтобы открываться быстро.</p>`)}
       ${card('', `<h2>Загруженные книги</h2><p class="small">Подключено: ${(index.books||[]).length}. Здесь проверяется текст, картинки и мини-тесты. Обложки не грузятся в списке — изображения открываются внутри книги.</p><div class="books100-list">${(index.books||[]).map(b=>books100Card(b,ch,true)).join('')}</div><div class="grid-v2"><button class="btn secondary" onclick="resetBooks100Challenge()">Сбросить своё тестовое состояние</button><button class="btn secondary" onclick="forceBooks100Miss()">Сымитировать пропуск суток</button></div>`)}
       ${card('', `<button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
     return;
   }
   if(!books100IsStartedV19(ch)){
-    shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">ежедневный челлендж</p><h1>100 книг за 100 дней</h1><p>При первом запуске открывается первая книга и начинается окно на 24 часа. Зачёт книги даёт +1 учебную единицу и баллы серии. Следующая книга открывается только после окончания текущего таймера.</p>`)}
-      ${card('', `<h2>Правила</h2><div class="list-clean"><div><b>1 книга — 24 часа</b><p>Если мини-тест пройден, книга сохраняется в личной библиотеке.</p></div><div><b>Баллы серии</b><p>Первый зачёт — 50 баллов. Каждый следующий зачёт подряд добавляет +2 балла к награде дня.</p></div><div><b>Пропуск</b><p>Если книга не пройдена за 24 часа, она закрывается, серия сбрасывается, следующая награда снова равна 50 баллам.</p></div></div><p class="small" data-books100-sync-line="1">${syncing ? 'Синхронизируем состояние с Supabase...' : (errorText || '')}</p><button class="btn primary" onclick="startBookChallenge()">Начать челлендж</button><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
+    shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">библиотека книг</p><h1>Топ-100 книг для бизнеса</h1><p>Все подключённые книги открыты сразу. Можно читать в любом порядке без таймера и ежедневной блокировки.</p>`)}
+      ${card('', `<h2>Правила</h2><div class="list-clean"><div><b>Все книги открыты</b><p>Можно читать саммари в любом порядке.</p></div><div><b>Статус прочитано</b><p>После завершения книги карточка подсвечивается зелёным цветом.</p></div><div><b>Без ежедневных ограничений</b><p>Таймер, пропуски и статус дней больше не используются.</p></div></div><p class="small" data-books100-sync-line="1">${syncing ? 'Синхронизируем состояние с Supabase...' : (errorText || '')}</p><button class="btn primary" onclick="startBookChallenge()">Открыть список книг</button><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
     return;
   }
   const currentBook = books100CurrentBookV20(index, ch);
   const ms = books100RemainingMs(ch);
   const reward = books100RewardForCurrent(ch);
   const visibleBooks = books100VisibleStudentBooksV20(index, ch);
-  shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">100 книг за 100 дней</p><h1>День ${Number(ch.currentDay||1)} / 100</h1><p>Награда за зачёт текущей книги: <b>${formatPoints(reward)} баллов</b> и <b>+1 учебная единица</b>. Новая книга не открывается сразу после теста — она ждёт окончания 24-часового окна.</p><p class="small" data-books100-sync-line="1">${syncing ? 'Синхронизируем состояние с Supabase...' : 'Состояние синхронизировано.'}</p>${progressBarHtml(Math.min(100, Number(ch.passedBooks||0)), 'on-dark')}`)}
-    ${card('books100-status-card', `<div class="challenge-grid"><div><span>Осталось</span>${books100TimerHtmlV19(ch, ms)}</div><div><span>Серия</span><b>${Number(ch.streak||0)}</b></div><div><span>Зачтено</span><b>${Number(ch.passedBooks||0)}</b></div><div><span>Баллы</span><b>${formatPoints(Number(ch.pointsEarned||0))}</b></div></div>${books100CurrentStateCardV18(ch,currentBook,ms)}`)}
+  shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">Топ-100 книг для бизнеса</p><h1>День ${Number(ch.currentDay||1)} / 100</h1><p>Книги открыты без ежедневных ограничений. Прочитанные саммари отмечаются зелёным цветом.</p><p class="small" data-books100-sync-line="1">${syncing ? 'Синхронизируем состояние с Supabase...' : 'Состояние синхронизировано.'}</p>${progressBarHtml(Math.min(100, Number(ch.passedBooks||0)), 'on-dark')}`)}
+    ${card('books100-status-card', `<div class="challenge-grid"><div><span>Осталось</span>${books100TimerHtmlV19(ch, ms)}</div><div><span>Статус</span><b>${Number(ch.streak||0)}</b></div><div><span>Зачтено</span><b>${Number(ch.passedBooks||0)}</b></div><div><span>Баллы</span><b>${formatPoints(Number(ch.pointsEarned||0))}</b></div></div>${books100CurrentStateCardV18(ch,currentBook,ms)}`)}
     ${card('', `<h2>Личная библиотека</h2><p class="small">Показаны текущая книга, зачтённые книги и пропущенные книги.</p><div class="books100-list">${visibleBooks.map(b=>books100Card(b,ch,false)).join('')}</div><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
   setTimeout(()=>startBooks100LiveTimerV19(new Date(ch.dayStartedAt).getTime() + books100DayMs()), 0);
 }
@@ -1432,7 +1432,7 @@ async function renderBookChallenge(){
       books100RefreshIndexV20().catch(e=>console.warn('BOOKS100_INDEX_REFRESH_FAIL', e));
       return;
     }
-    shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">100 книг за 100 дней</p><h1>Открываем челлендж</h1><p>Загружаем список книг. Обычно это занимает несколько секунд.</p>`)}${card('', `<p class="small">Если экран висит дольше 10 секунд, проверьте файл <b>content/challenges/books100/index.json</b>.</p><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
+    shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">Топ-100 книг для бизнеса</p><h1>Открываем список книг</h1><p>Загружаем список книг. Обычно это занимает несколько секунд.</p>`)}${card('', `<p class="small">Если экран висит дольше 10 секунд, проверьте файл <b>content/challenges/books100/index.json</b>.</p><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
     const index = await loadBooks100Index();
     const localState = getBooks100RawState();
     renderBookChallengeFromStateV20(index, localState, !isAdminMode(), null);
@@ -1446,18 +1446,18 @@ async function startBookChallenge(){
   try{
     const index = await loadBooks100Index();
     const first = books100ByIndex(index, 0);
-    shell(`${card('blue-card-v2 books100-hero', `<h1>Запускаем челлендж</h1><p>Создаём 24-часовое окно первой книги.</p>`)}`,'home');
+    shell(`${card('blue-card-v2 books100-hero', `<h1>Открываем список книг</h1><p>Создаём 24-часовое окно первой книги.</p>`)}`,'home');
     const data = await books100ApiV20("start", { currentBook: books100BookPayloadV18(first), books: books100BooksPayloadV18(index) }, { timeoutMs: 10000 });
     const ch = books100ApplyServerStateV18(data);
     renderBookChallengeFromStateV20(index, ch, false, null);
   }catch(e){
     console.error(e);
-    shell(`${card('result-bad-v2', `<h1>Челлендж не запустился</h1><p>Supabase не ответил быстро или вернул ошибку.</p><p class="small">${esc(e.message||e)}</p><button class="btn secondary" onclick="renderBookChallenge()">Повторить</button><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
+    shell(`${card('result-bad-v2', `<h1>Книжный блок не запустился</h1><p>Supabase не ответил быстро или вернул ошибку.</p><p class="small">${esc(e.message||e)}</p><button class="btn secondary" onclick="renderBookChallenge()">Повторить</button><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
   }
 }
 async function resetBooks100Challenge(){
   if(!isAdminMode()) return alert("Сброс доступен только администратору.");
-  if(!confirm("Сбросить своё тестовое состояние челленджа?")) return;
+  if(!confirm("Сбросить своё тестовое состояние книжного блока?")) return;
   try{ await books100ApiV20("reset", {}, { timeoutMs: 10000 }); }catch(e){ console.error(e); }
   state.books100ServerState = null;
   localStorage.removeItem(BOOKS100_STORAGE_KEY);
@@ -1495,7 +1495,7 @@ async function openBooks100Book(day, adminPreview){
     renderBooks100Reading();
   }catch(e){
     console.error(e);
-    shell(`${card('result-bad-v2', `<h1>Книга не открылась</h1><p>Не удалось проверить доступ или загрузить книгу.</p><p class="small">${esc(e.message||e)}</p><button class="btn secondary" onclick="renderBookChallenge()">К челленджу</button>`)}`,'home');
+    shell(`${card('result-bad-v2', `<h1>Книга не открылась</h1><p>Не удалось проверить доступ или загрузить книгу.</p><p class="small">${esc(e.message||e)}</p><button class="btn secondary" onclick="renderBookChallenge()">К списку книг</button>`)}`,'home');
   }
 }
 
@@ -1522,7 +1522,7 @@ function globalInstructionPanelHtml() {
       <div><b>2. Проходите урок по порядку</b><p>Внутри урока сохраняется маршрут: презентация → тест → саммари книг → домашнее задание → проверка. Следующий этап открывается после предыдущего, чтобы не терялась логика обучения.</p></div>
       <div><b>3. Работайте с фактами бизнеса</b><p>В домашнем задании важно заполнять реальные или честно оценочные данные. Цель — не красивая таблица, а первичный диагноз: где теряется результат и что проверить ближайшие 7 дней.</p></div>
       <div><b>4. Следите за прогрессом</b><p>Общий прогресс считается по готовым урокам и их этапам: презентация, тест, саммари и принятое домашнее задание. Баллы и достижения показывают накопленную активность внутри системы.</p></div>
-      <div><b>5. Используйте дополнительные блоки отдельно</b><p>Челлендж книг, бизнес-факты, материалы и медиа будут усиливать обучение, но основной порядок остаётся прежним: сначала урок, затем практика и проверка.</p></div>
+      <div><b>5. Используйте дополнительные блоки отдельно</b><p>Топ-100 книг, бизнес-факты, материалы и медиа будут усиливать обучение, но основной порядок остаётся прежним: сначала урок, затем практика и проверка.</p></div>
     </div>
   </div>`;
 }
@@ -2130,7 +2130,7 @@ function renderHome() {
         ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','','disabled main-block-card')}
       </div>
       <div class="secondary-track-grid-v22">
-        ${renderMainBlockCard('100 книг за 100 дней','Ежедневный челлендж: одна книга, 24 часа, мини-тест, +1 учебная единица и баллы серии.','доступно','renderBookChallenge()','active books100-entry compact-card')}
+        ${renderMainBlockCard('Топ-100 книг для бизнеса','Саммари бизнес-книг без таймера и ежедневных ограничений.','доступно','renderBookChallenge()','active books100-entry compact-card')}
         ${renderMainBlockCard('Бизнес-факты','Короткие практические статьи о реальных бизнес-ситуациях: ошибки, решения, цифры и выводы, которые можно применить в своей системе.','скоро','','disabled compact-card')}
         ${renderMainBlockCard('Дополнительные материалы','Отдельные уроки, разборы и материалы, которые дополняют основной маршрут.','скоро','','disabled compact-card')}
         ${renderMainBlockCard('VIP уровень','Более подробные разборы, инструменты и активность.','в разработке','','disabled compact-card')}
@@ -2147,7 +2147,7 @@ function renderAdmin(){
   if(!isAdminUser()){ alert('Нет прав администратора.'); return; }
   shell(`${card('blue-card-v2', `<h1>Панель администратора</h1><p>Проверка ДЗ теперь привязана к конкретному уроку. Сначала найдите работы ученика или выберите урок вручную.</p>`)}
     ${card('', `<h2>Проверка ДЗ</h2><p class="small">Комментарий сохраняется внутри статуса ДЗ. Telegram-сообщение ученику появится только после отдельного подключения бота уведомлений.</p><input id="admin-target-user" placeholder="Telegram ID или username ученика"><select id="admin-lesson-code" class="admin-select-v25">${adminLessonOptionsV25()}</select><textarea id="admin-review-comment" placeholder="Комментарий проверяющего. Для доработки обязателен."></textarea><div class="grid-v2"><button class="btn secondary" onclick="adminLoadHomeworkQueueV25()">Найти ДЗ ученика</button><button class="btn secondary" onclick="adminLoadHomeworkQueueV25('all')">Показать все ДЗ на проверке</button><button class="btn primary" onclick="adminReviewManualV25('approve_homework')">Принять выбранный урок</button><button class="btn secondary" onclick="adminReviewManualV25('reject_homework')">Вернуть выбранный урок на доработку</button></div><div id="admin-homework-queue" class="admin-homework-queue-v25"></div>`) }
-    ${card('', `<h2>100 книг за 100 дней</h2><p>Можно восстановить зачёты из успешных попыток теста, если после обновлений часть статусов стала отображаться неверно.</p><div class="grid-v2"><button class="btn primary" onclick="books100AdminRepairAllV25()">Проверить и восстановить зачёты книг</button><button class="btn secondary" onclick="renderBookChallenge()">Открыть книги челленджа</button></div>`)}
+    ${card('', `<h2>Топ-100 книг для бизнеса</h2><p>Можно восстановить зачёты из успешных попыток теста, если после обновлений часть статусов стала отображаться неверно.</p><div class="grid-v2"><button class="btn primary" onclick="books100AdminRepairAllV25()">Проверить и восстановить зачёты книг</button><button class="btn secondary" onclick="renderBookChallenge()">Открыть книги из блока «Топ-100 книг для бизнеса»</button></div>`)}
     ${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${state.catalog.lessons.map(l=>`<button class="lesson-row-v2" onclick="openLesson('${l.code}')"><div><b>${esc(l.code)} · ${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${l.slidesCount} слайдов · ${l.quizCount} вопросов · ${l.bookScreensCount} саммари</p></div><span>→</span></button>`).join('')}</div>`)}`,'profile');
 }
 async function adminApiV25(payload){
@@ -2672,7 +2672,7 @@ window.renderHome = function(){
         ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','','disabled main-block-card')}
       </div>
       <div class="secondary-track-grid-v22 architecture-secondary-tracks">
-        ${renderMainBlockCard('100 книг за 100 дней','Ежедневная книга, мини-тест, учебные единицы и серия баллов.','доступно','renderBookChallenge()','active books100-entry compact-card')}
+        ${renderMainBlockCard('Топ-100 книг для бизнеса','Саммари бизнес-книг без таймера и ежедневных ограничений.','доступно','renderBookChallenge()','active books100-entry compact-card')}
         ${forumVisibleInNavigationV38() ? renderMainBlockCard('Бизнес-форум','Практические вопросы и обмен опытом по видам деятельности.','тестирование','renderBusinessForum()','active compact-card') : ''}
         ${renderMainBlockCard('Бизнес-факты','Короткие практические статьи о реальных бизнес-ситуациях.','скоро','','disabled compact-card')}
         ${renderMainBlockCard('Дополнительные материалы','Разборы, шаблоны и материалы вне основного маршрута.','скоро','','disabled compact-card')}
@@ -3255,7 +3255,7 @@ else installArchitectureObserverV35();
     var practice = lessons.filter(function(l){ return selfStudyCompletedV39(l.code); }).length;
     var insights = typeof loadInsights === 'function' ? loadInsights().length : 0;
     var ch = typeof getChallengeState === 'function' ? getChallengeState() : {};
-    return card('done-summary-card', `<h2>Что уже сделано</h2><div class="done-grid"><div><span>Презентации</span><b>${presentation}</b></div><div><span>Тесты</span><b>${quiz}</b></div><div><span>Саммари</span><b>${books}</b></div><div><span>Самостоятельные работы</span><b>${practice}</b></div><div><span>Книги челленджа</span><b>${Number(ch.passedBooks || 0)}</b></div><div><span>Мои выводы</span><b>${insights}</b></div></div>`);
+    return card('done-summary-card', `<h2>Что уже сделано</h2><div class="done-grid"><div><span>Презентации</span><b>${presentation}</b></div><div><span>Тесты</span><b>${quiz}</b></div><div><span>Саммари</span><b>${books}</b></div><div><span>Самостоятельные работы</span><b>${practice}</b></div><div><span>Топ-100 книг</span><b>${Number(ch.passedBooks || 0)}</b></div><div><span>Мои выводы</span><b>${insights}</b></div></div>`);
   };
 
   var renderProfileBeforeSelfStudyV39 = window.renderProfile;
@@ -3279,7 +3279,7 @@ else installArchitectureObserverV35();
       ? card('', `<h2>Бизнес-форум</h2><p>Форум используется для вопросов и обсуждений. Пока он закрыт для учеников, администратор может продолжать тестирование.</p><button class="btn primary" onclick="renderBusinessForum()">Открыть форум</button>`)
       : '';
     shell(`${card('blue-card-v2', `<h1>Панель администратора</h1><p>Все опубликованные уроки доступны ученикам сразу. Самостоятельные работы больше не требуют проверки.</p>`)}
-      ${card('', `<h2>100 книг за 100 дней</h2><p>Можно проверить книги, мини-тесты и восстановление зачётов.</p><div class="grid-v2"><button class="btn primary" onclick="books100AdminRepairAllV25()">Проверить и восстановить зачёты книг</button><button class="btn secondary" onclick="renderBookChallenge()">Открыть книги челленджа</button></div>`)}
+      ${card('', `<h2>Топ-100 книг для бизнеса</h2><p>Можно проверить книги, мини-тесты и восстановление зачётов.</p><div class="grid-v2"><button class="btn primary" onclick="books100AdminRepairAllV25()">Проверить и восстановить зачёты книг</button><button class="btn secondary" onclick="renderBookChallenge()">Открыть книги из блока «Топ-100 книг для бизнеса»</button></div>`)}
       ${forumBlock}
       ${card('', `<h2>Все уроки</h2><p>Значок «в подготовке» получают только неопубликованные материалы. Все остальные уроки доступны ученикам без недельного ожидания.</p><div class="lesson-list-v2">${(state.catalog?.lessons || []).map(function(lesson){
         var ready = isLessonPrepared(lesson);
@@ -3441,7 +3441,7 @@ else installArchitectureObserverV35();
     shell(`${card('blue-card-v2 progress-rules-hero-v40', `<p class="eyebrow">правила системы</p><h1>Как считаются прогресс и баллы</h1><p>Прогресс и баллы — разные показатели. Прогресс показывает прохождение этапов, баллы используются как мотивационная система.</p>`)}
       ${card('', `<h2>Прогресс</h2><p>В расчёт входят только опубликованные уроки. В каждом опубликованном уроке четыре этапа равного веса:</p><div class="score-rule-grid-v40 equal"><div><span>25%</span><b>Презентация</b></div><div><span>25%</span><b>Тест</b></div><div><span>25%</span><b>Саммари</b></div><div><span>25%</span><b>Самостоятельная работа</b></div></div><p class="small">Сейчас выполнено: <b>${gp.done} из ${gp.total}</b> этапов — <b>${gp.percent}%</b>.</p>`)}
       ${card('', `<h2>Исследовательские баллы</h2><div class="score-rule-grid-v40"><div><span>+1</span><b>Новый модуль</b></div><div><span>+1</span><b>Новый урок</b></div><div><span>+1</span><b>Новый слайд</b></div><div><span>+1</span><b>Рабочий материал</b></div></div><p class="small">Баллы начисляются за первое открытие новых элементов библиотеки бизнес-систем. Повторное открытие уже изученного элемента баллы не добавляет.</p>`)}
-      ${card('', `<h2>Отдельно: 100 книг за 100 дней</h2><p>Баллы челленджа прибавляются к баллам уроков. Первый зачтённый день даёт 50 баллов, далее награда растёт на 2 балла за каждый день серии.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`,'profile');
+      ${card('', `<h2>Отдельно: Топ-100 книг для бизнеса</h2><p>Книги открыты для чтения в любом порядке; прочитанные саммари отмечаются зелёным цветом.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`,'profile');
   };
 
   function primaryRoutesHtmlV40(){
@@ -3458,7 +3458,7 @@ else installArchitectureObserverV35();
     var forumClass = forumReadyForCurrentModeV40() ? 'active' : 'soon';
     return `<div class="secondary-track-grid-v22 architecture-secondary-tracks-v40">
       ${renderMainBlockCard('Бизнес-форум','Вопросы по урокам, обсуждения практики и обмен опытом участников.',forumStatus,'openForumBlockV40()',forumClass + ' compact-card')}
-      ${renderMainBlockCard('100 книг за 100 дней','Ежедневная книга, мини-тест, учебные единицы и серия баллов.','доступно','renderBookChallenge()','active books100-entry compact-card')}
+      ${renderMainBlockCard('Топ-100 книг для бизнеса','Саммари бизнес-книг без таймера и ежедневных ограничений.','доступно','renderBookChallenge()','active books100-entry compact-card')}
       ${renderMainBlockCard('Газета','Новости бизнеса и приложения в формате цифровых газетных выпусков.','скоро','renderNewspaperV40()','soon compact-card')}
       ${renderMainBlockCard('Предпринимательские статьи','Практические статьи о ситуациях, цифрах, решениях и последствиях.','скоро','renderEntrepreneurArticlesV40()','soon compact-card')}
       ${renderMainBlockCard('Прямые разборы','Гарвардские и другие бизнес-кейсы с разбором вариантов решения.','скоро','renderDirectReviewsV40()','soon compact-card')}
@@ -3546,7 +3546,7 @@ else installArchitectureObserverV35();
       {title:'Нет своего бизнеса',status:'скоро',action:'renderNoBusinessV40()'},
       {title:'Я сотрудник',status:'скоро',action:'renderEmployeeRouteV40()'},
       {title:'Бизнес-форум',status:forumStatus,action:'openForumBlockV40()'},
-      {title:'100 книг за 100 дней',status:'доступно',action:'renderBookChallenge()'},
+      {title:'Топ-100 книг для бизнеса',status:'доступно',action:'renderBookChallenge()'},
       {title:'Газета',status:'скоро',action:'renderNewspaperV40()'},
       {title:'Предпринимательские статьи',status:'скоро',action:'renderEntrepreneurArticlesV40()'},
       {title:'Прямые разборы',status:'скоро',action:'renderDirectReviewsV40()'},
@@ -3799,10 +3799,10 @@ else installArchitectureObserverV35();
 
   window.renderProgressRulesV40 = function(){
     var gp = globalStageProgress();
-    shell(`${card('blue-card-v2 progress-rules-hero-v40', `<p class="eyebrow">показатели системы</p><h1>Как считаются прогресс и баллы</h1><p>Общий прогресс показывает прохождение запланированной учебной программы. Баллы отражают выполненные действия внутри уроков и челленджа книг.</p>`)}
+    shell(`${card('blue-card-v2 progress-rules-hero-v40', `<p class="eyebrow">показатели системы</p><h1>Как считаются прогресс и баллы</h1><p>Общий прогресс показывает прохождение запланированной учебной программы. Баллы отражают выполненные действия внутри уроков и блока «Топ-100 книг для бизнеса».</p>`)}
       ${card('', `<h2>Общий прогресс</h2><div class="planned-progress-breakdown-v41"><div><b>60 уроков</b><span>Я предприниматель</span></div><div><b>10 уроков</b><span>Нет своего бизнеса</span></div><div><b>10 уроков</b><span>Я сотрудник</span></div></div><p>Всего в программе заложено <b>80 уроков</b>. Каждый урок состоит из четырёх этапов, поэтому полный план равен <b>320 этапам</b>.</p><div class="score-rule-grid-v40 equal"><div><span>25%</span><b>Презентация</b></div><div><span>25%</span><b>Тест</b></div><div><span>25%</span><b>Саммари</b></div><div><span>25%</span><b>Самостоятельная работа</b></div></div><p class="small">Сейчас выполнено: <b>${gp.done} из ${gp.total}</b> этапов — <b>${gp.percent}%</b>.</p>`)}
       ${card('', `<h2>Исследовательские баллы</h2><div class="score-rule-grid-v40"><div><span>+1</span><b>Новый модуль</b></div><div><span>+1</span><b>Новый урок</b></div><div><span>+1</span><b>Новый слайд</b></div><div><span>+1</span><b>Рабочий материал</b></div></div><p class="small">Баллы начисляются за исследование библиотеки бизнес-систем: за первое открытие новых модулей, блоков, уроков, слайдов, тестов, саммари и рабочих материалов.</p>`)}
-      ${card('', `<h2>100 книг за 100 дней</h2><p>Челлендж имеет собственный прогресс. Его баллы прибавляются к общему количеству баллов, но книги не входят в процент прохождения основной программы из 80 уроков.</p><p class="small">Первый зачтённый день даёт 50 баллов. Далее награда растёт на 2 балла за каждый день серии.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`,'profile');
+      ${card('', `<h2>Топ-100 книг для бизнеса</h2><p>Блок книг имеет собственный прогресс чтения и не ограничивает прохождение основной программы.</p><p class="small">Все книги открыты сразу; прочитанные отмечаются зелёным цветом.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`,'profile');
   };
   window.renderPointsRulesV41 = window.renderProgressRulesV40;
 
@@ -3995,8 +3995,8 @@ else installArchitectureObserverV35();
     var forumBlock = typeof window.renderBusinessForum === 'function'
       ? card('', `<h2>Бизнес-форум</h2><p>Администраторский доступ используется для настройки и тестирования форума.</p><button class="btn primary" onclick="renderBusinessForum()">Открыть форум</button>`)
       : '';
-    shell(`${card('blue-card-v2', `<h1>Панель администратора</h1><p>Здесь собраны предпросмотр опубликованных уроков, книги челленджа и тестовые разделы.</p>`)}
-      ${card('', `<h2>100 книг за 100 дней</h2><div class="grid-v2"><button class="btn primary" onclick="books100AdminRepairAllV25()">Проверить зачёты книг</button><button class="btn secondary" onclick="renderBookChallenge()">Открыть книги челленджа</button></div>`)}
+    shell(`${card('blue-card-v2', `<h1>Панель администратора</h1><p>Здесь собраны предпросмотр опубликованных уроков, книги из блока «Топ-100 книг для бизнеса» и тестовые разделы.</p>`)}
+      ${card('', `<h2>Топ-100 книг для бизнеса</h2><div class="grid-v2"><button class="btn primary" onclick="books100AdminRepairAllV25()">Проверить зачёты книг</button><button class="btn secondary" onclick="renderBookChallenge()">Открыть книги из блока «Топ-100 книг для бизнеса»</button></div>`)}
       ${forumBlock}
       ${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${(state.catalog?.lessons || []).map(function(lesson){
         var ready = isLessonPrepared(lesson);
@@ -4099,7 +4099,7 @@ else installArchitectureObserverV35();
     var forumClass = forumReady ? 'active' : 'soon';
     return `<div class="secondary-track-grid-v22 architecture-secondary-tracks-v40">
       ${renderMainBlockCard('Бизнес-форум','Вопросы по системам, обсуждение практических ситуаций и обмен опытом участников.',forumStatus,'openForumBlockV40()',forumClass + ' compact-card')}
-      ${renderMainBlockCard('100 книг за 100 дней','Ежедневная книга, конспект, мини-тест, единицы освоения и серия баллов.','доступно','renderBookChallenge()','active books100-entry compact-card')}
+      ${renderMainBlockCard('Топ-100 книг для бизнеса','Саммари бизнес-книг без таймера и ежедневных ограничений.','доступно','renderBookChallenge()','active books100-entry compact-card')}
       ${renderMainBlockCard('Газета','Новости бизнеса и приложения в формате цифровых газетных выпусков.','скоро','renderNewspaperV40()','soon compact-card')}
       ${renderMainBlockCard('Предпринимательские статьи','Практические статьи о ситуациях, цифрах, решениях и последствиях.','скоро','renderEntrepreneurArticlesV40()','soon compact-card')}
       ${renderMainBlockCard('Прямые разборы','Гарвардские и другие бизнес-кейсы с разбором вариантов решения.','скоро','renderDirectReviewsV40()','soon compact-card')}
@@ -4264,9 +4264,9 @@ else installArchitectureObserverV35();
   };
 
   window.renderPointsRulesV43 = function(){
-    shell(`${card('blue-card-v2 progress-rules-hero-v40', `<p class="eyebrow">баллы библиотеки</p><h1>Как начисляются баллы</h1><p>Баллы отражают завершённые действия внутри опубликованных уроков и отдельно — результаты челленджа книг.</p>`)}
+    shell(`${card('blue-card-v2 progress-rules-hero-v40', `<p class="eyebrow">баллы библиотеки</p><h1>Как начисляются баллы</h1><p>Баллы отражают завершённые действия внутри опубликованных уроков и отдельно — результаты блока «Топ-100 книг для бизнеса».</p>`)}
       ${card('', `<h2>Исследовательские баллы</h2><div class="score-rule-grid-v40"><div><span>+1</span><b>Первый вход</b></div><div><span>+1</span><b>Модуль</b></div><div><span>+1</span><b>Слайд</b></div><div><span>+1</span><b>Материал</b></div></div><p class="small">Каждое новое действие в библиотеке бизнес-систем даёт 1 балл один раз за всё время.</p>`)}
-      ${card('', `<h2>100 книг за 100 дней</h2><p>Баллы челленджа прибавляются отдельно. Первый зачтённый день даёт 50 баллов, далее награда растёт на 2 балла за каждый день серии.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`,'profile');
+      ${card('', `<h2>Топ-100 книг для бизнеса</h2><p>Книги открыты для чтения в любом порядке; прочитанные саммари отмечаются зелёным цветом.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`,'profile');
   };
   window.renderPointsRulesV42 = window.renderPointsRulesV43;
   window.renderPointsRulesV41 = window.renderPointsRulesV43;
@@ -4400,8 +4400,8 @@ else installArchitectureObserverV35();
   window.setArchitectureViewV44 = setArchitectureViewV44;
 
   /*
-     Таймер челленджа больше не имеет права сам открывать экран
-     «100 книг за 100 дней». На главной он только обновляет цифры.
+     Таймер прежней механики больше не имеет права сам открывать экран
+     «Топ-100 книг для бизнеса». На главной он только обновляет цифры.
   */
   function stopBooks100TimerV44(){
     if (window.__books100TimerV44) {
@@ -4451,7 +4451,7 @@ else installArchitectureObserverV35();
     window.__books100TimerV44 = setInterval(tick, 15000);
   };
 
-  /* Не позволяем фоновой синхронизации челленджа вернуть пользователя
+  /* Не позволяем фоновой синхронизации прежней механики вернуть пользователя
      обратно в раздел книг после перехода на главную или в профиль. */
   var renderBookChallengeFromStateBeforeV44 = window.renderBookChallengeFromStateV20;
   if (typeof renderBookChallengeFromStateBeforeV44 === 'function') {
@@ -4487,7 +4487,7 @@ else installArchitectureObserverV35();
         <div><b>3. Профиль хранит ваш результат</b><p>В профиле находятся общий прогресс, баллы, уровень, достижение, количество изученных страниц, завершённых тестов, саммари книг, шаблонов и сохранённых выводов.</p></div>
         <div><b>4. Опубликованные материалы доступны для работы</b><p>В блоке «Я предприниматель» выберите вид бизнеса и нужный опубликованный материал. Нумерация показывает рекомендуемую последовательность.</p></div>
         <div><b>5. Каждый материал переводится в действие</b><p>Изучите презентацию, пройдите тест, разберите саммари книг и откройте рабочий шаблон, чтобы применить систему к своему бизнесу.</p></div>
-        <div><b>6. Челлендж книг работает отдельно</b><p>В разделе «100 книг за 100 дней» открывается книга дня, страницы конспекта и мини-тест. Результаты добавляются в профиль и общую систему баллов.</p></div>
+        <div><b>6. Топ-100 книг работает отдельно</b><p>В разделе «Топ-100 книг для бизнеса» все саммари открыты сразу. Прочитанные книги отмечаются в профиле и подсвечиваются в списке.</p></div>
         <div><b>7. Нижняя панель содержит частые действия</b><p>«Главная» возвращает к структуре, «Профиль» открывает личные результаты. «Финансовый помощник» появится после завершения разработки.</p></div>
       </div>
     </div>`;
@@ -4592,7 +4592,7 @@ else installArchitectureObserverV35();
   }
   window.refreshChallengePagesV44 = refreshChallengePagesV44;
 
-  /* Отмечаем открытую страницу челленджа. */
+  /* Отмечаем открытую страницу книжного блока. */
   var renderBooks100ReadingBeforeV44 = window.renderBooks100Reading;
   if (typeof renderBooks100ReadingBeforeV44 === 'function') {
     window.renderBooks100Reading = async function(){
@@ -4632,7 +4632,7 @@ else installArchitectureObserverV35();
 
   window.doneSummaryHtml = function(){
     var stats = readingStatsV44();
-    return card('done-summary-card profile-done-compact-v43 profile-done-v44', `<div class="done-heading-v44"><div><p class="eyebrow">накопленный объём</p><h2>Что уже сделано</h2></div><p>Учитываются материалы уроков и челленджа книг.</p></div><div class="done-grid"><div><span>Презентации</span><b>${formatPoints(stats.presentations)}</b></div><div><span>Страницы</span><b id="profile-pages-value-v44">${formatPoints(stats.pages)}</b></div><div><span>Тесты</span><b>${formatPoints(stats.tests)}</b></div><div><span>Саммари книг</span><b>${formatPoints(stats.bookSummaries)}</b></div><div><span>Шаблоны</span><b>${formatPoints(stats.templates)}</b></div><div><span>Выводы</span><b>${formatPoints(stats.insights)}</b></div></div>`);
+    return card('done-summary-card profile-done-compact-v43 profile-done-v44', `<div class="done-heading-v44"><div><p class="eyebrow">накопленный объём</p><h2>Что уже сделано</h2></div><p>Учитываются материалы уроков и блока «Топ-100 книг для бизнеса».</p></div><div class="done-grid"><div><span>Презентации</span><b>${formatPoints(stats.presentations)}</b></div><div><span>Страницы</span><b id="profile-pages-value-v44">${formatPoints(stats.pages)}</b></div><div><span>Тесты</span><b>${formatPoints(stats.tests)}</b></div><div><span>Саммари книг</span><b>${formatPoints(stats.bookSummaries)}</b></div><div><span>Шаблоны</span><b>${formatPoints(stats.templates)}</b></div><div><span>Выводы</span><b>${formatPoints(stats.insights)}</b></div></div>`);
   };
 
   /* ---------- Уровни и достижения ---------- */
@@ -4735,7 +4735,7 @@ else installArchitectureObserverV35();
   };
 
   /* Переходы в другие экраны отменяют право фоновой синхронизации
-     челленджа перерисовывать текущий экран. */
+     прежней механики перерисовывать текущий экран. */
   [
     'renderLearning','renderActivityLessons','renderLessonHub','renderHomework',
     'renderHomeworkCenter','renderAdmin','renderAdditionalMaterials'
@@ -5744,7 +5744,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
     const forumClass = forumReady ? 'active' : 'soon';
     return `<div class="secondary-track-grid-v22 architecture-secondary-tracks-v40">
       ${mainCardV81('Бизнес-форум','Вопросы по системам, обсуждение практических ситуаций и обмен опытом участников.',forumStatus,'openForumBlockV40()',forumClass + ' compact-card')}
-      ${mainCardV81('100 книг за 100 дней','Ежедневная книга, конспект, мини-тест, единицы освоения и серия баллов.','доступно','renderBookChallenge()','active books100-entry compact-card')}
+      ${mainCardV81('Топ-100 книг для бизнеса','Саммари бизнес-книг без таймера и ежедневных ограничений.','доступно','renderBookChallenge()','active books100-entry compact-card')}
       ${mainCardV81('Газета','Новости бизнеса и приложения в формате цифровых газетных выпусков.','скоро','renderNewspaperV40()','soon compact-card')}
       ${mainCardV81('Предпринимательские статьи','Практические статьи о ситуациях, цифрах, решениях и последствиях.','скоро','renderEntrepreneurArticlesV40()','soon compact-card')}
       ${mainCardV81('Прямые разборы','Гарвардские и другие бизнес-кейсы с разбором вариантов решения.','скоро','renderDirectReviewsV40()','soon compact-card')}
@@ -6331,5 +6331,285 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
       'Старые страницы правил баллов перенаправлены на исследовательские баллы.',
       'Финансовый помощник открыт ученикам; закрытые внутренние блоки остаются неактивными.'
     ]
+  };
+})();
+
+/* =====================================================
+   v96 — Топ-100 книг для бизнеса: открытая библиотека вместо ежедневной механики
+   ===================================================== */
+(function installTop100BusinessBooksV96(){
+  window.APP_UI_VERSION_V96 = 'v96-top100-business-books-and-profile-sync-20260630';
+  try { window.APP_UI_VERSION = window.APP_UI_VERSION_V96; } catch(e) {}
+  var TOP100_TITLE_V96 = 'Топ-100 книг для бизнеса';
+  var TOP100_SUBTITLE_V96 = 'Саммари книг и управленческие идеи для предпринимателя. Все книги открыты без таймера и ежедневных ограничений.';
+  var TOP100_INDEX_URL_V96 = 'content/challenges/books100/index.json';
+  var TOP100_CACHE_VERSION_V96 = window.APP_UI_VERSION_V96;
+  state.top100IndexV96 = state.top100IndexV96 || null;
+  state.top100CacheV96 = state.top100CacheV96 || {};
+
+  function v96Esc(value){
+    if (typeof esc === 'function') return esc(value);
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
+  }
+  function v96Card(cls, html){ return typeof card === 'function' ? card(cls || '', html || '') : '<section class="card-v2 '+(cls||'')+'">'+(html||'')+'</section>'; }
+  function v96Shell(html, tab){ return typeof shell === 'function' ? shell(html, tab || 'home') : (document.getElementById('app').innerHTML = html); }
+  function v96Format(value){ return typeof formatPoints === 'function' ? formatPoints(value) : String(value || 0); }
+  function v96Pad(value, len){ return String(value || 0).padStart(len || 2, '0'); }
+  function v96UserSuffix(){
+    try { if (typeof readingUserSuffixV44 === 'function') return readingUserSuffixV44(); } catch(e) {}
+    try { var ids = typeof possibleIds === 'function' ? possibleIds() : []; if (ids && ids[0]) return String(ids[0]); } catch(e) {}
+    try { return String((state.user && (state.user.id || state.user.username)) || 'local'); } catch(e) { return 'local'; }
+  }
+  function v96ReadStorageKey(){ return 'architecture_top100_read_books_v96_' + v96UserSuffix(); }
+  function v96ReadStoredIds(){
+    try { var arr = JSON.parse(localStorage.getItem(v96ReadStorageKey()) || '[]'); return Array.isArray(arr) ? arr.map(String) : []; } catch(e) { return []; }
+  }
+  function v96OldPassedIds(){
+    try {
+      var ch = typeof getBooks100RawState === 'function' ? getBooks100RawState() : {};
+      return Array.isArray(ch.passedBookIds) ? ch.passedBookIds.map(String) : [];
+    } catch(e) { return []; }
+  }
+  function v96ReadIds(){ return Array.from(new Set(v96ReadStoredIds().concat(v96OldPassedIds()).filter(Boolean))); }
+  function v96IsRead(bookMeta){
+    var id = v96BookId(bookMeta);
+    return v96ReadIds().indexOf(String(id)) !== -1;
+  }
+  function v96BookId(bookMeta){ return String((bookMeta && (bookMeta.id || bookMeta.bookId || bookMeta.day)) || ''); }
+  function v96SaveReadIds(ids){ localStorage.setItem(v96ReadStorageKey(), JSON.stringify(Array.from(new Set((ids||[]).map(String).filter(Boolean))))); }
+  function v96MarkBookRead(bookMeta){
+    var id = v96BookId(bookMeta);
+    if (!id) return;
+    var ids = v96ReadIds();
+    if (ids.indexOf(id) === -1) {
+      ids.push(id);
+      v96SaveReadIds(ids);
+    }
+    try {
+      var st = typeof getBooks100RawState === 'function' ? getBooks100RawState() : {};
+      st.passedBookIds = Array.from(new Set((st.passedBookIds || []).concat(id)));
+      st.passedBooks = st.passedBookIds.length;
+      st.unitsEarned = st.passedBooks;
+      st.pointsEarned = 0;
+      if (typeof saveBooks100State === 'function') saveBooks100State(st);
+    } catch(e) {}
+  }
+  function v96Award(eventKey, eventType, payload){
+    try { if (typeof awardResearchPointOnceV91 === 'function') awardResearchPointOnceV91(eventKey, eventType, payload || {}); } catch(e) {}
+  }
+
+  async function v96LoadIndex(){
+    if (state.top100IndexV96 && Array.isArray(state.top100IndexV96.books)) return state.top100IndexV96;
+    if (state.books100Index && Array.isArray(state.books100Index.books)) { state.top100IndexV96 = state.books100Index; return state.top100IndexV96; }
+    var response = await fetch(TOP100_INDEX_URL_V96 + '?v=' + encodeURIComponent(TOP100_CACHE_VERSION_V96), { cache:'no-cache' });
+    if (!response.ok) throw new Error('TOP100_INDEX_LOAD_FAILED');
+    var data = await response.json();
+    data.books = Array.isArray(data.books) ? data.books : [];
+    state.top100IndexV96 = data;
+    state.books100Index = data;
+    return data;
+  }
+  async function v96LoadBook(bookMeta){
+    if (!bookMeta) throw new Error('TOP100_BOOK_META_MISSING');
+    var id = v96BookId(bookMeta);
+    if (state.top100CacheV96[id]) return state.top100CacheV96[id];
+    var urls = [];
+    if (bookMeta.contentUrl) urls.push(bookMeta.contentUrl);
+    if (Array.isArray(bookMeta.fallbackContentUrls)) urls = urls.concat(bookMeta.fallbackContentUrls);
+    if (!urls.length && bookMeta.day) {
+      urls.push('content/challenges/books100/book100-' + v96Pad(bookMeta.day,2) + '.json');
+      urls.push('content/challenges/books100/' + v96Pad(bookMeta.day,3) + '.json');
+      urls.push('content/challenges/books100/book_' + v96Pad(bookMeta.day,3) + '.json');
+    }
+    var lastError = null;
+    for (var i=0; i<urls.length; i++) {
+      try {
+        var response = await fetch(String(urls[i]) + '?v=' + encodeURIComponent(TOP100_CACHE_VERSION_V96), { cache:'no-cache' });
+        if (!response.ok) throw new Error('HTTP_' + response.status);
+        var data = await response.json();
+        state.top100CacheV96[id] = data;
+        state.books100Cache = state.books100Cache || {};
+        state.books100Cache[id] = data;
+        return data;
+      } catch(error) { lastError = error; }
+    }
+    throw new Error('TOP100_BOOK_LOAD_FAILED: ' + id + ' | ' + (lastError && lastError.message || 'no contentUrl'));
+  }
+  function v96BooksList(index){
+    return (index && Array.isArray(index.books) ? index.books : []).slice().sort(function(a,b){ return Number(a.day || 0) - Number(b.day || 0); });
+  }
+  function v96BookCard(bookMeta){
+    var day = Number(bookMeta.day || 0);
+    var read = v96IsRead(bookMeta);
+    var status = read ? 'прочитано' : 'доступно';
+    var cls = read ? 'passed top100-read-v96' : 'top100-open-v96';
+    var title = bookMeta.title || ('Книга ' + (day || ''));
+    var author = bookMeta.author || '';
+    return '<button class="books100-book-card books100-book-card-fast top100-book-card-v96 '+cls+'" onclick="openBooks100Book('+Number(day || 0)+', false)">'
+      + '<div class="books100-cover books100-cover-fast"><span>' + v96Pad(day || 0, 3) + '</span></div>'
+      + '<div><b>' + v96Esc(v96Pad(day || 0, 3) + '. ' + title) + '</b><p>' + v96Esc(author) + '</p><em>' + v96Esc(status) + '</em></div>'
+      + '</button>';
+  }
+  function v96Top100ProgressHtml(index){
+    var books = v96BooksList(index);
+    var read = books.filter(v96IsRead).length;
+    var total = books.length;
+    var percent = total ? Math.round(read / total * 100) : 0;
+    return '<div class="top100-progress-v96"><div><span>Подключено</span><b>'+v96Format(total)+' / 100</b></div><div><span>Прочитано</span><b>'+v96Format(read)+'</b></div><div><span>Прогресс списка</span><b>'+percent+'%</b></div></div>';
+  }
+
+  window.renderBookChallenge = async function(){
+    v96Award('module:books100', 'module_open', { module:'books100', title:TOP100_TITLE_V96 });
+    try {
+      var index = await v96LoadIndex();
+      var books = v96BooksList(index);
+      var html = v96Card('blue-card-v2 books100-hero top100-hero-v96', '<p class="eyebrow">библиотека саммари</p><h1>'+TOP100_TITLE_V96+'</h1><p>'+TOP100_SUBTITLE_V96+'</p>'+v96Top100ProgressHtml(index))
+        + v96Card('', '<h2>Список книг</h2><p class="small">Книги можно открывать в любом порядке. Если книга дочитана до последней страницы, карточка отмечается зелёным цветом как прочитанная.</p><div class="books100-list top100-list-v96">'+books.map(v96BookCard).join('')+'</div><button class="btn secondary" onclick="renderHome()">На главную</button>');
+      v96Shell(html, 'home');
+    } catch(error) {
+      v96Shell(v96Card('result-bad-v2', '<h1>Список книг не загрузился</h1><p>Проверьте файл <b>content/challenges/books100/index.json</b>. Блок больше не использует библиотека книг, но список книг всё ещё берётся из этого контентного файла.</p><p class="small">'+v96Esc(error.message || error)+'</p><button class="btn secondary" onclick="renderHome()">На главную</button>'), 'home');
+    }
+  };
+  window.startBookChallenge = window.renderBookChallenge;
+  window.renderTop100BusinessBooks = window.renderBookChallenge;
+
+  window.openBooks100Book = async function(day){
+    try {
+      var index = await v96LoadIndex();
+      var bookMeta = (typeof books100ByDay === 'function' ? books100ByDay(index, day) : null) || v96BooksList(index).find(function(b){ return Number(b.day) === Number(day); });
+      if (!bookMeta) return alert('Книга не найдена.');
+      state.books100ActiveBookDay = Number(day || bookMeta.day || 1);
+      state.books100ScreenIndex = 0;
+      state.books100QuestionIndex = 0;
+      state.books100Answers = {};
+      state.books100AdminPreview = false;
+      v96Award('book_open:books100:' + v96BookId(bookMeta), 'book_open', { module:'books100', bookId:v96BookId(bookMeta), day:Number(bookMeta.day||0) });
+      await window.renderBooks100Reading();
+    } catch(error) {
+      v96Shell(v96Card('result-bad-v2', '<h1>Книга не открылась</h1><p>Не удалось загрузить саммари.</p><p class="small">'+v96Esc(error.message || error)+'</p><button class="btn secondary" onclick="renderBookChallenge()">К списку книг</button>'), 'home');
+    }
+  };
+
+  function v96BookScreenHtml(book, screen){
+    var body = screen && screen.textHtml ? screen.textHtml : (screen && screen.text ? '<p>'+v96Esc(screen.text)+'</p>' : '<p>Текст саммари будет добавлен после редакторской проверки.</p>');
+    return '<section class="slide-text-v2 books100-text top100-text-v96"><p class="eyebrow">'+TOP100_TITLE_V96+'</p><h3>'+v96Esc('Страница ' + Number((screen && screen.number) || (state.books100ScreenIndex + 1)) + '. ' + ((screen && screen.title) || ''))+'</h3>'+body+'</section>';
+  }
+  window.renderBooks100Reading = async function(){
+    try {
+      var index = await v96LoadIndex();
+      var bookMeta = (typeof books100ByDay === 'function' ? books100ByDay(index, state.books100ActiveBookDay) : null) || v96BooksList(index)[0];
+      var book = await v96LoadBook(bookMeta);
+      var screens = Array.isArray(book.screens) ? book.screens : [];
+      if (!screens.length) throw new Error('TOP100_BOOK_HAS_NO_SCREENS');
+      var total = screens.length;
+      var i = Math.max(0, Math.min(Number(state.books100ScreenIndex || 0), total - 1));
+      state.books100ScreenIndex = i;
+      var screen = screens[i] || {};
+      var image = screen.image || (bookMeta.coverImage && i === 0 ? bookMeta.coverImage : ('assets/challenges/books100/' + v96Pad(bookMeta.day || book.day || 1, 3) + '/screen_' + v96Pad(i+1, 2) + '.png'));
+      try { if (typeof markChallengePageV44 === 'function') markChallengePageV44(v96BookId(bookMeta), i+1, total); } catch(e) {}
+      v96Award('summary:books100:' + v96BookId(bookMeta) + ':' + v96Pad(i+1, 3), 'summary_page_open', { module:'books100', bookId:v96BookId(bookMeta), page:i+1, total:total });
+      if (i === total - 1) v96MarkBookRead(bookMeta);
+      var nextLabel = i === total - 1 ? 'Завершить книгу' : 'Далее';
+      var nextAction = i === total - 1 ? 'renderBookChallenge()' : 'nextBooks100Screen()';
+      var nav = '<div class="nav-panel-v2 nav-panel-v2-three top100-nav-v96"><button class="btn secondary" onclick="renderBookChallenge()">К списку книг</button><button class="btn secondary" '+(i===0?'disabled':'')+' onclick="prevBooks100Screen()">Назад</button><button class="btn primary" onclick="'+nextAction+'">'+nextLabel+'</button></div>';
+      var readNotice = i === total - 1 ? '<div class="top100-read-notice-v96"><b>Книга отмечена как прочитанная</b><p>В списке она будет подсвечена зелёным цветом.</p></div>' : '';
+      v96Shell(nav+'<div class="media-counter">'+v96Esc(book.title || bookMeta.title || 'Книга')+' · страница '+(i+1)+'/'+total+'</div><div class="media-box-v2"><img src="'+v96Esc(image)+'?v='+v96Esc(TOP100_CACHE_VERSION_V96)+'" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';"><div class="image-missing-v2" style="display:none"><b>Страница '+(i+1)+'</b><p>Иллюстрация в подготовке.</p></div></div>'+readNotice+v96BookScreenHtml(book, screen), 'home');
+    } catch(error) {
+      v96Shell(v96Card('result-bad-v2', '<h1>Страница книги не открылась</h1><p class="small">'+v96Esc(error.message || error)+'</p><button class="btn secondary" onclick="renderBookChallenge()">К списку книг</button>'), 'home');
+    }
+  };
+  window.nextBooks100Screen = function(){ state.books100ScreenIndex = Number(state.books100ScreenIndex || 0) + 1; return window.renderBooks100Reading(); };
+  window.prevBooks100Screen = function(){ state.books100ScreenIndex = Math.max(0, Number(state.books100ScreenIndex || 0) - 1); return window.renderBooks100Reading(); };
+  window.startBooks100Quiz = function(){ return window.renderBooks100Reading(); };
+  window.renderBooks100QuizQuestion = function(){ return window.renderBooks100Reading(); };
+  window.finishBooks100Quiz = function(){ return window.renderBookChallenge(); };
+
+  window.activeChallengeCardHtml = function(){ return ''; };
+  window.safeActiveChallengeCardHtmlV24 = function(){ return ''; };
+  window.challengePoints = function(){ return 0; };
+  window.challengeUnits = function(){ return v96ReadIds().length; };
+  window.currentChallengeReward = function(){ return 0; };
+
+  function v96MainCard(title, desc, status, action, cls){
+    if (typeof mainCardV81 === 'function') return mainCardV81(title, desc, status, action, cls);
+    if (typeof renderMainBlockCard === 'function') return renderMainBlockCard(title, desc, status, action, cls);
+    return '<button class="main-block-card '+(cls||'')+'" onclick="'+(action||'')+'"><b>'+v96Esc(title)+'</b><p>'+v96Esc(desc)+'</p><span>'+v96Esc(status)+'</span></button>';
+  }
+  var secondaryBeforeV96 = window.secondaryBlocksHtmlV40;
+  window.secondaryBlocksHtmlV40 = function(){
+    var forumReady = Boolean(typeof forumVisibleInNavigationV38 === 'function' && forumVisibleInNavigationV38() && typeof window.renderBusinessForum === 'function');
+    var forumStatus = forumReady ? ((typeof isAdminMode === 'function' && isAdminMode()) ? 'тестирование' : 'доступно') : 'в подготовке';
+    var forumClass = forumReady ? 'active' : 'soon';
+    return '<div class="secondary-track-grid-v22 architecture-secondary-tracks-v40">'
+      + v96MainCard('Бизнес-форум','Вопросы по системам, обсуждение практических ситуаций и обмен опытом участников.',forumStatus,'openForumBlockV40()',forumClass + ' compact-card')
+      + v96MainCard(TOP100_TITLE_V96,'Открытая библиотека саммари: книги можно читать в любом порядке, без таймера и ежедневных ограничений.','доступно','renderBookChallenge()','active books100-entry compact-card top100-entry-v96')
+      + v96MainCard('Газета','Новости бизнеса и приложения в формате цифровых газетных выпусков.','скоро','renderNewspaperV40()','soon compact-card')
+      + v96MainCard('Предпринимательские статьи','Практические статьи о ситуациях, цифрах, решениях и последствиях.','скоро','renderEntrepreneurArticlesV40()','soon compact-card')
+      + v96MainCard('Прямые разборы','Гарвардские и другие бизнес-кейсы с разбором вариантов решения.','скоро','renderDirectReviewsV40()','soon compact-card')
+      + v96MainCard('Что посмотреть','Фильмы, интервью, лекции и видео с управленческими выводами.','скоро','renderWatchV40()','soon compact-card')
+      + v96MainCard('Дополнительные материалы','Шаблоны, инструкции, документы и инструменты вне основных направлений.','скоро','renderAdditionalMaterials()','soon compact-card')
+      + v96MainCard('VIP уровень','Расширенные разборы, инструменты и закрытые возможности.','в разработке','renderVipV40()','soon compact-card')
+      + '</div>';
+  };
+
+  try {
+    drawerItemsV40 = function(){
+      var forumStatus = (typeof forumReadyForCurrentModeV40 === 'function' && forumReadyForCurrentModeV40()) ? 'доступно' : 'в подготовке';
+      return [
+        {title:'Я предприниматель',status:'доступно',action:'renderLearning()'},
+        {title:'Нет своего бизнеса',status:'скоро',action:'renderNoBusinessV40()'},
+        {title:'Я сотрудник',status:'скоро',action:'renderEmployeeRouteV40()'},
+        {title:'Бизнес-форум',status:forumStatus,action:'openForumBlockV40()'},
+        {title:TOP100_TITLE_V96,status:'доступно',action:'renderBookChallenge()'},
+        {title:'Газета',status:'скоро',action:'renderNewspaperV40()'},
+        {title:'Предпринимательские статьи',status:'скоро',action:'renderEntrepreneurArticlesV40()'},
+        {title:'Прямые разборы',status:'скоро',action:'renderDirectReviewsV40()'},
+        {title:'Что посмотреть',status:'скоро',action:'renderWatchV40()'},
+        {title:'Дополнительные материалы',status:'скоро',action:'renderAdditionalMaterials()'},
+        {title:'VIP уровень',status:'в разработке',action:'renderVipV40()'}
+      ];
+    };
+    window.drawerItemsV40 = drawerItemsV40;
+  } catch(e) {}
+
+  if (typeof globalInstructionPanelHtml === 'function') {
+    window.globalInstructionPanelHtml = function(){
+      return '<div id="global-instruction-panel" class="global-instruction-panel v44-instruction-panel" style="display:none"><div class="instruction-head"><b>Как пользоваться приложением</b><button onclick="toggleGlobalInstruction(false)" aria-label="Закрыть инструкцию">×</button></div><div class="instruction-steps"><div><b>1. Главная показывает всю структуру</b><p>На главной собраны доступные и будущие блоки. Открытые разделы можно запускать сразу, а блоки в подготовке отмечены и не нажимаются.</p></div><div><b>2. Откройте направление</b><p>В разделе «Я предприниматель» выберите вид бизнеса и любой опубликованный урок. Нумерация показывает рекомендуемую последовательность.</p></div><div><b>3. Разберите систему</b><p>Каждый урок включает презентацию, тест, саммари и рабочий шаблон для применения материала.</p></div><div><b>4. Используйте Топ-100 книг</b><p>В блоке «Топ-100 книг для бизнеса» все доступные саммари открыты сразу. Прочитанные книги отмечаются зелёным цветом.</p></div><div><b>5. Профиль хранит результат</b><p>В профиле отражаются исследовательские баллы, открытые уроки, слайды, саммари, тесты, рабочие материалы и прочитанные книги.</p></div></div></div>';
+    };
+  }
+
+  function v96ResearchMap(){ try { return typeof getResearchPointEventsV91 === 'function' ? getResearchPointEventsV91() : {}; } catch(e) { return {}; } }
+  function v96CountEvents(predicate){ var map = v96ResearchMap(); return Object.keys(map).filter(function(k){ return predicate(k, map[k]); }).length; }
+  function v96ProfileStats(){
+    var slideCount = v96CountEvents(function(k){ return k.indexOf('slide:') === 0; });
+    var summaryCount = v96CountEvents(function(k){ return k.indexOf('summary:') === 0; });
+    var lessonCount = v96CountEvents(function(k){ return k.indexOf('lesson:') === 0 && k.indexOf(':presentation') === -1 && k.indexOf(':books') === -1 && k.indexOf(':homework') === -1; });
+    var testCount = v96CountEvents(function(k){ return k.indexOf('quiz_open:') === 0; });
+    var homeworkCount = v96CountEvents(function(k){ return k.indexOf('homework_link:') === 0; });
+    var modulesCount = v96CountEvents(function(k){ return k.indexOf('module:') === 0; });
+    var blocksCount = v96CountEvents(function(k){ return k.indexOf('block:') === 0 || k.indexOf('finance_section:') === 0; });
+    var activitiesCount = v96CountEvents(function(k){ return k.indexOf('activity:') === 0; });
+    var readBooks = v96ReadIds().length;
+    var openedElements = typeof getResearchEventsCountV91 === 'function' ? getResearchEventsCountV91() : Object.keys(v96ResearchMap()).length;
+    var points = typeof getResearchPointsTotalV91 === 'function' ? getResearchPointsTotalV91() : openedElements;
+    return { points:points, opened:openedElements, modules:modulesCount, blocks:blocksCount, activities:activitiesCount, lessons:lessonCount, slides:slideCount, summaries:summaryCount, tests:testCount, homework:homeworkCount, readBooks:readBooks, pages:slideCount + summaryCount };
+  }
+  window.architectureProfileStatsV96 = v96ProfileStats;
+  window.doneSummaryHtml = function(){
+    var stats = v96ProfileStats();
+    return v96Card('done-summary-card profile-done-compact-v43 profile-done-v44 profile-done-v96', '<div class="done-heading-v44"><div><p class="eyebrow">синхронизированная статистика</p><h2>Что уже открыто</h2></div><p>Учитываются все исследовательские события приложения: модули, уроки, слайды, саммари, тесты, рабочие материалы и книги.</p></div><div class="done-grid done-grid-v96"><div><span>Элементы</span><b>'+v96Format(stats.opened)+'</b></div><div><span>Страницы/экраны</span><b id="profile-pages-value-v44">'+v96Format(stats.pages)+'</b></div><div><span>Уроки</span><b>'+v96Format(stats.lessons)+'</b></div><div><span>Слайды</span><b>'+v96Format(stats.slides)+'</b></div><div><span>Саммари</span><b>'+v96Format(stats.summaries)+'</b></div><div><span>Тесты</span><b>'+v96Format(stats.tests)+'</b></div><div><span>Рабочие материалы</span><b>'+v96Format(stats.homework)+'</b></div><div><span>Книги прочитаны</span><b>'+v96Format(stats.readBooks)+'</b></div></div>');
+  };
+  window.readingStatsV44 = function(){
+    var s = v96ProfileStats();
+    return { presentations:s.lessons, pages:s.pages, tests:s.tests, bookSummaries:s.readBooks, templates:s.homework, insights:0 };
+  };
+
+  window.__ARCHITECTURE_TOP100_V96 = {
+    title: TOP100_TITLE_V96,
+    oldMechanicsDisabled: true,
+    dailyTimerDisabled: true,
+    quizGateDisabled: true,
+    allBooksOpen: true,
+    readStatus: 'last screen viewed marks book as read'
   };
 })();

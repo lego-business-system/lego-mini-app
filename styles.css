@@ -5653,3 +5653,31 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
 /* v94 — stable homework buttons */
 .homework-template-stack-v93,.homework-template-stack-v94{display:flex;flex-direction:column;gap:10px;margin:16px 0 18px;}
 .homework-template-stack-v93 .btn,.homework-template-stack-v94 .btn{width:100%;justify-content:center;text-align:center;}
+
+
+/* v95 clean stability UI */
+.homework-actions-v95{display:flex;flex-direction:column;gap:10px;margin:14px 0 10px;align-items:stretch;}
+.homework-actions-v95 .btn{width:100%;justify-content:center;}
+.v95-bottom-nav .bottom-item b{font-size:11px;line-height:1.1;}
+.research-rules-hero-v95 p{max-width:760px;}
+
+
+/* v95 stability helpers */
+.bottom-nav-v95{grid-template-columns:repeat(3,1fr);}
+.homework-link-stack-v95{display:flex;flex-direction:column;gap:10px;margin:16px 0;}
+.homework-actions-v95{margin-top:12px;}
+
+/* v96 — Топ-100 книг для бизнеса */
+.top100-hero-v96 .top100-progress-v96,
+.top100-progress-v96{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:16px}
+.top100-progress-v96>div{padding:12px;border-radius:16px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.24)}
+.top100-progress-v96 span{display:block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;opacity:.78;font-weight:800;margin-bottom:4px}
+.top100-progress-v96 b{font-size:20px;line-height:1.1}
+.top100-book-card-v96.passed,.books100-book-card.top100-read-v96{background:#edf8f2;border-color:rgba(34,167,93,.45);box-shadow:0 10px 24px rgba(34,167,93,.10)}
+.top100-book-card-v96.passed em,.books100-book-card.top100-read-v96 em{background:#d9f3e5;color:#0f7a3c}
+.top100-book-card-v96.top100-open-v96 em{background:#e7f0fa;color:#1f4f8a}
+.top100-read-notice-v96{margin:12px 0;padding:14px 16px;border-radius:18px;background:#edf8f2;border:1px solid rgba(34,167,93,.35);color:#143a26}
+.top100-read-notice-v96 b{display:block;margin-bottom:4px}.top100-read-notice-v96 p{margin:0;font-size:14px;line-height:1.45}
+.profile-done-v96 .done-grid-v96{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(min-width:720px){.profile-done-v96 .done-grid-v96{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:520px){.top100-progress-v96{grid-template-columns:1fr}.top100-nav-v96{grid-template-columns:1fr}}
