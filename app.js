@@ -34,7 +34,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v100-research-points-supabase-sync-20260630";
+const APP_CACHE_VERSION = "v100-supabase-research-sync-20260630";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -2386,53 +2386,6 @@ function shell(content, activeTab) {
     </div>`;
 }
 
-
-
-/* =====================================================
-   v100 — синхронизация исследовательских баллов из Supabase
-   ===================================================== */
-function researchPointUserSuffixV100(){
-  try {
-    const ids = typeof possibleIds === 'function' ? possibleIds() : [];
-    if (ids && ids[0]) return String(ids[0]).replace(/[^a-zA-Z0-9_-]/g, '_');
-    const names = typeof possibleUsernames === 'function' ? possibleUsernames() : [];
-    if (names && names[0]) return String(names[0]).replace(/[^a-zA-Z0-9_-]/g, '_');
-    const user = typeof getTelegramUser === 'function' ? getTelegramUser() : {};
-    if (user && user.id) return String(user.id).replace(/[^a-zA-Z0-9_-]/g, '_');
-    if (user && user.username) return String(user.username).replace(/[^a-zA-Z0-9_-]/g, '_');
-  } catch(e) {}
-  return 'local';
-}
-function researchPointStorageKeyV100(){
-  return 'architecture_research_point_events_v91_' + researchPointUserSuffixV100();
-}
-function mergeResearchPointEventsFromServerV100(result){
-  try {
-    const rows = (result && (result.research_point_events || result.researchPointEvents)) || [];
-    if (!Array.isArray(rows) || !rows.length) return;
-    const key = researchPointStorageKeyV100();
-    let map = {};
-    try { map = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch(e) { map = {}; }
-    rows.forEach(function(row){
-      const eventKey = String(row.event_key || row.eventKey || '').trim();
-      if (!eventKey) return;
-      if (map[eventKey]) return;
-      map[eventKey] = {
-        eventKey,
-        eventType: String(row.event_type || row.eventType || 'research_event'),
-        points: Number(row.points || 1),
-        payload: row.payload || row.payload_json || {},
-        createdAt: row.created_at || row.createdAt || new Date().toISOString(),
-        source: 'supabase'
-      };
-    });
-    localStorage.setItem(key, JSON.stringify(map));
-    try { state.researchPointEvents = map; } catch(e) {}
-  } catch(e) {
-    console.warn('RESEARCH_POINT_SERVER_MERGE_FAILED', e);
-  }
-}
-
 function bottomNav(active) {
   if (!hasVerifiedAccessV32()) return "";
   const item = (key,label,icon,fn)=>`<button class="bottom-item ${active===key?'active':''}" onclick="safeNavigateV32('${fn.replace("()","")}')"><span>${icon}</span><b>${label}</b></button>`;
@@ -2490,7 +2443,7 @@ async function checkAccess() {
     try { localStorage.setItem('lego_app_mode', 'student'); } catch(e) {}
 
     state.remoteProgressByLesson = result.progress_by_lesson || result.progressByLesson || {};
-    mergeResearchPointEventsFromServerV100(result);
+    try { if (typeof hydrateResearchEventsFromAccessResultV100 === 'function') hydrateResearchEventsFromAccessResultV100(result); } catch(e) { console.warn('RP_HYDRATE_ACCESS_V100', e); }
     if (result.progress && result.lesson && result.lesson.code) {
       state.remoteProgressByLesson[result.lesson.code] = result.progress;
     }
@@ -2510,7 +2463,7 @@ async function checkAccess() {
    false: форум виден только в режиме администратора;
    true: форум можно показывать ученикам (после финального теста и включения Supabase).
    ===================================================== */
-window.FORUM_PUBLIC_UI_V38 = false;
+window.FORUM_PUBLIC_UI_V38 = true;
 function forumVisibleInNavigationV38(){
   return Boolean(window.FORUM_PUBLIC_UI_V38 === true || (typeof isAdminMode === 'function' && isAdminMode()));
 }
@@ -2781,7 +2734,7 @@ window.checkAccess = async function(){
     state.appMode = 'student';
     localStorage.setItem('lego_app_mode', 'student');
     state.remoteProgressByLesson = result.progress_by_lesson || result.progressByLesson || {};
-    mergeResearchPointEventsFromServerV100(result);
+    try { if (typeof hydrateResearchEventsFromAccessResultV100 === 'function') hydrateResearchEventsFromAccessResultV100(result); } catch(e) { console.warn('RP_HYDRATE_ACCESS_V100', e); }
     if (result.progress && result.lesson && result.lesson.code) state.remoteProgressByLesson[result.lesson.code] = result.progress;
     // v65: администратор при новом входе остаётся в режиме ученика; администрирование включается вручную.
     await loadCatalog();
@@ -3325,7 +3278,7 @@ else installArchitectureObserverV35();
   window.renderAdmin = function(){
     if (!isAdminUser()) { alert('Нет прав администратора.'); return; }
     var forumBlock = typeof window.renderBusinessForum === 'function'
-      ? card('', `<h2>Бизнес-форум</h2><p>Форум используется для вопросов и обсуждений. Пока он закрыт для учеников, администратор может продолжать тестирование.</p><button class="btn primary" onclick="renderBusinessForum()">Открыть форум</button>`)
+      ? card('', `<h2>Бизнес-форум</h2><p>Форум используется для вопросов по урокам, обсуждения практических ситуаций и обмена опытом участников.</p><button class="btn primary" onclick="renderBusinessForum()">Открыть форум</button>`)
       : '';
     shell(`${card('blue-card-v2', `<h1>Панель администратора</h1><p>Все опубликованные уроки доступны ученикам сразу. Самостоятельные работы больше не требуют проверки.</p>`)}
       ${card('', `<h2>Топ-100 книг для бизнеса</h2><p>Можно проверить книги, мини-тесты и восстановление зачётов.</p><div class="grid-v2"><button class="btn primary" onclick="books100AdminRepairAllV25()">Проверить и восстановить зачёты книг</button><button class="btn secondary" onclick="renderBookChallenge()">Открыть книги из блока «Топ-100 книг для бизнеса»</button></div>`)}
@@ -3474,7 +3427,7 @@ else installArchitectureObserverV35();
     ]);
   };
   window.renderForumUnavailableV40 = function(){
-    renderContentPlaceholderV40('Бизнес-форум','раздел в подготовке','Форум пока закрыт для учеников. После завершения тестирования здесь появятся вопросы по урокам, обсуждения практики и обмен опытом.',[
+    renderContentPlaceholderV40('Бизнес-форум','раздел в подготовке','Форум открыт для вопросов по урокам, обсуждения практики и обмена опытом участников.',[
       {icon:'01',title:'Вопросы по урокам',text:'Обсуждение конкретных затруднений без обязательной проверки самостоятельной работы.'},
       {icon:'02',title:'Разбор ситуаций',text:'Участники смогут описывать факты, действия и результаты.'},
       {icon:'03',title:'Профессиональные ответы',text:'Ответы по существу темы с сохранением правил и модерации.'}
@@ -3857,7 +3810,7 @@ else installArchitectureObserverV35();
 
   var renderMainBlockBeforeV41 = window.renderMainBlockCard;
   var studentLockedBlocksV41 = [
-    'Нет своего бизнеса', 'Я сотрудник', 'Бизнес-форум', 'Газета',
+    'Нет своего бизнеса', 'Я сотрудник', 'Газета',
     'Предпринимательские статьи', 'Прямые разборы', 'Что посмотреть',
     'Дополнительные материалы', 'VIP уровень'
   ];
@@ -3988,7 +3941,6 @@ else installArchitectureObserverV35();
   [
     ['renderNoBusinessV40','Нет своего бизнеса'],
     ['renderEmployeeRouteV40','Я сотрудник'],
-    ['openForumBlockV40','Бизнес-форум'],
     ['renderNewspaperV40','Газета'],
     ['renderEntrepreneurArticlesV40','Предпринимательские статьи'],
     ['renderDirectReviewsV40','Прямые разборы'],
@@ -4042,7 +3994,7 @@ else installArchitectureObserverV35();
   window.renderAdmin = function(){
     if (!isAdminUser()) { alert('Нет прав администратора.'); return; }
     var forumBlock = typeof window.renderBusinessForum === 'function'
-      ? card('', `<h2>Бизнес-форум</h2><p>Администраторский доступ используется для настройки и тестирования форума.</p><button class="btn primary" onclick="renderBusinessForum()">Открыть форум</button>`)
+      ? card('', `<h2>Бизнес-форум</h2><p>Форум открыт для участников. Администратор видит дополнительные инструменты модерации.</p><button class="btn primary" onclick="renderBusinessForum()">Открыть форум</button>`)
       : '';
     shell(`${card('blue-card-v2', `<h1>Панель администратора</h1><p>Здесь собраны предпросмотр опубликованных уроков, книги из блока «Топ-100 книг для бизнеса» и тестовые разделы.</p>`)}
       ${card('', `<h2>Топ-100 книг для бизнеса</h2><div class="grid-v2"><button class="btn primary" onclick="books100AdminRepairAllV25()">Проверить зачёты книг</button><button class="btn secondary" onclick="renderBookChallenge()">Открыть книги из блока «Топ-100 книг для бизнеса»</button></div>`)}
@@ -6025,11 +5977,61 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
 })();
 
 
+
+/* =====================================================
+   v100 — синхронизация исследовательских событий из Supabase
+   ===================================================== */
+function researchUserSuffixV100(result){
+  try { var ids = typeof possibleIds === 'function' ? possibleIds() : []; if (ids && ids[0]) return String(ids[0]).replace(/[^a-zA-Z0-9_-]/g, '_'); } catch(e) {}
+  try { var u = result && result.user ? result.user : (state && state.user ? state.user : {}); if (u && u.telegram_id) return String(u.telegram_id).replace(/[^a-zA-Z0-9_-]/g, '_'); if (u && u.id) return String(u.id).replace(/[^a-zA-Z0-9_-]/g, '_'); } catch(e) {}
+  try { var tgUser = typeof getTelegramUser === 'function' ? getTelegramUser() : {}; if (tgUser && tgUser.id) return String(tgUser.id).replace(/[^a-zA-Z0-9_-]/g, '_'); } catch(e) {}
+  return 'local';
+}
+function hydrateResearchEventsFromAccessResultV100(result){
+  try {
+    var incoming = (result && (result.researchPointEvents || result.research_point_events)) || [];
+    if (!Array.isArray(incoming) || !incoming.length) return;
+    var suffix = researchUserSuffixV100(result);
+    var key = 'architecture_research_point_events_v91_' + suffix;
+    var map = {};
+    try { map = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch(e) { map = {}; }
+    var readKey = 'architecture_top100_read_books_v96_' + suffix;
+    var readIds = [];
+    try { readIds = JSON.parse(localStorage.getItem(readKey) || '[]') || []; } catch(e) { readIds = []; }
+    var changed = false;
+    var readChanged = false;
+    incoming.forEach(function(row){
+      if (!row) return;
+      var eventKey = String(row.event_key || row.eventKey || '').trim();
+      if (!eventKey) return;
+      var eventType = String(row.event_type || row.eventType || 'research_event');
+      var payload = row.payload || row.payload_json || {};
+      if (!map[eventKey]) {
+        map[eventKey] = {
+          eventKey: eventKey,
+          eventType: eventType,
+          points: Number(row.points || 1) || 1,
+          payload: payload,
+          createdAt: row.created_at || row.createdAt || new Date().toISOString()
+        };
+        changed = true;
+      }
+      if (eventType === 'book_read' || eventKey.indexOf('book_read:books100:') === 0) {
+        var bookId = String((payload && (payload.bookId || payload.book_id || payload.id)) || eventKey.split(':').pop() || '').trim();
+        if (bookId && readIds.indexOf(bookId) === -1) { readIds.push(bookId); readChanged = true; }
+      }
+    });
+    if (changed) localStorage.setItem(key, JSON.stringify(map));
+    if (readChanged) localStorage.setItem(readKey, JSON.stringify(Array.from(new Set(readIds.map(String)))));
+  } catch(e) { console.warn('RESEARCH_EVENTS_HYDRATE_V100_FAILED', e); }
+}
+window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAccessResultV100;
+
 /* =====================================================
    v91 — исследовательские баллы: 1 новое действие = 1 балл
    ===================================================== */
 (function installResearchPointsV91(){
-  window.APP_UI_VERSION_V91 = 'v100-research-points-supabase-sync-20260630';
+  window.APP_UI_VERSION_V91 = 'v100-supabase-research-sync-20260630';
   try { window.APP_UI_VERSION_V89 = window.APP_UI_VERSION_V91; } catch(e) {}
   try { if (typeof LEGO_V24_CACHE_VERSION !== 'undefined') LEGO_V24_CACHE_VERSION = window.APP_UI_VERSION_V91; } catch(e) {}
   try { contentVersionV24 = function(){ return window.APP_UI_VERSION_V91; }; window.contentVersionV24 = contentVersionV24; } catch(e) {}
@@ -6383,7 +6385,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
    v96 — Топ-100 книг для бизнеса: открытая библиотека вместо ежедневной механики
    ===================================================== */
 (function installTop100BusinessBooksV96(){
-  window.APP_UI_VERSION_V96 = 'v100-research-points-supabase-sync-20260630';
+  window.APP_UI_VERSION_V96 = 'v100-supabase-research-sync-20260630';
   try { window.APP_UI_VERSION = window.APP_UI_VERSION_V96; } catch(e) {}
   var TOP100_TITLE_V96 = 'Топ-100 книг для бизнеса';
   var TOP100_SUBTITLE_V96 = 'Саммари книг и управленческие идеи для предпринимателя. Все книги открыты без таймера и ежедневных ограничений.';
@@ -6553,7 +6555,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
       var image = screen.image || (bookMeta.coverImage && i === 0 ? bookMeta.coverImage : ('assets/challenges/books100/' + v96Pad(bookMeta.day || book.day || 1, 3) + '/screen_' + v96Pad(i+1, 2) + '.png'));
       try { if (typeof markChallengePageV44 === 'function') markChallengePageV44(v96BookId(bookMeta), i+1, total); } catch(e) {}
       v96Award('summary:books100:' + v96BookId(bookMeta) + ':' + v96Pad(i+1, 3), 'summary_page_open', { module:'books100', bookId:v96BookId(bookMeta), page:i+1, total:total });
-      if (i === total - 1) v96MarkBookRead(bookMeta);
+      if (i === total - 1) { v96MarkBookRead(bookMeta); v96Award('book_read:books100:' + v96BookId(bookMeta), 'book_read', { module:'books100', bookId:v96BookId(bookMeta), day:Number(bookMeta.day||0), title:bookMeta.title || '' }); }
       var nextLabel = i === total - 1 ? 'Завершить книгу' : 'Далее';
       var nextAction = i === total - 1 ? 'renderBookChallenge()' : 'nextBooks100Screen()';
       var nav = '<div class="nav-panel-v2 nav-panel-v2-three top100-nav-v96"><button class="btn secondary" onclick="renderBookChallenge()">К списку книг</button><button class="btn secondary" '+(i===0?'disabled':'')+' onclick="prevBooks100Screen()">Назад</button><button class="btn primary" onclick="'+nextAction+'">'+nextLabel+'</button></div>';
@@ -6718,7 +6720,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
    - клики по ссылкам не задваивают счётчик "Рабочие материалы".
    ===================================================== */
 (function installProfileStatsAndWorkMaterialsV99(){
-  window.APP_UI_VERSION_V99 = 'v100-research-points-supabase-sync-20260630';
+  window.APP_UI_VERSION_V99 = 'v100-supabase-research-sync-20260630';
   try { window.APP_UI_VERSION = window.APP_UI_VERSION_V99; } catch(e) {}
   try { window.APP_UI_VERSION_V91 = window.APP_UI_VERSION_V99; } catch(e) {}
   try { window.APP_UI_VERSION_V96 = window.APP_UI_VERSION_V99; } catch(e) {}
@@ -7004,3 +7006,31 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
   };
 })();
 
+
+
+/* =====================================================
+   v101 — открытие Бизнес-форума для учеников
+   Форум остаётся вне нижнего меню, но открыт с главной и бокового меню.
+   Закрытые будущие разделы по-прежнему не открываются.
+   ===================================================== */
+(function installForumPublicOpenV101(){
+  window.FORUM_PUBLIC_UI_V38 = true;
+
+  if (Array.isArray(window.studentLockedBlocksV41)) {
+    window.studentLockedBlocksV41 = window.studentLockedBlocksV41.filter(function(title){
+      return String(title || '').trim() !== 'Бизнес-форум';
+    });
+  }
+
+  window.forumVisibleInNavigationV38 = function(){ return true; };
+  window.forumReadyForCurrentModeV40 = function(){
+    return typeof window.renderBusinessForum === 'function';
+  };
+  window.openForumBlockV40 = function(){
+    if (typeof window.renderBusinessForum === 'function') return window.renderBusinessForum();
+    if (typeof renderContentPlaceholderV40 === 'function') {
+      return renderContentPlaceholderV40('Бизнес-форум','подключение','Форум загружается. Если экран не открылся, обновите приложение.', []);
+    }
+    return renderHome();
+  };
+})();
