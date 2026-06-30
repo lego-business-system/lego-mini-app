@@ -108,15 +108,7 @@ function saveLocalProgress(code, patch) {
 function getProgress(code) {
   return Object.assign({}, state.remoteProgressByLesson[code] || {}, loadLocalProgress(code) || {});
 }
-function isStageDone(code, stage) {
-  const p = getProgress(code);
-  if(stage === "presentation") return Boolean(p.presentation_completed || p.presentation_completed_at);
-  if(stage === "quiz") return Boolean(p.quiz_completed || p.quiz_completed_at);
-  if(stage === "books") return Boolean(p.books_completed || p.books_completed_at);
-  if(stage === "homeworkSubmitted") return Boolean(p.homework_submitted || p.homework_submitted_at || p.status === "homework_submitted" || p.status === "completed");
-  if(stage === "homeworkVerified") return Boolean(p.homework_verified || p.homework_checked || p.homework_verified_at || p.status === "completed");
-  return false;
-}
+/* removed obsolete duplicate function isStageDone in v95 cleanup */
 function lessonScore(code) {
   let score = 0;
   if (isStageDone(code,"presentation")) score += 10;
@@ -125,21 +117,8 @@ function lessonScore(code) {
   if (isStageDone(code,"homeworkVerified")) score += 70;
   return score;
 }
-function lessonStageLabel(code) {
-  if (isStageDone(code,"homeworkVerified")) return "Модуль закрыт";
-  if (isStageDone(code,"homeworkSubmitted")) return "ДЗ на проверке";
-  if (isStageDone(code,"books")) return "Сдать ДЗ";
-  if (isStageDone(code,"quiz")) return "Изучить саммари";
-  if (isStageDone(code,"presentation")) return "Пройти тест";
-  return "Начать презентацию";
-}
-function lessonStageAction(code) {
-  if (isStageDone(code,"homeworkSubmitted") && !isStageDone(code,"homeworkVerified")) return "renderHomeworkStatus()";
-  if (isStageDone(code,"books")) return "renderHomework()";
-  if (isStageDone(code,"quiz")) return "startBooks()";
-  if (isStageDone(code,"presentation")) return "startQuiz(false)";
-  return "startSlides()";
-}
+/* removed obsolete duplicate function lessonStageLabel in v95 cleanup */
+/* removed obsolete duplicate function lessonStageAction in v95 cleanup */
 
 async function remoteSave(event, payload) {
   const code = state.selectedLessonCode;
@@ -159,90 +138,19 @@ async function remoteSave(event, payload) {
     return { ok: true, local: true, error: "REMOTE_SAVE_FAILED" };
   }
 }
-function localPatchForEvent(event, payload) {
-  const now = nowIso();
-  if(event === "lesson_started") return { status:"in_progress", current_step:"presentation", presentation_started_at: now, last_slide_number: payload.lastSlideNumber || 1 };
-  if(event === "slide_viewed") return { status:"in_progress", current_step:"presentation", last_slide_number: payload.lastSlideNumber || 1 };
-  if(event === "presentation_completed") return { status:"in_progress", current_step:"quiz", presentation_completed:true, presentation_completed_at: now, last_slide_number: payload.lastSlideNumber || 0 };
-  if(event === "quiz_progress") return { status:"in_progress", current_step:"quiz", current_question: state.questionIndex, quiz_answers: state.answers };
-  if(event === "quiz_completed") return { status:"in_progress", current_step: payload.passed ? "books" : "quiz", quiz_completed: Boolean(payload.passed), quiz_completed_at: payload.passed ? now : undefined, quiz_score: payload.score, quiz_total: payload.total, quiz_answers: payload.answers };
-  if(event === "books_started") return { status:"in_progress", current_step:"books", books_started_at: now, last_book_slide_number: payload.lastBookSlideNumber || 1 };
-  if(event === "book_slide_viewed") return { status:"in_progress", current_step:"books", last_book_slide_number: payload.lastBookSlideNumber || 1 };
-  if(event === "books_completed") return { status:"in_progress", current_step:"homework", books_completed:true, books_completed_at: now, last_book_slide_number: payload.lastBookSlideNumber || 0 };
-  if(event === "homework_started") return { status:"in_progress", current_step:"homework", homework_started_at: now };
-  if(event === "homework_submitted") return { status:"homework_submitted", current_step:"review", homework_submitted:true, homework_submitted_at: now };
-  if(event === "homework_verified") return { status:"completed", current_step:"completed", homework_verified:true, homework_checked:true, homework_verified_at: now, completed_at: now };
-  return { updated_at: now };
-}
+/* removed obsolete duplicate function localPatchForEvent in v95 cleanup */
 
-async function loadCatalog() {
-  if (state.catalog) return state.catalog;
-  const response = await fetch(CATALOG_URL + "?v=" + APP_CACHE_VERSION);
-  if (!response.ok) throw new Error("CATALOG_LOAD_FAILED");
-  state.catalog = await response.json();
-  return state.catalog;
-}
-async function loadLesson(code) {
-  if (state.lessonCache[code]) return state.lessonCache[code];
-  const lesson = state.catalog.lessons.find(l => l.code === code);
-  if (!lesson) throw new Error("LESSON_NOT_FOUND: " + code);
-  const response = await fetch(lesson.contentUrl + "?v=" + APP_CACHE_VERSION);
-  if (!response.ok) throw new Error("LESSON_CONTENT_LOAD_FAILED: " + code);
-  const data = await response.json();
-  state.lessonCache[code] = data;
-  return data;
-}
+/* removed obsolete duplicate function loadCatalog in v95 cleanup */
+/* removed obsolete duplicate function loadLesson in v95 cleanup */
 function getLessonMeta(code) { return state.catalog.lessons.find(l => l.code === code); }
 function getActivity(key) { return state.catalog.activities.find(a => a.key === key); }
 function activityLessons(key) { return state.catalog.lessons.filter(l => l.activityKey === key).sort((a,b)=>a.number-b.number); }
-function canOpenLesson(meta) {
-  if (!meta) return false;
-  if (isAdminMode()) return true;
-  if (meta.number === 1) return true;
-  const prev = activityLessons(meta.activityKey).find(l => l.number === meta.number - 1);
-  return prev ? isStageDone(prev.code, "homeworkVerified") : false;
-}
+/* removed obsolete duplicate function canOpenLesson in v95 cleanup */
 function setSelectedActivity(key) { state.selectedActivityKey = key; localStorage.setItem("lego_selected_activity", key); renderActivityLessons(key); }
-async function openLesson(code) {
-  const meta = getLessonMeta(code);
-  if (!meta) return;
-  if (!canOpenLesson(meta)) { alert("Урок пока закрыт. Следующий модуль открывается после проверенного ДЗ предыдущего урока."); return; }
-  state.selectedLessonCode = code;
-  state.selectedActivityKey = meta.activityKey;
-  localStorage.setItem("lego_selected_lesson", code);
-  localStorage.setItem("lego_selected_activity", meta.activityKey);
-  await loadLesson(code);
-  renderLessonHub();
-}
+/* removed obsolete duplicate function openLesson in v95 cleanup */
 
-function shell(content, activeTab) {
-  const root = $("app");
-  if (!root) return;
-  const modeButton = isAdminUser()
-    ? `<button class="mode-pill ${isAdminMode() ? "admin" : "student-preview"}" onclick="renderProfile()">${isAdminMode() ? "Администрирование" : "Режим ученика"}</button>`
-    : "";
-  root.innerHTML = `
-    <div class="app-shell-v2">
-      <header class="app-header-v2">
-        <div>
-          <div class="brand-logo">Л.Е.Г.О.</div>
-          <div class="brand-subtitle">система внедрения управленческих изменений</div>
-        </div>
-        ${modeButton}
-      </header>
-      <main class="content-v2">${content}</main>
-      ${bottomNav(activeTab || "home")}
-    </div>`;
-}
-function bottomNav(active) {
-  const item = (key,label,icon,fn)=>`<button class="bottom-item ${active===key?'active':''}" onclick="${fn}"><span>${icon}</span><b>${label}</b></button>`;
-  return `<nav class="bottom-nav-v2 bottom-nav-v2-four">
-    ${item('home','Главная','⌂','renderHome()')}
-    ${item('learning','Обучение','▣','renderLearning()')}
-    ${item('homework','ДЗ','✓','renderHomeworkCenter()')}
-    ${item('profile','Профиль','○','renderProfile()')}
-  </nav>`;
-}
+/* removed obsolete duplicate function shell in v95 cleanup */
+/* removed obsolete duplicate function bottomNav in v95 cleanup */
 function card(cls, html) { return `<section class="card-v2 ${cls||''}">${html}</section>`; }
 function progressRing(percent, label, sub) {
   const p = safePercent(percent);
@@ -261,29 +169,11 @@ function progressRing(percent, label, sub) {
   </div>`;
 }
 
-function lessonProgressMini(code) {
-  const score = lessonScore(code);
-  const percent = safePercent(score);
-  return `<div class="lesson-progress-mini">
-    <div class="lesson-progress-top"><span>Прогресс урока</span><b>${percent}%</b></div>
-    <div class="lesson-progress-bar"><div style="width:${percent}%"></div></div>
-    <div class="lesson-progress-bottom"><span>Баллы</span><b>${score} / 100</b></div>
-  </div>`;
-}
+/* removed obsolete duplicate function lessonProgressMini in v95 cleanup */
 
-function lessonOverviewCard(lesson) {
-  const img = lesson.overviewImage || `assets/lesson_overview/${lesson.code}.png`;
-  return `<section class="lesson-overview-card">
-    <img src="${img}?v=${APP_CACHE_VERSION}" alt="Карта урока" onerror="this.closest('.lesson-overview-card').style.display='none';">
-  </section>`;
-}
+/* removed obsolete duplicate function lessonOverviewCard in v95 cleanup */
 
-function getActivityProgressInfo(key) {
-  const lessons = activityLessons(key);
-  const openCount = lessons.filter(canOpenLesson).length;
-  const doneCount = lessons.filter(l => lessonScore(l.code) >= 100).length;
-  return { lessons, openCount, doneCount };
-}
+/* removed obsolete duplicate function getActivityProgressInfo in v95 cleanup */
 
 
 function cleanStudentHtml(html) {
@@ -320,85 +210,16 @@ function renderDisplayText(item, kind) {
   return cleanStudentHtml(raw);
 }
 
-function legacyTradeImage(label, current) {
-  const n = String(current).padStart(2, "0");
-  if (state.selectedLessonCode !== "ENT-TR-01") return null;
-  if (label === "Слайд") return `assets/lesson/slide_${n}.png`;
-  if (label === "Саммари") {
-    if (current >= 1 && current <= 5) return `assets/books/book1/book1_${String(current).padStart(2,"0")}.png`;
-    if (current >= 6 && current <= 10) return `assets/books/book2/book2_${String(current-5).padStart(2,"0")}.png`;
-    if (current >= 11 && current <= 15) return `assets/books/book3/book3_${String(current-10).padStart(2,"0")}.png`;
-    if (current >= 16 && current <= 20) return `assets/books/book4/book4_${String(current-15).padStart(2,"0")}.png`;
-    if (current >= 21 && current <= 25) return `assets/books/book5/book5_${String(current-20).padStart(2,"0")}.png`;
-    if (current === 26) return "assets/books/final_summary.png";
-  }
-  return null;
-}
+/* removed obsolete duplicate function legacyTradeImage in v95 cleanup */
 
-function handleImageError(img) {
-  if (!img) return;
-  if (img.dataset && img.dataset.fallbackUsed !== "1") {
-    const legacy = legacyTradeImage(img.dataset.label, Number(img.dataset.index));
-    if (legacy && img.src.indexOf(legacy) === -1) {
-      img.dataset.fallbackUsed = "1";
-      img.src = legacy + "?v=" + APP_CACHE_VERSION;
-      return;
-    }
-  }
-  img.style.display = "none";
-  const fallback = img.nextElementSibling;
-  if (fallback) fallback.style.display = "flex";
-}
+/* removed obsolete duplicate function handleImageError in v95 cleanup */
 
 function kpi(title,value,note,cls){ return `<div class="kpi-card ${cls||''}"><span>${title}</span><b>${value}</b><p>${note||''}</p></div>`; }
-function nextLessonMeta() {
-  const all = state.catalog.lessons;
-  const open = all.filter(canOpenLesson);
-  const inProgress = open.find(l => lessonScore(l.code) < 100) || open[0] || all[0];
-  return getLessonMeta(state.selectedLessonCode) || inProgress;
-}
-function totalProgressPercent() {
-  const lessons = state.catalog.lessons || [];
-  if (!lessons.length) return 0;
-  const sum = lessons.reduce((acc,l)=>acc+lessonScore(l.code),0);
-  return Math.round(sum / (lessons.length * 100) * 100);
-}
-function currentActivityProgress() {
-  const lessons = activityLessons(state.selectedActivityKey);
-  if (!lessons.length) return 0;
-  const sum = lessons.reduce((acc,l)=>acc+lessonScore(l.code),0);
-  return Math.round(sum / (lessons.length * 100) * 100);
-}
+/* removed obsolete duplicate function nextLessonMeta in v95 cleanup */
+/* removed obsolete duplicate function totalProgressPercent in v95 cleanup */
+/* removed obsolete duplicate function currentActivityProgress in v95 cleanup */
 
-function renderHome() {
-  const meta = nextLessonMeta();
-  const act = getActivity(meta.activityKey);
-  state.selectedLessonCode = meta.code;
-  state.selectedActivityKey = meta.activityKey;
-  const score = lessonScore(meta.code);
-  const nextLabel = lessonStageLabel(meta.code);
-  const html = `
-    ${card('hero-dashboard', `
-      <div class="hero-layout">
-        <div>
-          <p class="eyebrow">текущий шаг</p>
-          <h1>${esc(nextLabel)}</h1>
-          <p>${esc(act.title)} · урок ${String(meta.number).padStart(2,'0')} · ${esc(meta.title)}</p>
-          <button class="btn primary" onclick="openLesson('${meta.code}')">Продолжить</button>
-        </div>
-        ${progressRing(score, 'урок', 'текущий модуль')}
-      </div>
-    `)}
-
-    ${card('', `<h2>Основные блоки</h2><p>Выберите крупный маршрут.</p>
-      <div class="top-track-grid">
-        <button class="track-card disabled"><b>Нет своего бизнеса</b><p>В разработке.</p></button>
-        <button class="track-card active" onclick="renderLearning()"><b>Я предприниматель</b><p>Диагностика, уроки, ДЗ, проверка и управленческие действия.</p></button>
-        <button class="track-card disabled"><b>Я сотрудник</b><p>В разработке.</p></button>
-      </div>`)}
-  `;
-  shell(html, 'home');
-}
+/* removed obsolete duplicate function renderHome in v95 cleanup */
 function activityIntroText(act) {
   if (!act) return "Описание направления будет добавлено.";
   const direct = String(act.description || act.intro || act.moduleDescription || "").trim();
@@ -414,46 +235,11 @@ function activityIntroText(act) {
   return fallback[act.key] || String(act.chain || "Описание направления будет добавлено.").trim();
 }
 
-function renderLearning() {
-  const html = `
-    ${card('blue-card-v2', `<h1>Я предприниматель</h1><p>Сначала выбирается вид деятельности. После выбора откроется маршрут из 10 уроков внутри конкретного направления.</p>${isAdminMode() ? '<p class="small admin-note">Режим администрирования: после выбора направления будут доступны все уроки.</p>' : ''}`)}
-    <div class="activity-grid-v2">
-      ${state.catalog.activities.map(a=>{
-        const info = getActivityProgressInfo(a.key);
-        const cardText = String(a.chain || activityIntroText(a)).trim();
-        return `<button class="activity-card-v2 ${a.key===state.selectedActivityKey?'active':''}" onclick="renderActivityLessons('${a.key}')">
-          <span>${a.icon}</span>
-          <b>${esc(a.title)}</b>
-          <small>${esc(cardText)}</small>
-          <em>${info.openCount} из ${info.lessons.length} уроков доступно</em>
-        </button>`;
-      }).join('')}
-    </div>
-  `;
-  shell(html, 'learning');
-}
+/* removed obsolete duplicate function renderLearning in v95 cleanup */
 
-function renderActivityLessons(key) {
-  if (key && getActivity(key)) {
-    state.selectedActivityKey = key;
-    localStorage.setItem("lego_selected_activity", key);
-  }
-  const act = getActivity(state.selectedActivityKey) || state.catalog.activities[0];
-  const info = getActivityProgressInfo(act.key);
-  const html = `
-    ${card('blue-card-v2', `<p class="eyebrow">Я предприниматель</p><h1>${esc(act.title)}</h1><p>${esc(activityIntroText(act))}</p><p class="small">Первый урок доступен сразу. Следующий урок открывается после приёмки ДЗ предыдущего урока.</p>`)}
-    ${card('', `<div class="activity-toolbar"><button class="btn secondary" onclick="renderLearning()">К видам деятельности</button></div><h2>Уроки направления</h2><p>Доступно: <b>${info.openCount} из ${info.lessons.length}</b>. Пройдено: <b>${info.doneCount}</b>.</p><div class="lesson-list-v2">${info.lessons.map(renderLessonRow).join('')}</div>`)}
-  `;
-  shell(html, 'learning');
-}
+/* removed obsolete duplicate function renderActivityLessons in v95 cleanup */
 
-function renderLessonRow(l) {
-  const score=lessonScore(l.code); const locked=!canOpenLesson(l);
-  return `<button class="lesson-row-v2 ${locked?'locked':''}" onclick="openLesson('${l.code}')">
-    <div><b>${String(l.number).padStart(2,'0')}. ${esc(l.title)}</b><p>${locked?'закрыт':lessonStageLabel(l.code)} · ${score}/100</p></div>
-    <span>${locked?'🔒':(score===100?'✓':'→')}</span>
-  </button>`;
-}
+/* removed obsolete duplicate function renderLessonRow in v95 cleanup */
 function firstLessonDescription(activityKey, title) {
   const fallback = {
     trade: "Этот урок помогает разобрать торговлю не по ощущениям, а по фактам. Вы увидите, где именно теряется результат: во входящем потоке, конверсии в покупку, ассортименте, среднем чеке, марже, запасах, расходах, учёте или свободных деньгах. Задача урока — поставить первичный диагноз бизнеса и понять, какой участок требует особого внимания в дальнейшем маршруте.",
@@ -466,93 +252,21 @@ function firstLessonDescription(activityKey, title) {
   return fallback[activityKey] || `Этот урок помогает разобрать тему «${title || 'урок'}» через факты, показатели, ограничение и действие на ближайший цикл.`;
 }
 
-function cleanLessonDescription(lesson) {
-  let text = String(lesson && lesson.description ? lesson.description : '').trim();
-  const title = String(lesson && lesson.title ? lesson.title : '').trim();
-  const activity = String(lesson && lesson.activityTitle ? lesson.activityTitle : '').trim();
-  const num = String(lesson && lesson.number ? lesson.number : '').padStart(2,'0');
-  const patterns = [
-    `${activity}. Урок ${num}. ${title}.`,
-    `${activity}. Урок ${Number((lesson && lesson.number) || 0)}. ${title}.`,
-    `${activity}, урок ${num}. ${title}.`,
-    `Урок ${num}. ${title}.`,
-    title
-  ];
-  patterns.forEach(function(pattern){
-    if (!pattern) return;
-    text = text.replace(pattern, '').trim();
-  });
-  text = text
-    .replace(/Версия\s+наполнения\s*:\s*v\d+[\w.-]*/ig, '')
-    .replace(/\bv\d+(?:\.\d+)?\b/ig, '')
-    .replace(/^\.+/, '')
-    .trim();
-  const looksTechnical = /Методологии\s*:|BMC|TOC|HADI|BSC|Unit Economics|поток клиентов\s*→|цепочк[аи]/i.test(text);
-  if (!text || (Number(lesson && lesson.number) === 1 && looksTechnical && text.length < 260)) {
-    return firstLessonDescription(lesson && lesson.activityKey, title);
-  }
-  return text;
-}
-async function renderLessonHub() {
-  const lesson = await loadLesson(state.selectedLessonCode);
-  const meta = getLessonMeta(state.selectedLessonCode);
-  const activityKey = meta ? meta.activityKey : (lesson.activityKey || state.selectedActivityKey);
-  const adminService = isAdminMode() && lesson.passportText ? `<details class="admin-details"><summary>Служебное описание урока</summary><pre class="text-pre">${esc(lesson.passportText || '')}</pre></details>` : "";
-  const html = `
-    ${card('blue-card-v2 lesson-head-card', `<p class="eyebrow">${esc(lesson.activityTitle)} · урок ${String(lesson.number).padStart(2,'0')}</p><h1>${esc(lesson.title)}</h1><div class="lesson-meta-chips"><span>${esc(lesson.activityTitle)}</span><span>Урок ${String(lesson.number).padStart(2,'0')}</span></div><p>${esc(cleanLessonDescription(lesson))}</p>${lessonProgressMini(meta.code)}`)}
-    ${lessonOverviewCard(lesson)}
-    <div class="stage-grid-v2">
-      ${stageCard('presentation','Презентация','Информационная часть урока',isStageDone(meta.code,'presentation'),'startSlides()')}
-      ${stageCard('quiz','Тест','Проверка понимания материала',isStageDone(meta.code,'quiz'),'startQuiz(false)',!isStageDone(meta.code,'presentation') && !isAdminMode())}
-      ${stageCard('books','Саммари','Информация о полезных книгах',isStageDone(meta.code,'books'),'startBooks()',!isStageDone(meta.code,'quiz') && !isAdminMode())}
-      ${stageCard('homework','Домашнее задание','Практическая часть урока',isStageDone(meta.code,'homeworkSubmitted'),'renderHomework()',!isStageDone(meta.code,'books') && !isAdminMode())}
-    </div>
-    ${card('', `<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">← К выбору уроков</button>`)}
-    ${adminService}
-  `;
-  shell(html, 'learning');
-}
-function stageCard(key,title,note,done,action,locked){ return `<button class="stage-card-v2 ${done?'done':''} ${locked?'locked':''}" onclick="${locked?'alert(\'Этап пока закрыт.\')':action}"><b>${title}</b><p>${note}</p><span>${done?'✓':(locked?'🔒':'→')}</span></button>`; }
+/* removed obsolete duplicate function cleanLessonDescription in v95 cleanup */
+/* removed obsolete duplicate function renderLessonHub in v95 cleanup */
+/* removed obsolete duplicate function stageCard in v95 cleanup */
 async function startSlides(){ const p=getProgress(state.selectedLessonCode); state.slideIndex = Math.max(0, Number(p.last_slide_number || 1)-1); await remoteSave('lesson_started',{lastSlideNumber:state.slideIndex+1}); renderSlide(); }
-async function renderSlide(){ const lesson=await loadLesson(state.selectedLessonCode); const slide=lesson.slides[state.slideIndex]; shell(`${topLessonNav('prevSlide()','nextSlide()',state.slideIndex===0,state.slideIndex===lesson.slides.length-1?'К тесту':'Далее')} ${mediaScreen(slide.image,'Слайд',state.slideIndex+1,lesson.slides.length,renderDisplayText(slide,'slide'))}`,'learning'); }
+/* removed obsolete duplicate function renderSlide in v95 cleanup */
 function topLessonNav(prev,next,prevDisabled,nextLabel){ return `<div class="nav-panel-v2 nav-panel-v2-three"><button class="btn secondary" onclick="renderLessonHub()">К уроку</button><button class="btn secondary" ${prevDisabled?'disabled':''} onclick="${prev}">Назад</button><button class="btn primary" onclick="${next}">${nextLabel}</button></div>`; }
-function mediaScreen(image,label,current,total,html){
-  const legacy = legacyTradeImage(label, current);
-  const src = legacy || image || "";
-  const imageHtml = src
-    ? `<img src="${src}?v=${APP_CACHE_VERSION}" data-label="${label}" data-index="${current}" onerror="handleImageError(this)">`
-    : `<img src="" data-label="${label}" data-index="${current}" onerror="handleImageError(this)" style="display:none">`;
-  return `<div class="media-counter">${label}: ${current}/${total}</div><div class="media-box-v2">${imageHtml}<div class="image-missing-v2" style="display:none"><b>${label} ${current}</b><p>Иллюстрация в подготовке.</p></div></div><section class="slide-text-v2">${cleanStudentHtml(html)}</section>`;
-}
+/* removed obsolete duplicate function mediaScreen in v95 cleanup */
 async function prevSlide(){ if(state.slideIndex>0){ state.slideIndex--; await remoteSave('slide_viewed',{lastSlideNumber:state.slideIndex+1}); renderSlide(); } }
 async function nextSlide(){ const lesson=await loadLesson(state.selectedLessonCode); if(state.slideIndex<lesson.slides.length-1){ state.slideIndex++; await remoteSave('slide_viewed',{lastSlideNumber:state.slideIndex+1}); renderSlide(); } else { await remoteSave('presentation_completed',{lastSlideNumber:lesson.slides.length}); startQuiz(false); } }
-async function startQuiz(reset){
-  const lesson = await loadLesson(state.selectedLessonCode);
-  const p = getProgress(state.selectedLessonCode);
-  const total = Array.isArray(lesson.quiz) ? lesson.quiz.length : 0;
-  const savedIndex = Number(p.current_question || 0);
-  state.questionIndex = reset ? 0 : Math.max(0, Math.min(total ? total - 1 : 0, isNaN(savedIndex) ? 0 : savedIndex));
-  state.answers = reset ? {} : (p.quiz_answers && typeof p.quiz_answers === 'object' ? p.quiz_answers : {});
-  renderQuestion();
-}
+/* removed obsolete duplicate function startQuiz in v95 cleanup */
 function quizOptionLabel(i){
   return String.fromCharCode(65 + Number(i || 0));
 }
 
-async function renderQuestion(){
-  const lesson = await loadLesson(state.selectedLessonCode);
-  if (!lesson.quiz || !lesson.quiz.length) {
-    shell(card('result-bad-v2', '<h1>Тест не найден</h1><p>В файле урока нет вопросов теста.</p>'),'learning');
-    return;
-  }
-  state.questionIndex = Math.max(0, Math.min(state.questionIndex, lesson.quiz.length - 1));
-  const q = lesson.quiz[state.questionIndex];
-  const selected = state.answers[state.questionIndex];
-  const isLast = state.questionIndex === lesson.quiz.length - 1;
-  const activityKey = lesson.activityKey || state.selectedActivityKey;
-  const nav = `<div class="nav-panel-v2 nav-panel-v2-three"><button class="btn secondary" onclick="renderLessonHub()">К уроку</button><button class="btn secondary" ${state.questionIndex===0?'disabled':''} onclick="prevQuestion()">Назад</button><button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button></div>`;
-  shell(`${nav}<div class="quiz-card-v2"><p class="eyebrow">Вопрос ${state.questionIndex+1}/${lesson.quiz.length}</p><h2>${esc(q.q)}</h2><p class="small">Нажмите на вариант ответа — следующий вопрос откроется автоматически.</p>${q.a.map((a,i)=>`<button class="option-v2 ${Number(selected)===i?'selected':''}" onclick="selectAnswer(${i})">${quizOptionLabel(i)}. ${esc(a)}</button>`).join('')}${isLast?'<p class="small">После выбора ответа тест завершится и покажет разбор.</p>':''}</div>`,'learning');
-}
+/* removed obsolete duplicate function renderQuestion in v95 cleanup */
 async function selectAnswer(i){
   const lesson = await loadLesson(state.selectedLessonCode);
   state.answers[state.questionIndex] = i;
@@ -583,36 +297,11 @@ async function nextQuestion(){
     await finishQuiz();
   }
 }
-function quizReviewHtml(lesson){
-  const rows = (lesson.quiz || []).map((q,i)=>{
-    const rawUser = state.answers[i];
-    const userIndex = rawUser === undefined ? undefined : Number(rawUser);
-    const correctIndex = Number(q.correct || 0);
-    const ok = userIndex === correctIndex;
-    const userText = userIndex === undefined ? 'нет ответа' : `${quizOptionLabel(userIndex)}. ${q.a[userIndex] || ''}`;
-    const correctText = `${quizOptionLabel(correctIndex)}. ${q.a[correctIndex] || ''}`;
-    return `<div class="review-row ${ok?'ok':'bad'}"><h3>Вопрос ${i+1}. ${ok?'Верно':'Нужно повторить'}</h3><p><b>Ваш ответ:</b> ${esc(userText)}</p>${ok?'':`<p><b>Правильный ответ:</b> ${esc(correctText)}</p>`}<p><b>Почему:</b> ${esc(q.explanation || 'Правильный ответ опирается на причину, показатель и проверяемое действие, а не на быструю реакцию на симптом.')}</p></div>`;
-  }).join('');
-  return `<div class="quiz-review-v2"><h2>Разбор ответов</h2>${rows}</div>`;
-}
+/* removed obsolete duplicate function quizReviewHtml in v95 cleanup */
 
-async function finishQuiz(){
-  const lesson = await loadLesson(state.selectedLessonCode);
-  let score = 0;
-  (lesson.quiz || []).forEach((q,i)=>{ if(Number(state.answers[i]) === Number(q.correct)) score++; });
-  const total = lesson.quiz ? lesson.quiz.length : 0;
-  const passScoreRaw = Number(lesson.passScore || 0);
-  const passScore = passScoreRaw > 0 ? passScoreRaw : Math.ceil(total * 0.8);
-  const passed = score >= passScore;
-  const activityKey = lesson.activityKey || state.selectedActivityKey;
-  await remoteSave('quiz_completed',{score,total,passed,answers:state.answers});
-  const msg = passed
-    ? 'Тест пройден. Можно переходить к блоку с полезными книгами и затем к домашнему заданию.'
-    : 'Результат пока ниже проходного уровня. Лучше ещё раз вернуться к информационной части урока и спокойно разобрать логику: вход → переход → результат → маржа → ресурс → расходы → деньги. После повторения тест будет проще пройти за счёт понимания, а не угадывания.';
-  shell(`${card(passed?'result-ok-v2':'result-bad-v2', `<h1>${passed?'Тест пройден':'Тест не пройден'}</h1><p>Результат: <b>${score}/${total}</b>. Проходной уровень: <b>${passScore}/${total}</b>.</p><p>${msg}</p><div class="grid-v2">${passed?actionButton('К саммари','startBooks()','primary'):actionButton('Вернуться к информационной части','startSlides()','primary')}${!passed?actionButton('Пройти тест заново','startQuiz(true)','secondary'):''}${actionButton('К уроку','renderLessonHub()','secondary')}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button></div>`)}${card('',quizReviewHtml(lesson))}`,'learning');
-}
+/* removed obsolete duplicate function finishQuiz in v95 cleanup */
 async function startBooks(){ const p=getProgress(state.selectedLessonCode); state.bookIndex=Math.max(0,Number(p.last_book_slide_number||1)-1); await remoteSave('books_started',{lastBookSlideNumber:state.bookIndex+1}); renderBook(); }
-async function renderBook(){ const lesson=await loadLesson(state.selectedLessonCode); const scr=lesson.bookScreens[state.bookIndex]; shell(`${topLessonNav('prevBook()','nextBook()',state.bookIndex===0,state.bookIndex===lesson.bookScreens.length-1?'К ДЗ':'Далее')} ${mediaScreen(scr.image,'Саммари',state.bookIndex+1,lesson.bookScreens.length,renderDisplayText(scr,'book'))}`,'learning'); }
+/* removed obsolete duplicate function renderBook in v95 cleanup */
 async function prevBook(){ if(state.bookIndex>0){ state.bookIndex--; await remoteSave('book_slide_viewed',{lastBookSlideNumber:state.bookIndex+1}); renderBook(); } }
 async function nextBook(){ const lesson=await loadLesson(state.selectedLessonCode); if(state.bookIndex<lesson.bookScreens.length-1){ state.bookIndex++; await remoteSave('book_slide_viewed',{lastBookSlideNumber:state.bookIndex+1}); renderBook(); } else { await remoteSave('books_completed',{lastBookSlideNumber:lesson.bookScreens.length}); renderHomework(); } }
 
@@ -639,36 +328,10 @@ function homeworkExampleUrl(code, hw) {
     || HOMEWORK_EXAMPLE_URLS[c]
     || '';
 }
-async function renderHomework(){
-  const lesson = await loadLesson(state.selectedLessonCode);
-  const code = state.selectedLessonCode;
-  const activityKey = lesson.activityKey || state.selectedActivityKey;
-  if (!isAdminMode() && !isStageDone(code, 'books')) {
-    shell(`${card('blue-card-v2', `<h1>Домашнее задание пока закрыто</h1><p>Домашнее задание открывается после информационной части, теста и саммари. Так сохраняется порядок обучения и проверки.</p>`)}${card('', `${actionButton('К уроку','renderLessonHub()','primary')}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button>` )}`,'homework');
-    return;
-  }
-  await remoteSave('homework_started',{});
-  const hw = lesson.homework || {};
-  const tableButton = hw.buttonLabel || 'Получить шаблон таблицы ДЗ';
-  const defaultInstruction = `<h3>Практическая часть урока</h3><p>Заполните прикреплённый шаблон по фактическим данным своего бизнеса. Главная цель — увидеть первичное ограничение, сформулировать действие на 7 дней и выбрать метрику проверки.</p>`;
-  const instruction = cleanStudentHtml(hw.instructionHtml || defaultInstruction);
-  shell(`${card('blue-card-v2', `<h1>${esc(hw.title || 'Домашнее задание')}</h1><p>Практическая часть урока. Здесь вы переносите материал в реальные цифры своего бизнеса.</p>`)}${card('', `${instruction}<div class="grid-v2">${externalButton(tableButton,homeworkSheetUrl(code, hw),'primary')}${externalButton('Открыть форму сдачи',hw.submitFormUrl||'#','secondary')}${actionButton('Я отправил ДЗ','markHomeworkSubmitted()','primary')}${actionButton('← Вернуться к уроку','renderLessonHub()','secondary')}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button></div>`)}${isAdminMode()?card('', `<details class="admin-details"><summary>Служебное ТЗ таблицы и критерии</summary><h3>ТЗ таблицы</h3><pre class="text-pre">${esc(hw.tableTzText || 'ТЗ таблицы будет добавлено позже.')}</pre><h3>Критерии</h3><pre class="text-pre">${esc(hw.gradingText || '')}</pre></details>`):''}`,'homework');
-}
-async function markHomeworkSubmitted(){ if(!confirm('Форма со ссылкой на ДЗ уже отправлена?')) return; await remoteSave('homework_submitted',{submittedAt:nowIso()}); renderHomeworkStatus(); }
-function renderHomeworkStatus(){
-  const code = state.selectedLessonCode;
-  const meta = getLessonMeta(code);
-  const activityKey = meta ? meta.activityKey : state.selectedActivityKey;
-  shell(`${card('blue-card-v2', `<h1>Статус ДЗ</h1><p>${isStageDone(code,'homeworkVerified')?'ДЗ проверено. Модуль закрыт.':(isStageDone(code,'homeworkSubmitted')?'ДЗ отправлено на проверку.':'ДЗ пока не отправлено.')}</p>`)}${card('', `${actionButton('К уроку','renderLessonHub()','primary')}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button>`)}`,'homework');
-}
-function renderHomeworkCenter(){
-  const visibleLessons = state.catalog.lessons.filter(l=>canOpenLesson(l) || isStageDone(l.code,'homeworkSubmitted')).slice(0,30);
-  shell(`${card('blue-card-v2', `<h1>Домашние задания</h1><p>Здесь отображаются ДЗ по открытым урокам. Если этап ДЗ ещё не открыт, сначала нужно пройти презентацию, тест и саммари.</p>`)}${card('', `<div class="lesson-list-v2">${visibleLessons.map(l=>{
-    const ready = isAdminMode() || isStageDone(l.code,'books');
-    const status = isStageDone(l.code,'homeworkVerified') ? 'проверено' : (isStageDone(l.code,'homeworkSubmitted') ? 'на проверке' : (ready ? 'можно сдавать' : 'закрыто до саммари'));
-    return `<button class="lesson-row-v2 ${ready?'':'locked'}" onclick="openLesson('${l.code}').then(()=>${ready?'renderHomework()':'renderLessonHub()'})"><div><b>${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${status}</p></div><span>${ready?'→':'🔒'}</span></button>`;
-  }).join('')}</div>`)}`,'homework');
-}
+/* removed obsolete duplicate function renderHomework in v95 cleanup */
+/* removed obsolete duplicate function markHomeworkSubmitted in v95 cleanup */
+/* removed obsolete duplicate function renderHomeworkStatus in v95 cleanup */
+/* removed obsolete duplicate function renderHomeworkCenter in v95 cleanup */
 
 function loadGrowthMetrics(){ try { return JSON.parse(localStorage.getItem('lego_growth_metrics')||'[]'); } catch(e){ return []; } }
 function saveGrowthMetrics(){ localStorage.setItem('lego_growth_metrics', JSON.stringify(state.growthMetrics||[])); }
@@ -676,41 +339,15 @@ function addMetric(){ const name=$('metric-name')?.value.trim(); const before=Nu
 function removeMetric(i){ state.growthMetrics.splice(i,1); saveGrowthMetrics(); renderDashboard(); }
 function renderDashboard(){ const rows=state.growthMetrics||[]; shell(`${card('blue-card-v2', `<h1>Мои показатели роста</h1><p>Фиксация изменений бизнеса: было → стало → изменение. Это отдельный блок, не смешанный с учебным прогрессом.</p>`)}${card('', `<h2>Добавить показатель</h2><div class="metric-form"><input id="metric-name" placeholder="Показатель: выручка, конверсия, заявки"><input id="metric-before" type="number" placeholder="Было"><input id="metric-after" type="number" placeholder="Стало"><button class="btn primary" onclick="addMetric()">Сохранить</button></div>`)}${card('', `<h2>История</h2>${rows.length?rows.map((r,i)=>metricRow(r,i)).join(''):'<p>Пока нет показателей. Добавьте первый показатель вручную.</p>'}`)}`,'dashboard'); }
 function metricRow(r,i){ const diff=Number(r.after)-Number(r.before); const pct=r.before?Math.round(diff/Number(r.before)*100):0; return `<div class="metric-row"><div><b>${esc(r.name)}</b><p>${r.before} → ${r.after} · ${diff>=0?'+':''}${diff} ${r.before?`(${pct>=0?'+':''}${pct}%)`:''}</p></div><button onclick="removeMetric(${i})">×</button></div>`; }
-function renderProfile(){
-  const total = totalProgressPercent();
-  const totalScore = (state.catalog.lessons || []).reduce((acc,l)=>acc+lessonScore(l.code),0);
-  const activeMeta = getLessonMeta(state.selectedLessonCode) || nextLessonMeta();
-  const activeScore = activeMeta ? lessonScore(activeMeta.code) : 0;
-  const adminBlock = isAdminUser()
-    ? card('', `<h2>Режим работы</h2><p>Этот блок виден только администратору. У обычного участника переключателя режима и админ-панели нет.</p><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Просмотр как ученик</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Администрирование</button></div><p class="small">Проверка администратора идёт по Telegram ID / username и роли, которую возвращает проверка доступа.</p>`)
-    : '';
-  shell(`${card('blue-card-v2', `<h1>Профиль</h1><p>${esc(state.user?.first_name || 'Пользователь')} · ${isAdminUser()?'Администратор':'участник'}</p>`)}${card('', `<h2>Баллы и общий прогресс</h2><p>Общие баллы и общий прогресс хранятся здесь, чтобы не дублировать их внутри каждого направления.</p>${progressRing(total,'общий','по всем урокам')}<div class="profile-score-grid"><div><span>Всего баллов</span><b>${totalScore}</b></div><div><span>Текущий урок</span><b>${activeScore} / 100</b></div></div>`)}${adminBlock}${card('', `<h2>Поддержка</h2>${externalButton('Задать вопрос',SUPPORT_FORM_URL,'secondary')}${externalButton('Предложить идею',IDEA_FORM_URL,'secondary')}${isAdminUser()?actionButton('Панель администратора','renderAdmin()','primary'):''}`)}`,'profile');
-}
-function renderAdmin(){ if(!isAdminUser()){alert('Нет прав администратора.'); return;} shell(`${card('blue-card-v2', `<h1>Панель администратора</h1><p>Полный доступ ко всем урокам, предпросмотр контента и проверка ДЗ.</p>`)}${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${state.catalog.lessons.map(l=>`<button class="lesson-row-v2" onclick="openLesson('${l.code}')"><div><b>${esc(l.code)} · ${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${l.slidesCount} слайдов · ${l.quizCount} вопросов · ${l.bookScreensCount} саммари</p></div><span>→</span></button>`).join('')}</div>`)}${card('', `<h2>Проверка ДЗ</h2><input id="admin-target-user" placeholder="Telegram ID или username ученика"><textarea id="admin-review-comment" placeholder="Комментарий проверяющего"></textarea><button class="btn primary" onclick="adminApproveTargetUser()">Принять ДЗ</button><button class="btn secondary" onclick="adminRejectTargetUser()">Отправить на доработку</button>`)}`,'profile'); }
+/* removed obsolete duplicate function renderProfile in v95 cleanup */
+/* removed obsolete duplicate function renderAdmin in v95 cleanup */
 async function adminReview(action){ const target=$('admin-target-user')?.value.trim(); const comment=$('admin-review-comment')?.value.trim(); if(!target){alert('Укажите ученика.'); return;} if(action==='reject_homework'&&!comment){alert('Для доработки нужен комментарий.'); return;} if(!tg||!tg.initData){alert('Администраторская проверка работает внутри Telegram WebApp.'); return;} const res=await fetch(ADMIN_REVIEW_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData,lessonCode:state.selectedLessonCode,targetUser:target,action,comment,checkedAt:nowIso(),homeworkScore:70})}); const out=await res.json().catch(()=>({})); alert(out.ok?'Готово. Статус обновлён.':('Ошибка: '+(out.reason||out.error||'неизвестно'))); }
 function adminApproveTargetUser(){ adminReview('approve_homework'); }
 function adminRejectTargetUser(){ adminReview('reject_homework'); }
 
 function emergencyScreen(message){ const root=$('app'); if(root) root.innerHTML=`<div class="emergency"><h1>Ошибка запуска</h1><p>${esc(message)}</p></div>`; }
-function accessDenied(reason){ shell(card('result-bad-v2', `<h1>Доступ закрыт</h1><p>Приложение доступно только участникам закрытого Telegram-канала.</p><p>Причина: <b>${esc(reason)}</b></p>`),'home'); }
-async function checkAccess(){
-  shell(card('blue-card-v2', '<h1>Проверяем доступ</h1><p>Загружается каталог уроков и проверяется Telegram-доступ.</p>'),'home');
-  await loadCatalog();
-  if(!tg || !tg.initData){ accessDenied('OPEN_FROM_TELEGRAM_REQUIRED'); return; }
-  try{
-    const response=await fetch(CHECK_ACCESS_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData})});
-    const result=await response.json().catch(()=>({}));
-    if(!response.ok || !result.access){ accessDenied(result.reason||'ACCESS_DENIED'); return; }
-    state.access=true; state.accessReason=result.reason; state.user=result.user || null; state.role=result.user?.role || 'student';
-    // Новый вход всегда начинается в режиме ученика, даже для администратора.
-    state.appMode = 'student';
-    try { localStorage.setItem('lego_app_mode','student'); } catch(e) {}
-    state.remoteProgressByLesson = result.progress_by_lesson || result.progressByLesson || {};
-    if(result.progress && result.lesson && result.lesson.code) state.remoteProgressByLesson[result.lesson.code]=result.progress;
-    // v65: администратор при новом входе остаётся в режиме ученика; администрирование включается вручную.
-    renderHome();
-  } catch(e){ console.error(e); accessDenied('CHECK_ACCESS_ERROR'); }
-}
+/* removed obsolete duplicate function accessDenied in v95 cleanup */
+/* removed obsolete duplicate function checkAccess in v95 cleanup */
 async function boot(){ try{ await checkAccess(); }catch(e){ console.error(e); emergencyScreen(e.message||'BOOT_ERROR'); } }
 window.addEventListener('error', e=>{ console.error(e.error||e.message); emergencyScreen(e.message||'GLOBAL_ERROR'); });
 window.addEventListener('unhandledrejection', e=>{ console.error(e.reason); emergencyScreen(e.reason?.message||'UNHANDLED_REJECTION'); });
@@ -723,105 +360,19 @@ window.addEventListener('unhandledrejection', e=>{ console.error(e.reason); emer
 function formatPoints(value) {
   return Number(value || 0).toLocaleString("ru-RU");
 }
-function consultationCostText() {
-  return formatPoints(CONSULTATION_COST) + " баллов";
-}
-function brandLogoHtml(compact) {
-  const logo = compact ? "assets/brand/lego-mark.png" : "assets/brand/lego-logo.png";
-  return `<button class="brand-lockup ${compact ? 'compact' : ''}" onclick="renderHome()" aria-label="Л.Е.Г.О — на главную">
-    <span class="brand-logo-plate">
-      <img src="${logo}?v=${APP_CACHE_VERSION}" alt="Л.Е.Г.О" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-      <span class="brand-fallback" style="display:none"><b>Л.Е.Г.О.</b><span>система внедрения управленческих изменений</span></span>
-    </span>
-  </button>`;
-}
-function shell(content, activeTab) {
-  const root = $("app");
-  if (!root) return;
-  const modeButton = isAdminUser()
-    ? `<button class="mode-pill ${isAdminMode() ? "admin" : "student-preview"}" onclick="renderProfile()">${isAdminMode() ? "Администрирование" : "Режим ученика"}</button>`
-    : "";
-  root.innerHTML = `
-    <div class="app-shell-v2">
-      <header class="app-header-v2">
-        ${brandLogoHtml(false)}
-        ${modeButton}
-      </header>
-      <main class="content-v2">${content}</main>
-      ${bottomNav(activeTab || "home")}
-    </div>`;
-}
-function bottomNav(active) {
-  const item = (key,label,icon,fn)=>`<button class="bottom-item ${active===key?'active':''}" onclick="${fn}"><span>${icon}</span><b>${label}</b></button>`;
-  return `<nav class="bottom-nav-v2 bottom-nav-v2-four">
-    ${item('home','Главная','⌂','renderHome()')}
-    ${item('learning','Уроки','▣','renderLearning()')}
-    ${item('homework','ДЗ','✓','renderHomeworkCenter()')}
-    ${item('profile','Профиль','○','renderProfile()')}
-  </nav>`;
-}
-function isLessonPrepared(meta) {
-  if (!meta) return false;
-  if (meta.status === "ready") {
-    if (Number(meta.number) === 1) return READY_FIRST_LESSON_CODES.includes(meta.code);
-    return true;
-  }
-  return false;
-}
-function lessonAvailableStages(meta) {
-  if (!meta || !isLessonPrepared(meta)) return [];
-  const stages = [];
-  if (Number(meta.slidesCount || 0) > 0) stages.push("presentation");
-  if (Number(meta.quizCount || 0) > 0) stages.push("quiz");
-  if (Number(meta.bookScreensCount || 0) > 0) stages.push("books");
-  stages.push("homework");
-  return stages;
-}
-function lessonCompletedStageCount(code, meta) {
-  const stages = lessonAvailableStages(meta || getLessonMeta(code));
-  let done = 0;
-  if (stages.includes("presentation") && isStageDone(code,"presentation")) done++;
-  if (stages.includes("quiz") && isStageDone(code,"quiz")) done++;
-  if (stages.includes("books") && isStageDone(code,"books")) done++;
-  if (stages.includes("homework") && isStageDone(code,"homeworkVerified")) done++;
-  return done;
-}
-function lessonStageProgressInfo(code) {
-  const meta = getLessonMeta(code);
-  const total = lessonAvailableStages(meta).length || 4;
-  const done = lessonCompletedStageCount(code, meta);
-  return { done, total, percent: total ? safePercent(done / total * 100) : 0 };
-}
-function readyCoreLessons() {
-  return (state.catalog?.lessons || []).filter(isLessonPrepared);
-}
-function globalStageProgress() {
-  const lessons = readyCoreLessons();
-  let done = 0, total = 0;
-  lessons.forEach(meta => {
-    total += lessonAvailableStages(meta).length;
-    done += lessonCompletedStageCount(meta.code, meta);
-  });
-  return { done, total, percent: total ? safePercent(done / total * 100) : 0 };
-}
-function totalProgressPercent() { return globalStageProgress().percent; }
-function currentActivityProgress() {
-  const lessons = activityLessons(state.selectedActivityKey).filter(isLessonPrepared);
-  let done = 0, total = 0;
-  lessons.forEach(meta => {
-    total += lessonAvailableStages(meta).length;
-    done += lessonCompletedStageCount(meta.code, meta);
-  });
-  return total ? safePercent(done / total * 100) : 0;
-}
-function canOpenLesson(meta) {
-  if (!meta) return false;
-  if (isAdminMode()) return true;
-  if (!isLessonPrepared(meta)) return false;
-  if (Number(meta.number) === 1) return true;
-  const prev = activityLessons(meta.activityKey).find(l => Number(l.number) === Number(meta.number) - 1);
-  return prev ? isStageDone(prev.code, "homeworkVerified") : false;
-}
+/* removed obsolete duplicate function consultationCostText in v95 cleanup */
+/* removed obsolete duplicate function brandLogoHtml in v95 cleanup */
+/* removed obsolete duplicate function shell in v95 cleanup */
+/* removed obsolete duplicate function bottomNav in v95 cleanup */
+/* removed obsolete duplicate function isLessonPrepared in v95 cleanup */
+/* removed obsolete duplicate function lessonAvailableStages in v95 cleanup */
+/* removed obsolete duplicate function lessonCompletedStageCount in v95 cleanup */
+/* removed obsolete duplicate function lessonStageProgressInfo in v95 cleanup */
+/* removed obsolete duplicate function readyCoreLessons in v95 cleanup */
+/* removed obsolete duplicate function globalStageProgress in v95 cleanup */
+/* removed obsolete duplicate function totalProgressPercent in v95 cleanup */
+/* removed obsolete duplicate function currentActivityProgress in v95 cleanup */
+/* removed obsolete duplicate function canOpenLesson in v95 cleanup */
 async function openLesson(code) {
   const meta = getLessonMeta(code);
   if (!meta) return;
@@ -839,13 +390,7 @@ async function openLesson(code) {
   await loadLesson(code);
   renderLessonHub();
 }
-function getActivityProgressInfo(key) {
-  const lessons = activityLessons(key);
-  const openCount = lessons.filter(canOpenLesson).length;
-  const doneCount = lessons.filter(l => isLessonPrepared(l) && lessonCompletedStageCount(l.code,l) >= lessonAvailableStages(l).length).length;
-  const readyCount = lessons.filter(isLessonPrepared).length;
-  return { lessons, openCount, doneCount, readyCount };
-}
+/* removed obsolete duplicate function getActivityProgressInfo in v95 cleanup */
 function nextLessonMeta() {
   const ready = readyCoreLessons();
   const open = ready.filter(canOpenLesson);
@@ -853,51 +398,10 @@ function nextLessonMeta() {
   if (preferred && canOpenLesson(preferred) && lessonCompletedStageCount(preferred.code, preferred) < lessonAvailableStages(preferred).length) return preferred;
   return open.find(l => lessonCompletedStageCount(l.code,l) < lessonAvailableStages(l).length) || open[0] || ready[0] || (state.catalog.lessons || [])[0];
 }
-function lessonProgressMini(code) {
-  const info = lessonStageProgressInfo(code);
-  return `<div class="lesson-progress-mini stage-progress-mini">
-    <div class="lesson-progress-top"><span>Прогресс урока</span><b>${info.done} / ${info.total}</b></div>
-    <div class="lesson-progress-bar"><div style="width:${info.percent}%"></div></div>
-    <div class="lesson-progress-bottom"><span>Этапы пройдены</span><b>${info.percent}%</b></div>
-  </div>`;
-}
-function renderMainBlockCard(title, text, status, action, cls) {
-  const clickable = Boolean(action);
-  return `<button class="track-card ${cls || ''} ${clickable ? '' : 'disabled'}" ${clickable ? `onclick="${action}"` : ''}>
-    <b>${esc(title)}</b><p>${esc(text)}</p><em>${esc(status)}</em>
-  </button>`;
-}
-function renderHome() {
-  const gp = globalStageProgress();
-  const html = `
-    ${card('hero-dashboard main-dashboard-card', `
-      <div class="hero-layout">
-        <div>
-          <p class="eyebrow">общая система</p>
-          <h1>Ваш прогресс в Л.Е.Г.О.</h1>
-          <p>Прогресс считается по пройденным этапам доступных уроков: презентация, тест, саммари и принятое домашнее задание.</p>
-        </div>
-        ${progressRing(gp.percent, 'общий', `${gp.done} из ${gp.total || 0} этапов`)}
-      </div>
-    `)}
-    ${card('', `<h2>Выбрать блок</h2><p>Выберите направление работы внутри платформы.</p>
-      <div class="top-track-grid top-track-grid-five">
-        ${renderMainBlockCard('Нет своего бизнеса','Базовый маршрут для подготовки к предпринимательскому мышлению и запуску.','скоро','','disabled')}
-        ${renderMainBlockCard('Я предприниматель','Диагностика, уроки, ДЗ, проверка и управленческие действия.','доступно','renderLearning()','active')}
-        ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','','disabled')}
-        ${renderMainBlockCard('100 книг за 100 дней','Ежедневный челлендж: саммари, мини-тест, баллы и личная библиотека.','каркас готов','renderBookChallenge()','')}
-        ${renderMainBlockCard('Дополнительные материалы','Дополнительные уроки и материалы вне основного маршрута.','каркас готов','renderAdditionalMaterials()','')}
-      </div>`)}
-  `;
-  shell(html, 'home');
-}
-function entrepreneurCurrentStepCard() {
-  const meta = nextLessonMeta();
-  if (!meta) return '';
-  const act = getActivity(meta.activityKey);
-  const info = lessonStageProgressInfo(meta.code);
-  return card('blue-card-v2', `<p class="eyebrow">ваш текущий шаг</p><h1>${esc(lessonStageLabel(meta.code))}</h1><p>${esc(act?.title || '')} · урок ${String(meta.number).padStart(2,'0')} · ${esc(meta.title)}</p><div class="step-summary-line"><span>Прогресс урока</span><b>${info.done}/${info.total} · ${info.percent}%</b></div><button class="btn primary" onclick="openLesson('${meta.code}')">Продолжить</button>`);
-}
+/* removed obsolete duplicate function lessonProgressMini in v95 cleanup */
+/* removed obsolete duplicate function renderMainBlockCard in v95 cleanup */
+/* removed obsolete duplicate function renderHome in v95 cleanup */
+/* removed obsolete duplicate function entrepreneurCurrentStepCard in v95 cleanup */
 function renderLearning() {
   const html = `
     ${card('blue-card-v2', `<h1>Я предприниматель</h1><p>Сначала выбирается вид деятельности. После выбора откроется маршрут из 10 уроков внутри конкретного направления.</p>${isAdminMode() ? '<p class="small admin-note">Режим администрирования: после выбора направления будут доступны все уроки.</p>' : ''}`)}
@@ -918,129 +422,19 @@ function renderLearning() {
   `;
   shell(html, 'learning');
 }
-function renderActivityLessons(key) {
-  if (key && getActivity(key)) {
-    state.selectedActivityKey = key;
-    localStorage.setItem("lego_selected_activity", key);
-  }
-  const act = getActivity(state.selectedActivityKey) || state.catalog.activities[0];
-  const info = getActivityProgressInfo(act.key);
-  const activityPercent = currentActivityProgress();
-  const readyNote = info.readyCount ? 'Первый готовый урок доступен сразу. Следующий урок открывается после приёмки ДЗ предыдущего урока.' : 'Материалы направления временно закрыты: уроки откроются после оформления изображений, тестов и проверки логики.';
-  const html = `
-    ${card('blue-card-v2', `<p class="eyebrow">Я предприниматель</p><h1>${esc(act.title)}</h1><p>${esc(activityIntroText(act))}</p><p class="small">${readyNote}</p><div class="step-summary-line"><span>Прогресс направления</span><b>${activityPercent}%</b></div>`)}
-    ${card('', `<div class="activity-toolbar"><button class="btn secondary" onclick="renderLearning()">К видам деятельности</button></div><h2>Уроки направления</h2><p>Доступно: <b>${info.openCount} из ${info.lessons.length}</b>. Готово к выдаче: <b>${info.readyCount}</b>. Пройдено: <b>${info.doneCount}</b>.</p><div class="lesson-list-v2">${info.lessons.map(renderLessonRow).join('')}</div>`)}
-  `;
-  shell(html, 'learning');
-}
-function renderLessonRow(l) {
-  const locked = !canOpenLesson(l);
-  const prepared = isLessonPrepared(l);
-  const info = lessonStageProgressInfo(l.code);
-  const subtitle = !prepared
-    ? 'в редакторской подготовке'
-    : (locked ? 'закрыт' : `${lessonStageLabel(l.code)} · ${info.done}/${info.total} этапов`);
-  return `<button class="lesson-row-v2 ${locked?'locked':''}" onclick="openLesson('${l.code}')">
-    <div><b>${String(l.number).padStart(2,'0')}. ${esc(l.title)}</b><p>${subtitle}</p></div>
-    <span>${locked?'🔒':(info.percent===100?'✓':'→')}</span>
-  </button>`;
-}
-function lessonOverviewCard(lesson) {
-  const img = lesson.overviewImage || `assets/lesson_overview/${lesson.code}.png`;
-  return `<section class="lesson-overview-card"><img src="${img}?v=${APP_CACHE_VERSION}" alt="Карта урока" onerror="this.closest('.lesson-overview-card').style.display='none';"></section>`;
-}
-function renderLessonHub() {
-  loadLesson(state.selectedLessonCode).then(lesson => {
-    const meta = getLessonMeta(state.selectedLessonCode);
-    const activityKey = meta ? meta.activityKey : (lesson.activityKey || state.selectedActivityKey);
-    const adminService = isAdminMode() && lesson.passportText ? `<details class="admin-details"><summary>Служебное описание урока</summary><pre class="text-pre">${esc(lesson.passportText || '')}</pre></details>` : "";
-    const html = `
-      ${card('blue-card-v2 lesson-head-card', `<p class="eyebrow">${esc(lesson.activityTitle)} · урок ${String(lesson.number).padStart(2,'0')}</p><h1>${esc(lesson.title)}</h1><div class="lesson-meta-chips"><span>${esc(lesson.activityTitle)}</span><span>Урок ${String(lesson.number).padStart(2,'0')}</span></div><p>${esc(cleanLessonDescription(lesson))}</p>${lessonProgressMini(meta.code)}`)}
-      ${lessonOverviewCard(lesson)}
-      <div class="stage-grid-v2">
-        ${stageCard('presentation','Презентация','Информационная часть урока',isStageDone(meta.code,'presentation'),'startSlides()')}
-        ${stageCard('quiz','Тест','Проверка понимания материала',isStageDone(meta.code,'quiz'),'startQuiz(false)',!isStageDone(meta.code,'presentation') && !isAdminMode())}
-        ${stageCard('books','Саммари','Информация о полезных книгах',isStageDone(meta.code,'books'),'startBooks()',!isStageDone(meta.code,'quiz') && !isAdminMode())}
-        ${stageCard('homework','Домашнее задание','Практическая часть урока',isStageDone(meta.code,'homeworkSubmitted'),'renderHomework()',!isStageDone(meta.code,'books') && !isAdminMode())}
-      </div>
-      ${card('', `<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">← К выбору уроков</button>`)}
-      ${adminService}
-    `;
-    shell(html, 'learning');
-  }).catch(e => emergencyScreen(e.message || 'LESSON_HUB_ERROR'));
-}
-function lessonImageFallback(label, current) {
-  const n = String(current).padStart(2, "0");
-  if (state.selectedLessonCode === "ENT-TR-01") return legacyTradeImage(label, current);
-  if (state.selectedLessonCode === "ENT-SV-01") {
-    if (label === "Слайд") return `assets/lesson/services/01/slides/slide_${n}.png`;
-    if (label === "Саммари") {
-      const idx = Number(current);
-      if (idx >= 1 && idx <= 5) return `assets/lesson/services/01/books/book1_${String(idx).padStart(2,"0")}.png`;
-      if (idx >= 6 && idx <= 10) return `assets/lesson/services/01/books/book2_${String(idx-5).padStart(2,"0")}.png`;
-      if (idx >= 11 && idx <= 15) return `assets/lesson/services/01/books/book3_${String(idx-10).padStart(2,"0")}.png`;
-      if (idx >= 16 && idx <= 20) return `assets/lesson/services/01/books/book4_${String(idx-15).padStart(2,"0")}.png`;
-      if (idx >= 21 && idx <= 25) return `assets/lesson/services/01/books/book5_${String(idx-20).padStart(2,"0")}.png`;
-      if (idx === 26) return `assets/lesson/services/01/books/final_summary.png`;
-    }
-  }
-  return null;
-}
-function handleImageError(img) {
-  if (!img) return;
-  if (img.dataset && img.dataset.fallbackUsed !== "1") {
-    const fallback = lessonImageFallback(img.dataset.label, Number(img.dataset.index));
-    if (fallback && img.src.indexOf(fallback) === -1) {
-      img.dataset.fallbackUsed = "1";
-      img.src = fallback + "?v=" + APP_CACHE_VERSION;
-      return;
-    }
-    const original = img.dataset.originalSrc || "";
-    const singular = original.replace('assets/lessons/', 'assets/lesson/');
-    if (singular && singular !== original && img.src.indexOf(singular) === -1) {
-      img.dataset.fallbackUsed = "1";
-      img.src = singular + "?v=" + APP_CACHE_VERSION;
-      return;
-    }
-  }
-  img.style.display = "none";
-  const fallbackBox = img.nextElementSibling;
-  if (fallbackBox) fallbackBox.style.display = "flex";
-}
-function mediaScreen(image,label,current,total,html){
-  const fallback = lessonImageFallback(label, current);
-  const src = image || fallback || "";
-  const imageHtml = src
-    ? `<img src="${src}?v=${APP_CACHE_VERSION}" data-original-src="${esc(src)}" data-label="${label}" data-index="${current}" onerror="handleImageError(this)">`
-    : `<img src="" data-label="${label}" data-index="${current}" onerror="handleImageError(this)" style="display:none">`;
-  return `<div class="media-counter">${label}: ${current}/${total}</div><div class="media-box-v2">${imageHtml}<div class="image-missing-v2" style="display:none"><b>${label} ${current}</b><p>Иллюстрация в подготовке.</p></div></div><section class="slide-text-v2">${cleanStudentHtml(html)}</section>`;
-}
-function renderBookChallenge(){
-  const data = getChallengeState();
-  const started = Boolean(data.startedAt);
-  const progress = data.passedBooks || 0;
-  const html = `${card('blue-card-v2', `<p class="eyebrow">новый блок</p><h1>100 книг за 100 дней</h1><p>Ежедневный челлендж: одно саммари, один мини-тест, 24 часа на прохождение и 100 баллов за зачтённую книгу.</p>${progressRing(progress,'книг',`${progress} из 100 зачтено`)}`)}
-  ${card('', `<h2>${started?'Текущий день челленджа':'Запуск челленджа'}</h2><p>${started?'Каркас челленджа готов. Список 100 книг и мини-тесты будут подключаться отдельным контентным файлом.':'После запуска будет открываться одна книга в день. Если саммари прочитано и мини-тест пройден — книга остаётся в доступе и начисляется 100 баллов.'}</p><div class="list-clean"><div><b>Правило 24 часов</b><p>На книгу даётся сутки с момента открытия.</p></div><div><b>Зачёт</b><p>Саммари + мини-тест = 100 баллов и постоянный доступ к книге.</p></div><div><b>Пропуск</b><p>Если тест не пройден за сутки, книга закрывается и открывается следующая.</p></div></div>${started?actionButton('Вернуться на главную','renderHome()','secondary'):actionButton('Начать челлендж','startBookChallenge()','primary')}`)}`;
-  shell(html,'home');
-}
-function getChallengeState(){ try{return JSON.parse(localStorage.getItem('lego_book_challenge_v1')||'{}')}catch(e){return {}} }
-function saveChallengeState(data){ localStorage.setItem('lego_book_challenge_v1', JSON.stringify(data || {})); }
-function startBookChallenge(){ saveChallengeState({startedAt:nowIso(), currentDay:1, passedBooks:0, missedBooks:0}); renderBookChallenge(); }
-function renderAdditionalMaterials(){
-  const html = `${card('blue-card-v2', `<p class="eyebrow">дополнительный блок</p><h1>Дополнительные материалы</h1><p>Здесь будут отдельные уроки, документы, кейсы и разборы, которые не ломают основной маршрут по видам деятельности.</p>`)}
-  ${card('', `<h2>Разделы</h2><div class="list-clean"><div><b>Финансы и учёт</b><p>Дополнительные разборы показателей, денег и управленческой отчётности.</p></div><div><b>Команда и управление</b><p>Материалы для руководителей, управляющих и сотрудников.</p></div><div><b>Кейсы и документы</b><p>Практические примеры, шаблоны и дополнительные инструкции.</p></div></div><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`;
-  shell(html,'home');
-}
-function renderProfile(){
-  const gp = globalStageProgress();
-  const totalScore = (state.catalog.lessons || []).reduce((acc,l)=>acc+lessonScore(l.code),0);
-  const activeMeta = getLessonMeta(state.selectedLessonCode) || nextLessonMeta();
-  const lp = activeMeta ? lessonStageProgressInfo(activeMeta.code) : {done:0,total:0,percent:0};
-  const adminBlock = isAdminUser()
-    ? card('', `<h2>Режим работы</h2><p>Этот блок виден только администратору. У обычного участника переключателя режима и админ-панели нет.</p><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Просмотр как ученик</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Администрирование</button></div><p class="small">Проверка администратора идёт по Telegram ID / username и роли, которую возвращает проверка доступа.</p>`)
-    : '';
-  shell(`${card('blue-card-v2', `<h1>Профиль</h1><p>${esc(state.user?.first_name || 'Пользователь')} · ${isAdminUser()?'Администратор':'участник'}</p>`)}${card('', `<h2>Прогресс и баллы</h2><p>Прогресс считается по этапам доступных уроков. Баллы используются отдельно как мотивационная система.</p>${progressRing(gp.percent,'общий',`${gp.done} из ${gp.total || 0} этапов`)}<div class="profile-score-grid"><div><span>Всего баллов</span><b>${formatPoints(totalScore)}</b></div><div><span>Текущий урок</span><b>${lp.done} / ${lp.total}</b></div><div><span>Консультация</span><b>${consultationCostText()}</b></div><div><span>Готовые уроки</span><b>${readyCoreLessons().length}</b></div></div>`)}${adminBlock}${card('', `<h2>Поддержка</h2>${externalButton('Задать вопрос',SUPPORT_FORM_URL,'secondary')}${externalButton('Предложить идею',IDEA_FORM_URL,'secondary')}${externalButton('Получить консультацию — '+consultationCostText(),CONSULTATION_FORM_URL,'primary')}${isAdminUser()?actionButton('Панель администратора','renderAdmin()','primary'):''}`)}`,'profile');
-}
+/* removed obsolete duplicate function renderActivityLessons in v95 cleanup */
+/* removed obsolete duplicate function renderLessonRow in v95 cleanup */
+/* removed obsolete duplicate function lessonOverviewCard in v95 cleanup */
+/* removed obsolete duplicate function renderLessonHub in v95 cleanup */
+/* removed obsolete duplicate function lessonImageFallback in v95 cleanup */
+/* removed obsolete duplicate function handleImageError in v95 cleanup */
+/* removed obsolete duplicate function mediaScreen in v95 cleanup */
+/* removed obsolete duplicate function renderBookChallenge in v95 cleanup */
+/* removed obsolete duplicate function getChallengeState in v95 cleanup */
+/* removed obsolete duplicate function saveChallengeState in v95 cleanup */
+/* removed obsolete duplicate function startBookChallenge in v95 cleanup */
+/* removed obsolete duplicate function renderAdditionalMaterials in v95 cleanup */
+/* removed obsolete duplicate function renderProfile in v95 cleanup */
 
 
 /* =====================================================
@@ -1078,38 +472,13 @@ const LEGO_LEVELS = [
 function adminLabel() { return "Администратор"; }
 function studentRoleLabel() { return isAdminUser() ? adminLabel() : "Ученик Л.Е.Г.О"; }
 function consultationCostText() { return formatPoints(CONSULTATION_COST) + " баллов"; }
-function isLessonFullyCompleted(meta) {
-  if (!meta) return false;
-  const total = lessonAvailableStages(meta).length;
-  if (!total) return false;
-  return lessonCompletedStageCount(meta.code, meta) >= total;
-}
+/* removed obsolete duplicate function isLessonFullyCompleted in v95 cleanup */
 function completedCoreLessonsCount() {
   return readyCoreLessons().filter(isLessonFullyCompleted).length;
 }
 function challengeStateKey() { return "lego_book_challenge_v2"; }
-function getChallengeState(){
-  try {
-    const v2 = JSON.parse(localStorage.getItem(challengeStateKey()) || "{}");
-    if (v2 && Object.keys(v2).length) return v2;
-    const old = JSON.parse(localStorage.getItem('lego_book_challenge_v1') || "{}");
-    if (old && Object.keys(old).length) {
-      return {
-        startedAt: old.startedAt || nowIso(),
-        active: Boolean(old.startedAt),
-        currentDay: Number(old.currentDay || 1),
-        streak: Number(old.passedBooks || 0),
-        passedBooks: Number(old.passedBooks || 0),
-        missedBooks: Number(old.missedBooks || 0),
-        pointsEarned: estimateChallengePoints(Number(old.passedBooks || 0)),
-        currentBookTitle: old.currentBookTitle || "книга дня",
-        todayStage: old.todayStage || "саммари не открыто"
-      };
-    }
-    return {};
-  } catch(e) { return {}; }
-}
-function saveChallengeState(data){ localStorage.setItem(challengeStateKey(), JSON.stringify(data || {})); }
+/* removed obsolete duplicate function getChallengeState in v95 cleanup */
+/* removed obsolete duplicate function saveChallengeState in v95 cleanup */
 function estimateChallengePoints(count) {
   let total = 0;
   for (let i = 1; i <= Number(count || 0); i++) total += challengeRewardForDay(i);
@@ -1120,18 +489,10 @@ function challengeRewardForDay(dayNumber) {
   if (d >= 100) return 250;
   return 50 + (d - 1) * 2;
 }
-function currentChallengeDay(ch) {
-  return Math.max(1, Math.min(100, Number(ch.currentDay || (Number(ch.streak || 0) + 1) || 1)));
-}
-function currentChallengeReward(ch) {
-  return challengeRewardForDay(currentChallengeDay(ch));
-}
-function challengeUnits(ch) { return Number(ch.passedBooks || 0); }
-function challengePoints(ch) {
-  const explicit = Number(ch.pointsEarned || 0);
-  if (explicit > 0) return explicit;
-  return estimateChallengePoints(Number(ch.passedBooks || 0));
-}
+/* removed obsolete duplicate function currentChallengeDay in v95 cleanup */
+/* removed obsolete duplicate function currentChallengeReward in v95 cleanup */
+/* removed obsolete duplicate function challengeUnits in v95 cleanup */
+/* removed obsolete duplicate function challengePoints in v95 cleanup */
 function completedLearningUnits() {
   const challenge = getChallengeState();
   const extraUnits = Number(localStorage.getItem('lego_extra_units_v1') || 0);
@@ -1163,16 +524,7 @@ function levelBarHtml(info) {
   const cells = Array.from({length: segments}, (_,i)=>`<span class="${i < active ? 'active' : ''}"></span>`).join('');
   return `<div class="level-bar-wrap"><div class="level-bar-segments">${cells}</div><div class="level-bar-caption"><span>${info.current.level >= 25 ? 'Финальный уровень открыт' : `${info.inside} / ${info.span} внутри уровня`}</span><b>${info.current.level}/25</b></div></div>`;
 }
-function titleHelpHtml() {
-  const rows = LEGO_LEVELS.map(row => `<div><b>${row.level}. ${esc(row.title)}</b><span>${row.level === 25 ? '1000+ единиц' : `${row.min}–${row.max} единиц`}</span></div>`).join('');
-  return `<div id="title-help-panel" class="title-help-panel" style="display:none">
-    <div class="title-help-head"><b>Как работает уровень</b><button onclick="toggleTitleHelp(false)">×</button></div>
-    <p>Уровень показывает накопленный учебный опыт. Учебные единицы начисляются за полностью закрытые уроки, книги челленджа после мини-теста, дополнительные материалы и специальные задания.</p>
-    <p>В челлендже одна книга после пройденного теста даёт +1 учебную единицу. Баллы начисляются отдельно и могут тратиться на возможности внутри системы.</p>
-    <p>Финальный титул «Мастер Л.Е.Г.О» открывается после 1000 учебных единиц. На последнем уровне будет доступен суперсекретный бонус.</p>
-    <div class="level-help-list">${rows}</div>
-  </div>`;
-}
+/* removed obsolete duplicate function titleHelpHtml in v95 cleanup */
 function toggleTitleHelp(force) {
   const el = $('title-help-panel');
   if (!el) return;
@@ -1180,137 +532,17 @@ function toggleTitleHelp(force) {
   el.style.display = next ? 'block' : 'none';
   if (next) el.scrollIntoView({behavior:'smooth', block:'start'});
 }
-function titleCardHtml() {
-  const info = studentTitleInfo();
-  return card('title-card-v12', `<div class="title-card-head"><div><p class="eyebrow">уровень ученика</p><h2>${esc(info.current.title)}</h2></div><button class="help-dot" onclick="toggleTitleHelp()" aria-label="Как работают уровни">?</button></div>${titleHelpHtml()}<div class="title-stat-row"><div><span>Уровень</span><b>${info.current.level} / 25</b></div><div><span>Учебные единицы</span><b>${formatPoints(info.units)}</b></div></div>${levelBarHtml(info)}<p class="small title-note">${info.secretUnlocked ? 'Суперсекретный бонус открыт.' : `До следующего уровня: ${formatPoints(info.left)} учебных единиц.`}</p>`);
-}
-function activeChallengeCardHtml() {
-  const ch = getChallengeState();
-  if (!ch || !ch.active) return '';
-  const day = currentChallengeDay(ch);
-  const reward = currentChallengeReward(ch);
-  const started = ch.dayStartedAt || ch.startedAt;
-  const startedTime = started ? new Date(started).getTime() : Date.now();
-  const expires = startedTime + 24 * 60 * 60 * 1000;
-  const leftMs = Math.max(0, expires - Date.now());
-  const hours = Math.floor(leftMs / 3600000);
-  const minutes = Math.floor((leftMs % 3600000) / 60000);
-  return card('challenge-active-card', `<p class="eyebrow">ежедневная задача</p><h2>100 книг за 100 дней</h2><div class="challenge-grid"><div><span>День</span><b>${day} / 100</b></div><div><span>Осталось</span><b>${hours} ч ${minutes} мин</b></div><div><span>Серия</span><b>${Number(ch.streak || 0)} подряд</b></div><div><span>Награда сегодня</span><b>${formatPoints(reward)} баллов</b></div></div><p><b>Книга:</b> ${esc(ch.currentBookTitle || 'книга дня')}</p><p><b>Этап:</b> ${esc(ch.todayStage || 'саммари не открыто')}</p><p class="small">Зачёт книги даёт +1 учебную единицу. Если день пропущен, серия и награда следующего дня возвращаются к 50 баллам.</p>`);
-}
-function brandLogoHtml(compact) {
-  const logo = compact ? "assets/brand/lego-mark.png" : "assets/brand/lego-logo.png";
-  return `<button class="brand-lockup ${compact ? 'compact' : ''}" onclick="renderHome()" aria-label="Л.Е.Г.О — на главную">
-    <span class="brand-logo-plate">
-      <img src="${logo}?v=${APP_CACHE_VERSION}" alt="Л.Е.Г.О" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-      <span class="brand-fallback" style="display:none"><b>Л.Е.Г.О.</b><span>система внедрения управленческих изменений</span></span>
-    </span>
-  </button>`;
-}
-function shell(content, activeTab) {
-  const root = $("app");
-  if (!root) return;
-  const modeButton = isAdminUser()
-    ? `<button class="mode-pill ${isAdminMode() ? "admin" : "student-preview"}" onclick="renderProfile()">${isAdminMode() ? "Администрирование" : "Режим ученика"}</button>`
-    : "";
-  root.innerHTML = `
-    <div class="app-shell-v2">
-      <header class="app-header-v2">
-        ${brandLogoHtml(false)}
-        ${modeButton}
-      </header>
-      <main class="content-v2">${content}</main>
-      ${bottomNav(activeTab || "home")}
-    </div>`;
-}
-function renderMainBlockCard(title, text, status, action, cls) {
-  const clickable = Boolean(action);
-  return `<button class="track-card ${cls || ''} ${clickable ? '' : 'disabled'}" ${clickable ? `onclick="${action}"` : 'disabled'}>
-    <b>${esc(title)}</b><p>${esc(text)}</p><em>${esc(status)}</em>
-  </button>`;
-}
-function renderHome() {
-  const gp = globalStageProgress();
-  const points = totalPoints();
-  const titleInfo = studentTitleInfo();
-  const html = `
-    ${card('hero-dashboard main-dashboard-card', `
-      <div class="hero-layout">
-        <div>
-          <p class="eyebrow">общая система</p>
-          <h1>Ваш прогресс в Л.Е.Г.О.</h1>
-          <p>Прогресс считается по пройденным этапам готовых уроков: презентация, тест, саммари и принятое домашнее задание.</p>
-          <div class="dashboard-mini-grid"><div><span>Баллы</span><b>${formatPoints(points)}</b></div><div><span>Титул</span><b>${esc(titleInfo.current.title)}</b></div></div>
-        </div>
-        ${progressRing(gp.percent, 'общий', `${gp.done} из ${gp.total || 0} этапов`)}
-      </div>
-    `)}
-    ${titleCardHtml()}
-    ${activeChallengeCardHtml()}
-    ${card('', `<h2>Выбрать блок</h2><p>Выберите направление работы внутри платформы.</p>
-      <div class="top-track-grid top-track-grid-five">
-        ${renderMainBlockCard('Нет своего бизнеса','Базовый маршрут для подготовки к предпринимательскому мышлению и запуску.','скоро','','disabled')}
-        ${renderMainBlockCard('Я предприниматель','Диагностика, уроки, ДЗ, проверка и управленческие действия.','доступно','renderLearning()','active')}
-        ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','','disabled')}
-        ${renderMainBlockCard('100 книг за 100 дней','Ежедневный челлендж: 1 книга за 24 часа. После мини-теста книга даёт +1 единицу и баллы серии: 50 в первый день, дальше +2 за каждый зачёт подряд.','скоро','','disabled')}
-        ${renderMainBlockCard('Дополнительные материалы','Отдельные уроки, разборы и материалы, которые дополняют основной маршрут.','скоро','','disabled')}
-      </div>`)}
-  `;
-  shell(html, 'home');
-}
-async function continueLessonFromProgress(code) {
-  const meta = getLessonMeta(code);
-  if (!meta) return;
-  if (!canOpenLesson(meta)) { alert("Урок пока закрыт."); return; }
-  state.selectedLessonCode = code;
-  state.selectedActivityKey = meta.activityKey;
-  localStorage.setItem("lego_selected_lesson", code);
-  localStorage.setItem("lego_selected_activity", meta.activityKey);
-  await loadLesson(code);
-  if (isStageDone(code,"homeworkSubmitted") && !isStageDone(code,"homeworkVerified")) return renderHomeworkStatus();
-  if (isStageDone(code,"books")) return renderHomework();
-  if (isStageDone(code,"quiz")) return startBooks();
-  if (isStageDone(code,"presentation")) return startQuiz(false);
-  return startSlides();
-}
-function entrepreneurCurrentStepCard() {
-  const meta = nextLessonMeta();
-  if (!meta) return '';
-  const act = getActivity(meta.activityKey);
-  const info = lessonStageProgressInfo(meta.code);
-  const p = getProgress(meta.code);
-  const place = p.last_book_slide_number ? `Саммари ${p.last_book_slide_number}` : (p.last_slide_number ? `Слайд ${p.last_slide_number}` : 'Начало урока');
-  return card('blue-card-v2 current-step-card', `<p class="eyebrow">ваш текущий шаг</p><h1>${esc(lessonStageLabel(meta.code))}</h1><p>${esc(act?.title || '')} · урок ${String(meta.number).padStart(2,'0')} · ${esc(meta.title)}</p><div class="step-summary-line"><span>Прогресс урока</span><b>${info.done}/${info.total} · ${info.percent}%</b></div><div class="step-summary-line"><span>Последнее место</span><b>${esc(place)}</b></div><button class="btn primary" onclick="continueLessonFromProgress('${meta.code}')">Продолжить с последнего места</button>`);
-}
-function currentActivityProgress() {
-  const lessons = activityLessons(state.selectedActivityKey);
-  const plannedTotal = Math.max(lessons.length, 10) * 4;
-  let done = 0;
-  lessons.forEach(meta => { done += lessonCompletedStageCount(meta.code, meta); });
-  return plannedTotal ? safePercent(done / plannedTotal * 100) : 0;
-}
-function getActivityProgressInfo(key) {
-  const lessons = activityLessons(key);
-  const openCount = lessons.filter(canOpenLesson).length;
-  const readyCount = lessons.filter(isLessonPrepared).length;
-  const doneCount = lessons.filter(isLessonFullyCompleted).length;
-  const routeTotal = Math.max(lessons.length, 10) * 4;
-  const stageDone = lessons.reduce((sum,l)=>sum + lessonCompletedStageCount(l.code,l),0);
-  return { lessons, openCount, doneCount, readyCount, routeTotal, stageDone, routePercent: routeTotal ? safePercent(stageDone / routeTotal * 100) : 0 };
-}
-function renderActivityLessons(key) {
-  if (key && getActivity(key)) {
-    state.selectedActivityKey = key;
-    localStorage.setItem("lego_selected_activity", key);
-  }
-  const act = getActivity(state.selectedActivityKey) || state.catalog.activities[0];
-  const info = getActivityProgressInfo(act.key);
-  const readyNote = info.readyCount ? 'Первый готовый урок доступен сразу. Следующий урок открывается после приёмки ДЗ предыдущего урока.' : 'Материалы направления временно закрыты: уроки откроются после оформления изображений, тестов и проверки логики.';
-  const html = `
-    ${card('blue-card-v2', `<p class="eyebrow">Я предприниматель</p><h1>${esc(act.title)}</h1><p>${esc(activityIntroText(act))}</p><p class="small">${readyNote}</p><div class="step-summary-line"><span>Прогресс направления</span><b>${info.stageDone}/${info.routeTotal} этапов · ${info.routePercent}%</b></div>`)}
-    ${card('', `<div class="activity-toolbar"><button class="btn secondary" onclick="renderLearning()">К видам деятельности</button></div><h2>Уроки направления</h2><p>Маршрут направления считается от 10 уроков: <b>40 этапов</b>. Доступно сейчас: <b>${info.openCount} из ${info.lessons.length}</b>. Готово к выдаче: <b>${info.readyCount}</b>.</p><div class="lesson-list-v2">${info.lessons.map(renderLessonRow).join('')}</div>`)}
-  `;
-  shell(html, 'learning');
-}
+/* removed obsolete duplicate function titleCardHtml in v95 cleanup */
+/* removed obsolete duplicate function activeChallengeCardHtml in v95 cleanup */
+/* removed obsolete duplicate function brandLogoHtml in v95 cleanup */
+/* removed obsolete duplicate function shell in v95 cleanup */
+/* removed obsolete duplicate function renderMainBlockCard in v95 cleanup */
+/* removed obsolete duplicate function renderHome in v95 cleanup */
+/* removed obsolete duplicate function continueLessonFromProgress in v95 cleanup */
+/* removed obsolete duplicate function entrepreneurCurrentStepCard in v95 cleanup */
+/* removed obsolete duplicate function currentActivityProgress in v95 cleanup */
+/* removed obsolete duplicate function getActivityProgressInfo in v95 cleanup */
+/* removed obsolete duplicate function renderActivityLessons in v95 cleanup */
 function lessonSummaryForDoneBlock(meta) {
   const info = lessonStageProgressInfo(meta.code);
   return `${esc(meta.activityTitle || '')} · ${info.done}/${info.total} этапов`;
@@ -1322,63 +554,15 @@ function insightsKey() {
 }
 function loadInsights() { try { return JSON.parse(localStorage.getItem(insightsKey()) || '[]'); } catch(e){ return []; } }
 function saveInsights(list) { localStorage.setItem(insightsKey(), JSON.stringify(Array.isArray(list) ? list : [])); }
-function saveLessonInsight() {
-  const input = $('lesson-insight-input');
-  const text = String(input?.value || '').trim();
-  if (!text) { alert('Запишите вывод одной-двумя фразами.'); return; }
-  const meta = getLessonMeta(state.selectedLessonCode);
-  const list = loadInsights();
-  list.unshift({
-    id: Date.now(),
-    lessonCode: state.selectedLessonCode,
-    lessonTitle: meta?.title || '',
-    activityTitle: meta?.activityTitle || '',
-    text,
-    createdAt: nowIso()
-  });
-  saveInsights(list.slice(0, 100));
-  if (input) input.value = '';
-  renderLessonHub();
-}
+/* removed obsolete duplicate function saveLessonInsight in v95 cleanup */
 function deleteInsight(id) {
   saveInsights(loadInsights().filter(x => String(x.id) !== String(id)));
   renderProfile();
 }
-function lessonInsightCard() {
-  const list = loadInsights().filter(x => x.lessonCode === state.selectedLessonCode).slice(0,3);
-  return card('insight-card', `<h2>Мой вывод по уроку</h2><p>Зафиксируйте одну управленческую мысль, которую нужно перенести в действия или ДЗ.</p><textarea id="lesson-insight-input" rows="3" placeholder="Например: главное ограничение сейчас не в потоке, а в переходе заявки в оплату..."></textarea><button class="btn primary" onclick="saveLessonInsight()">Сохранить вывод</button>${list.length ? `<div class="insight-list-mini">${list.map(x=>`<div><b>${shortDate(x.createdAt)}</b><p>${esc(x.text)}</p></div>`).join('')}</div>` : ''}`);
-}
-function renderLessonHub() {
-  loadLesson(state.selectedLessonCode).then(lesson => {
-    const meta = getLessonMeta(state.selectedLessonCode);
-    const activityKey = meta ? meta.activityKey : (lesson.activityKey || state.selectedActivityKey);
-    const adminService = isAdminMode() && lesson.passportText ? `<details class="admin-details"><summary>Служебное описание урока</summary><pre class="text-pre">${esc(lesson.passportText || '')}</pre></details>` : "";
-    const html = `
-      ${card('blue-card-v2 lesson-head-card', `<p class="eyebrow">${esc(lesson.activityTitle)} · урок ${String(lesson.number).padStart(2,'0')}</p><h1>${esc(lesson.title)}</h1><div class="lesson-meta-chips"><span>${esc(lesson.activityTitle)}</span><span>Урок ${String(lesson.number).padStart(2,'0')}</span></div><p>${esc(cleanLessonDescription(lesson))}</p>${lessonProgressMini(meta.code)}<button class="btn primary" onclick="continueLessonFromProgress('${meta.code}')">Продолжить с последнего места</button>`)}
-      ${lessonOverviewCard(lesson)}
-      <div class="stage-grid-v2">
-        ${stageCard('presentation','Презентация','Информационная часть урока',isStageDone(meta.code,'presentation'),'startSlides()')}
-        ${stageCard('quiz','Тест','Проверка понимания материала',isStageDone(meta.code,'quiz'),'startQuiz(false)',!isStageDone(meta.code,'presentation') && !isAdminMode())}
-        ${stageCard('books','Саммари','Информация о полезных книгах',isStageDone(meta.code,'books'),'startBooks()',!isStageDone(meta.code,'quiz') && !isAdminMode())}
-        ${stageCard('homework','Домашнее задание','Практическая часть урока',isStageDone(meta.code,'homeworkSubmitted'),'renderHomework()',!isStageDone(meta.code,'books') && !isAdminMode())}
-      </div>
-      ${lessonInsightCard()}
-      ${card('', `<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">← К выбору уроков</button>`)}
-      ${adminService}
-    `;
-    shell(html, 'learning');
-  }).catch(e => emergencyScreen(e.message || 'LESSON_HUB_ERROR'));
-}
-function preloadImage(src) {
-  if (!src) return;
-  try { const img = new Image(); img.src = src + (src.includes('?') ? '&' : '?') + 'v=' + APP_CACHE_VERSION; } catch(e) {}
-}
-function mediaSrcFor(label, index, lesson) {
-  if (!lesson) return lessonImageFallback(label, index);
-  if (label === 'Слайд') return lesson.slides?.[index-1]?.image || lessonImageFallback(label, index);
-  if (label === 'Саммари') return lesson.bookScreens?.[index-1]?.image || lessonImageFallback(label, index);
-  return lessonImageFallback(label, index);
-}
+/* removed obsolete duplicate function lessonInsightCard in v95 cleanup */
+/* removed obsolete duplicate function renderLessonHub in v95 cleanup */
+/* removed obsolete duplicate function preloadImage in v95 cleanup */
+/* removed obsolete duplicate function mediaSrcFor in v95 cleanup */
 function preloadAdjacentMedia(label, current, total, lesson) {
   [current + 1, current + 2, current - 1].forEach(i => {
     if (i >= 1 && i <= total) preloadImage(mediaSrcFor(label, i, lesson));
@@ -1396,9 +580,7 @@ async function renderBook(){
   shell(`${topLessonNav('prevBook()','nextBook()',state.bookIndex===0,state.bookIndex===lesson.bookScreens.length-1?'К ДЗ':'Далее')} ${mediaScreen(scr.image,'Саммари',state.bookIndex+1,lesson.bookScreens.length,renderDisplayText(scr,'book'))}`,'learning');
   preloadAdjacentMedia('Саммари', state.bookIndex + 1, lesson.bookScreens.length, lesson);
 }
-function renderBookChallenge(){
-  shell(`${card('blue-card-v2 soon-page-card', `<p class="eyebrow">скоро</p><h1>100 книг за 100 дней</h1><p>Раздел скоро откроется. Внутри будет ежедневный челлендж: одна книга за 24 часа, мини-тест, +1 учебная единица и баллы серии.</p>`)}${card('', `<h2>Как будет работать начисление</h2><div class="list-clean"><div><b>Книга зачтена</b><p>Саммари изучено, мини-тест пройден: книга остаётся в доступе, начисляется +1 учебная единица.</p></div><div><b>Баллы серии</b><p>Первый день — 50 баллов. Каждый зачёт подряд увеличивает награду следующего дня на 2 балла. При пропуске серия возвращается к 50.</p></div><div><b>100-й день</b><p>При непрерывном прохождении награда доходит до 250 баллов.</p></div></div><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
-}
+/* removed obsolete duplicate function renderBookChallenge in v95 cleanup */
 function renderAdditionalMaterials(){
   shell(`${card('blue-card-v2 soon-page-card', `<p class="eyebrow">скоро</p><h1>Дополнительные материалы</h1><p>Раздел скоро откроется. Здесь будут отдельные уроки, разборы, шаблоны и материалы, которые дополняют основной маршрут.</p>`)}${card('', `<button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
 }
@@ -1412,30 +594,10 @@ function doneSummaryHtml() {
   const ch = getChallengeState();
   return card('done-summary-card', `<h2>Что уже сделано</h2><div class="done-grid"><div><span>Презентации</span><b>${presentation}</b></div><div><span>Тесты</span><b>${quiz}</b></div><div><span>Саммари</span><b>${books}</b></div><div><span>Принятые ДЗ</span><b>${hw}</b></div><div><span>Книги челленджа</span><b>${Number(ch.passedBooks || 0)}</b></div><div><span>Мои выводы</span><b>${insights}</b></div></div>`);
 }
-function insightsProfileHtml() {
-  const list = loadInsights().slice(0, 8);
-  return card('insight-card', `<h2>Мои выводы</h2><p>Короткие управленческие выводы, которые вы сохранили внутри уроков.</p>${list.length ? `<div class="insight-list">${list.map(x=>`<div><div><b>${esc(x.activityTitle || '')} · ${esc(x.lessonTitle || x.lessonCode)}</b><span>${shortDate(x.createdAt)}</span><p>${esc(x.text)}</p></div><button onclick="deleteInsight('${x.id}')">×</button></div>`).join('')}</div>` : '<p class="small">Пока выводов нет. Откройте урок и сохраните первый вывод после презентации или саммари.</p>'}`);
-}
-function consultationCardsHtml(points) {
-  const missing = Math.max(0, CONSULTATION_COST - Number(points || 0));
-  const canRequest = missing <= 0;
-  return card('consultation-card', `<h2>Консультации</h2><div class="consult-grid"><div><b>Консультация за баллы</b><p>Стоимость: ${consultationCostText()}.</p><p>${canRequest ? 'Баллов достаточно. Можно отправить заявку на консультацию за баллы.' : `Недостаточно баллов. Нужно ещё: ${formatPoints(missing)}.`}</p>${canRequest ? externalButton('Запросить консультацию за баллы', CONSULTATION_FORM_URL, 'primary') : '<button class="btn secondary" disabled>Недостаточно баллов</button>'}</div><div><b>Индивидуальная консультация</b><p>Можно оставить заявку на разбор бизнеса, управленческого вопроса или конкретной ситуации. Условия консультации согласовываются отдельно.</p>${externalButton('Подать заявку на индивидуальную консультацию', CONSULTATION_FORM_URL, 'secondary')}</div></div><h3>Что можно будет получать за баллы</h3><div class="bonus-list"><span>Приоритетный разбор ДЗ</span><span>Дополнительный шаблон</span><span>Закрытый разбор кейса</span><span>Проверка гипотезы</span></div>`);
-}
-function renderProfile(){
-  const gp = globalStageProgress();
-  const points = totalPoints();
-  const activeMeta = getLessonMeta(state.selectedLessonCode) || nextLessonMeta();
-  const lp = activeMeta ? lessonStageProgressInfo(activeMeta.code) : {done:0,total:0,percent:0};
-  const titleInfo = studentTitleInfo();
-  const adminBlock = isAdminUser()
-    ? card('boss-panel-card', `<h2>Панель администратора</h2><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Просмотр как ученик</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Режим администрирования</button></div><p class="small">Панель управления, проверка ДЗ и полный предпросмотр уроков доступны только владельцу системы.</p>${actionButton('Открыть панель администратора','renderAdmin()','primary')}`)
-    : '';
-  shell(`${card('blue-card-v2', `<h1>Профиль</h1><p>${esc(state.user?.first_name || 'Пользователь')} · ${studentRoleLabel()}</p>`)}${titleCardHtml()}${card('', `<h2>Прогресс и баллы</h2>${progressRing(gp.percent,'общий',`${gp.done} из ${gp.total || 0} этапов`)}<div class="profile-score-grid"><div><span>Всего баллов</span><b>${formatPoints(points)}</b></div><div><span>Текущий урок</span><b>${lp.done} / ${lp.total}</b></div><div><span>Учебные единицы</span><b>${formatPoints(titleInfo.units)}</b></div><div><span>Готовые уроки</span><b>${readyCoreLessons().length}</b></div></div>`)}${doneSummaryHtml()}${insightsProfileHtml()}${adminBlock}${consultationCardsHtml(points)}${card('', `<h2>Поддержка</h2>${externalButton('Задать вопрос',SUPPORT_FORM_URL,'secondary')}${externalButton('Предложить идею',IDEA_FORM_URL,'secondary')}`)}`,'profile');
-}
-function renderAdmin(){
-  if(!isAdminUser()){ alert('Нет прав администратора.'); return; }
-  shell(`${card('blue-card-v2', `<h1>Панель администратора</h1><p>Полный доступ ко всем урокам, предпросмотр контента и проверка ДЗ.</p>`)}${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${state.catalog.lessons.map(l=>`<button class="lesson-row-v2" onclick="openLesson('${l.code}')"><div><b>${esc(l.code)} · ${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${l.slidesCount} слайдов · ${l.quizCount} вопросов · ${l.bookScreensCount} саммари</p></div><span>→</span></button>`).join('')}</div>`)}${card('', `<h2>Проверка ДЗ</h2><input id="admin-target-user" placeholder="Telegram ID или username ученика"><textarea id="admin-review-comment" placeholder="Комментарий проверяющего"></textarea><button class="btn primary" onclick="adminApproveTargetUser()">Принять ДЗ</button><button class="btn secondary" onclick="adminRejectTargetUser()">Отправить на доработку</button>`)}`,'profile');
-}
+/* removed obsolete duplicate function insightsProfileHtml in v95 cleanup */
+/* removed obsolete duplicate function consultationCardsHtml in v95 cleanup */
+/* removed obsolete duplicate function renderProfile in v95 cleanup */
+/* removed obsolete duplicate function renderAdmin in v95 cleanup */
 
 
 /* =====================================================
@@ -1449,53 +611,12 @@ function progressBarHtml(percent, cls) {
   return `<div class="progress-line ${cls || ''}"><div style="width:${p}%"></div></div>`;
 }
 
-function stageCompletedDate(code, stage) {
-  const p = getProgress(code);
-  if (stage === 'presentation') return p.presentation_completed_at || p.presentation_started_at || null;
-  if (stage === 'quiz') return p.quiz_completed_at || p.quiz_started_at || null;
-  if (stage === 'books') return p.books_completed_at || p.books_started_at || null;
-  if (stage === 'homeworkSubmitted') return p.homework_submitted_at || p.homework_started_at || null;
-  if (stage === 'homeworkVerified') return p.homework_verified_at || p.homework_checked_at || p.completed_at || null;
-  return null;
-}
-function stageStatusText(code, stage) {
-  if (stage === 'homeworkVerified') return isStageDone(code,'homeworkVerified') ? 'принято' : (isStageDone(code,'homeworkSubmitted') ? 'на проверке' : 'ожидает ДЗ');
-  if (stage === 'homeworkSubmitted') return isStageDone(code,'homeworkSubmitted') ? 'отправлено' : 'не отправлено';
-  return isStageDone(code, stage) ? 'пройдено' : 'не пройдено';
-}
-function lessonTimelineHtml(code) {
-  const rows = [
-    ['presentation','Презентация'],
-    ['quiz','Тест'],
-    ['books','Саммари'],
-    ['homeworkSubmitted','ДЗ отправлено'],
-    ['homeworkVerified','ДЗ принято']
-  ];
-  return card('lesson-timeline-card', `<h2>История прохождения</h2><div class="timeline-grid">${rows.map(([stage,label])=>{
-    const status = stageStatusText(code, stage);
-    const date = stageCompletedDate(code, stage);
-    const done = status === 'пройдено' || status === 'отправлено' || status === 'принято';
-    const review = status === 'на проверке';
-    return `<div class="timeline-row ${done?'done':''} ${review?'review':''}"><span>${esc(label)}</span><b>${esc(status)}</b><em>${date ? shortDate(date) : '—'}</em></div>`;
-  }).join('')}</div>`);
-}
-function homeworkReviewNoticeHtml(code) {
-  if (isStageDone(code,'homeworkSubmitted') && !isStageDone(code,'homeworkVerified')) {
-    return `<div class="homework-review-notice"><b>Домашнее задание на проверке</b><p>Работа отправлена ${shortDate(stageCompletedDate(code,'homeworkSubmitted'))}. После проверки Администратор примет ДЗ или вернёт его на доработку.</p></div>`;
-  }
-  if (isStageDone(code,'homeworkVerified')) {
-    return `<div class="homework-review-notice accepted"><b>Домашнее задание принято</b><p>Проверка завершена ${shortDate(stageCompletedDate(code,'homeworkVerified'))}. Урок засчитан.</p></div>`;
-  }
-  return '';
-}
+/* removed obsolete duplicate function stageCompletedDate in v95 cleanup */
+/* removed obsolete duplicate function stageStatusText in v95 cleanup */
+/* removed obsolete duplicate function lessonTimelineHtml in v95 cleanup */
+/* removed obsolete duplicate function homeworkReviewNoticeHtml in v95 cleanup */
 
-function lessonProgressMini(code) {
-  const info = lessonStageProgressInfo(code);
-  return `<div class="lesson-progress-mini stage-progress-mini">
-    <div class="lesson-progress-top"><span>Прогресс урока</span><b>${info.percent}%</b></div>
-    <div class="lesson-progress-bar"><div style="width:${info.percent}%"></div></div>
-  </div>`;
-}
+/* removed obsolete duplicate function lessonProgressMini in v95 cleanup */
 
 function titleHelpHtml() {
   const rows = LEGO_LEVELS.map(row => `<div><b>${row.level}. ${esc(row.title)}</b><span>${row.level === 25 ? '1000+ учебных единиц' : `${row.min}–${row.max} учебных единиц`}</span></div>`).join('');
@@ -1522,38 +643,7 @@ function renderMainBlockCard(title, text, status, action, cls) {
     <b>${esc(title)}</b><p>${esc(text)}</p><em>${esc(status)}</em>
   </button>`;
 }
-function renderHome() {
-  const gp = globalStageProgress();
-  const points = totalPoints();
-  const html = `
-    ${card('hero-dashboard main-dashboard-card merged-dashboard-card', `
-      <div class="merged-dashboard-top">
-        <div>
-          <p class="eyebrow">общая система</p>
-          <h1>Ваш прогресс</h1>
-          <p>Прогресс считается по пройденным этапам готовых уроков: презентация, тест, саммари и принятое домашнее задание.</p>
-        </div>
-        ${progressRing(gp.percent, 'общий', `${gp.done} из ${gp.total || 0}`)}
-      </div>
-      <div class="dashboard-mini-grid dashboard-mini-grid-compact">
-        <div><span>Баллы</span><b>${formatPoints(points)}</b></div>
-        <div><span>Достижение</span><b>${esc(studentTitleInfo().current.title)}</b></div>
-      </div>
-      ${achievementInlineHtml()}
-    `)}
-    ${activeChallengeCardHtml()}
-    ${card('', `<h2>Выбрать блок</h2><p>Выберите направление работы внутри платформы.</p>
-      <div class="top-track-grid top-track-grid-six">
-        ${renderMainBlockCard('Нет своего бизнеса','Базовый маршрут для подготовки к предпринимательскому мышлению и запуску.','скоро','','disabled')}
-        ${renderMainBlockCard('Я предприниматель','Диагностика, уроки, ДЗ, проверка и управленческие действия.','доступно','renderLearning()','active')}
-        ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','','disabled')}
-        ${renderMainBlockCard('100 книг за 100 дней','Ежедневный челлендж: одна книга, 24 часа, мини-тест, +1 учебная единица и баллы серии.','скоро','','disabled')}
-        ${renderMainBlockCard('Дополнительные материалы','Отдельные уроки, разборы и материалы, которые дополняют основной маршрут.','скоро','','disabled')}
-        ${renderMainBlockCard('VIP уровень','Расширенный уровень участия, закрытые форматы, персональные разборы и дополнительные возможности.','в разработке','','disabled')}
-      </div>`)}
-  `;
-  shell(html, 'home');
-}
+/* removed obsolete duplicate function renderHome in v95 cleanup */
 
 function entrepreneurCurrentStepCard() {
   const meta = nextLessonMeta();
@@ -1564,20 +654,7 @@ function entrepreneurCurrentStepCard() {
   const place = p.last_book_slide_number ? `Саммари ${p.last_book_slide_number}` : (p.last_slide_number ? `Слайд ${p.last_slide_number}` : 'Начало урока');
   return card('blue-card-v2 current-step-card', `<p class="eyebrow">ваш текущий шаг</p><h1>${esc(lessonStageLabel(meta.code))}</h1><p>${esc(act?.title || '')} · урок ${String(meta.number).padStart(2,'0')} · ${esc(meta.title)}</p><div class="step-progress-block"><div class="step-summary-line"><span>Прогресс урока</span><b>${info.percent}%</b></div>${progressBarHtml(info.percent,'on-dark')}</div><div class="step-summary-line"><span>Последнее место</span><b>${esc(place)}</b></div><button class="btn primary" onclick="continueLessonFromProgress('${meta.code}')">Продолжить с последнего места</button>`);
 }
-function renderActivityLessons(key) {
-  if (key && getActivity(key)) {
-    state.selectedActivityKey = key;
-    localStorage.setItem("lego_selected_activity", key);
-  }
-  const act = getActivity(state.selectedActivityKey) || state.catalog.activities[0];
-  const info = getActivityProgressInfo(act.key);
-  const readyNote = info.readyCount ? 'Первый готовый урок доступен сразу. Следующий урок открывается после приёмки ДЗ предыдущего урока.' : 'Материалы направления временно закрыты: уроки откроются после оформления изображений, тестов и проверки логики.';
-  const html = `
-    ${card('blue-card-v2 activity-progress-head', `<p class="eyebrow">Я предприниматель</p><h1>${esc(act.title)}</h1><p>${esc(activityIntroText(act))}</p><p class="small">${readyNote}</p><div class="step-progress-block"><div class="step-summary-line"><span>Прогресс направления</span><b>${info.routePercent}%</b></div>${progressBarHtml(info.routePercent,'on-dark')}</div>`)}
-    ${card('', `<div class="activity-toolbar"><button class="btn secondary" onclick="renderLearning()">К видам деятельности</button></div><h2>Уроки направления</h2><p>Доступно сейчас: <b>${info.openCount} из ${info.lessons.length}</b>. Готово к выдаче: <b>${info.readyCount}</b>.</p><div class="lesson-list-v2">${info.lessons.map(renderLessonRow).join('')}</div>`)}
-  `;
-  shell(html, 'learning');
-}
+/* removed obsolete duplicate function renderActivityLessons in v95 cleanup */
 
 function saveSharedInsightDraft(entry) {
   const key = insightsKey() + '_shared';
@@ -1635,39 +712,9 @@ function lessonInsightCard() {
   return card('insight-card', `<h2>Мой вывод по уроку</h2><p>Сохраняйте здесь главный вывод или короткие заметки по уроку. Это поможет вернуться к мысли перед ДЗ и следующим действием.</p><textarea id="lesson-insight-input" rows="3" placeholder="Например: главное ограничение сейчас не в потоке, а в переходе заявки в оплату..."></textarea><label class="share-insight-check"><input type="checkbox" id="lesson-insight-share"><span>Поделиться этим выводом с администратором</span></label><button class="btn primary" onclick="saveLessonInsight()">Сохранить вывод</button>${list.length ? `<div class="insight-list-mini">${list.map(x=>`<div><b>${shortDate(x.createdAt)}${x.shared ? ' · отправить администратору' : ''}</b><p>${esc(x.text)}</p></div>`).join('')}</div>` : ''}`);
 }
 
-function renderLessonHub() {
-  loadLesson(state.selectedLessonCode).then(lesson => {
-    const meta = getLessonMeta(state.selectedLessonCode);
-    const activityKey = meta ? meta.activityKey : (lesson.activityKey || state.selectedActivityKey);
-    const adminService = isAdminMode() && lesson.passportText ? `<details class="admin-details"><summary>Служебное описание урока</summary><pre class="text-pre">${esc(lesson.passportText || '')}</pre></details>` : "";
-    const html = `
-      ${card('blue-card-v2 lesson-head-card', `<p class="eyebrow">${esc(lesson.activityTitle)} · урок ${String(lesson.number).padStart(2,'0')}</p><h1>${esc(lesson.title)}</h1><div class="lesson-meta-chips"><span>${esc(lesson.activityTitle)}</span><span>Урок ${String(lesson.number).padStart(2,'0')}</span></div><p>${esc(cleanLessonDescription(lesson))}</p>${lessonProgressMini(meta.code)}${homeworkReviewNoticeHtml(meta.code)}<button class="btn primary" onclick="continueLessonFromProgress('${meta.code}')">Продолжить с последнего места</button>`)}
-      ${lessonOverviewCard(lesson)}
-      <div class="stage-grid-v2">
-        ${stageCard('presentation','Презентация','Информационная часть урока',isStageDone(meta.code,'presentation'),'startSlides()')}
-        ${stageCard('quiz','Тест','Проверка понимания материала',isStageDone(meta.code,'quiz'),'startQuiz(false)',!isStageDone(meta.code,'presentation') && !isAdminMode())}
-        ${stageCard('books','Саммари','Информация о полезных книгах',isStageDone(meta.code,'books'),'startBooks()',!isStageDone(meta.code,'quiz') && !isAdminMode())}
-        ${stageCard('homework','Домашнее задание','Практическая часть урока',isStageDone(meta.code,'homeworkSubmitted'),'renderHomework()',!isStageDone(meta.code,'books') && !isAdminMode())}
-      </div>
-      ${lessonTimelineHtml(meta.code)}
-      ${lessonInsightCard()}
-      ${card('', `<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">← К выбору уроков</button>`)}
-      ${adminService}
-    `;
-    shell(html, 'learning');
-  }).catch(e => emergencyScreen(e.message || 'LESSON_HUB_ERROR'));
-}
+/* removed obsolete duplicate function renderLessonHub in v95 cleanup */
 
-function renderHomeworkStatus(){
-  const code = state.selectedLessonCode;
-  const meta = getLessonMeta(code);
-  const activityKey = meta ? meta.activityKey : state.selectedActivityKey;
-  const statusText = isStageDone(code,'homeworkVerified') ? 'Домашнее задание принято' : (isStageDone(code,'homeworkSubmitted') ? 'Домашнее задание на проверке' : 'Домашнее задание пока не отправлено');
-  const detail = isStageDone(code,'homeworkVerified')
-    ? `Проверка завершена ${shortDate(stageCompletedDate(code,'homeworkVerified'))}. Урок засчитан.`
-    : (isStageDone(code,'homeworkSubmitted') ? `Работа отправлена ${shortDate(stageCompletedDate(code,'homeworkSubmitted'))}. После проверки откроется следующий шаг или появится доработка.` : 'Откройте домашнее задание, заполните шаблон и отправьте форму на проверку.');
-  shell(`${card('blue-card-v2', `<h1>${esc(statusText)}</h1><p>${esc(detail)}</p>`)}${lessonTimelineHtml(code)}${card('', `${actionButton('К уроку','renderLessonHub()','primary')}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button>`)}`,'homework');
-}
+/* removed obsolete duplicate function renderHomeworkStatus in v95 cleanup */
 
 function consultationCardsHtml(points) {
   const missing = Math.max(0, CONSULTATION_COST - Number(points || 0));
@@ -1783,94 +830,15 @@ function pickLatestDateValue() {
   return best || values[0];
 }
 
-function stageCompletedDate(code, stage) {
-  const p = getProgress(code);
-  if (stage === 'presentation') {
-    return isStageDone(code,'presentation') ? pickLatestDateValue(p.presentation_completed_at, p.presentation_started_at) : null;
-  }
-  if (stage === 'quiz') {
-    return isStageDone(code,'quiz') ? pickLatestDateValue(p.quiz_completed_at, p.quiz_started_at) : null;
-  }
-  if (stage === 'books') {
-    return isStageDone(code,'books') ? pickLatestDateValue(p.books_completed_at, p.books_started_at) : null;
-  }
-  if (stage === 'homeworkSubmitted') {
-    return isStageDone(code,'homeworkSubmitted') ? pickLatestDateValue(p.homework_submitted_at, p.homework_started_at) : null;
-  }
-  if (stage === 'homeworkVerified') {
-    if (!isStageDone(code,'homeworkVerified')) return null;
-    return pickLatestDateValue(p.homework_verified_at, p.homework_checked_at, p.homework_completed_at, p.completed_at);
-  }
-  return null;
-}
+/* removed obsolete duplicate function stageCompletedDate in v95 cleanup */
 
-function stageStatusText(code, stage) {
-  if (stage === 'homeworkVerified') return isStageDone(code,'homeworkVerified') ? 'принято' : 'ожидает проверки';
-  if (stage === 'homeworkSubmitted') return isStageDone(code,'homeworkSubmitted') ? 'отправлено' : 'не отправлено';
-  return isStageDone(code, stage) ? 'пройдено' : 'не пройдено';
-}
+/* removed obsolete duplicate function stageStatusText in v95 cleanup */
 
-function lessonTimelineHtml(code) {
-  const rows = [
-    ['presentation','Презентация'],
-    ['quiz','Тест'],
-    ['books','Саммари'],
-    ['homeworkSubmitted','ДЗ отправлено'],
-    ['homeworkVerified','ДЗ принято']
-  ];
-  return card('lesson-timeline-card', `<h2>История прохождения</h2><div class="timeline-grid">${rows.map(([stage,label])=>{
-    const status = stageStatusText(code, stage);
-    const date = stageCompletedDate(code, stage);
-    const done = status === 'пройдено' || status === 'отправлено' || status === 'принято';
-    const review = status === 'ожидает проверки';
-    return `<div class="timeline-row ${done?'done':''} ${review?'review':''}"><span>${esc(label)}</span><b>${esc(status)}</b><em>${date ? shortDate(date) : '—'}</em></div>`;
-  }).join('')}</div>`);
-}
+/* removed obsolete duplicate function lessonTimelineHtml in v95 cleanup */
 
-function homeworkReviewNoticeHtml(code) {
-  const submittedAt = stageCompletedDate(code,'homeworkSubmitted');
-  const verifiedAt = stageCompletedDate(code,'homeworkVerified');
-  if (isStageDone(code,'homeworkSubmitted') && !isStageDone(code,'homeworkVerified')) {
-    return `<div class="homework-review-notice"><b>Домашнее задание на проверке</b><p>Работа отправлена ${shortDate(submittedAt)}. После проверки Администратор примет ДЗ или вернёт его на доработку.</p></div>`;
-  }
-  if (isStageDone(code,'homeworkVerified')) {
-    return `<div class="homework-review-notice accepted"><b>Домашнее задание принято</b><p>Проверка завершена ${shortDate(verifiedAt)}. Урок засчитан.</p></div>`;
-  }
-  return '';
-}
+/* removed obsolete duplicate function homeworkReviewNoticeHtml in v95 cleanup */
 
-function renderHome() {
-  const gp = globalStageProgress();
-  const points = totalPoints();
-  const html = `
-    ${card('hero-dashboard main-dashboard-card merged-dashboard-card v16-dashboard-card', `
-      <div class="v16-dashboard-head">
-        <div class="v16-dashboard-copy">
-          <p class="eyebrow">общая система</p>
-          <h1>Ваш прогресс</h1>
-          <p>Прогресс считается по пройденным этапам готовых уроков: презентация, тест, саммари и принятое домашнее задание.</p>
-        </div>
-        ${compactProgressRing(gp.percent)}
-      </div>
-      <div class="dashboard-mini-grid dashboard-mini-grid-compact v16-mini-grid">
-        <div><span>Баллы</span><b>${formatPoints(points)}</b></div>
-        <div><span>Достижение</span><b>${esc(studentTitleInfo().current.title)}</b></div>
-      </div>
-      ${achievementInlineHtml()}
-    `)}
-    ${activeChallengeCardHtml()}
-    ${card('', `<h2>Выбрать блок</h2><p>Выберите направление работы внутри платформы.</p>
-      <div class="top-track-grid top-track-grid-six">
-        ${renderMainBlockCard('Нет своего бизнеса','Базовый маршрут для подготовки к предпринимательскому мышлению и запуску.','скоро','','disabled')}
-        ${renderMainBlockCard('Я предприниматель','Диагностика, уроки, ДЗ, проверка и управленческие действия.','доступно','renderLearning()','active')}
-        ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','','disabled')}
-        ${renderMainBlockCard('100 книг за 100 дней','Ежедневный челлендж: одна книга, 24 часа, мини-тест, +1 учебная единица и баллы серии.','скоро','','disabled')}
-        ${renderMainBlockCard('Дополнительные материалы','Отдельные уроки, разборы и материалы, которые дополняют основной маршрут.','скоро','','disabled')}
-        ${renderMainBlockCard('VIP уровень','Более подробные разборы, инструменты и активность.','в разработке','','disabled')}
-      </div>`)}
-  `;
-  shell(html, 'home');
-}
+/* removed obsolete duplicate function renderHome in v95 cleanup */
 
 
 /* =====================================================
@@ -1892,10 +860,7 @@ state.books100AdminPreview = false;
 function books100NowMs(){ return Date.now(); }
 function books100DayMs(){ return 24 * 60 * 60 * 1000; }
 function books100Iso(ms){ return new Date(ms || books100NowMs()).toISOString(); }
-function books100RemainingMs(ch){
-  if (!ch || !ch.active || !ch.dayStartedAt) return 0;
-  return Math.max(0, new Date(ch.dayStartedAt).getTime() + books100DayMs() - books100NowMs());
-}
+/* removed obsolete duplicate function books100RemainingMs in v95 cleanup */
 function books100TimeLeftText(ms){
   const total = Math.max(0, Number(ms || 0));
   const hours = Math.floor(total / (60 * 60 * 1000));
@@ -1927,41 +892,17 @@ function books100DefaultState(){
     updatedAt: books100Iso()
   };
 }
-function getBooks100RawState(){
-  try { return Object.assign(books100DefaultState(), JSON.parse(localStorage.getItem(BOOKS100_STORAGE_KEY) || "{}")); }
-  catch(e){ return books100DefaultState(); }
-}
-function saveBooks100State(data){
-  const next = Object.assign(books100DefaultState(), data || {}, { updatedAt: books100Iso() });
-  localStorage.setItem(BOOKS100_STORAGE_KEY, JSON.stringify(next));
-  return next;
-}
-function getChallengeState(){
-  // Профиль и главная используют эту функцию для баллов и учебных единиц.
-  return getBooks100RawState();
-}
+/* removed obsolete duplicate function getBooks100RawState in v95 cleanup */
+/* removed obsolete duplicate function saveBooks100State in v95 cleanup */
+/* removed obsolete duplicate function getChallengeState in v95 cleanup */
 function saveChallengeState(data){ return saveBooks100State(data); }
-function challengeUnits(ch){ return Number((ch || getBooks100RawState()).unitsEarned || (ch || {}).passedBooks || 0); }
-function challengePoints(ch){ return Number((ch || getBooks100RawState()).pointsEarned || 0); }
+/* removed obsolete duplicate function challengeUnits in v95 cleanup */
+/* removed obsolete duplicate function challengePoints in v95 cleanup */
 function currentChallengeDay(ch){ return Math.max(1, Math.min(100, Number((ch || getBooks100RawState()).currentDay || 1))); }
-function currentChallengeReward(ch){ return books100RewardForCurrent(ch || getBooks100RawState()); }
+/* removed obsolete duplicate function currentChallengeReward in v95 cleanup */
 
-async function loadBooks100Index(){
-  if (state.books100Index) return state.books100Index;
-  const response = await fetch(BOOKS100_INDEX_URL + "?v=" + BOOKS100_CACHE_VERSION);
-  if (!response.ok) throw new Error("BOOKS100_INDEX_LOAD_FAILED");
-  state.books100Index = await response.json();
-  return state.books100Index;
-}
-async function loadBooks100Book(bookMeta){
-  const key = bookMeta.id || String(bookMeta.day || "");
-  if (state.books100Cache[key]) return state.books100Cache[key];
-  const response = await fetch(bookMeta.contentUrl + "?v=" + BOOKS100_CACHE_VERSION);
-  if (!response.ok) throw new Error("BOOKS100_BOOK_LOAD_FAILED: " + key);
-  const data = await response.json();
-  state.books100Cache[key] = data;
-  return data;
-}
+/* removed obsolete duplicate function loadBooks100Index in v95 cleanup */
+/* removed obsolete duplicate function loadBooks100Book in v95 cleanup */
 function books100ByDay(index, day){
   return (index?.books || []).find(b => Number(b.day) === Number(day));
 }
@@ -1997,13 +938,8 @@ function normalizeBooks100State(ch, index){
   if (changed) saveBooks100State(next);
   return next;
 }
-async function getBooks100StateNormalized(){
-  const index = await loadBooks100Index();
-  const ch = normalizeBooks100State(getBooks100RawState(), index);
-  saveBooks100State(ch);
-  return ch;
-}
-function startBookChallenge(){ startBooks100Challenge(); }
+/* removed obsolete duplicate function getBooks100StateNormalized in v95 cleanup */
+/* removed obsolete duplicate function startBookChallenge in v95 cleanup */
 async function startBooks100Challenge(){
   const index = await loadBooks100Index();
   const firstBook = books100ByIndex(index, 0);
@@ -2026,116 +962,21 @@ async function startBooks100Challenge(){
   renderBookChallenge();
   return next;
 }
-function resetBooks100Challenge(){
-  if (!confirm('Сбросить тестовое состояние челленджа на этом устройстве?')) return;
-  localStorage.removeItem(BOOKS100_STORAGE_KEY);
-  state.books100ScreenIndex = 0;
-  state.books100QuestionIndex = 0;
-  state.books100Answers = {};
-  renderBookChallenge();
-}
-async function forceBooks100Miss(){
-  const index = await loadBooks100Index();
-  const ch = getBooks100RawState();
-  if (!ch.active) { alert('Челлендж ещё не запущен.'); return; }
-  ch.dayStartedAt = books100Iso(books100NowMs() - books100DayMs() - 1000);
-  saveBooks100State(ch);
-  await renderBookChallenge();
-}
+/* removed obsolete duplicate function resetBooks100Challenge in v95 cleanup */
+/* removed obsolete duplicate function forceBooks100Miss in v95 cleanup */
 function canOpenBooks100BookForStudent(bookMeta, ch){
   if (!bookMeta) return false;
   const id = bookMeta.id;
   const current = Number(bookMeta.day) === Number(ch.currentDay) || Number(bookMeta.day) === Number(ch.currentIndex) + 1;
   return (ch.passedBookIds || []).includes(id) || current;
 }
-function books100StatusForBook(bookMeta, ch){
-  if (!bookMeta) return 'закрыто';
-  if ((ch.passedBookIds || []).includes(bookMeta.id)) return 'зачтено';
-  if ((ch.missedBookIds || []).includes(bookMeta.id)) return 'пропущено';
-  const currentBook = Number(bookMeta.day) === Number(ch.currentIndex || 0) + 1;
-  if (ch.active && currentBook) return 'книга дня';
-  return 'закрыто';
-}
-function books100Card(bookMeta, ch, admin){
-  const status = admin ? 'доступно администратору' : books100StatusForBook(bookMeta, ch);
-  const locked = !admin && !canOpenBooks100BookForStudent(bookMeta, ch);
-  const img = bookMeta.coverImage || `assets/challenges/books100/${String(bookMeta.day).padStart(3,'0')}/screen_01.png`;
-  return `<button class="books100-book-card ${locked ? 'locked' : ''}" ${locked ? 'disabled' : `onclick="openBooks100Book(${Number(bookMeta.day)}, ${admin ? 'true' : 'false'})"`}>
-    <div class="books100-cover"><img src="${img}?v=${BOOKS100_CACHE_VERSION}" alt="${esc(bookMeta.title)}" onerror="this.style.display='none';"></div>
-    <div><b>${String(bookMeta.day).padStart(3,'0')}. ${esc(bookMeta.title)}</b><p>${esc(bookMeta.author || '')}</p><em>${esc(status)}</em></div>
-  </button>`;
-}
-function activeChallengeCardHtml(){
-  const raw = getBooks100RawState();
-  if (!raw.active) return '';
-  const ms = books100RemainingMs(raw);
-  const reward = books100RewardForCurrent(raw);
-  return card('challenge-active-card', `<p class="eyebrow">ежедневная задача</p><h2>100 книг за 100 дней</h2><div class="challenge-grid"><div><span>День</span><b>${Number(raw.currentDay || 1)} / 100</b></div><div><span>Осталось</span><b>${books100TimeLeftText(ms)}</b></div><div><span>Серия</span><b>${Number(raw.streak || 0)} подряд</b></div><div><span>Награда</span><b>${formatPoints(reward)} баллов</b></div></div><p><b>Книга:</b> ${esc(raw.currentBookTitle || 'книга дня')}</p><p><b>Этап:</b> ${esc(raw.todayStage || 'саммари не открыто')}</p><button class="btn primary" onclick="renderBookChallenge()">Продолжить челлендж</button>`);
-}
-async function renderBookChallenge(){
-  try {
-    const index = await loadBooks100Index();
-    const ch = await getBooks100StateNormalized();
-    if (isAdminMode()) {
-      const html = `${card('blue-card-v2 books100-hero', `<p class="eyebrow">режим администратора</p><h1>100 книг за 100 дней</h1><p>В режиме администратора все загруженные книги открыты для просмотра без таймера, без блокировок и без начисления баллов.</p>`)}
-      ${card('', `<h2>Загруженные книги</h2><p class="small">Сейчас подключено: ${index.books.length}. По мере добавления book_006.json и далее список расширится автоматически.</p><div class="books100-list">${index.books.map(b=>books100Card(b, ch, true)).join('')}</div><div class="grid-v2"><button class="btn secondary" onclick="resetBooks100Challenge()">Сбросить тестовое состояние</button><button class="btn secondary" onclick="forceBooks100Miss()">Сымитировать пропуск суток</button></div>`)}
-      ${card('', `<button class="btn secondary" onclick="renderHome()">На главную</button>`)} `;
-      shell(html,'home');
-      return;
-    }
-    if (!ch.active) {
-      const html = `${card('blue-card-v2 books100-hero', `<p class="eyebrow">ежедневный челлендж</p><h1>100 книг за 100 дней</h1><p>Каждый день открывается одна книга на 24 часа. Если саммари изучено и мини-тест пройден, книга остаётся в личной библиотеке, начисляется +1 учебная единица и баллы серии.</p>`)}
-      ${card('', `<h2>Правила зачёта</h2><div class="list-clean"><div><b>Одна книга в день</b><p>На книгу даётся 24 часа с момента открытия дня.</p></div><div><b>Награда растёт по серии</b><p>Первый зачёт — 50 баллов. Каждый день подряд добавляет +2 к награде следующей книги. При пропуске серия возвращается к 50.</p></div><div><b>Учебная единица</b><p>Каждая зачтённая книга после мини-теста даёт +1 учебную единицу.</p></div></div><button class="btn primary" onclick="startBooks100Challenge()">Начать челлендж</button><button class="btn secondary" onclick="renderHome()">На главную</button>`)} `;
-      shell(html,'home');
-      return;
-    }
-    const currentBook = books100ByIndex(index, ch.currentIndex);
-    const ms = books100RemainingMs(ch);
-    const reward = books100RewardForCurrent(ch);
-    const currentBlock = currentBook
-      ? `<div class="books100-current"><div><p class="eyebrow">книга дня</p><h2>${esc(currentBook.title)}</h2><p>${esc(currentBook.author || '')}</p></div><button class="btn primary" onclick="openBooks100Book(${Number(currentBook.day)}, false)">Открыть книгу дня</button></div>`
-      : `<div class="books100-current"><h2>Следующие книги готовятся</h2><p>Первые ${index.books.length} книг подключены. Добавьте следующие JSON-файлы в content/challenges/books100/, чтобы продолжить маршрут.</p></div>`;
-    const html = `${card('blue-card-v2 books100-hero', `<p class="eyebrow">100 книг за 100 дней</p><h1>День ${Number(ch.currentDay || 1)} / 100</h1><p>До конца окна: <b>${books100TimeLeftText(ms)}</b>. Награда за зачёт сегодня: <b>${formatPoints(reward)} баллов</b> и <b>+1 учебная единица</b>.</p>${progressBarHtml(Math.min(100, Number(ch.passedBooks || 0)), 'on-dark')}`)}
-    ${card('books100-status-card', `<div class="challenge-grid"><div><span>Серия</span><b>${Number(ch.streak || 0)}</b></div><div><span>Зачтено</span><b>${Number(ch.passedBooks || 0)}</b></div><div><span>Пропущено</span><b>${Number(ch.missedBooks || 0)}</b></div><div><span>Баллы</span><b>${formatPoints(Number(ch.pointsEarned || 0))}</b></div></div>${currentBlock}`)}
-    ${card('', `<h2>Личная библиотека</h2><p class="small">Зачтённые книги остаются доступными. Пропущенные книги закрываются.</p><div class="books100-list">${index.books.map(b=>books100Card(b, ch, false)).join('')}</div><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`;
-    shell(html,'home');
-  } catch(e) {
-    shell(`${card('result-bad-v2', `<h1>Книги не загрузились</h1><p>Проверьте, что файлы лежат в <b>content/challenges/books100/</b> и называются index.json, book_001.json, book_002.json и так далее.</p><p class="small">${esc(e.message || e)}</p><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
-  }
-}
-async function openBooks100Book(day, adminPreview){
-  const index = await loadBooks100Index();
-  const bookMeta = books100ByDay(index, day);
-  if (!bookMeta) { alert('Книга не найдена.'); return; }
-  const ch = await getBooks100StateNormalized();
-  if (!adminPreview && !canOpenBooks100BookForStudent(bookMeta, ch)) { alert('Эта книга сейчас закрыта.'); return; }
-  state.books100ActiveBookDay = Number(day);
-  state.books100ScreenIndex = 0;
-  state.books100AdminPreview = Boolean(adminPreview);
-  if (!adminPreview) saveBooks100State(Object.assign(ch, { todayStage: 'саммари открыто' }));
-  renderBooks100Reading();
-}
-function books100ScreenTextHtml(book, screen){
-  const assignment = book.practicalAssignment || {};
-  const screenText = screen ? `<h3>${esc(screen.title || '')}</h3><p>${esc(screen.text || '')}</p>` : '';
-  const summary = state.books100ScreenIndex >= (book.screens || []).length - 1
-    ? `<div class="books100-full-summary"><h3>Развёрнутое саммари</h3>${book.fullSummaryHtml || ''}<h3>Практика дня</h3><p><b>${esc(assignment.title || 'Практическое задание')}</b></p><p>${esc(assignment.result || '')}</p></div>`
-    : '';
-  return `<section class="slide-text-v2 books100-text">${screenText}${summary}</section>`;
-}
-async function renderBooks100Reading(){
-  const index = await loadBooks100Index();
-  const bookMeta = books100ByDay(index, state.books100ActiveBookDay);
-  const book = await loadBooks100Book(bookMeta);
-  const screens = book.screens || [];
-  const i = Math.max(0, Math.min(state.books100ScreenIndex, screens.length - 1));
-  state.books100ScreenIndex = i;
-  const screen = screens[i];
-  const total = screens.length || 1;
-  const image = screen?.image || `assets/challenges/books100/${String(book.day).padStart(3,'0')}/screen_${String(i+1).padStart(2,'0')}.png`;
-  const nav = `<div class="nav-panel-v2 nav-panel-v2-three"><button class="btn secondary" onclick="renderBookChallenge()">К челленджу</button><button class="btn secondary" ${i===0?'disabled':''} onclick="prevBooks100Screen()">Назад</button><button class="btn primary" onclick="nextBooks100Screen()">${i===total-1?'К мини-тесту':'Далее'}</button></div>`;
-  shell(`${nav}<div class="media-counter">Книга ${String(book.day).padStart(3,'0')}: экран ${i+1}/${total}</div><div class="media-box-v2"><img src="${image}?v=${BOOKS100_CACHE_VERSION}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><div class="image-missing-v2" style="display:none"><b>Экран ${i+1}</b><p>Иллюстрация в подготовке.</p></div></div>${books100ScreenTextHtml(book, screen)}`,'home');
-}
+/* removed obsolete duplicate function books100StatusForBook in v95 cleanup */
+/* removed obsolete duplicate function books100Card in v95 cleanup */
+/* removed obsolete duplicate function activeChallengeCardHtml in v95 cleanup */
+/* removed obsolete duplicate function renderBookChallenge in v95 cleanup */
+/* removed obsolete duplicate function openBooks100Book in v95 cleanup */
+/* removed obsolete duplicate function books100ScreenTextHtml in v95 cleanup */
+/* removed obsolete duplicate function renderBooks100Reading in v95 cleanup */
 function prevBooks100Screen(){ if (state.books100ScreenIndex > 0) { state.books100ScreenIndex--; renderBooks100Reading(); } }
 function nextBooks100Screen(){
   loadBooks100Index().then(index=>{
@@ -2147,34 +988,10 @@ function nextBooks100Screen(){
     else startBooks100Quiz();
   });
 }
-async function startBooks100Quiz(){
-  state.books100QuestionIndex = 0;
-  state.books100Answers = {};
-  const ch = getBooks100RawState();
-  if (!state.books100AdminPreview) saveBooks100State(Object.assign(ch, { todayStage: 'мини-тест открыт' }));
-  renderBooks100QuizQuestion();
-}
-async function renderBooks100QuizQuestion(){
-  const index = await loadBooks100Index();
-  const bookMeta = books100ByDay(index, state.books100ActiveBookDay);
-  const book = await loadBooks100Book(bookMeta);
-  const quiz = book.quiz || [];
-  if (!quiz.length) { alert('В этой книге нет мини-теста.'); return; }
-  const i = Math.max(0, Math.min(state.books100QuestionIndex, quiz.length-1));
-  state.books100QuestionIndex = i;
-  const q = quiz[i];
-  const selected = state.books100Answers[i];
-  const nav = `<div class="nav-panel-v2 nav-panel-v2-three"><button class="btn secondary" onclick="renderBookChallenge()">К челленджу</button><button class="btn secondary" ${i===0?'disabled':''} onclick="prevBooks100Question()">Назад</button><button class="btn secondary" onclick="renderBooks100Reading()">К саммари</button></div>`;
-  shell(`${nav}<div class="quiz-card-v2 books100-quiz-card"><p class="eyebrow">Мини-тест · вопрос ${i+1}/${quiz.length}</p><h2>${esc(q.q)}</h2><p class="small">Нажмите на вариант ответа — следующий вопрос откроется автоматически.</p>${(q.a||[]).map((a,idx)=>`<button class="option-v2 ${Number(selected)===idx?'selected':''}" onclick="selectBooks100Answer(${idx})">${quizOptionLabel(idx)}. ${esc(a)}</button>`).join('')}</div>`,'home');
-}
+/* removed obsolete duplicate function startBooks100Quiz in v95 cleanup */
+/* removed obsolete duplicate function renderBooks100QuizQuestion in v95 cleanup */
 function prevBooks100Question(){ if (state.books100QuestionIndex > 0) { state.books100QuestionIndex--; renderBooks100QuizQuestion(); } }
-function selectBooks100Answer(i){
-  state.books100Answers[state.books100QuestionIndex] = i;
-  loadBooks100Index().then(index=>loadBooks100Book(books100ByDay(index, state.books100ActiveBookDay))).then(book=>{
-    if (state.books100QuestionIndex < (book.quiz || []).length - 1) { state.books100QuestionIndex++; renderBooks100QuizQuestion(); }
-    else finishBooks100Quiz();
-  });
-}
+/* removed obsolete duplicate function selectBooks100Answer in v95 cleanup */
 function books100QuizReviewHtml(book){
   return `<div class="quiz-review-v2"><h2>Разбор мини-теста</h2>${(book.quiz || []).map((q,i)=>{
     const userIndex = Number(state.books100Answers[i]);
@@ -2183,85 +1000,11 @@ function books100QuizReviewHtml(book){
     return `<div class="review-row ${ok?'ok':'bad'}"><h3>Вопрос ${i+1}. ${ok?'Верно':'Нужно повторить'}</h3><p><b>Ваш ответ:</b> ${Number.isFinite(userIndex) ? esc(`${quizOptionLabel(userIndex)}. ${q.a[userIndex] || ''}`) : 'нет ответа'}</p>${ok?'':`<p><b>Правильный ответ:</b> ${esc(`${quizOptionLabel(correctIndex)}. ${q.a[correctIndex] || ''}`)}</p>`}<p><b>Почему:</b> ${esc(q.explanation || 'Ответ проверяет применение идеи книги к управленческой ситуации.')}</p></div>`;
   }).join('')}</div>`;
 }
-async function finishBooks100Quiz(){
-  const index = await loadBooks100Index();
-  const bookMeta = books100ByDay(index, state.books100ActiveBookDay);
-  const book = await loadBooks100Book(bookMeta);
-  const quiz = book.quiz || [];
-  let score = 0;
-  quiz.forEach((q,i)=>{ if (Number(state.books100Answers[i]) === Number(q.correct || 0)) score++; });
-  const passScore = Number(book.passScore || Math.ceil(quiz.length * 0.8));
-  const passed = score >= passScore;
-  let resultNotice = '';
-  if (passed && !state.books100AdminPreview) {
-    const ch = await getBooks100StateNormalized();
-    if (!(ch.passedBookIds || []).includes(bookMeta.id)) {
-      const reward = books100RewardForCurrent(ch);
-      const nextIndex = Number(ch.currentIndex || 0) + 1;
-      const nextBook = books100ByIndex(index, nextIndex);
-      saveBooks100State(Object.assign(ch, {
-        passedBookIds: (ch.passedBookIds || []).concat(bookMeta.id),
-        passedBooks: Number(ch.passedBooks || 0) + 1,
-        streak: Number(ch.streak || 0) + 1,
-        pointsEarned: Number(ch.pointsEarned || 0) + reward,
-        unitsEarned: Number(ch.unitsEarned || 0) + 1,
-        currentIndex: nextIndex,
-        currentDay: Number(ch.currentDay || 1) + 1,
-        dayStartedAt: books100Iso(),
-        currentBookTitle: nextBook ? nextBook.title : 'следующая книга готовится',
-        todayStage: nextBook ? 'саммари не открыто' : 'первые книги пройдены'
-      }));
-      resultNotice = `<p>Начислено: <b>${formatPoints(reward)} баллов</b> и <b>+1 учебная единица</b>. Книга остаётся в личной библиотеке.</p>`;
-    } else {
-      resultNotice = `<p>Книга уже была зачтена ранее. Повторный проход не начисляет баллы повторно.</p>`;
-    }
-  }
-  if (state.books100AdminPreview) {
-    resultNotice = `<p>Это режим администратора. Баллы, серия и учебные единицы не изменяются.</p>`;
-  }
-  const msg = passed
-    ? `<h1>Книга зачтена</h1><p>Результат: <b>${score}/${quiz.length}</b>. Проходной уровень: <b>${passScore}/${quiz.length}</b>.</p>${resultNotice}`
-    : `<h1>Мини-тест не пройден</h1><p>Результат: <b>${score}/${quiz.length}</b>. Проходной уровень: <b>${passScore}/${quiz.length}</b>.</p><p>Лучше спокойно вернуться к саммари и пройти тест повторно до окончания 24 часов.</p>`;
-  shell(`${card(passed?'result-ok-v2':'result-bad-v2', `${msg}<div class="grid-v2">${passed?'<button class="btn primary" onclick="renderBookChallenge()">К челленджу</button>':'<button class="btn primary" onclick="renderBooks100Reading()">Вернуться к саммари</button><button class="btn secondary" onclick="startBooks100Quiz()">Пройти тест заново</button>'}<button class="btn secondary" onclick="renderHome()">На главную</button></div>`)}${card('', books100QuizReviewHtml(book))}`,'home');
-}
+/* removed obsolete duplicate function finishBooks100Quiz in v95 cleanup */
 
-function renderHome() {
-  const gp = globalStageProgress();
-  const points = totalPoints();
-  const html = `
-    ${card('hero-dashboard main-dashboard-card merged-dashboard-card v16-dashboard-card', `
-      <div class="v16-dashboard-head">
-        <div class="v16-dashboard-copy">
-          <p class="eyebrow">общая система</p>
-          <h1>Ваш прогресс</h1>
-          <p>Прогресс считается по пройденным этапам готовых уроков: презентация, тест, саммари и принятое домашнее задание.</p>
-        </div>
-        ${compactProgressRing(gp.percent)}
-      </div>
-      <div class="dashboard-mini-grid dashboard-mini-grid-compact v16-mini-grid">
-        <div><span>Баллы</span><b>${formatPoints(points)}</b></div>
-        <div><span>Достижение</span><b>${esc(studentTitleInfo().current.title)}</b></div>
-      </div>
-      ${achievementInlineHtml()}
-    `)}
-    ${activeChallengeCardHtml()}
-    ${card('', `<h2>Выбрать блок</h2><p>Выберите направление работы внутри платформы.</p>
-      <div class="top-track-grid top-track-grid-six">
-        ${renderMainBlockCard('Нет своего бизнеса','Базовый маршрут для подготовки к предпринимательскому мышлению и запуску.','скоро','','disabled')}
-        ${renderMainBlockCard('Я предприниматель','Диагностика, уроки, ДЗ, проверка и управленческие действия.','доступно','renderLearning()','active')}
-        ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','','disabled')}
-        ${renderMainBlockCard('100 книг за 100 дней','Ежедневный челлендж: одна книга, 24 часа, мини-тест, +1 учебная единица и баллы серии.','доступно','renderBookChallenge()','active books100-entry')}
-        ${renderMainBlockCard('Дополнительные материалы','Отдельные уроки, разборы и материалы, которые дополняют основной маршрут.','скоро','','disabled')}
-        ${renderMainBlockCard('VIP уровень','Более подробные разборы, инструменты и активность.','в разработке','','disabled')}
-      </div>`)}
-  `;
-  shell(html, 'home');
-}
+/* removed obsolete duplicate function renderHome in v95 cleanup */
 
-function renderAdmin(){
-  if(!isAdminUser()){ alert('Нет прав администратора.'); return; }
-  shell(`${card('blue-card-v2', `<h1>Панель администратора</h1><p>Полный доступ ко всем урокам, предпросмотр контента, книги челленджа и проверка ДЗ.</p>`)}${card('', `<h2>Все уроки</h2><div class="lesson-list-v2">${state.catalog.lessons.map(l=>`<button class="lesson-row-v2" onclick="openLesson('${l.code}')"><div><b>${esc(l.code)} · ${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${l.slidesCount} слайдов · ${l.quizCount} вопросов · ${l.bookScreensCount} саммари</p></div><span>→</span></button>`).join('')}</div>`)}${card('', `<h2>Книги челленджа</h2><p>В режиме администратора все загруженные книги доступны для просмотра без таймера и без начисления баллов.</p><button class="btn primary" onclick="renderBookChallenge()">Открыть книги челленджа</button>`)}${card('', `<h2>Проверка ДЗ</h2><input id="admin-target-user" placeholder="Telegram ID или username ученика"><textarea id="admin-review-comment" placeholder="Комментарий проверяющего"></textarea><button class="btn primary" onclick="adminApproveTargetUser()">Принять ДЗ</button><button class="btn secondary" onclick="adminRejectTargetUser()">Отправить на доработку</button>`)}`,'profile');
-}
+/* removed obsolete duplicate function renderAdmin in v95 cleanup */
 
 
 /* =====================================================
@@ -2277,35 +1020,7 @@ function books100BookPayloadV18(book){
 }
 function books100BooksPayloadV18(index){ return ((index && index.books) || []).map(books100BookPayloadV18).filter(Boolean); }
 function books100DefaultMergedV18(){ try { return Object.assign(books100DefaultState(), JSON.parse(localStorage.getItem(BOOKS100_STORAGE_KEY)||"{}")); } catch(e){ return books100DefaultState(); } }
-function books100ApplyServerStateV18(data){
-  if (!data) return books100DefaultMergedV18();
-  const p = data.progress || data.state || data;
-  const statuses = data.statuses || [];
-  const statusByBookId = {};
-  statuses.forEach(s => { if (s && s.book_id) statusByBookId[s.book_id] = s; });
-  const next = Object.assign(books100DefaultState(), {
-    started: Boolean(p.started || p.started_at || p.startedAt),
-    startedAt: p.started_at || p.startedAt || null,
-    currentIndex: Number(p.current_index ?? p.currentIndex ?? 0),
-    currentDay: Number(p.current_day ?? p.currentDay ?? 1),
-    dayStartedAt: p.day_started_at || p.dayStartedAt || null,
-    currentBookId: p.current_book_id || p.currentBookId || null,
-    currentBookTitle: p.current_book_title || p.currentBookTitle || null,
-    todayStage: p.today_stage || p.todayStage || "саммари не открыто",
-    streak: Number(p.streak || 0),
-    pointsEarned: Number(p.points_earned ?? p.pointsEarned ?? 0),
-    unitsEarned: Number(p.units_earned ?? p.unitsEarned ?? 0),
-    passedBooks: Number(p.passed_books ?? p.passedBooks ?? 0),
-    missedBooks: Number(p.missed_books ?? p.missedBooks ?? 0),
-    statusByBookId,
-    passedBookIds: statuses.filter(s=>s.status==="passed").map(s=>s.book_id),
-    missedBookIds: statuses.filter(s=>s.status==="missed").map(s=>s.book_id),
-    updatedAt: p.updated_at || p.updatedAt || books100Iso()
-  });
-  state.books100ServerState = next;
-  localStorage.setItem(BOOKS100_STORAGE_KEY, JSON.stringify(next));
-  return next;
-}
+/* removed obsolete duplicate function books100ApplyServerStateV18 in v95 cleanup */
 function getBooks100RawState(){ return state.books100ServerState || books100DefaultMergedV18(); }
 function getChallengeState(){ return getBooks100RawState(); }
 function saveBooks100State(data){ state.books100ServerState = Object.assign(books100DefaultState(), data||{}, {updatedAt:books100Iso()}); localStorage.setItem(BOOKS100_STORAGE_KEY, JSON.stringify(state.books100ServerState)); return state.books100ServerState; }
@@ -2313,58 +1028,13 @@ function challengeUnits(ch){ return Number((ch || getBooks100RawState()).unitsEa
 function challengePoints(ch){ return Number((ch || getBooks100RawState()).pointsEarned || 0); }
 function currentChallengeReward(ch){ return books100RewardForCurrent(ch || getBooks100RawState()); }
 
-async function books100ApiV18(action, payload){
-  if (!tg || !tg.initData) throw new Error("BOOKS100_TELEGRAM_REQUIRED");
-  const response = await fetch(BOOKS100_PROGRESS_URL_V18, {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({ initData: tg.initData, action, payload: payload || {} })
-  });
-  const data = await response.json().catch(()=>({}));
-  if (!response.ok || data.ok === false) throw new Error(data.reason || data.error || "BOOKS100_PROGRESS_ERROR");
-  if (data.progress || data.state) books100ApplyServerStateV18(data);
-  return data;
-}
-async function getBooks100StateNormalized(){
-  const index = await loadBooks100Index();
-  try { return books100ApplyServerStateV18(await books100ApiV18("get_state", { books: books100BooksPayloadV18(index) })); }
-  catch(e){ console.error("BOOKS100_SYNC_ERROR", e); return getBooks100RawState(); }
-}
-async function startBookChallenge(){
-  const index = await loadBooks100Index();
-  const first = books100ByIndex(index, 0);
-  try { books100ApplyServerStateV18(await books100ApiV18("start", { currentBook: books100BookPayloadV18(first), books: books100BooksPayloadV18(index) })); }
-  catch(e){ console.error(e); alert("Не удалось запустить челлендж. Проверьте Supabase Edge Function books100-progress."); }
-  renderBookChallenge();
-}
-async function resetBooks100Challenge(){
-  if (!isAdminMode()) return alert("Сброс доступен только администратору.");
-  if (!confirm("Сбросить своё тестовое состояние челленджа?")) return;
-  try { await books100ApiV18("reset", {}); } catch(e){ console.error(e); }
-  state.books100ServerState = null; localStorage.removeItem(BOOKS100_STORAGE_KEY); renderBookChallenge();
-}
-async function forceBooks100Miss(){
-  if (!isAdminMode()) return alert("Тест пропуска доступен только администратору.");
-  const index = await loadBooks100Index();
-  try { await books100ApiV18("force_miss", { books: books100BooksPayloadV18(index) }); } catch(e){ console.error(e); alert("Не удалось сымитировать пропуск."); }
-  renderBookChallenge();
-}
-function books100StatusForBook(bookMeta, ch){
-  const row = ((ch && ch.statusByBookId) || {})[bookMeta.id];
-  if (row && row.status === "passed") return "зачтено";
-  if (row && row.status === "missed") return "пропущено";
-  if (bookMeta.id === (ch && ch.currentBookId)) return "открыто сегодня";
-  return "закрыто";
-}
-function books100Card(bookMeta, ch, admin){
-  const status = admin ? "доступно администратору" : books100StatusForBook(bookMeta, ch);
-  const open = admin || status === "зачтено" || status === "открыто сегодня";
-  const img = bookMeta.coverImage || `assets/challenges/books100/${String(bookMeta.day).padStart(3,"0")}/screen_01.png`;
-  return `<button class="books100-book-card ${open?'':'locked'} ${status==='зачтено'?'passed':''} ${status==='пропущено'?'missed':''}" ${open?`onclick="openBooks100Book(${Number(bookMeta.day)}, ${admin?'true':'false'})"`:'disabled'}>
-    <div class="books100-cover"><img src="${img}?v=${BOOKS100_CACHE_VERSION_V18}" alt="${esc(bookMeta.title)}" onerror="this.style.display='none';"></div>
-    <div><b>${esc(bookMeta.title)}</b><p>${esc(bookMeta.author||'')}</p><span>${esc(status)}</span></div>
-  </button>`;
-}
+/* removed obsolete duplicate function books100ApiV18 in v95 cleanup */
+/* removed obsolete duplicate function getBooks100StateNormalized in v95 cleanup */
+/* removed obsolete duplicate function startBookChallenge in v95 cleanup */
+/* removed obsolete duplicate function resetBooks100Challenge in v95 cleanup */
+/* removed obsolete duplicate function forceBooks100Miss in v95 cleanup */
+/* removed obsolete duplicate function books100StatusForBook in v95 cleanup */
+/* removed obsolete duplicate function books100Card in v95 cleanup */
 function books100CurrentStateCardV18(ch, currentBook, ms){
   const row = currentBook ? ((ch.statusByBookId || {})[currentBook.id]) : null;
   const passed = row && row.status === "passed";
@@ -2376,55 +1046,9 @@ function books100CurrentStateCardV18(ch, currentBook, ms){
     : `<button class="btn primary" onclick="openBooks100Book(${Number(currentBook.day)}, false)">Открыть книгу дня</button>`) : "";
   return `<div class="books100-current"><div><p class="eyebrow">книга дня</p><h2>${esc(currentBook ? currentBook.title : 'Следующие книги готовятся')}</h2><p>${esc(currentBook ? (currentBook.author||'') : 'Добавьте следующие книги в content/challenges/books100/.')}</p><p class="small">${note}</p></div>${btn}</div>`;
 }
-async function renderBookChallenge(){
-  try{
-    const index = await loadBooks100Index();
-    if (isAdminMode()){
-      const ch = await getBooks100StateNormalized();
-      shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">режим администратора</p><h1>100 книг за 100 дней</h1><p>Все загруженные книги открыты для просмотра без таймера, блокировок и начисления баллов.</p>`)}
-        ${card('', `<h2>Загруженные книги</h2><p class="small">Подключено: ${index.books.length}. Здесь проверяется текст, картинки и мини-тесты.</p><div class="books100-list">${index.books.map(b=>books100Card(b,ch,true)).join('')}</div><div class="grid-v2"><button class="btn secondary" onclick="resetBooks100Challenge()">Сбросить своё тестовое состояние</button><button class="btn secondary" onclick="forceBooks100Miss()">Сымитировать пропуск суток</button></div>`)}
-        ${card('', `<button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
-      return;
-    }
-    const ch = await getBooks100StateNormalized();
-    if (!ch.started){
-      shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">ежедневный челлендж</p><h1>100 книг за 100 дней</h1><p>При первом запуске открывается первая книга и начинается окно на 24 часа. Зачёт книги даёт +1 учебную единицу и баллы серии. Следующая книга открывается только после окончания текущего таймера.</p>`)}
-        ${card('', `<h2>Правила</h2><div class="list-clean"><div><b>1 книга — 24 часа</b><p>Если мини-тест пройден, книга сохраняется в личной библиотеке.</p></div><div><b>Баллы серии</b><p>Первый зачёт — 50 баллов. Каждый следующий зачёт подряд добавляет +2 балла к награде дня.</p></div><div><b>Пропуск</b><p>Если книга не пройдена за 24 часа, она закрывается, серия сбрасывается, следующая награда снова равна 50 баллам.</p></div></div><button class="btn primary" onclick="startBookChallenge()">Начать челлендж</button><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
-      return;
-    }
-    const currentBook = books100ByIndex(index, Number(ch.currentIndex||0));
-    const ms = books100RemainingMs(ch);
-    const reward = books100RewardForCurrent(ch);
-    shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">100 книг за 100 дней</p><h1>День ${Number(ch.currentDay||1)} / 100</h1><p>Награда за зачёт текущей книги: <b>${formatPoints(reward)} баллов</b> и <b>+1 учебная единица</b>. Новая книга не открывается сразу после теста — она ждёт окончания 24-часового окна.</p>${progressBarHtml(Math.min(100, Number(ch.passedBooks||0)), 'on-dark')}`)}
-      ${card('books100-status-card', `<div class="challenge-grid"><div><span>Осталось</span><b>${books100TimeLeftText(ms)}</b></div><div><span>Серия</span><b>${Number(ch.streak||0)}</b></div><div><span>Зачтено</span><b>${Number(ch.passedBooks||0)}</b></div><div><span>Баллы</span><b>${formatPoints(Number(ch.pointsEarned||0))}</b></div></div>${books100CurrentStateCardV18(ch,currentBook,ms)}`)}
-      ${card('', `<h2>Личная библиотека</h2><p class="small">Зачтённые книги остаются доступными. Пропущенные книги закрываются.</p><div class="books100-list">${index.books.map(b=>books100Card(b,ch,false)).join('')}</div><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
-  }catch(e){
-    console.error(e);
-    shell(`${card('result-bad-v2', `<h1>Книги не загрузились</h1><p>Проверьте файлы в <b>content/challenges/books100/</b> и функцию <b>books100-progress</b> в Supabase.</p><p class="small">${esc(e.message||e)}</p><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
-  }
-}
-async function openBooks100Book(day, adminPreview){
-  const index = await loadBooks100Index();
-  const bookMeta = books100ByDay(index, day);
-  if (!bookMeta) return alert("Книга не найдена.");
-  if (!adminPreview){
-    const ch = await getBooks100StateNormalized();
-    const status = books100StatusForBook(bookMeta, ch);
-    if (status !== "открыто сегодня" && status !== "зачтено"){
-      alert(status === "пропущено" ? "Эта книга была пропущена и закрыта." : "Эта книга пока закрыта. Следующая книга откроется после окончания текущего таймера.");
-      return;
-    }
-    try { await books100ApiV18("open_book", { book: books100BookPayloadV18(bookMeta), books: books100BooksPayloadV18(index) }); } catch(e){ console.error(e); }
-  }
-  state.books100ActiveBookDay = Number(day); state.books100ScreenIndex = 0; state.books100QuestionIndex = 0; state.books100Answers = {}; state.books100AdminPreview = Boolean(adminPreview);
-  renderBooks100Reading();
-}
-function books100ScreenTextHtml(book, screen){
-  const body = screen?.textHtml || (screen?.text ? `<p>${esc(screen.text)}</p>` : "<p>Текст слайда будет добавлен после редакторской проверки.</p>");
-  const assignment = book.practicalAssignment || {};
-  const summary = state.books100ScreenIndex >= (book.screens||[]).length-1 ? `<div class="books100-full-summary"><h3>Практика дня</h3><p><b>${esc(assignment.title||'Практическое задание')}</b></p><p>${esc(assignment.result||'')}</p></div>` : "";
-  return `<section class="slide-text-v2 books100-text"><p class="eyebrow">Книга: ${esc(book.title)}</p><h3>Слайд ${Number(screen?.number || state.books100ScreenIndex+1)}. ${esc(screen?.title||'')}</h3>${body}${summary}</section>`;
-}
+/* removed obsolete duplicate function renderBookChallenge in v95 cleanup */
+/* removed obsolete duplicate function openBooks100Book in v95 cleanup */
+/* removed obsolete duplicate function books100ScreenTextHtml in v95 cleanup */
 async function renderBooks100Reading(){
   const index = await loadBooks100Index();
   const bookMeta = books100ByDay(index, state.books100ActiveBookDay);
@@ -2461,32 +1085,8 @@ function selectBooks100Answer(i){
     if (state.books100QuestionIndex < (book.quiz||[]).length-1){ state.books100QuestionIndex++; renderBooks100QuizQuestion(); } else finishBooks100Quiz();
   });
 }
-async function finishBooks100Quiz(){
-  const index = await loadBooks100Index();
-  const bookMeta = books100ByDay(index,state.books100ActiveBookDay);
-  const book = await loadBooks100Book(bookMeta);
-  const quiz = book.quiz || [];
-  let score=0; quiz.forEach((q,i)=>{ if(Number(state.books100Answers[i])===Number(q.correct||0)) score++; });
-  const passScore = Number(book.passScore || Math.ceil(quiz.length*.8));
-  const passed = score >= passScore;
-  let resultNotice = "";
-  if (state.books100AdminPreview){ resultNotice = `<p>Это режим администратора. Баллы, серия и учебные единицы не изменяются.</p>`; }
-  else {
-    try{
-      const data = await books100ApiV18("quiz_completed", { book: books100BookPayloadV18(bookMeta), books: books100BooksPayloadV18(index), score, total: quiz.length, passed, answers: state.books100Answers });
-      const ch = books100ApplyServerStateV18(data);
-      if (passed){ const row = (ch.statusByBookId||{})[bookMeta.id] || {}; const pts = row.points_awarded || data.pointsAwarded || 0; resultNotice = `<p>Начислено: <b>${formatPoints(pts)} баллов</b> и <b>+1 учебная единица</b>. Книга остаётся в личной библиотеке. Следующая книга откроется после окончания 24-часового окна.</p>`; }
-    }catch(e){ console.error(e); resultNotice = `<p class="small">Не удалось сохранить результат в Supabase: ${esc(e.message||e)}.</p>`; }
-  }
-  const msg = passed ? `<h1>Книга зачтена</h1><p>Результат: <b>${score}/${quiz.length}</b>. Проходной уровень: <b>${passScore}/${quiz.length}</b>.</p>${resultNotice}` : `<h1>Мини-тест не пройден</h1><p>Результат: <b>${score}/${quiz.length}</b>. Проходной уровень: <b>${passScore}/${quiz.length}</b>.</p><p>Лучше спокойно вернуться к саммари, перечитать ключевые слайды и пройти тест повторно до окончания 24 часов.</p>${resultNotice}`;
-  shell(`${card(passed?'result-ok-v2':'result-bad-v2', `${msg}<div class="grid-v2">${passed?'<button class="btn primary" onclick="renderBookChallenge()">К челленджу</button>':'<button class="btn primary" onclick="renderBooks100Reading()">Вернуться к саммари</button><button class="btn secondary" onclick="startBooks100Quiz()">Пройти тест заново</button>'}<button class="btn secondary" onclick="renderHome()">На главную</button></div>`)}${card('',books100QuizReviewHtml(book))}`,'home');
-}
-function activeChallengeCardHtml(){
-  const ch = getBooks100RawState();
-  if (!ch || !ch.started) return "";
-  const ms = books100RemainingMs(ch); const reward = books100RewardForCurrent(ch);
-  return card('challenge-active-card', `<p class="eyebrow">ежедневная задача</p><h2>100 книг за 100 дней</h2><div class="challenge-grid"><div><span>День</span><b>${Number(ch.currentDay||1)} / 100</b></div><div><span>Осталось</span><b>${books100TimeLeftText(ms)}</b></div><div><span>Серия</span><b>${Number(ch.streak||0)} подряд</b></div><div><span>Награда</span><b>${formatPoints(reward)} баллов</b></div></div><p><b>Книга:</b> ${esc(ch.currentBookTitle||'книга дня')}</p><p><b>Этап:</b> ${esc(ch.todayStage||'саммари не открыто')}</p><button class="btn primary" onclick="renderBookChallenge()">Продолжить челлендж</button>`);
-}
+/* removed obsolete duplicate function finishBooks100Quiz in v95 cleanup */
+/* removed obsolete duplicate function activeChallengeCardHtml in v95 cleanup */
 
 
 
@@ -2537,22 +1137,9 @@ function books100ApplyServerStateV18(data){
   return next;
 }
 
-async function loadBooks100Index(){
-  const response = await fetch(BOOKS100_INDEX_URL + "?v=" + BOOKS100_CACHE_VERSION_V18, { cache: "no-store" });
-  if (!response.ok) throw new Error("BOOKS100_INDEX_LOAD_FAILED");
-  state.books100Index = await response.json();
-  return state.books100Index;
-}
+/* removed obsolete duplicate function loadBooks100Index in v95 cleanup */
 
-async function loadBooks100Book(bookMeta){
-  if (!bookMeta) throw new Error("BOOKS100_BOOK_META_MISSING");
-  const key = bookMeta.id || String(bookMeta.day || "");
-  const response = await fetch(bookMeta.contentUrl + "?v=" + BOOKS100_CACHE_VERSION_V18, { cache: "no-store" });
-  if (!response.ok) throw new Error("BOOKS100_BOOK_LOAD_FAILED: " + key);
-  const data = await response.json();
-  state.books100Cache[key] = data;
-  return data;
-}
+/* removed obsolete duplicate function loadBooks100Book in v95 cleanup */
 
 let books100TimerIntervalV19 = null;
 function stopBooks100LiveTimerV19(){
@@ -2600,34 +1187,7 @@ function books100ScreenTextHtml(book, screen){
   return `<section class="slide-text-v2 books100-text"><p class="eyebrow">Книга: ${esc(book.title)}</p><h3>Слайд ${Number(screen?.number || state.books100ScreenIndex+1)}. ${esc(screen?.title||'')}</h3>${body}${summary}</section>`;
 }
 
-async function renderBookChallenge(){
-  try{
-    const index = await loadBooks100Index();
-    if (isAdminMode()){
-      const ch = await getBooks100StateNormalized();
-      shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">режим администратора</p><h1>100 книг за 100 дней</h1><p>Все загруженные книги открыты для просмотра без таймера, блокировок и начисления баллов.</p>`)}
-        ${card('', `<h2>Загруженные книги</h2><p class="small">Подключено: ${index.books.length}. Здесь проверяется текст, картинки и мини-тесты.</p><div class="books100-list">${index.books.map(b=>books100Card(b,ch,true)).join('')}</div><div class="grid-v2"><button class="btn secondary" onclick="resetBooks100Challenge()">Сбросить своё тестовое состояние</button><button class="btn secondary" onclick="forceBooks100Miss()">Сымитировать пропуск суток</button></div>`)}
-        ${card('', `<button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
-      return;
-    }
-    const ch = await getBooks100StateNormalized();
-    if (!books100IsStartedV19(ch)){
-      shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">ежедневный челлендж</p><h1>100 книг за 100 дней</h1><p>При первом запуске открывается первая книга и начинается окно на 24 часа. Зачёт книги даёт +1 учебную единицу и баллы серии. Следующая книга открывается только после окончания текущего таймера.</p>`)}
-        ${card('', `<h2>Правила</h2><div class="list-clean"><div><b>1 книга — 24 часа</b><p>Если мини-тест пройден, книга сохраняется в личной библиотеке.</p></div><div><b>Баллы серии</b><p>Первый зачёт — 50 баллов. Каждый следующий зачёт подряд добавляет +2 балла к награде дня.</p></div><div><b>Пропуск</b><p>Если книга не пройдена за 24 часа, она закрывается, серия сбрасывается, следующая награда снова равна 50 баллам.</p></div></div><button class="btn primary" onclick="startBookChallenge()">Начать челлендж</button><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
-      return;
-    }
-    const currentBook = books100ByIndex(index, Number(ch.currentIndex||0));
-    const ms = books100RemainingMs(ch);
-    const reward = books100RewardForCurrent(ch);
-    shell(`${card('blue-card-v2 books100-hero', `<p class="eyebrow">100 книг за 100 дней</p><h1>День ${Number(ch.currentDay||1)} / 100</h1><p>Награда за зачёт текущей книги: <b>${formatPoints(reward)} баллов</b> и <b>+1 учебная единица</b>. Новая книга не открывается сразу после теста — она ждёт окончания 24-часового окна.</p>${progressBarHtml(Math.min(100, Number(ch.passedBooks||0)), 'on-dark')}`)}
-      ${card('books100-status-card', `<div class="challenge-grid"><div><span>Осталось</span>${books100TimerHtmlV19(ch, ms)}</div><div><span>Серия</span><b>${Number(ch.streak||0)}</b></div><div><span>Зачтено</span><b>${Number(ch.passedBooks||0)}</b></div><div><span>Баллы</span><b>${formatPoints(Number(ch.pointsEarned||0))}</b></div></div>${books100CurrentStateCardV18(ch,currentBook,ms)}`)}
-      ${card('', `<h2>Личная библиотека</h2><p class="small">Зачтённые книги остаются доступными. Пропущенные книги закрываются.</p><div class="books100-list">${index.books.map(b=>books100Card(b,ch,false)).join('')}</div><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
-    setTimeout(()=>startBooks100LiveTimerV19(new Date(ch.dayStartedAt).getTime() + books100DayMs()), 0);
-  }catch(e){
-    console.error(e);
-    shell(`${card('result-bad-v2', `<h1>Книги не загрузились</h1><p>Проверьте файлы в <b>content/challenges/books100/</b> и функцию <b>books100-progress</b> в Supabase.</p><p class="small">${esc(e.message||e)}</p><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
-  }
-}
+/* removed obsolete duplicate function renderBookChallenge in v95 cleanup */
 
 async function finishBooks100Quiz(){
   const index = await loadBooks100Index();
@@ -2944,13 +1504,7 @@ async function openBooks100Book(day, adminPreview){
 /* =====================================================
    v22 — production access, homepage blocks, instruction panel
    ===================================================== */
-function isLessonPrepared(meta) {
-  if (!meta) return false;
-  const readyFirstLessons = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
-  if (readyFirstLessons.includes(meta.code)) return true;
-  if (Number(meta.number) === 1) return false;
-  return meta.status === "ready";
-}
+/* removed obsolete duplicate function isLessonPrepared in v95 cleanup */
 
 function toggleGlobalInstruction(force) {
   const el = $("global-instruction-panel");
@@ -2973,43 +1527,7 @@ function globalInstructionPanelHtml() {
   </div>`;
 }
 
-function renderHome() {
-  const gp = globalStageProgress();
-  const points = totalPoints();
-  const html = `
-    ${card('hero-dashboard main-dashboard-card merged-dashboard-card v16-dashboard-card', `
-      <div class="v16-dashboard-head">
-        <div class="v16-dashboard-copy">
-          <div class="eyebrow-row"><p class="eyebrow">общая система</p><button class="instruction-link" onclick="toggleGlobalInstruction()">инструкция</button></div>
-          <h1>Ваш прогресс</h1>
-          <p>Прогресс считается по пройденным этапам готовых уроков: презентация, тест, саммари и принятое домашнее задание.</p>
-        </div>
-        ${compactProgressRing(gp.percent)}
-      </div>
-      <div class="dashboard-mini-grid dashboard-mini-grid-compact v16-mini-grid">
-        <div><span>Баллы</span><b>${formatPoints(points)}</b></div>
-        <div><span>Достижение</span><b>${esc(studentTitleInfo().current.title)}</b></div>
-      </div>
-      ${achievementInlineHtml()}
-      ${globalInstructionPanelHtml()}
-    `)}
-    ${activeChallengeCardHtml()}
-    ${card('', `<h2>Выбрать блок</h2><p>Выберите направление работы внутри платформы.</p>
-      <div class="top-track-grid main-track-grid-v22">
-        ${renderMainBlockCard('Нет своего бизнеса','Базовый маршрут для подготовки к предпринимательскому мышлению и запуску.','скоро','','disabled main-block-card')}
-        ${renderMainBlockCard('Я предприниматель','Диагностика, уроки, ДЗ, проверка и управленческие действия.','доступно','renderLearning()','active main-block-card')}
-        ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','','disabled main-block-card')}
-      </div>
-      <div class="secondary-track-grid-v22">
-        ${renderMainBlockCard('100 книг за 100 дней','Ежедневный челлендж: одна книга, 24 часа, мини-тест, +1 учебная единица и баллы серии.','доступно','renderBookChallenge()','active books100-entry compact-card')}
-        ${renderMainBlockCard('Бизнес-факты','Короткие практические статьи о реальных бизнес-ситуациях: ошибки, решения, цифры и выводы, которые можно применить в своей системе.','скоро','','disabled compact-card')}
-        ${renderMainBlockCard('Дополнительные материалы','Отдельные уроки, разборы и материалы, которые дополняют основной маршрут.','скоро','','disabled compact-card')}
-        ${renderMainBlockCard('VIP уровень','Более подробные разборы, инструменты и активность.','в разработке','','disabled compact-card')}
-        ${renderMainBlockCard('Бизнес-медиа','Подборки фильмов, сериалов, интервью и полезных видео о бизнесе с управленческими выводами для практики.','скоро','','disabled compact-card compact-card-wide')}
-      </div>`)}
-  `;
-  shell(html, 'home');
-}
+/* removed obsolete duplicate function renderHome in v95 cleanup */
 
 /* =====================================================
    v24 — stabilization layer: progress, lessons, quiz, homework
@@ -3018,37 +1536,16 @@ var LEGO_V24_CACHE_VERSION = "v31-books100-16-20-deep-rewrite-20260609";
 var LEGO_READY_FIRST_LESSON_CODES_V24 = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
 var LEGO_CORE_STAGE_CODES_V24 = ["presentation", "quiz", "books", "homework"];
 
-function contentVersionV24() {
-  return LEGO_V24_CACHE_VERSION;
-}
+/* removed obsolete duplicate function contentVersionV24 in v95 cleanup */
 function fetchJsonV24(url) {
   return fetch(url + (url.indexOf("?") >= 0 ? "&" : "?") + "v=" + contentVersionV24(), { cache: "no-cache" }).then(function(response){
     if (!response.ok) throw new Error("LOAD_FAILED: " + url);
     return response.json();
   });
 }
-async function loadCatalog() {
-  if (state.catalog && state.catalog.__version === contentVersionV24()) return state.catalog;
-  const data = await fetchJsonV24(CATALOG_URL);
-  data.__version = contentVersionV24();
-  state.catalog = data;
-  return state.catalog;
-}
-async function loadLesson(code) {
-  const cached = state.lessonCache[code];
-  if (cached && cached.__version === contentVersionV24()) return cached;
-  if (!state.catalog) await loadCatalog();
-  const lesson = (state.catalog.lessons || []).find(function(l){ return l.code === code; });
-  if (!lesson) throw new Error("LESSON_NOT_FOUND: " + code);
-  const data = await fetchJsonV24(lesson.contentUrl);
-  data.__version = contentVersionV24();
-  state.lessonCache[code] = data;
-  return data;
-}
-function mediaUrlV24(url) {
-  if (!url) return "";
-  return url + (url.indexOf("?") >= 0 ? "&" : "?") + "v=" + contentVersionV24();
-}
+/* removed obsolete duplicate function loadCatalog in v95 cleanup */
+/* removed obsolete duplicate function loadLesson in v95 cleanup */
+/* removed obsolete duplicate function mediaUrlV24 in v95 cleanup */
 function brandLogoHtml(compact) {
   const logo = compact ? "assets/brand/lego-mark.png" : "assets/brand/lego-logo.png";
   return `<button class="brand-lockup ${compact ? 'compact' : ''}" onclick="renderHome()" aria-label="Л.Е.Г.О — на главную">
@@ -3072,120 +1569,25 @@ function legacyTradeImage(label, current) {
   }
   return null;
 }
-function handleImageError(img) {
-  if (!img) return;
-  if (img.dataset && img.dataset.fallbackUsed !== "1") {
-    const legacy = legacyTradeImage(img.dataset.label, Number(img.dataset.index));
-    if (legacy && img.src.indexOf(legacy) === -1) {
-      img.dataset.fallbackUsed = "1";
-      img.src = mediaUrlV24(legacy);
-      return;
-    }
-  }
-  img.style.display = "none";
-  const fallback = img.nextElementSibling;
-  if (fallback) fallback.style.display = "flex";
-}
-function mediaScreen(image,label,current,total,html){
-  const legacy = legacyTradeImage(label, current);
-  const src = legacy || image || "";
-  const imageHtml = src
-    ? `<img src="${mediaUrlV24(src)}" data-label="${esc(label)}" data-index="${Number(current)}" onerror="handleImageError(this)">`
-    : `<img src="" data-label="${esc(label)}" data-index="${Number(current)}" style="display:none" onerror="handleImageError(this)">`;
-  return `<div class="media-counter">${esc(label)}: ${Number(current)}/${Number(total)}</div><div class="media-box-v2">${imageHtml}<div class="image-missing-v2" style="display:none"><b>${esc(label)} ${Number(current)}</b><p>Иллюстрация в подготовке.</p></div></div><section class="slide-text-v2">${cleanStudentHtml(html)}</section>`;
-}
+/* removed obsolete duplicate function handleImageError in v95 cleanup */
+/* removed obsolete duplicate function mediaScreen in v95 cleanup */
 function lessonOverviewCard(lesson) {
   const img = lesson.overviewImage || `assets/lesson_overview/${lesson.code}.png`;
   return `<section class="lesson-overview-card"><img src="${mediaUrlV24(img)}" alt="Карта урока" onerror="this.closest('.lesson-overview-card').style.display='none';"></section>`;
 }
 
-function homeworkStateV24(code) {
-  const p = getProgress(code);
-  const status = String(p.status || "").toLowerCase();
-  const verified = Boolean(p.homework_verified || p.homework_checked || p.homework_verified_at || status === "completed");
-  if (verified) return { key: "accepted", label: "Домашнее задание принято" };
-  if (status === "homework_revision" || status === "revision" || status === "rejected" || status === "needs_revision") return { key: "revision", label: "ДЗ на доработке" };
-  if (p.homework_submitted || p.homework_submitted_at || status === "homework_submitted") return { key: "review", label: "ДЗ на проверке" };
-  if (isStageDone(code, "books")) return { key: "available", label: "Сдать ДЗ" };
-  return { key: "locked", label: "ДЗ закрыто" };
-}
-function isStageDone(code, stage) {
-  const p = getProgress(code);
-  const status = String(p.status || "").toLowerCase();
-  if(stage === "presentation") return Boolean(p.presentation_completed || p.presentation_completed_at);
-  if(stage === "quiz") return Boolean(p.quiz_completed || p.quiz_completed_at);
-  if(stage === "books") return Boolean(p.books_completed || p.books_completed_at);
-  if(stage === "homeworkSubmitted") return homeworkStateV24(code).key !== "locked" && homeworkStateV24(code).key !== "available";
-  if(stage === "homeworkVerified") return Boolean(p.homework_verified || p.homework_checked || p.homework_verified_at || status === "completed");
-  return false;
-}
-function lessonStageLabel(code) {
-  const hw = homeworkStateV24(code);
-  if (hw.key === "accepted") return "Модуль закрыт";
-  if (hw.key === "revision") return "Доработать ДЗ";
-  if (hw.key === "review") return "ДЗ на проверке";
-  if (isStageDone(code,"books")) return "Сдать ДЗ";
-  if (isStageDone(code,"quiz")) return "Изучить саммари";
-  if (isStageDone(code,"presentation")) return "Пройти тест";
-  return "Начать презентацию";
-}
-function lessonStageAction(code) {
-  const hw = homeworkStateV24(code);
-  if (hw.key === "review" || hw.key === "accepted") return "renderHomeworkStatus()";
-  if (hw.key === "revision" || isStageDone(code,"books")) return "renderHomework()";
-  if (isStageDone(code,"quiz")) return "startBooks()";
-  if (isStageDone(code,"presentation")) return "startQuiz(false)";
-  return "startSlides()";
-}
-function lessonAvailableStages(meta) {
-  if (!meta || !isLessonPrepared(meta)) return [];
-  const stages = [];
-  if (Number(meta.slidesCount || 0) > 0) stages.push("presentation");
-  if (Number(meta.quizCount || 0) > 0) stages.push("quiz");
-  if (Number(meta.bookScreensCount || 0) > 0) stages.push("books");
-  stages.push("homework");
-  return stages;
-}
-function lessonCompletedStageCount(code, meta) {
-  const stages = lessonAvailableStages(meta || getLessonMeta(code));
-  let done = 0;
-  if (stages.includes("presentation") && isStageDone(code,"presentation")) done++;
-  if (stages.includes("quiz") && isStageDone(code,"quiz")) done++;
-  if (stages.includes("books") && isStageDone(code,"books")) done++;
-  if (stages.includes("homework") && isStageDone(code,"homeworkVerified")) done++;
-  return done;
-}
-function lessonStageProgressInfo(code) {
-  const meta = getLessonMeta(code);
-  const total = lessonAvailableStages(meta).length || 4;
-  const done = lessonCompletedStageCount(code, meta);
-  return { done, total, percent: total ? safePercent(done / total * 100) : 0 };
-}
-function isLessonPrepared(meta) {
-  if (!meta) return false;
-  if (LEGO_READY_FIRST_LESSON_CODES_V24.includes(meta.code)) return true;
-  if (Number(meta.number) === 1) return false;
-  return meta.status === "ready";
-}
-function canOpenLesson(meta) {
-  if (!meta) return false;
-  if (isAdminMode()) return true;
-  if (!isLessonPrepared(meta)) return false;
-  if (Number(meta.number) === 1) return true;
-  const prev = activityLessons(meta.activityKey).find(function(l){ return Number(l.number) === Number(meta.number) - 1; });
-  return prev ? isStageDone(prev.code, "homeworkVerified") : false;
-}
-function readyCoreLessons() { return (state.catalog?.lessons || []).filter(isLessonPrepared); }
-function globalStageProgress() {
-  const lessons = readyCoreLessons();
-  let done = 0, total = 0;
-  lessons.forEach(function(meta){ total += lessonAvailableStages(meta).length; done += lessonCompletedStageCount(meta.code, meta); });
-  return { done, total, percent: total ? safePercent(done / total * 100) : 0 };
-}
-function currentActivityProgress() {
-  const info = activityRouteProgressV24(state.selectedActivityKey);
-  return info.routePercent;
-}
+/* removed obsolete duplicate function homeworkStateV24 in v95 cleanup */
+/* removed obsolete duplicate function isStageDone in v95 cleanup */
+/* removed obsolete duplicate function lessonStageLabel in v95 cleanup */
+/* removed obsolete duplicate function lessonStageAction in v95 cleanup */
+/* removed obsolete duplicate function lessonAvailableStages in v95 cleanup */
+/* removed obsolete duplicate function lessonCompletedStageCount in v95 cleanup */
+/* removed obsolete duplicate function lessonStageProgressInfo in v95 cleanup */
+/* removed obsolete duplicate function isLessonPrepared in v95 cleanup */
+/* removed obsolete duplicate function canOpenLesson in v95 cleanup */
+/* removed obsolete duplicate function readyCoreLessons in v95 cleanup */
+/* removed obsolete duplicate function globalStageProgress in v95 cleanup */
+/* removed obsolete duplicate function currentActivityProgress in v95 cleanup */
 function activityRouteProgressV24(key) {
   const lessons = activityLessons(key);
   const routeTotal = Math.max(10, lessons.length || 10) * 4;
@@ -3196,50 +1598,12 @@ function activityRouteProgressV24(key) {
   const doneCount = lessons.filter(function(l){ return lessonCompletedStageCount(l.code,l) >= lessonAvailableStages(l).length && lessonAvailableStages(l).length > 0; }).length;
   return { lessons, openCount, readyCount, doneCount, routeTotal, stageDone, routePercent: routeTotal ? safePercent(stageDone / routeTotal * 100) : 0 };
 }
-function getActivityProgressInfo(key) { return activityRouteProgressV24(key); }
-function totalProgressPercent() { return globalStageProgress().percent; }
-function lessonProgressMini(code) {
-  const info = lessonStageProgressInfo(code);
-  return `<div class="lesson-progress-mini stage-progress-mini">
-    <div class="lesson-progress-top"><span>Прогресс урока</span><b>${info.percent}%</b></div>
-    <div class="lesson-progress-bar"><div style="width:${info.percent}%"></div></div>
-  </div>`;
-}
-function stageCompletedDate(code, stage) {
-  const p = getProgress(code);
-  if (stage === "presentation") return p.presentation_completed_at || null;
-  if (stage === "quiz") return p.quiz_completed_at || null;
-  if (stage === "books") return p.books_completed_at || null;
-  if (stage === "homeworkSubmitted") return p.homework_submitted_at || null;
-  if (stage === "homeworkRevision") return p.homework_checked_at || p.homework_revision_at || p.updated_at || null;
-  if (stage === "homeworkVerified") {
-    if (!isStageDone(code, "homeworkVerified")) return null;
-    return p.homework_verified_at || p.homework_checked_at || p.completed_at || null;
-  }
-  return null;
-}
-function lessonTimelineHtml(code) {
-  const hw = homeworkStateV24(code);
-  const rows = [
-    ["presentation", "Презентация", isStageDone(code,"presentation") ? "пройдена" : "—"],
-    ["quiz", "Тест", isStageDone(code,"quiz") ? "пройден" : "—"],
-    ["books", "Саммари", isStageDone(code,"books") ? "изучено" : "—"],
-    ["homeworkSubmitted", "ДЗ отправлено", (hw.key === "review" || hw.key === "revision" || hw.key === "accepted") ? (hw.key === "revision" ? "на доработке" : "отправлено") : "—"],
-    ["homeworkVerified", "ДЗ принято", hw.key === "accepted" ? "принято" : (hw.key === "review" ? "ожидает проверки" : "—")]
-  ];
-  return card('timeline-card', `<h2>История прохождения</h2><div class="timeline-list-v24">${rows.map(function(r){
-    const date = stageCompletedDate(code, r[0]);
-    const cls = r[2] !== "—" && r[2] !== "ожидает проверки" ? "done" : (r[2] === "ожидает проверки" ? "review" : "");
-    return `<div class="timeline-row-v24 ${cls}"><span>${esc(r[1])}</span><b>${esc(r[2])}</b><em>${date ? shortDate(date) : ''}</em></div>`;
-  }).join('')}</div>`);
-}
-function homeworkReviewNoticeHtml(code) {
-  const hw = homeworkStateV24(code);
-  if (hw.key === "review") return `<div class="homework-review-notice"><b>Домашнее задание на проверке</b><p>Работа отправлена ${shortDate(stageCompletedDate(code,'homeworkSubmitted'))}. После проверки появится статус: принято или нужна доработка.</p></div>`;
-  if (hw.key === "revision") return `<div class="homework-review-notice revision"><b>Домашнее задание на доработке</b><p>Проверьте комментарий администратора, уточните вывод и отправьте форму повторно.</p></div>`;
-  if (hw.key === "accepted") return `<div class="homework-review-notice accepted"><b>Домашнее задание принято</b><p>Проверка завершена ${shortDate(stageCompletedDate(code,'homeworkVerified'))}. Урок засчитан.</p></div>`;
-  return '';
-}
+/* removed obsolete duplicate function getActivityProgressInfo in v95 cleanup */
+/* removed obsolete duplicate function totalProgressPercent in v95 cleanup */
+/* removed obsolete duplicate function lessonProgressMini in v95 cleanup */
+/* removed obsolete duplicate function stageCompletedDate in v95 cleanup */
+/* removed obsolete duplicate function lessonTimelineHtml in v95 cleanup */
+/* removed obsolete duplicate function homeworkReviewNoticeHtml in v95 cleanup */
 function cleanLessonDescription(lesson) {
   const title = String(lesson && lesson.title ? lesson.title : '').trim();
   const key = String(lesson && lesson.activityKey ? lesson.activityKey : '').trim();
@@ -3266,62 +1630,10 @@ function homeworkStageCardV24(code) {
   if (hw.key === "revision") return stageCard('homework','Домашнее задание','Нужна доработка.',false,'renderHomework()',false,'revision');
   return stageCard('homework','Домашнее задание','Практическая часть урока',false,'renderHomework()',!isStageDone(code,'books') && !isAdminMode());
 }
-function renderActivityLessons(key) {
-  if (key && getActivity(key)) {
-    state.selectedActivityKey = key;
-    localStorage.setItem("lego_selected_activity", key);
-  }
-  const act = getActivity(state.selectedActivityKey) || state.catalog.activities[0];
-  const info = getActivityProgressInfo(act.key);
-  const readyNote = info.readyCount ? 'Первый готовый урок доступен сразу. Следующий урок открывается после приёмки ДЗ предыдущего урока.' : 'Материалы направления временно закрыты: уроки откроются после оформления изображений, тестов и проверки логики.';
-  const html = `
-    ${card('blue-card-v2 activity-progress-head', `<p class="eyebrow">Я предприниматель</p><h1>${esc(act.title)}</h1><p>${esc(activityIntroText(act))}</p><p class="small">${readyNote}</p><div class="step-progress-block"><div class="step-summary-line"><span>Прогресс направления</span><b>${info.routePercent}%</b></div>${progressBarHtml(info.routePercent,'on-dark')}</div>`)}
-    ${card('', `<div class="activity-toolbar"><button class="btn secondary" onclick="renderLearning()">К видам деятельности</button></div><h2>Уроки направления</h2><p>Доступно сейчас: <b>${info.openCount} из ${info.lessons.length}</b>. Готово к выдаче: <b>${info.readyCount}</b>.</p><div class="lesson-list-v2">${info.lessons.map(renderLessonRow).join('')}</div>`)}
-  `;
-  shell(html, 'learning');
-}
-function renderLessonRow(l) {
-  const locked = !canOpenLesson(l);
-  const info = lessonStageProgressInfo(l.code);
-  const status = locked ? (isLessonPrepared(l) ? 'закрыт до предыдущего ДЗ' : 'в подготовке') : lessonStageLabel(l.code);
-  return `<button class="lesson-row-v2 ${locked?'locked':''}" onclick="openLesson('${l.code}')">
-    <div><b>${String(l.number).padStart(2,'0')}. ${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${esc(status)}</p><div class="lesson-row-progress">${progressBarHtml(info.percent,'')}</div></div>
-    <span>${locked?'🔒':(info.percent===100?'✓':'→')}</span>
-  </button>`;
-}
-function renderLessonHub() {
-  loadLesson(state.selectedLessonCode).then(function(lesson){
-    const meta = getLessonMeta(state.selectedLessonCode);
-    const activityKey = meta ? meta.activityKey : (lesson.activityKey || state.selectedActivityKey);
-    const adminService = isAdminMode() && lesson.passportText ? `<details class="admin-details"><summary>Служебное описание урока</summary><pre class="text-pre">${esc(lesson.passportText || '')}</pre></details>` : "";
-    const html = `
-      ${card('blue-card-v2 lesson-head-card', `<p class="eyebrow">${esc(lesson.activityTitle)} · урок ${String(lesson.number).padStart(2,'0')}</p><h1>${esc(lesson.title)}</h1><div class="lesson-meta-chips"><span>${esc(lesson.activityTitle)}</span><span>Урок ${String(lesson.number).padStart(2,'0')}</span></div><p>${esc(cleanLessonDescription(lesson))}</p>${lessonProgressMini(meta.code)}${homeworkReviewNoticeHtml(meta.code)}<button class="btn primary" onclick="continueLessonFromProgress('${meta.code}')">Продолжить с последнего места</button>`)}
-      ${lessonOverviewCard(lesson)}
-      <div class="stage-grid-v2">
-        ${stageCard('presentation','Презентация','Информационная часть урока',isStageDone(meta.code,'presentation'),'startSlides()')}
-        ${stageCard('quiz','Тест','Проверка понимания материала',isStageDone(meta.code,'quiz'),'startQuiz(false)',!isStageDone(meta.code,'presentation') && !isAdminMode())}
-        ${stageCard('books','Саммари','Информация о полезных книгах',isStageDone(meta.code,'books'),'startBooks()',!isStageDone(meta.code,'quiz') && !isAdminMode())}
-        ${homeworkStageCardV24(meta.code)}
-      </div>
-      ${lessonTimelineHtml(meta.code)}
-      ${lessonInsightCard()}
-      ${card('', `<div class="grid-v2"><button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">← К выбору уроков</button><button class="btn secondary" onclick="renderHome()">На главную</button></div>`)}
-      ${adminService}
-    `;
-    shell(html, 'learning');
-  }).catch(function(e){ emergencyScreen(e.message || 'LESSON_HUB_ERROR'); });
-}
-async function startQuiz(reset){
-  const lesson = await loadLesson(state.selectedLessonCode);
-  const p = getProgress(state.selectedLessonCode);
-  const total = Array.isArray(lesson.quiz) ? lesson.quiz.length : 0;
-  const savedIndex = Number(p.current_question || 0);
-  const completed = Boolean(p.quiz_completed || p.quiz_completed_at);
-  state.questionIndex = (reset || completed) ? 0 : Math.max(0, Math.min(total ? total - 1 : 0, isNaN(savedIndex) ? 0 : savedIndex));
-  state.answers = (reset || completed) ? {} : (p.quiz_answers && typeof p.quiz_answers === 'object' ? p.quiz_answers : {});
-  state.quizOptionOrders = {};
-  renderQuestion();
-}
+/* removed obsolete duplicate function renderActivityLessons in v95 cleanup */
+/* removed obsolete duplicate function renderLessonRow in v95 cleanup */
+/* removed obsolete duplicate function renderLessonHub in v95 cleanup */
+/* removed obsolete duplicate function startQuiz in v95 cleanup */
 function quizOrderKeyV24(idx){ return state.selectedLessonCode + ':' + String(idx); }
 function shuffledQuizOrderV24(questionIndex, length){
   state.quizOptionOrders = state.quizOptionOrders || {};
@@ -3363,52 +1675,15 @@ function quizReviewHtml(lesson){
   }).join('');
   return `<div class="quiz-review-v2"><h2>Разбор ответов</h2>${rows}</div>`;
 }
-async function renderHomework(){
-  const lesson = await loadLesson(state.selectedLessonCode);
-  const code = state.selectedLessonCode;
-  const activityKey = lesson.activityKey || state.selectedActivityKey;
-  const hw = lesson.homework || {};
-  const hwState = homeworkStateV24(code);
-  if (!isAdminMode() && !isStageDone(code, 'books') && hwState.key === 'locked') {
-    shell(`${card('blue-card-v2', `<h1>Домашнее задание пока закрыто</h1><p>Домашнее задание открывается после информационной части, теста и саммари. Так сохраняется порядок обучения и проверки.</p>`)}${card('', `<div class="grid-v2">${actionButton('К уроку','renderLessonHub()','primary')}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button><button class="btn secondary" onclick="renderHome()">На главную</button></div>` )}`,'homework');
-    return;
-  }
-  await remoteSave('homework_started',{});
-  const tableButton = hw.buttonLabel || 'Получить шаблон таблицы ДЗ';
-  const defaultInstruction = `<h3>Практическая часть урока</h3><p>Откройте прикреплённый шаблон, сделайте копию и заполните фактические или честно оценочные данные своего бизнеса. Главная цель — увидеть первичное ограничение, сформулировать действие на 7 дней и выбрать метрику проверки.</p><p>Не нужно делать идеальную систему учёта. Достаточно тех данных, которые помогают понять, где теряется результат, деньги, время или управляемость.</p>`;
-  const instruction = cleanStudentHtml(hw.instructionHtml || defaultInstruction);
-  const revision = hwState.key === 'revision' ? homeworkReviewNoticeHtml(code) : '';
-  shell(`${card('blue-card-v2', `<h1>${esc(hw.title || 'Домашнее задание')}</h1><p>Практическая часть урока. Здесь материал переносится в реальные цифры и управленческий вывод.</p>${revision}`)}${card('', `${instruction}<div class="grid-v2">${externalButton(tableButton,homeworkSheetUrl(code, hw),'primary')}${externalButton('Открыть форму сдачи',hw.submitFormUrl||'#','secondary')}${actionButton(hwState.key === 'revision' ? 'Я отправил исправленное ДЗ' : 'Я отправил ДЗ','markHomeworkSubmitted()','primary')}${actionButton('← Вернуться к уроку','renderLessonHub()','secondary')}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button><button class="btn secondary" onclick="renderHome()">На главную</button></div>`)}${isAdminMode()?card('', `<details class="admin-details"><summary>Служебное ТЗ таблицы и критерии</summary><h3>ТЗ таблицы</h3><pre class="text-pre">${esc(hw.tableTzText || 'ТЗ таблицы будет добавлено позже.')}</pre><h3>Критерии</h3><pre class="text-pre">${esc(hw.gradingText || '')}</pre></details>`):''}`,'homework');
-}
-function renderHomeworkStatus(){
-  const code = state.selectedLessonCode;
-  const meta = getLessonMeta(code);
-  const activityKey = meta ? meta.activityKey : state.selectedActivityKey;
-  const hw = homeworkStateV24(code);
-  const detail = hw.key === 'accepted'
-    ? `Проверка завершена ${shortDate(stageCompletedDate(code,'homeworkVerified'))}. Урок засчитан.`
-    : hw.key === 'review'
-      ? `Работа отправлена ${shortDate(stageCompletedDate(code,'homeworkSubmitted'))}. После проверки появится статус: принято или нужна доработка.`
-      : hw.key === 'revision'
-        ? 'Работа возвращена на доработку. Откройте домашнее задание, уточните вывод и отправьте форму повторно.'
-        : 'Откройте домашнее задание, заполните шаблон и отправьте форму на проверку.';
-  shell(`${card('blue-card-v2', `<h1>${esc(hw.label)}</h1><p>${esc(detail)}</p>`)}${lessonTimelineHtml(code)}${card('', `<div class="grid-v2">${actionButton(hw.key === 'revision' ? 'Открыть ДЗ на доработку' : 'К уроку', hw.key === 'revision' ? 'renderHomework()' : 'renderLessonHub()', 'primary')}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button><button class="btn secondary" onclick="renderHome()">На главную</button></div>`)}`,'homework');
-}
-function renderHomeworkCenter(){
-  const visibleLessons = (state.catalog.lessons || []).filter(function(l){ return canOpenLesson(l) || isStageDone(l.code,'homeworkSubmitted') || isStageDone(l.code,'books'); }).slice(0,60);
-  shell(`${card('blue-card-v2', `<h1>Домашние задания</h1><p>Здесь отображаются ДЗ по открытым урокам. Если ДЗ ещё закрыто, сначала пройдите презентацию, тест и саммари.</p>`)}${card('', `<div class="lesson-list-v2">${visibleLessons.map(function(l){
-    const hw = homeworkStateV24(l.code);
-    const ready = isAdminMode() || isStageDone(l.code,'books') || hw.key !== 'locked';
-    const status = hw.key === 'accepted' ? 'принято' : hw.key === 'review' ? 'на проверке' : hw.key === 'revision' ? 'на доработке' : ready ? 'можно сдавать' : 'закрыто до саммари';
-    return `<button class="lesson-row-v2 ${ready?'':'locked'}" onclick="openLesson('${l.code}').then(()=>${ready?'renderHomework()':'renderLessonHub()'})"><div><b>${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${status}</p></div><span>${ready?'→':'🔒'}</span></button>`;
-  }).join('')}</div><button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'homework');
-}
+/* removed obsolete duplicate function renderHomework in v95 cleanup */
+/* removed obsolete duplicate function renderHomeworkStatus in v95 cleanup */
+/* removed obsolete duplicate function renderHomeworkCenter in v95 cleanup */
 
 /* =====================================================
    v24 — stabilization overrides: progress, lessons, quiz, homework
    ===================================================== */
 
-function appStableVersionV24(){ return "v31-books100-16-20-deep-rewrite-20260609"; }
+/* removed obsolete duplicate function appStableVersionV24 in v95 cleanup */
 
 function safeFetchUrlV24(url){
   const sep = String(url || "").includes("?") ? "&" : "?";
@@ -3435,26 +1710,11 @@ async function loadLesson(code) {
   return data;
 }
 
-function readyFirstLessonCodesV24(){ return ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"]; }
-function isLessonPrepared(meta) {
-  if (!meta) return false;
-  if (readyFirstLessonCodesV24().includes(meta.code)) return true;
-  if (Number(meta.number) === 1) return false;
-  return String(meta.status || "").toLowerCase() === "ready";
-}
+/* removed obsolete duplicate function readyFirstLessonCodesV24 in v95 cleanup */
+/* removed obsolete duplicate function isLessonPrepared in v95 cleanup */
 
 function progressRawV24(code){ return getProgress(code) || {}; }
-function homeworkStateV24(code){
-  const p = progressRawV24(code);
-  const status = String(p.status || p.homework_status || "").toLowerCase();
-  const verified = Boolean(p.homework_verified || p.homework_checked || p.homework_verified_at || p.homework_completed || p.homework_completed_at || status === "completed");
-  const revision = !verified && Boolean(status === "homework_revision" || status === "revision" || status === "rejected" || p.homework_revision || p.homework_revision_at || p.revision_required);
-  const submitted = Boolean(p.homework_submitted || p.homework_submitted_at || revision || verified || status === "homework_submitted");
-  if (verified) return "verified";
-  if (revision) return "revision";
-  if (submitted) return "review";
-  return "none";
-}
+/* removed obsolete duplicate function homeworkStateV24 in v95 cleanup */
 
 function isStageDone(code, stage) {
   const p = progressRawV24(code);
@@ -3563,22 +1823,7 @@ function canOpenLesson(meta) {
   return prev ? isStageDone(prev.code, "homeworkVerified") : false;
 }
 
-function stageStatusText(code, stage) {
-  const hw = homeworkStateV24(code);
-  if (stage === 'homeworkVerified') {
-    if (hw === 'verified') return 'принято';
-    if (hw === 'revision') return 'на доработке';
-    if (hw === 'review') return 'ожидает проверки';
-    return 'не принято';
-  }
-  if (stage === 'homeworkSubmitted') {
-    if (hw === 'verified') return 'отправлено';
-    if (hw === 'revision') return 'требует доработки';
-    if (hw === 'review') return 'отправлено';
-    return 'не отправлено';
-  }
-  return isStageDone(code, stage) ? 'пройдено' : 'не пройдено';
-}
+/* removed obsolete duplicate function stageStatusText in v95 cleanup */
 
 function stageCompletedDate(code, stage) {
   const p = getProgress(code);
@@ -3591,40 +1836,9 @@ function stageCompletedDate(code, stage) {
   return null;
 }
 
-function lessonTimelineHtml(code) {
-  const hw = homeworkStateV24(code);
-  const rows = [
-    ['presentation','Презентация'],
-    ['quiz','Тест'],
-    ['books','Саммари'],
-    ['homeworkSubmitted','ДЗ отправлено'],
-    ['homeworkVerified','ДЗ принято']
-  ];
-  return card('lesson-timeline-card', `<h2>История прохождения</h2><div class="timeline-grid">${rows.map(([stage,label])=>{
-    const status = stageStatusText(code, stage);
-    const date = stageCompletedDate(code, stage);
-    const done = status === 'пройдено' || status === 'отправлено' || status === 'принято';
-    const review = status === 'ожидает проверки';
-    const revision = status === 'на доработке' || status === 'требует доработки';
-    return `<div class="timeline-row ${done?'done':''} ${review?'review':''} ${revision?'revision':''}"><span>${esc(label)}</span><b>${esc(status)}</b><em>${date ? shortDate(date) : (stage==='homeworkVerified' && hw==='review' ? 'ожидает' : '—')}</em></div>`;
-  }).join('')}</div>`);
-}
+/* removed obsolete duplicate function lessonTimelineHtml in v95 cleanup */
 
-function homeworkReviewNoticeHtml(code) {
-  const hw = homeworkStateV24(code);
-  if (hw === 'review') {
-    return `<div class="homework-review-notice"><b>Домашнее задание на проверке</b><p>Работа отправлена ${shortDate(stageCompletedDate(code,'homeworkSubmitted'))}. После проверки Администратор примет ДЗ или вернёт его на доработку.</p></div>`;
-  }
-  if (hw === 'revision') {
-    const p = getProgress(code);
-    const comment = p.admin_review_comment || p.review_comment || p.homework_revision_comment || '';
-    return `<div class="homework-review-notice revision"><b>Домашнее задание требует доработки</b><p>${comment ? esc(comment) : 'Уточните вывод, показатель или действие на 7 дней и отправьте работу повторно.'}</p></div>`;
-  }
-  if (hw === 'verified') {
-    return `<div class="homework-review-notice accepted"><b>Домашнее задание принято</b><p>Проверка завершена ${shortDate(stageCompletedDate(code,'homeworkVerified'))}. Урок засчитан.</p></div>`;
-  }
-  return '';
-}
+/* removed obsolete duplicate function homeworkReviewNoticeHtml in v95 cleanup */
 
 function lessonProgressMini(code) {
   const info = lessonStageProgressInfo(code);
@@ -3658,43 +1872,7 @@ function renderActivityLessons(key) {
 function safeActiveChallengeCardHtmlV24(){
   try { return activeChallengeCardHtml ? activeChallengeCardHtml() : ''; } catch(e) { console.warn('ACTIVE_CHALLENGE_CARD_SKIPPED', e); return ''; }
 }
-function renderHome() {
-  const gp = globalStageProgress();
-  const points = totalPoints();
-  const html = `
-    ${card('hero-dashboard main-dashboard-card merged-dashboard-card v16-dashboard-card', `
-      <div class="v16-dashboard-head">
-        <div class="v16-dashboard-copy">
-          <div class="eyebrow-row"><p class="eyebrow">общая система</p><button class="instruction-link" onclick="toggleGlobalInstruction()">инструкция</button></div>
-          <h1>Ваш прогресс</h1>
-          <p>Прогресс считается по готовым урокам и их этапам: презентация, тест, саммари и принятое домашнее задание.</p>
-        </div>
-        ${compactProgressRing(gp.percent)}
-      </div>
-      <div class="dashboard-mini-grid dashboard-mini-grid-compact v16-mini-grid">
-        <div><span>Баллы</span><b>${formatPoints(points)}</b></div>
-        <div><span>Достижение</span><b>${esc(studentTitleInfo().current.title)}</b></div>
-      </div>
-      ${achievementInlineHtml()}
-      ${globalInstructionPanelHtml()}
-    `)}
-    ${safeActiveChallengeCardHtmlV24()}
-    ${card('', `<h2>Выбрать блок</h2><p>Выберите направление работы внутри платформы.</p>
-      <div class="top-track-grid main-track-grid-v22">
-        ${renderMainBlockCard('Нет своего бизнеса','Базовый маршрут для подготовки к предпринимательскому мышлению и запуску.','скоро','','disabled main-block-card')}
-        ${renderMainBlockCard('Я предприниматель','Диагностика, уроки, ДЗ, проверка и управленческие действия.','доступно','renderLearning()','active main-block-card')}
-        ${renderMainBlockCard('Я сотрудник','Маршрут для руководителей, управляющих и ключевых сотрудников.','скоро','','disabled main-block-card')}
-      </div>
-      <div class="secondary-track-grid-v22">
-        ${renderMainBlockCard('100 книг за 100 дней','Ежедневный челлендж: одна книга, 24 часа, мини-тест, +1 учебная единица и баллы серии.','доступно','renderBookChallenge()','active books100-entry compact-card')}
-        ${renderMainBlockCard('Бизнес-факты','Короткие практические статьи о реальных бизнес-ситуациях: ошибки, решения, цифры и выводы, которые можно применить в своей системе.','скоро','','disabled compact-card')}
-        ${renderMainBlockCard('Дополнительные материалы','Отдельные уроки, разборы и материалы, которые дополняют основной маршрут.','скоро','','disabled compact-card')}
-        ${renderMainBlockCard('VIP уровень','Более подробные разборы, инструменты и активность.','в разработке','','disabled compact-card')}
-        ${renderMainBlockCard('Бизнес-медиа','Подборки фильмов, сериалов, интервью и полезных видео о бизнесе с управленческими выводами для практики.','скоро','','disabled compact-card compact-card-wide')}
-      </div>`)}
-  `;
-  shell(html, 'home');
-}
+/* removed obsolete duplicate function renderHome in v95 cleanup */
 
 async function renderLessonHub() {
   try {
@@ -3768,58 +1946,17 @@ async function finishQuiz(){
   shell(`${card(passed?'result-ok-v2':'result-bad-v2', `<h1>${passed?'Тест пройден':'Тест не пройден'}</h1><p>Результат: <b>${score}/${total}</b>. Проходной уровень: <b>${passScore}/${total}</b>.</p><p>${msg}</p><div class="grid-v2">${passed?actionButton('К саммари','startBooks()','primary'):actionButton('Вернуться к информационной части','startSlides()','primary')}${!passed?actionButton('Пройти тест заново','startQuiz(true)','secondary'):''}${actionButton('К уроку','renderLessonHub()','secondary')}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button></div>`)}${card('',quizReviewHtml(lesson))}`,'learning');
 }
 
-async function renderHomework(){
-  const lesson = await loadLesson(state.selectedLessonCode);
-  const code = state.selectedLessonCode;
-  const activityKey = lesson.activityKey || state.selectedActivityKey;
-  const hwState = homeworkStateV24(code);
-  if (!isAdminMode() && !(isStageDone(code, 'books') || hwState === 'revision' || hwState === 'review' || hwState === 'verified')) {
-    shell(`${card('blue-card-v2', `<h1>Домашнее задание пока закрыто</h1><p>Домашнее задание открывается после информационной части, теста и саммари. Так сохраняется порядок обучения и проверки.</p>`)}${card('', `${actionButton('К уроку','renderLessonHub()','primary')}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button>` )}`,'homework');
-    return;
-  }
-  await remoteSave('homework_started',{});
-  const hw = lesson.homework || {};
-  const tableButton = hw.buttonLabel || 'Получить шаблон таблицы ДЗ';
-  const defaultInstruction = `<h3>Практическая часть урока</h3><p>Заполните прикреплённый шаблон по фактическим данным своего бизнеса. Главная цель — увидеть первичное ограничение, сформулировать действие на 7 дней и выбрать метрику проверки.</p>`;
-  const instruction = cleanStudentHtml(hw.instructionHtml || defaultInstruction);
-  const revisionNotice = hwState === 'revision' ? homeworkReviewNoticeHtml(code) : '';
-  shell(`${card('blue-card-v2', `<h1>${esc(hw.title || 'Домашнее задание')}</h1><p>Практическая часть урока. Здесь материал переносится в реальные цифры и управленческий вывод.</p>`)}${revisionNotice}${card('', `${instruction}<div class="grid-v2">${externalButton(tableButton,homeworkSheetUrl(code, hw),'primary')}${externalButton('Открыть форму сдачи',hw.submitFormUrl||'#','secondary')}${actionButton(hwState==='revision'?'Я отправил доработанное ДЗ':'Я отправил ДЗ','markHomeworkSubmitted()','primary')}${actionButton('← Вернуться к уроку','renderLessonHub()','secondary')}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button></div>`)}${isAdminMode()?card('', `<details class="admin-details"><summary>Служебное ТЗ таблицы и критерии</summary><h3>ТЗ таблицы</h3><pre class="text-pre">${esc(hw.tableTzText || 'ТЗ таблицы будет добавлено позже.')}</pre><h3>Критерии</h3><pre class="text-pre">${esc(hw.gradingText || '')}</pre></details>`):''}`,'homework');
-}
+/* removed obsolete duplicate function renderHomework in v95 cleanup */
 
 async function markHomeworkSubmitted(){
   if(!confirm('Форма со ссылкой на ДЗ уже отправлена?')) return;
   await remoteSave('homework_submitted',{submittedAt:nowIso()});
   renderHomeworkStatus();
 }
-function renderHomeworkStatus(){
-  const code = state.selectedLessonCode;
-  const meta = getLessonMeta(code);
-  const activityKey = meta ? meta.activityKey : state.selectedActivityKey;
-  const hw = homeworkStateV24(code);
-  const statusText = hw === 'verified' ? 'Домашнее задание принято' : (hw === 'revision' ? 'Домашнее задание требует доработки' : (hw === 'review' ? 'Домашнее задание на проверке' : 'Домашнее задание пока не отправлено'));
-  const p = getProgress(code);
-  const detail = hw === 'verified'
-    ? `Проверка завершена ${shortDate(stageCompletedDate(code,'homeworkVerified'))}. Урок засчитан.`
-    : (hw === 'revision' ? (p.admin_review_comment || p.review_comment || 'Уточните вывод, показатель или действие на 7 дней и отправьте работу повторно.') : (hw === 'review' ? `Работа отправлена ${shortDate(stageCompletedDate(code,'homeworkSubmitted'))}. После проверки откроется следующий шаг или появится доработка.` : 'Откройте домашнее задание, заполните шаблон и отправьте форму на проверку.'));
-  shell(`${card('blue-card-v2', `<h1>${esc(statusText)}</h1><p>${esc(detail)}</p>`)}${lessonTimelineHtml(code)}${card('', `${hw === 'revision' ? actionButton('Открыть ДЗ для доработки','renderHomework()','primary') : actionButton('К уроку','renderLessonHub()','primary')}<button class="btn secondary" onclick="renderActivityLessons('${activityKey}')">К выбору уроков</button>`)}`,'homework');
-}
-function renderHomeworkCenter(){
-  const visibleLessons = (state.catalog.lessons || []).filter(l=>canOpenLesson(l) || isStageDone(l.code,'homeworkSubmitted')).slice(0,60);
-  shell(`${card('blue-card-v2', `<h1>Домашние задания</h1><p>Здесь отображаются задания по открытым урокам. Если ДЗ ещё закрыто, сначала нужно пройти презентацию, тест и саммари.</p>`)}${card('', `<div class="lesson-list-v2">${visibleLessons.map(l=>{
-    const hw = homeworkStateV24(l.code);
-    const ready = isAdminMode() || isStageDone(l.code,'books') || hw !== 'none';
-    const status = hw === 'verified' ? 'принято' : (hw === 'revision' ? 'на доработке' : (hw === 'review' ? 'на проверке' : (ready ? 'можно сдавать' : 'закрыто до саммари')));
-    return `<button class="lesson-row-v2 ${ready?'':'locked'}" onclick="openLesson('${l.code}').then(()=>${ready?'renderHomework()':'renderLessonHub()'})"><div><b>${esc(l.title)}</b><p>${esc(l.activityTitle)} · ${status}</p></div><span>${ready?'→':'🔒'}</span></button>`;
-  }).join('')}</div>`)}`,'homework');
-}
+/* removed obsolete duplicate function renderHomeworkStatus in v95 cleanup */
+/* removed obsolete duplicate function renderHomeworkCenter in v95 cleanup */
 
-function accessDenied(reason){
-  const clean = String(reason || 'ACCESS_DENIED');
-  const friendly = clean === 'OPEN_FROM_TELEGRAM_REQUIRED'
-    ? 'Откройте приложение из Telegram, чтобы система смогла проверить доступ.'
-    : (clean === 'NOT_CHANNEL_MEMBER' ? 'Доступ открыт только участникам закрытого Telegram-канала.' : 'Не удалось подтвердить доступ. Проверьте подписку или напишите в поддержку.');
-  shell(card('result-bad-v2', `<h1>Доступ закрыт</h1><p>${esc(friendly)}</p><div class="grid-v2">${externalButton('Написать в поддержку',SUPPORT_FORM_URL,'primary')}</div><p class="small">Код проверки: ${esc(clean)}</p>`),'home');
-}
+/* removed obsolete duplicate function accessDenied in v95 cleanup */
 
 /* =====================================================
    v25 — homework review queue + clear student comments + books100 recovery tools
@@ -5303,7 +3440,7 @@ else installArchitectureObserverV35();
     var gp = typeof globalStageProgress === 'function' ? globalStageProgress() : {done:0,total:0,percent:0};
     shell(`${card('blue-card-v2 progress-rules-hero-v40', `<p class="eyebrow">правила системы</p><h1>Как считаются прогресс и баллы</h1><p>Прогресс и баллы — разные показатели. Прогресс показывает прохождение этапов, баллы используются как мотивационная система.</p>`)}
       ${card('', `<h2>Прогресс</h2><p>В расчёт входят только опубликованные уроки. В каждом опубликованном уроке четыре этапа равного веса:</p><div class="score-rule-grid-v40 equal"><div><span>25%</span><b>Презентация</b></div><div><span>25%</span><b>Тест</b></div><div><span>25%</span><b>Саммари</b></div><div><span>25%</span><b>Самостоятельная работа</b></div></div><p class="small">Сейчас выполнено: <b>${gp.done} из ${gp.total}</b> этапов — <b>${gp.percent}%</b>.</p>`)}
-      ${card('', `<h2>Баллы за один урок</h2><div class="score-rule-grid-v40"><div><span>10</span><b>Презентация</b></div><div><span>10</span><b>Тест</b></div><div><span>10</span><b>Саммари</b></div><div><span>70</span><b>Самостоятельная работа</b></div></div><p class="small">Полностью завершённый урок даёт 100 баллов. Старую пропорцию мы пока сохраняем, чтобы не пересчитать уже накопленные баллы и уровни.</p>`)}
+      ${card('', `<h2>Исследовательские баллы</h2><div class="score-rule-grid-v40"><div><span>+1</span><b>Новый модуль</b></div><div><span>+1</span><b>Новый урок</b></div><div><span>+1</span><b>Новый слайд</b></div><div><span>+1</span><b>Рабочий материал</b></div></div><p class="small">Баллы начисляются за первое открытие новых элементов библиотеки бизнес-систем. Повторное открытие уже изученного элемента баллы не добавляет.</p>`)}
       ${card('', `<h2>Отдельно: 100 книг за 100 дней</h2><p>Баллы челленджа прибавляются к баллам уроков. Первый зачтённый день даёт 50 баллов, далее награда растёт на 2 балла за каждый день серии.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`,'profile');
   };
 
@@ -5664,7 +3801,7 @@ else installArchitectureObserverV35();
     var gp = globalStageProgress();
     shell(`${card('blue-card-v2 progress-rules-hero-v40', `<p class="eyebrow">показатели системы</p><h1>Как считаются прогресс и баллы</h1><p>Общий прогресс показывает прохождение запланированной учебной программы. Баллы отражают выполненные действия внутри уроков и челленджа книг.</p>`)}
       ${card('', `<h2>Общий прогресс</h2><div class="planned-progress-breakdown-v41"><div><b>60 уроков</b><span>Я предприниматель</span></div><div><b>10 уроков</b><span>Нет своего бизнеса</span></div><div><b>10 уроков</b><span>Я сотрудник</span></div></div><p>Всего в программе заложено <b>80 уроков</b>. Каждый урок состоит из четырёх этапов, поэтому полный план равен <b>320 этапам</b>.</p><div class="score-rule-grid-v40 equal"><div><span>25%</span><b>Презентация</b></div><div><span>25%</span><b>Тест</b></div><div><span>25%</span><b>Саммари</b></div><div><span>25%</span><b>Самостоятельная работа</b></div></div><p class="small">Сейчас выполнено: <b>${gp.done} из ${gp.total}</b> этапов — <b>${gp.percent}%</b>.</p>`)}
-      ${card('', `<h2>Баллы за один урок</h2><div class="score-rule-grid-v40"><div><span>10</span><b>Презентация</b></div><div><span>10</span><b>Тест</b></div><div><span>10</span><b>Саммари</b></div><div><span>70</span><b>Самостоятельная работа</b></div></div><p class="small">Полностью завершённый урок даёт 100 баллов.</p>`)}
+      ${card('', `<h2>Исследовательские баллы</h2><div class="score-rule-grid-v40"><div><span>+1</span><b>Новый модуль</b></div><div><span>+1</span><b>Новый урок</b></div><div><span>+1</span><b>Новый слайд</b></div><div><span>+1</span><b>Рабочий материал</b></div></div><p class="small">Баллы начисляются за исследование библиотеки бизнес-систем: за первое открытие новых модулей, блоков, уроков, слайдов, тестов, саммари и рабочих материалов.</p>`)}
       ${card('', `<h2>100 книг за 100 дней</h2><p>Челлендж имеет собственный прогресс. Его баллы прибавляются к общему количеству баллов, но книги не входят в процент прохождения основной программы из 80 уроков.</p><p class="small">Первый зачтённый день даёт 50 баллов. Далее награда растёт на 2 балла за каждый день серии.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`,'profile');
   };
   window.renderPointsRulesV41 = window.renderProgressRulesV40;
@@ -6037,9 +4174,13 @@ else installArchitectureObserverV35();
   window.completeSelfStudyOnOpenV43 = completeSelfStudyOnOpenV43;
 
   window.openSelfStudyTemplateV43 = function(url){
+    var code = state && state.selectedLessonCode ? String(state.selectedLessonCode) : '';
     var target = String(url || '').trim();
+    if ((!target || target === '#') && code && typeof HOMEWORK_SHEET_URLS !== 'undefined') {
+      target = String(HOMEWORK_SHEET_URLS[code] || '').trim();
+    }
     if (!target || target === '#') {
-      alert('Рабочий шаблон для этого материала ещё не подключён.');
+      alert('Рабочая таблица для этого материала пока не подключена.');
       return;
     }
     completeSelfStudyOnOpenV43(state.selectedLessonCode).catch(function(error){
@@ -6124,7 +4265,7 @@ else installArchitectureObserverV35();
 
   window.renderPointsRulesV43 = function(){
     shell(`${card('blue-card-v2 progress-rules-hero-v40', `<p class="eyebrow">баллы библиотеки</p><h1>Как начисляются баллы</h1><p>Баллы отражают завершённые действия внутри опубликованных уроков и отдельно — результаты челленджа книг.</p>`)}
-      ${card('', `<h2>Баллы за один урок</h2><div class="score-rule-grid-v40"><div><span>25</span><b>Презентация</b></div><div><span>25</span><b>Тест</b></div><div><span>25</span><b>Саммари</b></div><div><span>25</span><b>Рабочий шаблон</b></div></div><p class="small">Полностью завершённый урок даёт <b>100 баллов</b>. Этап рабочего шаблона засчитывается при его открытии.</p>`)}
+      ${card('', `<h2>Исследовательские баллы</h2><div class="score-rule-grid-v40"><div><span>+1</span><b>Первый вход</b></div><div><span>+1</span><b>Модуль</b></div><div><span>+1</span><b>Слайд</b></div><div><span>+1</span><b>Материал</b></div></div><p class="small">Каждое новое действие в библиотеке бизнес-систем даёт 1 балл один раз за всё время.</p>`)}
       ${card('', `<h2>100 книг за 100 дней</h2><p>Баллы челленджа прибавляются отдельно. Первый зачтённый день даёт 50 баллов, далее награда растёт на 2 балла за каждый день серии.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`,'profile');
   };
   window.renderPointsRulesV42 = window.renderPointsRulesV43;
@@ -6760,7 +4901,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
    v77 — Финансовый помощник: единая чистая структура без старых слоёв
    ===================================================== */
 (function installFinanceCleanV77(){
-  window.APP_UI_VERSION_V77 = 'v86-finance-student-open-manual-callouts-20260629';
+  window.APP_UI_VERSION_V77 = 'v95-stability-refactor-safe-cleanup-20260630';
 
   const FINANCE_TRAINER_SECTION1_URL_V77 = 'https://docs.google.com/spreadsheets/d/1WsPb_DHt3ksIpCAZIMxgMDuSojIbztbV_5tthhdJ3Eg/edit?gid=972184137#gid=972184137';
   const FINANCE_MODULE_SECTIONS_V77 = [{"id": 1, "title": "Финансовое мышление собственника", "description": "Формирует базовую логику: предприниматель перестаёт смотреть только на кассу и начинает видеть бизнес как систему финансовых потоков, остатков, обязательств и решений.", "lessons": [{"id": 1, "title": "Деньги, прибыль и выручка: почему предприниматель ошибается", "objective": "Разрушить главный финансовый миф: деньги на счёте не равны прибыли, а поступление не всегда является выручкой.", "content": "Деньги, выручка, поступления, расходы, платежи, активы, кредиты, авансы клиентов. Разница между фактом денег и фактом заработка.", "case": "На счёт пришёл 1 000 000 ₽: это может быть выручка, аванс, кредит, возврат дебиторки или вклад собственника. Ученик разбирает влияние каждого варианта на ОПиУ, ДДС и баланс.", "result": "Ученик перестаёт оценивать бизнес только по остатку денег.", "fullContent": ["Урок 1. Деньги, прибыль и выручка: почему предприниматель ошибается", "Общая структура урока", "Количество слайдов: 18.", "Рекомендуемая длительность урока: 60–80 минут.", "Формат урока: теоретическое объяснение, разбор финансовых понятий, сквозной кейс на 1 000 000 ₽, сравнение влияния на ОПиУ, ДДС и баланс.", "Главная задача урока: разрушить базовый финансовый миф предпринимателя: деньги на счёте не равны прибыли, а поступление денег не всегда является выручкой.", "Результат ученика: ученик перестаёт оценивать бизнес только по остатку денег и начинает разделять три разные финансовые реальности: заработал ли бизнес, пришли ли деньги, что изменилось в активах и обязательствах.", "Слайд 1. Главный финансовый миф предпринимателя", "Что показать на слайде", "Показать крупную фразу: «Деньги на счёте ≠ прибыль бизнеса». Рядом можно показать предпринимателя, который смотрит на банковский остаток и делает преждевременный вывод: «У нас всё хорошо». Внизу слайда показать три вопроса: что заработали, какие деньги пришли, что бизнес теперь должен.", "Текст под слайдом", "Большинство предпринимателей начинают финансовый анализ с остатка денег на счёте. Это понятно, потому что деньги видны сразу и кажутся самым честным показателем. Но остаток денег показывает только текущую кассу, а не реальный финансовый результат. Поэтому бизнес может выглядеть здоровым по деньгам и одновременно быть убыточным.", "Главная ошибка возникает тогда, когда предприниматель называет любое поступление выручкой. Деньги могли прийти от клиента за уже оказанную услугу. Деньги могли прийти как аванс за услугу, которую ещё нужно оказать. Деньги могли прийти как кредит, вклад собственника или возврат старого долга.", "Прибыль отвечает на вопрос, заработал ли бизнес. Деньги отвечают на вопрос, сколько средств сейчас доступно. Баланс отвечает на вопрос, что у бизнеса есть и кому он должен. Эти три вопроса нельзя заменять одним банковским остатком.", "В этом уроке мы разложим одну простую ситуацию на несколько финансовых смыслов. На счёт бизнеса пришёл 1 000 000 ₽. На первый взгляд это одна и та же сумма денег. Но для финансового управления это могут быть пять совершенно разных событий.", "Слайд 2. Три финансовые реальности бизнеса", "Что показать на слайде", "Показать три колонки: ОПиУ, ДДС, Баланс. Под ОПиУ написать: «заработали или нет». Под ДДС написать: «деньги пришли или ушли». Под балансом написать: «что есть и что должны».", "Текст под слайдом", "Финансы бизнеса нельзя понять через один отчёт. ОПиУ показывает прибыльность бизнеса. ДДС показывает движение денег. Баланс показывает активы, обязательства и капитал собственника.", "ОПиУ нужен, чтобы понять, создаёт ли бизнес экономический результат. В нём отражаются выручка, расходы, прибыль, маржа и итоговый финансовый результат. Но ОПиУ не обязан совпадать с движением денег. Именно поэтому прибыль может быть положительной, а денег на счёте может не хватать.", "ДДС нужен, чтобы понять, откуда деньги пришли и куда они ушли. Он фиксирует поступления, платежи, инвестиции, кредиты, возвраты и изъятия. ДДС показывает кассовую реальность бизнеса. Но он не доказывает, что бизнес действительно заработал.", "Баланс нужен, чтобы понять, что изменилось внутри бизнеса после операции. В балансе появляются деньги, дебиторка, оборудование, долги, авансы клиентов и капитал собственника. Баланс связывает прибыль и деньги через остатки. Без баланса предприниматель видит только движение, но не видит финансовое положение.", "Слайд 3. Деньги: факт движения, а не факт заработка", "Что показать на слайде", "Показать банковский счёт с входящими и исходящими стрелками. Входящие стрелки подписать: «оплата клиента», «аванс», «кредит», «вклад собственника», «возврат дебиторки». Исходящие стрелки подписать: «аренда», «зарплата», «налоги», «оборудование», «погашение кредита».", "Текст под слайдом", "Деньги показывают, что произошло движение по кассе или счёту. Если деньги пришли, это означает только то, что остаток денежных средств увеличился. Если деньги ушли, это означает только то, что остаток денежных средств уменьшился. Само движение денег ещё не объясняет, заработал бизнес или нет.", "Одна и та же сумма поступления может иметь разный экономический смысл. Оплата за уже оказанную услугу связана с выручкой. Аванс клиента связан с обязательством оказать услугу в будущем. Кредит связан с долгом, а не с доходом.", "Такая же логика работает с платежами. Оплата аренды обычно является расходом периода. Покупка оборудования является не обычным расходом, а приобретением актива. Погашение тела кредита уменьшает деньги, но не является расходом в ОПиУ.", "Поэтому ДДС всегда нужно читать вместе с ОПиУ и балансом. ДДС показывает факт денег, но не показывает полный смысл операции. Предприниматель должен научиться задавать второй вопрос после любого поступления. Этот вопрос звучит так: почему эти деньги пришли и что бизнес теперь обязан сделать.", "Слайд 4. Выручка: факт заработка", "Что показать на слайде", "Показать схему: клиент получил ценность → бизнес признал выручку. Для услуг показать пример: «услуга оказана». Для торговли показать пример: «товар передан». Для проекта показать пример: «этап выполнен».", "Текст под слайдом", "Выручка возникает не просто потому, что деньги пришли. Выручка возникает тогда, когда бизнес передал клиенту ценность. В услугах это момент оказания услуги. В торговле это момент передачи товара покупателю.", "Если клиент оплатил услугу заранее, деньги уже пришли. Но пока услуга не оказана, бизнес ещё не заработал эту сумму. С финансовой точки зрения у бизнеса появляется обязательство перед клиентом. Он получил деньги, но должен выполнить обещание.", "Если услуга оказана, но клиент оплатит позже, выручка уже возникла. Денег ещё нет, но бизнес уже заработал доход. В балансе появляется дебиторская задолженность. Это означает, что клиент должен бизнесу деньги.", "Поэтому выручка и поступление денег могут происходить в разные моменты. Иногда деньги приходят раньше выручки. Иногда выручка возникает раньше денег. Иногда деньги вообще не связаны с выручкой, как в случае кредита или вклада собственника.", "Слайд 5. Прибыль: результат после расходов", "Что показать на слайде", "Показать простую формулу: Прибыль = Выручка − Расходы. Ниже показать, что расходы делятся на прямые, маркетинговые, административные, управленческие, амортизацию, проценты и налоги. Отдельно подписать: «платёж не всегда равен расходу».", "Текст под слайдом", "Прибыль показывает, сколько бизнес заработал после учёта расходов. Для расчёта прибыли недостаточно посмотреть, сколько денег осталось на счёте. Нужно понять, какая выручка была заработана и какие расходы относятся к этому периоду. Поэтому прибыль является результатом сопоставления доходов и расходов.", "Расход не всегда совпадает с платежом. Бизнес мог получить счёт от поставщика и признать расход, но оплатить его позже. Бизнес мог заплатить авансом за несколько месяцев вперёд, но расход должен относиться к будущим периодам. Бизнес мог купить оборудование, и тогда деньги ушли сразу, но расход будет появляться постепенно через амортизацию.", "Прибыль можно исказить, если неправильно классифицировать операции. Если кредит записать как доход, прибыль будет искусственно завышена. Если покупку оборудования списать в расходы одного месяца, прибыль будет искусственно занижена. Если аванс клиента признать выручкой сразу, бизнес покажет доход, который ещё не заработал.", "Поэтому предприниматель должен понимать не только сумму операции, но и её природу. Одна сумма может быть выручкой, долгом, авансом, активом или вкладом собственника. Финансовая грамотность начинается с правильной классификации. Без неё отчёты становятся красивыми, но опасными.", "Слайд 6. Расход и платёж: почему это не одно и то же", "Что показать на слайде", "Показать две колонки: Расход и Платёж. В колонке расход написать: «уменьшает прибыль». В колонке платёж написать: «уменьшает деньги». Между колонками показать примеры: аренда, зарплата, оборудование, погашение кредита.", "Текст под слайдом", "Расход отвечает на вопрос, что уменьшило финансовый результат бизнеса. Платёж отвечает на вопрос, куда ушли деньги. Эти события могут совпадать, но они не обязаны совпадать. Именно из-за этого предприниматели часто путают прибыль и кассу.", "Например, аренда за текущий месяц обычно является и расходом, и платежом, если её оплатили сразу. В этом случае она уменьшает и прибыль, и деньги. Но если аренда начислена, а оплатят её позже, прибыль уже уменьшилась. Деньги при этом пока не ушли.", "Другой пример — покупка оборудования. Деньги уходят сразу в момент оплаты. Но оборудование не является расходом одного месяца, потому что оно будет работать долго. В ОПиУ расход будет отражаться постепенно через амортизацию.", "Погашение тела кредита тоже часто путают с расходом. Деньги действительно уходят со счёта. Но тело кредита не является расходом, потому что бизнес возвращает ранее полученный долг. Расходом являются проценты, потому что это стоимость использования заёмных денег.", "Слайд 7. Актив и расход: покупка не всегда уменьшает прибыль сразу", "Что показать на слайде", "Показать пример: бизнес купил оборудование за 500 000 ₽. В ДДС показать минус 500 000 ₽. В балансе показать плюс оборудование. В ОПиУ показать не всю сумму, а ежемесячную амортизацию.", "Текст под слайдом", "Актив — это то, что остаётся у бизнеса и будет приносить пользу в будущем. Расход — это то, что связано с получением результата текущего периода. Если бизнес покупает расходники, они могут быстро перейти в себестоимость. Если бизнес покупает оборудование, оно обычно становится активом.", "Предприниматель часто воспринимает любую покупку как расход. Это удобно психологически, потому что деньги ушли и кажется, что бизнес потратил сумму полностью. Но финансово важно понять, исчезла ли ценность или она перешла в другую форму. Если деньги превратились в оборудование, то у бизнеса появился актив.", "Покупка оборудования влияет на ДДС сразу. Она уменьшает деньги в момент оплаты. Но на прибыль она влияет постепенно. Это происходит через амортизацию, которая распределяет стоимость актива на период его использования.", "Если списать оборудование в расходы одного месяца, отчёт будет искажён. Месяц покупки покажется хуже, чем он есть. Следующие месяцы покажутся лучше, потому что оборудование используется, но расход уже не отражается. Поэтому активы нужны для честного понимания результата.", "Слайд 8. Кредит: деньги пришли, но бизнес не заработал", "Что показать на слайде", "Показать поступление кредита 1 000 000 ₽ на счёт. В ДДС показать плюс 1 000 000 ₽ в финансовом потоке. В балансе показать плюс деньги и плюс долг. В ОПиУ показать ноль по выручке.", "Текст под слайдом", "Кредит увеличивает деньги на счёте, но не является выручкой. Бизнес не заработал эти деньги у клиента. Он получил ресурс, который должен вернуть. Поэтому кредит отражается как долг, а не как доход.", "Если предприниматель считает кредит выручкой, он создаёт опасную иллюзию. В отчёте кажется, что бизнес вырос и заработал больше. На деле бизнес просто увеличил обязательства. Такое искажение может привести к неправильным решениям по расходам, зарплатам и дивидендам.", "В ДДС кредит действительно будет поступлением. Но это поступление относится не к операционной деятельности, а к финансовой. Оно показывает, что бизнес привлёк деньги извне. Эти деньги могут помочь пройти кассовый разрыв или профинансировать рост.", "В балансе кредит всегда имеет вторую сторону. Деньги увеличиваются, но одновременно увеличивается долг. Позже бизнес будет платить проценты и возвращать тело кредита. Поэтому кредит улучшает кассу сегодня, но создаёт нагрузку на будущий денежный поток.", "Слайд 9. Аванс клиента: деньги пришли, но обязательство осталось", "Что показать на слайде", "Показать пример: клиент купил абонемент на 1 000 000 ₽. В ДДС показать поступление денег. В балансе показать обязательство «авансы клиентов». В ОПиУ показать выручку только по мере оказания услуг.", "Текст под слайдом", "Аванс клиента — одна из самых частых причин финансовой ошибки в услугах. Деньги поступают на счёт, и бизнесу кажется, что он заработал. Но если услуга ещё не оказана, выручка ещё не возникла. Бизнес получил деньги вперёд и теперь обязан выполнить работу.", "Особенно важно понимать это в абонементах, сертификатах, пакетах услуг и подписках. Продажа абонемента улучшает деньги сегодня. Но она создаёт обязательство оказать услуги завтра. Если бизнес потратит эти деньги как свободную прибыль, он может столкнуться с кассовым разрывом позже.", "В ОПиУ аванс должен превращаться в выручку постепенно. Например, клиент оплатил десять процедур. Выручка должна признаваться по мере проведения процедур. Остаток неоказанных процедур остаётся обязательством перед клиентом.", "Для предпринимателя это принципиально. Авансы могут создавать ощущение сильной кассы. Но если не отделять авансы от заработанной выручки, бизнес может переоценить свою прибыльность. Поэтому финансовая система должна отдельно видеть деньги, выручку и обязательства перед клиентами.", "Слайд 10. Дебиторка: бизнес заработал, но денег ещё нет", "Что показать на слайде", "Показать пример: услуга оказана на 1 000 000 ₽, клиент оплатит через 30 дней. В ОПиУ показать выручку 1 000 000 ₽. В ДДС показать ноль поступления сейчас. В балансе показать дебиторскую задолженность 1 000 000 ₽.", "Текст под слайдом", "Дебиторская задолженность возникает, когда бизнес уже заработал выручку, но деньги ещё не получил. Это особенно важно для проектов, B2B-услуг, корпоративных клиентов и продаж с отсрочкой. В ОПиУ выручка уже будет отражена. В ДДС поступления пока не будет.", "Такой бизнес может показывать прибыль и одновременно испытывать нехватку денег. На бумаге он заработал. Но деньги застряли у клиента. Поэтому прибыль не гарантирует платёжеспособность.", "Если дебиторка растёт быстрее выручки, это тревожный сигнал. Бизнес может продавать всё больше, но получать деньги всё позже. В такой ситуации рост может создать кассовый разрыв. Собственник должен следить не только за продажами, но и за сроками оплаты.", "Возврат дебиторки тоже нужно правильно понимать. Когда клиент наконец платит старый долг, деньги приходят на счёт. Но это не новая выручка, если выручка была признана раньше. Это превращение дебиторки в деньги внутри баланса.", "Слайд 11. Сквозной кейс: на счёт пришёл 1 000 000 ₽", "Что показать на слайде", "Показать центр слайда: «+1 000 000 ₽ на счёте». От этой суммы сделать пять веток: выручка, аванс клиента, кредит, возврат дебиторки, вклад собственника. Рядом поставить вопрос: «Что это значит для бизнеса?»", "Текст под слайдом", "Теперь разберём главный кейс урока. На счёт бизнеса поступил 1 000 000 ₽. Банковский остаток увеличился одинаково во всех вариантах. Но управленческий смысл операции будет совершенно разным.", "Первый вариант — это оплата за уже оказанную услугу или проданный товар. Тогда сумма может быть связана с выручкой. Второй вариант — это аванс клиента. Тогда деньги пришли, но бизнес ещё должен выполнить обязательство.", "Третий вариант — это кредит. Тогда деньги пришли, но бизнес не заработал их и должен вернуть. Четвёртый вариант — возврат дебиторки. Тогда деньги пришли сейчас, но выручка могла быть признана раньше.", "Пятый вариант — вклад собственника. Тогда деньги пришли от владельца бизнеса, а не от клиента. Это укрепляет кассу, но не создаёт выручку. Поэтому одинаковый приход денег может означать пять разных финансовых событий.", "Слайд 12. Вариант 1: это настоящая выручка", "Что показать на слайде", "Показать ситуацию: клиент оплатил услугу, которая уже оказана. В ОПиУ показать плюс выручка. В ДДС показать плюс операционные поступления. В балансе показать плюс деньги и влияние на капитал через прибыль.", "Текст под слайдом", "Если 1 000 000 ₽ пришёл за уже оказанную услугу, это может быть настоящей выручкой. Бизнес передал ценность клиенту. Клиент оплатил эту ценность. В этом варианте поступление денег и признание выручки могут совпасть.", "В ОПиУ появится выручка 1 000 000 ₽. Затем из неё нужно вычесть себестоимость, операционные расходы, налоги и другие расходы периода. Только после этого можно говорить о прибыли. Выручка сама по себе ещё не равна заработанным деньгам собственника.", "В ДДС появится операционное поступление. Это хороший тип поступления, потому что деньги пришли от основной деятельности бизнеса. Но даже здесь нельзя останавливаться на факте прихода. Нужно понять, сколько из этой выручки останется после расходов и обязательных платежей.", "В балансе увеличатся деньги. Если операция прибыльная, через ОПиУ увеличится капитал собственника. Если расходы по этой выручке выше самой выручки, бизнес может получить деньги и всё равно показать убыток. Поэтому даже настоящая выручка требует анализа маржи и расходов.", "Слайд 13. Вариант 2: это аванс клиента", "Что показать на слайде", "Показать ситуацию: клиент оплатил абонемент, но услуги ещё не оказаны. В ОПиУ показать ноль выручки сейчас или частичную выручку. В ДДС показать плюс деньги. В балансе показать плюс деньги и плюс обязательство перед клиентом.", "Текст под слайдом", "Если 1 000 000 ₽ пришёл как аванс, бизнес получил деньги раньше заработка. Это часто происходит при продаже абонементов, сертификатов, предоплат и пакетов услуг. Деньги на счёте выросли. Но выручка ещё не должна признаваться полностью.", "В ОПиУ сейчас не должно появиться 1 000 000 ₽ выручки, если услуга ещё не оказана. Выручка будет появляться постепенно. Каждый раз, когда бизнес выполняет часть обязательства, часть аванса превращается в выручку. Это делает отчёт о прибыли честным.", "В ДДС поступление уже есть. Денежный поток выглядит сильнее. Но это не свободные деньги в полном смысле. Бизнес получил их под будущую работу.", "В балансе одновременно появляются деньги и обязательство перед клиентом. Это обязательство показывает, что бизнес должен оказать услуги или вернуть деньги. Если предприниматель потратит весь аванс как прибыль, он может создать будущую проблему. Поэтому авансы нужно отдельно контролировать.", "Слайд 14. Вариант 3: это кредит", "Что показать на слайде", "Показать ситуацию: банк выдал кредит 1 000 000 ₽. В ОПиУ показать ноль выручки. В ДДС показать финансовое поступление. В балансе показать плюс деньги и плюс долг.", "Текст под слайдом", "Если 1 000 000 ₽ пришёл как кредит, бизнес получил финансирование. Это не продажа и не заработок. Клиенту не была передана ценность. Поэтому в ОПиУ не должна появляться выручка.", "В ДДС кредит отражается как поступление денег. Но важно показать его в правильном разделе. Это не операционный денежный поток, а финансовый поток. Он показывает, что бизнес привлёк внешний источник денег.", "В балансе кредит отражается сразу с двух сторон. Деньги увеличиваются на 1 000 000 ₽. Одновременно появляется долг на 1 000 000 ₽. Чистое финансовое положение бизнеса не становится лучше только из-за факта кредита.", "Позже кредит начнёт влиять на бизнес через платежи. Проценты будут расходом и будут уменьшать прибыль. Погашение тела кредита будет уменьшать деньги, но не будет расходом. Поэтому кредит нужно анализировать через долг, проценты и будущий денежный поток.", "Слайд 15. Вариант 4: это возврат дебиторки", "Что показать на слайде", "Показать ситуацию: клиент оплатил старый долг. В ОПиУ показать, что выручка уже была признана раньше. В ДДС показать плюс деньги сейчас. В балансе показать плюс деньги и минус дебиторка.", "Текст под слайдом", "Если 1 000 000 ₽ пришёл как возврат дебиторки, это не новая выручка. Бизнес мог оказать услугу или передать товар раньше. В тот момент выручка уже была признана. Сейчас клиент просто погасил свой долг.", "В ОПиУ текущего периода эта сумма не должна второй раз попадать в выручку. Если записать её как новую выручку, бизнес задвоит доход. Это создаст ложную прибыль. Потом собственник может принять решение на основе завышенного результата.", "В ДДС поступление будет отражено сейчас. Денег действительно стало больше. Это хорошее событие для кассы. Но оно не означает, что бизнес заработал новый доход в текущем периоде.", "В балансе происходит замена одного актива на другой. Дебиторская задолженность уменьшается. Деньги увеличиваются. Общая сумма активов может не измениться, потому что долг клиента просто превратился в деньги.", "Слайд 16. Вариант 5: это вклад собственника", "Что показать на слайде", "Показать ситуацию: собственник внёс 1 000 000 ₽ в бизнес. В ОПиУ показать ноль выручки. В ДДС показать поступление от собственника. В балансе показать плюс деньги и плюс капитал или займ собственника.", "Текст под слайдом", "Если 1 000 000 ₽ внёс собственник, бизнес получил внутреннее финансирование. Это может быть вклад в капитал или займ от собственника. В любом случае это не выручка. Клиенты не оплатили продукт или услугу.", "В ОПиУ эта сумма не должна появляться как доход. Иначе бизнес покажет прибыль, которую не заработал на рынке. Это особенно опасно на старте, когда собственник часто докладывает деньги. Без разделения кажется, что бизнес живёт на выручку, хотя на самом деле он живёт на вложения владельца.", "В ДДС поступление будет видно. Деньги действительно пришли в бизнес. Но по смыслу это финансовая поддержка, а не результат основной деятельности. Для управленческого анализа это нужно показывать отдельно.", "В балансе увеличатся деньги. Второй стороной будет капитал собственника или задолженность перед собственником. Если это вклад, он усиливает капитал. Если это займ, у бизнеса появляется обязательство вернуть деньги владельцу.", "Слайд 17. Матрица влияния: одна сумма, пять разных смыслов", "Что показать на слайде", "Показать таблицу из пяти строк и трёх колонок: ОПиУ, ДДС, Баланс. В строках указать: выручка, аванс, кредит, возврат дебиторки, вклад собственника. Цветом выделить, что ДДС увеличивается во всех пяти вариантах, но ОПиУ меняется не всегда.", "Текст под слайдом", "Теперь видно, почему банковский остаток нельзя использовать как единственный показатель бизнеса. Во всех пяти вариантах деньги на счёте увеличились на 1 000 000 ₽. Но только один вариант может быть полноценной текущей выручкой. Остальные варианты имеют другой финансовый смысл.", "Если это выручка, она влияет на ОПиУ и может привести к прибыли. Если это аванс, она влияет на деньги и обязательства, но не полностью на выручку. Если это кредит, она увеличивает деньги и долг. Если это возврат дебиторки, она превращает старый долг клиента в деньги.", "Если это вклад собственника, бизнес получил поддержку владельца. Такая операция не показывает качество бизнес-модели. Она может быть полезной, но её нельзя путать с заработком. Иначе предприниматель будет считать внешнее финансирование успехом продаж.", "Главная задача финансовой системы — правильно классифицировать каждую операцию. Без классификации все поступления сливаются в одну массу. Тогда предприниматель видит деньги, но не видит прибыль, обязательства и реальное положение бизнеса. Именно поэтому нужны ОПиУ, ДДС и баланс вместе.", "Слайд 18. Правило собственника: сначала смысл, потом сумма", "Что показать на слайде", "Показать финальное правило: «Любая операция сначала получает финансовый смысл, и только потом попадает в отчёт». Ниже показать пять проверочных вопросов: это выручка, аванс, долг, возврат старого долга или вклад собственника. Внизу указать итог: «Остаток денег — это не диагноз бизнеса».", "Текст под слайдом", "Финансовое мышление собственника начинается не с вопроса, сколько денег пришло. Оно начинается с вопроса, почему эти деньги пришли. Одна и та же сумма может усиливать бизнес, создавать обязательство или увеличивать долг. Поэтому сумма без смысла ничего не доказывает.", "После любого поступления нужно задать несколько вопросов. Клиент уже получил ценность или бизнес ещё должен её оказать. Это деньги от операционной деятельности или внешнее финансирование. Эта операция создаёт выручку, обязательство, долг, актив или капитал.", "После любого платежа нужно задавать такие же вопросы. Это расход текущего периода или покупка актива. Это оплата поставщику или погашение долга. Это уменьшает прибыль или только уменьшает деньги.", "Главный итог урока простой. Деньги на счёте не равны прибыли. Поступление денег не всегда является выручкой. Предприниматель должен смотреть на бизнес через ОПиУ, ДДС и баланс одновременно.", "Итоговая логика урока", "Этот урок должен полностью убрать у ученика привычку оценивать бизнес только по кассе. Ученик должен понять, что деньги являются только одним из слоёв финансовой системы. Прибыль показывает, заработал ли бизнес. Баланс показывает, что бизнес имеет и кому он должен.", "Сквозной кейс на 1 000 000 ₽ нужен как главный практический якорь. Он показывает, что одна сумма может иметь разные значения. Если ученик понял этот кейс, он уже не будет автоматически называть поступления выручкой. Это базовая точка входа в финансовый менеджмент.", "После урока остаётся карта пяти ситуаций: 1) деньги пришли как заработанная выручка; 2) деньги пришли как аванс клиента; 3) деньги пришли как кредит; 4) деньги пришли как возврат дебиторки; 5) деньги пришли как вклад собственника. Все пять ситуаций увеличивают деньги, но по-разному влияют на ОПиУ, ОДДС и баланс. Именно это различие является главным результатом урока."], "status": "ready"}, {"id": 2, "title": "Финансовая карта бизнеса", "objective": "Показать бизнес как систему: операции превращаются в выручку, деньги превращаются в денежный поток, остатки формируют баланс, метрики ведут к решениям.", "content": "Операционный контур, денежный контур, балансовый контур, контур метрик и управленческих решений.", "case": "Один и тот же месяц бизнеса разбирается через три экрана: ОПиУ, ДДС и баланс. Ученик видит, что каждый экран отвечает на разные вопросы.", "result": "Ученик понимает, что финансы бизнеса нельзя свести к одной таблице кассы.", "fullContent": ["Урок 2. Финансовая карта бизнеса", "Общая структура урока", "Название урока: Финансовая карта бизнеса.\nЗадача урока: показать бизнес как систему, где операции превращаются в выручку, деньги превращаются в денежный поток, остатки формируют баланс, а метрики ведут к управленческим решениям.\nКоличество слайдов: 22.\nРекомендуемая длительность урока: 80–110 минут.\nФормат урока: теория, схемы, сквозной кейс одного месяца бизнеса, разбор через ОПиУ, ДДС, баланс и метрики.\nТест после урока: не используется.\nРезультат ученика: ученик понимает, что финансы бизнеса нельзя свести к одной таблице кассы, одному банковскому остатку или одному показателю выручки.", "Слайд 1. Зачем предпринимателю финансовая карта бизнеса", "Что показать на слайде", "Показать крупную схему: «Бизнес ≠ касса». Ниже изобразить четыре слоя: операции, деньги, остатки, решения. В центре показать собственника, который должен видеть не одну цифру, а всю систему.", "Текст под слайдом", "Финансовая карта бизнеса нужна для того, чтобы предприниматель видел бизнес целиком. Если смотреть только на деньги, можно не заметить убыточность. Если смотреть только на прибыль, можно не заметить кассовый разрыв. Если смотреть только на выручку, можно не увидеть долгов, авансов и будущих обязательств.", "Бизнес каждый день производит много событий. Клиенты обращаются, записываются, покупают, оплачивают, получают услуги, возвращаются или уходят. Компания закупает материалы, платит сотрудникам, несёт расходы, берёт кредиты, покупает оборудование и платит налоги. Все эти события должны попадать в финансовую систему не случайно, а по понятной логике.", "Финансовая карта показывает, как одно событие отражается в разных частях бизнеса. Оказанная услуга может создать выручку. Оплата клиента может создать денежное поступление. Предоплата клиента может создать обязательство, а не прибыль.", "Главная идея урока состоит в том, что у бизнеса есть несколько финансовых экранов. Каждый экран отвечает на свой вопрос и не заменяет остальные. ОПиУ отвечает за прибыльность, ДДС отвечает за движение денег, баланс отвечает за финансовое положение. Метрики связывают эти отчёты с управленческими решениями.", "Слайд 2. Бизнес как система, а не набор таблиц", "Что показать на слайде", "Показать систему из связанных блоков: операции → отчёты → метрики → решения. Отдельно показать, что таблица кассы — это только один маленький блок внутри системы. Можно визуально выделить, что касса не видит прибыль, обязательства и активы.", "Текст под слайдом", "Предприниматель часто начинает учёт с простой таблицы кассы. В такой таблице обычно есть дата, поступление, расход и остаток. Это полезный старт, потому что бизнес хотя бы начинает видеть движение денег. Но таблица кассы не объясняет, заработал бизнес или просто получил временные деньги.", "Одна таблица кассы не показывает выручку в правильном смысле. Она не отделяет оплату текущей услуги от аванса клиента. Она не показывает, что клиент уже получил услугу, но оплатит позже. Она не показывает расходы, которые были начислены, но ещё не оплачены.", "Бизнес нельзя понять без связи между операциями, деньгами и остатками. Операции показывают, что было сделано. Деньги показывают, что было оплачено. Остатки показывают, что осталось у бизнеса и что бизнес должен.", "Финансовая система отличается от набора таблиц тем, что в ней есть логика связей. Каждая операция должна иметь финансовый смысл. Каждая сумма должна попадать в правильный контур. Каждый отчёт должен отвечать на свой вопрос и не подменять другой отчёт.", "Слайд 3. Четыре контура финансовой карты", "Что показать на слайде", "Показать четыре больших контура: операционный контур, денежный контур, балансовый контур, контур метрик и решений. Между ними показать стрелки. Внизу подписать: «финансы = связи между контурами».", "Текст под слайдом", "Финансовая карта бизнеса состоит из четырёх ключевых контуров. Первый контур — операционный. Он показывает, что бизнес реально делает: продаёт, оказывает услуги, производит, закупает, доставляет, обслуживает клиентов и выполняет проекты.", "Второй контур — денежный. Он показывает, когда и почему деньги входят в бизнес и выходят из него. Денежный контур важен для платёжеспособности, кассовых разрывов и краткосрочной устойчивости. Он не заменяет прибыль, но показывает, может ли бизнес выполнять обязательства деньгами.", "Третий контур — балансовый. Он показывает активы, обязательства и капитал собственника. В этом контуре видны деньги, дебиторка, запасы, основные средства, кредиты, авансы клиентов и долги поставщикам. Баланс показывает не движение, а состояние бизнеса на конкретную дату.", "Четвёртый контур — контур метрик и решений. Он превращает отчёты в управленческие выводы. Метрики показывают, где бизнес сильный, где слабый, где есть риск и где есть потенциал роста. Без этого контура отчёты остаются просто набором цифр.", "Слайд 4. Первый контур: операционная реальность бизнеса", "Что показать на слайде", "Показать схему операционного потока: заявки → продажи → выполнение → результат → повторное действие клиента. Для услуг можно показать цепочку: обращение → запись → визит → услуга → повторный визит. Для торговли можно показать: трафик → покупка → отгрузка → повторная покупка.", "Текст под слайдом", "Операционная реальность показывает, что бизнес делает до того, как цифры попадут в отчёты. В услугах это заявки, записи, визиты, оказанные услуги и повторные визиты. В торговле это трафик, конверсия, продажи, отгрузки, возвраты и товарные остатки. В производстве это закупка сырья, выпуск продукции, незавершённое производство и реализация.", "Финансовые отчёты не возникают из воздуха. Они являются отражением операционных событий. Если бизнес неправильно фиксирует операции, финансовая отчётность будет искажена. Поэтому финансовое управление начинается не с формул, а с правильного описания того, что происходит в бизнесе.", "Операционный контур отвечает на вопрос, как бизнес создаёт ценность. Он показывает, через какие действия появляется выручка. Он показывает, какие ресурсы используются для создания результата. Он показывает, где возникают ограничения: загрузка, мощность, персонал, поставки, склад или время выполнения.", "Если предприниматель не понимает операционный контур, он не сможет правильно читать финансы. Выручка будет казаться просто суммой продаж. Расходы будут казаться просто списком платежей. Метрики будут казаться отдельными цифрами без связи с реальными процессами бизнеса.", "Слайд 5. Как операции превращаются в выручку", "Что показать на слайде", "Показать формулу: выручка = признанная ценность, переданная клиенту. Ниже показать разные варианты признания: услуга оказана, товар передан, этап проекта выполнен, подписка использована. Справа показать, что оплата может быть раньше, позже или одновременно.", "Текст под слайдом", "Выручка появляется тогда, когда бизнес передал клиенту ценность. Для услуги это момент оказания услуги. Для торговли это момент передачи товара покупателю. Для проекта это момент выполнения этапа или согласованной части работ.", "Операция продажи и операция оплаты могут происходить в разные моменты. Клиент может заплатить до получения услуги. Клиент может заплатить сразу после получения услуги. Клиент может заплатить через месяц, если бизнес работает с отсрочкой.", "Поэтому финансовая карта должна отделять факт продажи от факта оплаты. Если услуга оказана, но деньги ещё не пришли, возникает выручка и дебиторская задолженность. Если деньги пришли заранее, но услуга ещё не оказана, возникает денежное поступление и обязательство перед клиентом. Если деньги пришли как кредит, выручка вообще не возникает.", "Формула выручки зависит от вида бизнеса, но логика остаётся общей. В услугах выручка может считаться через количество визитов и средний чек. В торговле она может считаться через количество проданных единиц и цену. В проектном бизнесе она может считаться через выполненные этапы и процент готовности.", "Слайд 6. Как ресурсы превращаются в расходы", "Что показать на слайде", "Показать схему: ресурсы → использование → расход периода. Отдельно показать, что деньги могут уйти раньше, позже или в момент расхода. Примеры: зарплата, аренда, расходники, реклама, оборудование.", "Текст под слайдом", "Расход появляется не просто потому, что деньги ушли. Расход появляется тогда, когда ресурс был использован для получения результата периода. Если мастер оказал услугу, его труд может стать частью себестоимости. Если реклама работала в текущем месяце, она может стать расходом текущего периода.", "Платёж и расход могут совпадать, но это не обязательное правило. Аренду можно оплатить в текущем месяце и признать расходом текущего месяца. Можно оплатить аренду заранее за несколько месяцев, и тогда часть платежа будет относиться к будущим периодам. Можно получить услугу от поставщика сейчас, а оплатить её позже.", "Оборудование показывает особенно важное отличие между платежом и расходом. Деньги уходят сразу при покупке. Но оборудование будет использоваться долго. Поэтому в ОПиУ оно должно попадать постепенно через амортизацию.", "Если бизнес не отделяет платежи от расходов, прибыль становится случайной. Месяц с крупной покупкой оборудования может выглядеть убыточным, хотя операционная модель не ухудшилась. Месяц без платежей может выглядеть прибыльным, хотя расходы уже накоплены. Поэтому финансовая карта должна связывать ресурсы, расходы, платежи и активы.", "Слайд 7. ОПиУ: экран прибыльности бизнеса", "Что показать на слайде", "Показать структуру ОПиУ: выручка → себестоимость → валовая прибыль → операционные расходы → EBITDA → амортизация → EBIT → проценты → налог → чистая прибыль. Рядом подписать главный вопрос: «Бизнес зарабатывает или нет?».", "Текст под слайдом", "ОПиУ показывает, зарабатывает ли бизнес в выбранном периоде. Этот отчёт собирает выручку, расходы и прибыль. Он не показывает движение денег напрямую. Его задача — показать экономический результат бизнеса.", "Базовая логика ОПиУ строится сверху вниз. Сначала показывается выручка. Затем вычитается себестоимость, чтобы получить валовую прибыль. После этого вычитаются операционные расходы, амортизация, проценты и налоги.", "ОПиУ помогает понять качество бизнес-модели. Если валовая маржа слабая, проблема может быть в цене, себестоимости или продуктовой линейке. Если EBITDA слабая, проблема может быть в операционных расходах. Если чистая прибыль слабая при нормальной EBITDA, проблема может быть в долге, амортизации или налоговой нагрузке.", "Главное ограничение ОПиУ состоит в том, что он не показывает кассу. Бизнес может быть прибыльным и одновременно испытывать нехватку денег. Бизнес может получать много денег и одновременно быть убыточным. Поэтому ОПиУ нужно читать вместе с ДДС и балансом.", "Слайд 8. Денежный контур: когда бизнес реально получает и тратит деньги", "Что показать на слайде", "Показать поток денег: деньги на начало → поступления → платежи → деньги на конец. Разделить поступления и платежи на операционные, инвестиционные и финансовые. Внизу показать формулу: деньги конец = деньги начало + чистый денежный поток.", "Текст под слайдом", "Денежный контур показывает движение денег. Он отвечает на вопрос, почему остаток денег увеличился или уменьшился. В этом контуре важна не прибыль, а факт поступления или платежа. Поэтому денежный контур ближе всего к реальной платёжеспособности бизнеса.", "Главная формула денежного контура проста. Деньги на конец периода равны деньгам на начало периода плюс чистое изменение денег. Чистое изменение денег складывается из всех поступлений и всех платежей. Но для анализа важно не только изменение, а структура этого изменения.", "Деньги могут прийти от клиентов, от банка, от собственника или от возврата дебиторки. Деньги могут уйти на расходы, оборудование, погашение кредита, налоги или дивиденды. Визуально все эти события просто меняют остаток счёта. Управленчески они имеют разный смысл.", "Поэтому ДДС делится на операционный, инвестиционный и финансовый поток. Операционный поток показывает деньги от основной деятельности. Инвестиционный поток показывает вложения в активы и развитие. Финансовый поток показывает кредиты, займы, вклады и изъятия собственника.", "Слайд 9. ДДС: экран платёжеспособности", "Что показать на слайде", "Показать структуру ДДС: OCF + CFI + CFF = Net CF. Рядом подписать вопрос: «Хватит ли бизнесу денег?». Внизу показать пример: прибыль есть, но деньги уменьшаются из-за дебиторки, capex и погашения долга.", "Текст под слайдом", "ДДС показывает, способен ли бизнес жить по деньгам. Он объясняет, откуда деньги пришли и куда они ушли. Этот отчёт особенно важен для контроля кассовых разрывов. Он показывает не теоретическую прибыль, а реальное движение средств.", "Операционный денежный поток показывает денежный результат основной деятельности. Если он стабильно отрицательный, бизнесу трудно жить без внешнего финансирования. Даже если ОПиУ показывает прибыль, отрицательный OCF может сигнализировать о проблемах с оплатами, запасами или авансами. Поэтому OCF нужно анализировать отдельно от чистой прибыли.", "Инвестиционный денежный поток показывает вложения в развитие или активы. Покупка оборудования, ремонт, открытие точки или покупка транспорта уменьшают деньги. Эти платежи могут быть правильными, если они создают будущую ценность. Но они могут создавать кассовое давление уже сейчас.", "Финансовый денежный поток показывает отношения бизнеса с капиталом и долгом. Кредит увеличивает деньги сегодня, но создаёт обязательства на будущее. Погашение кредита уменьшает деньги, но не является операционным расходом. Вклад собственника поддерживает бизнес, но не является выручкой.", "Слайд 10. Почему ОПиУ и ДДС показывают разные картины", "Что показать на слайде", "Показать две параллельные линии: экономический результат и движение денег. На первой линии отметить выручку и расходы. На второй линии отметить поступления и платежи. Между ними показать задержки: дебиторка, кредиторка, авансы, capex, долг.", "Текст под слайдом", "ОПиУ и ДДС часто не совпадают, потому что они отвечают на разные вопросы. ОПиУ показывает, заработал ли бизнес. ДДС показывает, пришли ли деньги и куда они ушли. Несовпадение этих отчётов является нормальной частью бизнеса.", "Выручка может быть признана раньше поступления денег. В этом случае бизнес заработал, но деньги ещё не получил. Появляется дебиторская задолженность. Прибыль есть, но касса не увеличилась.", "Деньги могут прийти раньше выручки. Это происходит при авансах, абонементах, сертификатах и предоплатах. В этом случае деньги есть, но бизнес ещё не заработал всю сумму. В балансе появляется обязательство перед клиентом.", "Платёж может быть не расходом периода. Покупка оборудования уменьшает деньги, но не должна полностью уменьшать прибыль текущего месяца. Погашение тела кредита уменьшает деньги, но не является расходом в ОПиУ. Именно поэтому финансовая карта должна показывать не одну линию, а несколько связанных контуров.", "Слайд 11. Балансовый контур: что бизнес имеет и кому должен", "Что показать на слайде", "Показать формулу: Активы = Обязательства + Капитал. Слева показать активы: деньги, дебиторка, запасы, оборудование. Справа показать обязательства и капитал: кредиты, авансы клиентов, кредиторка, налоги, капитал собственника.", "Текст под слайдом", "Балансовый контур показывает состояние бизнеса на конкретную дату. Он отвечает на вопрос, что у бизнеса есть и кому бизнес должен. В отличие от ОПиУ и ДДС, баланс не является отчётом движения за период. Это снимок финансового положения.", "Активы показывают ресурсы бизнеса. Деньги являются активом. Дебиторская задолженность является активом, потому что клиент должен бизнесу деньги. Оборудование является активом, если оно используется для получения будущей выгоды.", "Обязательства показывают, что бизнес должен другим. Кредит является обязательством перед банком или заимодавцем. Аванс клиента является обязательством оказать услугу или поставить товар. Кредиторская задолженность показывает, что бизнес должен поставщикам.", "Капитал показывает остаточную часть, которая принадлежит собственнику после вычета обязательств из активов. Если активы растут за счёт прибыли, капитал усиливается. Если активы растут только за счёт долга, капитал может не улучшаться. Поэтому баланс нужен, чтобы отличать реальное укрепление бизнеса от простого увеличения денег на счёте.", "Слайд 12. Остатки: мост между прибылью и деньгами", "Что показать на слайде", "Показать формулу остатка: остаток на начало + увеличение − уменьшение = остаток на конец. Рядом показать основные остатки: дебиторка, кредиторка, запасы, авансы клиентов, ОС, долг, налоги, ФОТ. В центре написать: «остатки объясняют разницу между ОПиУ и ДДС».", "Текст под слайдом", "Остатки являются главным мостом между прибылью и деньгами. Если бизнес заработал выручку, но деньги не получил, появляется дебиторка. Если бизнес получил деньги заранее, но услугу не оказал, появляются авансы клиентов. Если бизнес купил актив, деньги ушли, но в балансе появился ресурс.", "Каждый остаток должен иметь движение. Остаток на начало увеличивается новыми операциями и уменьшается закрывающими операциями. Например, дебиторка увеличивается, когда выручка признана без оплаты. Дебиторка уменьшается, когда клиент оплачивает долг.", "Такая логика важна для контроля качества данных. Остатки нельзя просто вводить как случайные цифры. Они должны быть объяснены движением бизнеса. Если остаток появился, должна быть причина его появления.", "Без остатков невозможно объяснить, почему прибыль и деньги отличаются. Прибыль может быть высокой, но деньги могут застрять в дебиторке. Деньги могут быть высокими, но часть из них может относиться к авансам клиентов. Поэтому баланс не является сложной бухгалтерской формальностью, а является картой незавершённых финансовых процессов.", "Слайд 13. Рабочий капитал: где деньги застревают внутри бизнеса", "Что показать на слайде", "Показать схему рабочего капитала: дебиторка + запасы + авансы поставщикам − кредиторка − авансы клиентов. Для услуг показать: дебиторка, авансы клиентов, ФОТ к выплате, налоги к уплате. Для торговли показать: запасы, поставщики, дебиторка, скидки и списания.", "Текст под слайдом", "Рабочий капитал показывает, сколько денег связано в текущей деятельности бизнеса. Он помогает понять, почему бизнес может быть прибыльным, но испытывать нехватку денег. Если клиенты платят позже, деньги застревают в дебиторке. Если бизнес закупил много товара, деньги застревают в запасах.", "В торговле рабочий капитал часто связан с товарным остатком. Деньги уже потрачены на закупку. Пока товар не продан, они не вернулись в кассу. Если оборачиваемость слабая, прибыль может существовать на бумаге, но деньги будут заморожены в складе.", "В услугах рабочий капитал часто проявляется через авансы клиентов, долги клиентов, ФОТ к выплате и налоги. Продажа абонементов может улучшить кассу сейчас, но создать обязательства на будущее. Работа с корпоративными клиентами может создать выручку сейчас, но деньги придут позже. Начисленная зарплата может уменьшить прибыль, но деньги уйдут в дату выплаты.", "Рабочий капитал нужно читать как систему сроков. Важно не только сколько бизнес зарабатывает, но и когда он получает деньги. Важно не только сколько бизнес тратит, но и когда он платит. Управление рабочим капиталом часто решает проблему денег быстрее, чем рост продаж.", "Слайд 14. Метрики: язык диагностики бизнеса", "Что показать на слайде", "Показать переход: отчёты → метрики → диагноз → решение. В примерах указать: валовая маржа, EBITDA margin, OCF, current ratio, LTV/CAC, загрузка, оборачиваемость, Debt/EBITDA. Подписать: «метрика без решения не нужна».", "Текст под слайдом", "Метрики нужны не для украшения дашборда. Они нужны для диагностики бизнеса. Отчёт показывает цифру, а метрика помогает понять качество этой цифры. Например, выручка сама по себе не объясняет, выгоден ли рост.", "Финансовые метрики показывают результат и устойчивость. Валовая маржа показывает качество основной модели. EBITDA margin показывает операционную эффективность. OCF показывает способность бизнеса превращать деятельность в деньги.", "Операционные и коммерческие метрики объясняют причины финансового результата. В услугах важны заявки, записи, визиты, загрузка и повторные продажи. В торговле важны трафик, конверсия, средний чек, маржа и оборачиваемость. В производстве важны мощность, выпуск, брак, себестоимость и запасы.", "Метрики должны вести к управленческим решениям. Если валовая маржа падает, нужно смотреть цены, себестоимость и продуктовую линейку. Если OCF отрицательный, нужно смотреть дебиторку, запасы, авансы и платежный календарь. Если LTV/CAC слабый, нужно пересматривать маркетинг, удержание или экономику продукта.", "Слайд 15. Метрики нельзя читать отдельно", "Что показать на слайде", "Показать несколько примеров конфликтующих сигналов: выручка растёт, маржа падает; EBITDA положительная, OCF отрицательный; деньги растут, обязательства растут; ROAS хороший, прибыль слабая. В центре написать: «одна метрика не даёт диагноза».", "Текст под слайдом", "Одна метрика почти никогда не даёт полный диагноз. Выручка может расти, но прибыль может падать. Деньги могут увеличиваться, но обязательства могут расти быстрее. Реклама может показывать хороший ROAS, но не создавать достаточную маржу.", "Метрики нужно читать связками. Выручку нужно читать вместе с валовой маржей и операционными расходами. Прибыль нужно читать вместе с денежным потоком. Деньги нужно читать вместе с балансом и обязательствами.", "Например, EBITDA может быть положительной, но OCF может быть отрицательным. Это означает, что операционная модель может выглядеть прибыльной, но деньги не превращаются в кассу. Причина может быть в дебиторке, запасах, авансах поставщикам или крупных платежах. Без связки отчётов предприниматель может сделать неправильный вывод.", "Другой пример — рост денег на счёте. Деньги могут вырасти из-за реальной выручки. Они могут вырасти из-за кредита. Они могут вырасти из-за продажи абонементов, которые ещё нужно отработать. Поэтому метрика денег должна всегда читаться вместе с ДДС и балансом.", "Слайд 16. Финансовая карта месяца: один месяц, три экрана", "Что показать на слайде", "Показать один месяц бизнеса как кейс. Слева указать исходные события месяца. Справа показать три экрана: ОПиУ, ДДС, Баланс. Внизу подписать: «один месяц — три разных вопроса».", "Текст под слайдом", "Теперь разберём месяц бизнеса через финансовую карту. В течение месяца бизнес оказывает услуги, получает оплаты, начисляет расходы, покупает активы и платит по обязательствам. Все эти события происходят в одном периоде. Но они отражаются в разных отчётах по разным правилам.", "ОПиУ покажет, сколько бизнес заработал и сколько расходов относится к этому месяцу. В нём важны выручка, себестоимость, операционные расходы, амортизация, проценты, налоги и чистая прибыль. Этот экран отвечает на вопрос прибыльности. Он не обязан совпадать с изменением денег.", "ДДС покажет, сколько денег реально пришло и ушло. В нём будут оплаты клиентов, платежи поставщикам, зарплата, налоги, покупка оборудования, кредитные платежи и вклады собственника. Этот экран отвечает на вопрос платёжеспособности. Он показывает, что произошло с деньгами.", "Баланс покажет, что осталось на конец месяца. В нём будут деньги, дебиторка, авансы клиентов, оборудование, долги, налоги к уплате и капитал. Этот экран отвечает на вопрос финансового положения. Он показывает последствия всех событий месяца.", "Слайд 17. Кейс месяца: исходные события", "Что показать на слайде", "Показать таблицу исходных событий месяца. Пример: оказано услуг на 1 200 000 ₽, получено денег от клиентов 1 500 000 ₽, из них 400 000 ₽ авансы, расходы начислены 700 000 ₽, оплачено расходов 600 000 ₽, куплено оборудование 300 000 ₽, погашен кредит 100 000 ₽. Отдельно указать, что часть выручки ещё не оплачена.", "Текст под слайдом", "Представим бизнес услуг за один месяц. Бизнес оказал услуг на 1 200 000 ₽. Денег от клиентов поступило 1 500 000 ₽. Из этих поступлений 400 000 ₽ являются авансами за будущие услуги.", "Расходы месяца начислены на 700 000 ₽. Фактически оплачено поставщикам и сотрудникам 600 000 ₽. Оставшиеся 100 000 ₽ стали задолженностью бизнеса. Это означает, что расход уже есть, но деньги ещё не ушли.", "В этом же месяце бизнес купил оборудование за 300 000 ₽. Деньги ушли сразу. Но оборудование будет использоваться не один месяц. Поэтому в ОПиУ должна попасть не вся покупка, а только амортизация периода.", "Также бизнес погасил тело кредита на 100 000 ₽. Этот платёж уменьшил деньги. Но он не является расходом в ОПиУ. Он уменьшает обязательство по кредиту в балансе.", "Слайд 18. Кейс месяца через ОПиУ", "Что показать на слайде", "Показать ОПиУ по кейсу. Выручка: 1 200 000 ₽. Расходы начисленные: 700 000 ₽. Амортизация: например, 20 000 ₽. EBITDA: 500 000 ₽. EBIT: 480 000 ₽. Отдельно показать, что аванс 400 000 ₽ не входит в выручку.", "Текст под слайдом", "Через ОПиУ этот месяц выглядит как месяц заработка. Бизнес оказал услуг на 1 200 000 ₽. Именно эта сумма является выручкой, потому что услуги уже оказаны. Поступления денег сами по себе не определяют выручку.", "Начисленные расходы составили 700 000 ₽. Эти расходы относятся к текущему месяцу, даже если часть из них ещё не оплачена. Поэтому ОПиУ учитывает 700 000 ₽ расходов, а не только 600 000 ₽ фактических платежей. Это делает прибыль более честной.", "Если не учитывать амортизацию, EBITDA составит 500 000 ₽. Если амортизация оборудования за месяц равна 20 000 ₽, EBIT составит 480 000 ₽. Покупка оборудования на 300 000 ₽ не должна полностью попадать в расходы месяца. Она влияет на ДДС сразу и на ОПиУ постепенно.", "Аванс клиентов на 400 000 ₽ не входит в выручку текущего месяца. Бизнес получил деньги, но ещё не оказал будущие услуги. Поэтому в ОПиУ эта сумма не должна завышать результат. Она будет признана выручкой позже, когда бизнес выполнит обязательство.", "Слайд 19. Кейс месяца через ДДС", "Что показать на слайде", "Показать ДДС по кейсу. Поступления от клиентов: 1 500 000 ₽. Операционные платежи: 600 000 ₽. Покупка оборудования: 300 000 ₽. Погашение кредита: 100 000 ₽. Чистое изменение денег: +500 000 ₽.", "Текст под слайдом", "Через ДДС этот месяц выглядит как месяц роста денег. От клиентов поступило 1 500 000 ₽. Это больше, чем признанная выручка, потому что часть поступлений является авансом. ДДС фиксирует факт денег, поэтому аванс входит в поступления.", "Операционные платежи составили 600 000 ₽. Это меньше начисленных расходов, потому что 100 000 ₽ расходов ещё не оплачены. ДДС показывает только фактические платежи. Поэтому он не совпадает с ОПиУ по расходам.", "Покупка оборудования на 300 000 ₽ попадает в инвестиционный денежный поток. Она уменьшает деньги сейчас. Но она не является обычным расходом периода. Поэтому ОПиУ и ДДС снова показывают разные стороны одной операции.", "Погашение тела кредита на 100 000 ₽ попадает в финансовый денежный поток. Оно уменьшает деньги и уменьшает долг. Но оно не уменьшает прибыль. Поэтому ДДС показывает платёж, которого нет в ОПиУ как расхода.", "Слайд 20. Кейс месяца через баланс", "Что показать на слайде", "Показать баланс на конец месяца после операций. В активах: деньги выросли на 500 000 ₽, оборудование увеличилось на 300 000 ₽ минус амортизация, возможно дебиторка. В обязательствах: авансы клиентов 400 000 ₽, кредиторка 100 000 ₽, долг уменьшился на 100 000 ₽. В капитале: прибыль месяца увеличила капитал.", "Текст под слайдом", "Баланс показывает последствия месяца на конец периода. Деньги выросли на 500 000 ₽, потому что поступления превысили платежи. Оборудование появилось в активах, потому что бизнес купил долгосрочный ресурс. Его стоимость будет постепенно уменьшаться через амортизацию.", "Авансы клиентов на 400 000 ₽ появились в обязательствах. Это не прибыль, а обязанность бизнеса оказать услуги в будущем. Если бизнес уже потратит эти деньги, обязательство всё равно останется. Поэтому баланс защищает собственника от иллюзии свободной кассы.", "Кредиторская задолженность на 100 000 ₽ появилась, потому что часть расходов начислена, но ещё не оплачена. Это означает, что ОПиУ уже учёл расход. ДДС ещё не показал платёж. Баланс связывает эти два отчёта через обязательство.", "Долг по кредиту уменьшился на 100 000 ₽ из-за погашения тела кредита. Деньги ушли, но прибыль не изменилась от этого платежа. Капитал собственника увеличился на прибыль месяца. В итоге баланс показывает не только деньги, но и всё финансовое положение бизнеса после месяца.", "Слайд 21. Как три экрана приводят к разным решениям", "Что показать на слайде", "Показать три блока решений. От ОПиУ: управлять маржей, расходами, ценой. От ДДС: управлять платежами, авансами, резервом, кассовыми рисками. От баланса: управлять долгом, дебиторкой, активами, обязательствами.", "Текст под слайдом", "ОПиУ приводит к решениям по прибыльности. Если валовая маржа слабая, нужно смотреть себестоимость, цену и продуктовую линейку. Если EBITDA слабая, нужно смотреть операционные расходы. Если чистая прибыль слабая, нужно смотреть амортизацию, проценты и налоги.", "ДДС приводит к решениям по деньгам. Если деньги падают, нужно смотреть поступления, платежи, дебиторку, авансы, capex и кредитные платежи. Если впереди кассовый разрыв, нужно переносить платежи, ускорять поступления или искать финансирование. Если операционный поток отрицательный, нужно разбирать модель глубже.", "Баланс приводит к решениям по устойчивости. Если растёт дебиторка, нужно управлять сроками оплаты клиентов. Если растут авансы клиентов, нужно контролировать будущую загрузку и обязательства. Если растёт долг, нужно оценивать кредитную нагрузку и способность бизнеса обслуживать платежи.", "Метрики соединяют эти решения в систему. Они показывают, где проблема является операционной, финансовой или стратегической. Например, нехватка денег может быть следствием слабых продаж, длинной дебиторки, большого capex или высокой долговой нагрузки. Без финансовой карты эти причины легко перепутать.", "Слайд 22. Итоговая финансовая карта бизнеса", "Что показать на слайде", "Показать финальную схему всего урока: операции → ОПиУ → прибыльность, деньги → ДДС → платёжеспособность, остатки → баланс → устойчивость, метрики → диагностика → решения. Внизу крупно написать: «финансы бизнеса нельзя свести к кассе».", "Текст под слайдом", "Финансовая карта бизнеса показывает, что бизнес состоит из нескольких связанных контуров. Операционный контур объясняет, как бизнес создаёт ценность. Денежный контур показывает, как деньги входят и выходят. Балансовый контур показывает, что остаётся у бизнеса и что он должен.", "ОПиУ нужен для анализа прибыльности. ДДС нужен для анализа платёжеспособности. Баланс нужен для анализа устойчивости и финансового положения. Метрики нужны для диагностики и принятия решений.", "Предприниматель ошибается, когда пытается заменить всю систему одной таблицей кассы. Касса показывает только деньги. Она не показывает, заработал ли бизнес, какие обязательства появились и какие активы были созданы. Поэтому касса является важным, но неполным экраном.", "Главный результат урока состоит в том, что ученик начинает видеть бизнес системно. Он понимает, что одна и та же операция может затрагивать несколько отчётов. Он понимает, что каждый отчёт отвечает на свой вопрос. Он готов дальше изучать ОПиУ, ДДС, баланс, метрики и управленческие решения как части единой финансовой архитектуры.", "Итоговая логика урока", "Урок 2 должен закрепить переход от простого взгляда на деньги к системному взгляду на бизнес. Ученик должен понять, что финансы не начинаются с отчётов, а начинаются с реальных операций бизнеса. Операции создают выручку, расходы, деньги, остатки, обязательства и капитал. Эти элементы нельзя смешивать в одну кассовую таблицу.", "Финансовая карта помогает ученику увидеть, зачем нужны три главных отчёта. ОПиУ показывает, зарабатывает ли бизнес. ДДС показывает, хватает ли бизнесу денег. Баланс показывает, что у бизнеса есть и кому он должен.", "Сквозной кейс месяца показывает, что один и тот же период можно увидеть через разные экраны. Через ОПиУ месяц может выглядеть прибыльным. Через ДДС он может выглядеть денежно сильным или слабым. Через баланс он может показать рост обязательств, активов или капитала.", "Главная мысль урока должна остаться у ученика в простой форме. Бизнес нельзя понять по одной цифре. Бизнес нельзя понять по одной таблице кассы. Бизнес нужно видеть как систему операций, денег, остатков, метрик и решений."], "status": "ready"}, {"id": 3, "title": "Управленческий учёт против бухгалтерии", "objective": "Отделить управленческую финансовую систему собственника от бухгалтерского учёта для государства.", "content": "Бухгалтерский учёт, налоговый учёт, управленческий учёт, управленческая отчётность, внутренние правила, логическая честность данных.", "case": "Бухгалтер показывает прибыль по правилам учёта, собственник видит кассовый риск. Ученик разбирает, почему оба взгляда могут быть правильными, но решают разные задачи.", "result": "Ученик понимает, зачем нужна отдельная управленческая финансовая система.", "fullContent": ["Урок 3. Управленческий учёт против бухгалтерии", "Общая структура урока", "Название урока: Управленческий учёт против бухгалтерии.\nЗадача урока: отделить управленческую финансовую систему собственника от бухгалтерского и налогового учёта.\nКоличество слайдов: 22.\nРекомендуемая длительность урока: 80–110 минут.\nФормат урока: теория, сравнительные схемы, кейс, разбор расхождений между бухгалтерской прибылью, управленческой прибылью и денежным риском.\nТест после урока: не используется.\nРезультат ученика: ученик понимает, зачем бизнесу нужна отдельная управленческая финансовая система, даже если бухгалтерия ведётся корректно.", "Слайд 1. Главная ошибка: считать бухгалтерию системой управления", "Что показать на слайде", "Показать две разные панели. На первой панели — бухгалтерская отчётность для государства. На второй панели — управленческая панель собственника с прибылью, деньгами, остатками, метриками и рисками.", "Текст под слайдом", "Многие предприниматели думают, что если у бизнеса есть бухгалтер, значит финансовая система уже существует. Это логичная, но опасная ошибка. Бухгалтерия действительно нужна бизнесу, но её задача не совпадает с задачей собственника. Бухгалтерия может быть корректной и при этом не давать управленческой картины.", "Бухгалтерский учёт чаще всего ориентирован на правила, документы, налоги, обязательную отчётность и юридическую корректность. Он отвечает на вопрос, как правильно отразить операции по установленным правилам. Собственника интересует другой вопрос: что на самом деле происходит с бизнесом. Эти два вопроса связаны, но они не одинаковые.", "Управленческий учёт нужен не для отчётности перед государством. Он нужен для принятия решений внутри бизнеса. Он показывает прибыльность, деньги, остатки, обязательства, эффективность, отклонения и риски. Он должен быть понятен собственнику, руководителю и команде управления.", "Главная мысль урока состоит не в том, что бухгалтерия плохая. Бухгалтерия выполняет свою функцию. Проблема начинается тогда, когда предприниматель пытается использовать бухгалтерию как единственную систему управления. Для управления бизнесом нужна отдельная управленческая финансовая система.", "Слайд 2. Три разных учёта внутри бизнеса", "Что показать на слайде", "Показать три колонки: бухгалтерский учёт, налоговый учёт, управленческий учёт. Под каждой колонкой указать главный вопрос: юридическая корректность, налоговые обязательства, управленческие решения.", "Текст под слайдом", "В бизнесе можно выделить три разных контура учёта. Первый контур — бухгалтерский учёт. Он фиксирует хозяйственные операции по правилам учёта и формирует официальную финансовую картину. Его задача связана с корректностью, документами и регламентами.", "Второй контур — налоговый учёт. Он нужен для расчёта налоговой базы и налоговых обязательств. Он может отличаться от бухгалтерского учёта, потому что налоговые правила могут иметь собственную логику. Для предпринимателя важно понимать, что налоговая прибыль и управленческая прибыль не обязаны совпадать.", "Третий контур — управленческий учёт. Он строится под задачи собственника и руководства. Он отвечает на вопросы о прибыльности, деньгах, окупаемости, марже, кассовых рисках, эффективности команды, маркетинга, продуктов и направлений. Он может использовать данные бухгалтерии, но не ограничивается ими.", "Эти три контура нельзя смешивать в одну таблицу без правил. Если смешать их, предприниматель перестанет понимать, какую цифру он видит. Одна цифра может быть корректной для налогов, но бесполезной для управления. Поэтому сначала нужно определить, какой учёт отвечает на какой вопрос.", "Слайд 3. Бухгалтерский учёт: для чего он нужен", "Что показать на слайде", "Показать схему: документы → проводки → регистры → отчётность. Отдельно подписать: юридическая корректность, подтверждение операций, обязательства, отчётность. Внизу указать: бухгалтерия не обязана быть дашбордом собственника.", "Текст под слайдом", "Бухгалтерский учёт фиксирует хозяйственную жизнь бизнеса в установленной форме. Он работает с документами, первичными основаниями, счетами учёта, регистрами и официальной отчётностью. Его задача — показать операции так, чтобы они были корректно оформлены и подтверждены. Это важный фундамент финансовой дисциплины.", "Бухгалтерия помогает бизнесу соблюдать обязательные требования. Она показывает имущество, обязательства, доходы, расходы, налоги и расчёты с контрагентами. Она помогает не потерять юридическую структуру операций. Она снижает риск хаоса в документах и обязательствах.", "Но бухгалтерия не всегда отвечает на вопросы собственника в нужной форме. Собственнику нужно знать, какое направление прибыльное. Ему нужно видеть, какой филиал создаёт кассовый риск. Ему нужно понимать, какой продукт тянет маржу вниз.", "Поэтому бухгалтерский учёт не должен заменять управленческую систему. Он может быть источником данных. Он может быть базой для сверки. Но управленческие решения требуют другой аналитики, другой группировки и другой скорости получения информации.", "Слайд 4. Налоговый учёт: почему он не равен управлению бизнесом", "Что показать на слайде", "Показать налоговый контур отдельно от управленческого. В налоговом контуре указать: налоговая база, налог к уплате, сроки, режим, декларации. В управленческом контуре указать: прибыльность, cash flow, маржа, риски, решения.", "Текст под слайдом", "Налоговый учёт нужен для расчёта налогов. Он отвечает на вопрос, сколько бизнес должен заплатить по налоговым обязательствам. Для этого используются специальные правила, сроки, режимы и основания. Эти правила могут не совпадать с управленческой логикой собственника.", "Предприниматель часто видит налоговые цифры и пытается по ним оценить здоровье бизнеса. Это опасно, потому что налоговая база не всегда показывает реальную управленческую прибыль. В одном случае налоговая нагрузка может быть низкой, но бизнес может иметь слабую маржу. В другом случае налог может быть высоким, но кассовая проблема может быть связана не с налогами, а с дебиторкой.", "Налоговый учёт не показывает всю экономику продуктов, филиалов, каналов продаж и сотрудников. Он не обязан показывать окупаемость маркетинга. Он не обязан показывать, какой абонемент создаёт будущую нагрузку. Он не обязан показывать, где бизнес теряет деньги операционно.", "Поэтому налоговый учёт нельзя использовать как единственный инструмент управления. Он нужен для контроля налоговых обязательств. Он должен быть связан с управленческой системой через налоговый блок. Но он не должен подменять финансовую диагностику бизнеса.", "Слайд 5. Управленческий учёт: система решений собственника", "Что показать на слайде", "Показать управленческий контур: ввод данных → управленческие отчёты → метрики → диагностика → решения. В центре написать: управленческий учёт отвечает на вопрос «что делать дальше». Рядом показать ОПиУ, ДДС, баланс, план-факт и дашборд.", "Текст под слайдом", "Управленческий учёт — это система, которая помогает собственнику принимать решения. Он показывает бизнес так, как им реально нужно управлять. В нём важны направления, филиалы, продукты, клиенты, каналы продаж, сотрудники, проекты и периоды. Он должен быть ближе к управленческой реальности, чем к формальному шаблону.", "Управленческий учёт отвечает на вопросы, которые бухгалтерия может не раскрывать. Какое направление даёт прибыль. Почему деньги заканчиваются при положительной прибыли. Какой продукт создаёт выручку, но не создаёт маржу. Какой филиал выглядит большим, но потребляет больше денег, чем зарабатывает.", "В управленческой системе важны не только отчёты, но и правила. Нужно заранее определить, что считать выручкой. Нужно определить, какие расходы считать прямыми. Нужно определить, как учитывать авансы, оборудование, долги, зарплаты и налоги.", "Управленческий учёт должен быть логически честным. Он не обязан совпадать с бухгалтерией построчно. Но он не должен выдумывать цифры и искажать реальность. Его задача — дать собственнику управляемую, проверяемую и полезную картину бизнеса.", "Слайд 6. Один факт — разные представления", "Что показать на слайде", "Показать одну операцию в центре: клиент оплатил абонемент на 100 000 ₽. От неё сделать три стрелки: бухгалтерский взгляд, налоговый взгляд, управленческий взгляд. В управленческом взгляде показать деньги, обязательство и будущую выручку.", "Текст под слайдом", "Одна и та же операция может по-разному отображаться в разных системах учёта. Это не означает, что одна система обязательно врёт. Это означает, что каждая система отвечает на свой вопрос. Ошибка возникает тогда, когда предприниматель берёт цифру из одной системы и использует её для другой задачи.", "Например, клиент оплатил абонемент на 100 000 ₽. С точки зрения денег бизнес получил поступление. С точки зрения управленческой выручки бизнес ещё не обязательно заработал всю сумму. С точки зрения баланса у бизнеса может появиться обязательство оказать услуги.", "В управленческой системе важно показать не только факт прихода денег. Нужно показать, какая часть суммы уже заработана, а какая относится к будущим услугам. Нужно показать, как это повлияет на загрузку специалистов. Нужно показать, какой риск возникнет, если бизнес потратит аванс как свободную прибыль.", "Именно поэтому один факт должен иметь несколько финансовых признаков. У операции должна быть дата, сумма, контрагент, экономический смысл, тип движения денег и влияние на отчёты. Тогда система не просто хранит цифры. Она объясняет, что произошло с бизнесом.", "Слайд 7. Почему бухгалтерская прибыль может отличаться от управленческой", "Что показать на слайде", "Показать две строки прибыли: бухгалтерская прибыль и управленческая прибыль. Между ними показать причины расхождений: группировка расходов, разовые операции, авансы, управленческие корректировки, филиалы, внутренние правила. Внизу написать: различие не всегда означает ошибку.", "Текст под слайдом", "Бухгалтерская прибыль и управленческая прибыль могут отличаться. Это нормальная ситуация, если у систем разные задачи и разные правила. Бухгалтерская прибыль строится по правилам бухгалтерского учёта. Управленческая прибыль строится по правилам, которые помогают собственнику понимать бизнес.", "Одно из расхождений возникает из-за группировки расходов. Бухгалтерия может классифицировать расходы по своей логике. Управленка может разделять расходы на производственные, маркетинговые, коммерческие, административные и управленческие. Для собственника это разделение важно, потому что оно показывает, какая часть бизнеса потребляет ресурсы.", "Другое расхождение возникает из-за аналитики направлений. Бухгалтерская система может не разделять прибыль по продуктам, филиалам, проектам или каналам продаж. Управленческая система должна делать такое разделение, если собственнику нужно принимать решения по этим направлениям. Иначе бизнес видит общую прибыль, но не видит источники этой прибыли.", "Также различия могут появляться из-за управленческих корректировок. Собственник может исключать разовые расходы из операционного анализа. Он может отдельно показывать вложения в развитие. Он может пересобирать отчёт так, чтобы видеть повторяемую экономику бизнеса. Главное, чтобы такие корректировки были описаны правилами и не превращались в манипуляцию.", "Слайд 8. Почему бухгалтерия может показывать прибыль, а собственник видеть кассовый риск", "Что показать на слайде", "Показать кейсовую ситуацию: прибыль есть, но денег не хватает. В ОПиУ указать положительную прибыль. В ДДС показать отрицательный денежный поток. В балансе показать рост дебиторки, авансов поставщикам или погашение кредита.", "Текст под слайдом", "Бухгалтерия или отчёт о прибыли может показывать положительный результат. При этом собственник может видеть, что денег на ближайшие платежи не хватает. Это не обязательно противоречие. Прибыль и деньги отвечают на разные вопросы.", "Прибыль может быть положительной, если бизнес признал выручку и начислил расходы корректно. Но деньги могли ещё не поступить от клиентов. В этом случае выручка есть, а денежного поступления нет. В балансе появляется дебиторская задолженность.", "Деньги могут уйти на платежи, которые не являются расходами ОПиУ. Например, бизнес мог погасить тело кредита. Бизнес мог купить оборудование. Бизнес мог заплатить налоги за прошлый период или закрыть старые обязательства.", "Поэтому собственник может быть прав, когда говорит о кассовом риске. Бухгалтерский отчёт может быть прав, когда показывает прибыль по своим правилам. Проблема не в том, что один отчёт обязательно ошибается. Проблема в том, что они отвечают на разные управленческие вопросы.", "Слайд 9. Кейс урока: бухгалтер показывает прибыль, собственник видит риск", "Что показать на слайде", "Показать вводные данные кейса. Выручка месяца 2 000 000 ₽, расходы начислены 1 400 000 ₽, прибыль 600 000 ₽. Денег поступило только 1 200 000 ₽, платежей было 1 700 000 ₽, впереди зарплата и аренда.", "Текст под слайдом", "Представим бизнес услуг за месяц. По отчёту о прибыли бизнес заработал выручку 2 000 000 ₽. Начисленные расходы составили 1 400 000 ₽. Формально управленческая или бухгалтерская прибыль до дополнительных корректировок может составить 600 000 ₽.", "Но по деньгам ситуация выглядит иначе. От клиентов поступило только 1 200 000 ₽. Часть клиентов оплатит позже, поэтому часть выручки превратилась в дебиторку. При этом платежи месяца составили 1 700 000 ₽.", "Собственник смотрит на банк и видит снижение денег. Впереди зарплата, аренда, налоги и платежи поставщикам. Он не понимает, почему в отчёте прибыль есть, а денег не хватает. На этом месте часто возникает конфликт между собственником и бухгалтерией.", "Правильный вывод состоит в том, что нужно разделить экраны. ОПиУ показывает прибыльность месяца. ДДС показывает кассовую нагрузку месяца. Баланс показывает, где застряли деньги и какие обязательства остались.", "Слайд 10. Разбор кейса через бухгалтерский взгляд", "Что показать на слайде", "Показать упрощённый отчёт: выручка 2 000 000 ₽, начисленные расходы 1 400 000 ₽, прибыль 600 000 ₽. Рядом подписать: этот взгляд отвечает на вопрос «какой финансовый результат признан за период». Отдельно указать, что он не показывает сроки оплат.", "Текст под слайдом", "Через бухгалтерский или отчётный взгляд месяц может выглядеть успешным. Выручка признана, потому что услуги были оказаны. Расходы начислены, потому что ресурсы были использованы. Разница между выручкой и расходами показывает положительный результат.", "Такой взгляд может быть корректным в своей логике. Он не обязан показывать, что все клиенты уже заплатили. Он не обязан показывать, что все платежи были комфортны для кассы. Он фиксирует экономический результат периода по своим правилам.", "Для оценки прибыльности этот взгляд полезен. Он показывает, что бизнес потенциально может зарабатывать. Он позволяет увидеть маржу, структуру расходов и операционный результат. Он помогает не путать временную нехватку денег с убыточной бизнес-моделью.", "Но этот взгляд неполон для ежедневного управления. Если собственник будет смотреть только на прибыль, он может не увидеть кассовый разрыв. Он может вовремя не заметить рост дебиторки. Он может принять решение вывести деньги, хотя бизнесу нужно закрывать платежи.", "Слайд 11. Разбор кейса через управленческий денежный взгляд", "Что показать на слайде", "Показать ДДС: поступления 1 200 000 ₽, платежи 1 700 000 ₽, чистое изменение денег минус 500 000 ₽. Рядом показать дебиторку 800 000 ₽ как причину расхождения. Внизу подписать: прибыль есть, но деньги не пришли.", "Текст под слайдом", "Через денежный взгляд месяц выглядит напряжённым. Денег поступило 1 200 000 ₽. Платежей было 1 700 000 ₽. Чистое изменение денег составило минус 500 000 ₽.", "Это не отменяет прибыльность месяца. Но это показывает, что бизнесу не хватило текущих поступлений для покрытия платежей. Если у бизнеса был запас денег, он мог пройти месяц спокойно. Если запаса не было, появилась реальная угроза кассового разрыва.", "Причина может быть в дебиторской задолженности. Бизнес оказал услуг на 2 000 000 ₽, но получил только 1 200 000 ₽. Остальные 800 000 ₽ остались у клиентов. В ОПиУ это уже выручка, а в ДДС денег ещё нет.", "Управленческий денежный взгляд нужен, чтобы не пропустить момент риска. Он показывает, когда платить зарплату, аренду, налоги и поставщикам. Он показывает, какие поступления ожидаются. Он помогает собственнику управлять сроками, а не только прибылью.", "Слайд 12. Разбор кейса через баланс", "Что показать на слайде", "Показать баланс после месяца. В активах: деньги уменьшились, дебиторка выросла. В обязательствах: остались зарплата, налоги или поставщики к оплате. В капитале: прибыль месяца увеличила капитал, но деньги могли снизиться.", "Текст под слайдом", "Баланс объясняет, почему прибыль и деньги разошлись. Если бизнес заработал выручку, но не получил оплату, в балансе появляется дебиторка. Это актив, потому что клиент должен бизнесу деньги. Но этот актив ещё не является деньгами на счёте.", "Если бизнес начислил расходы, но не все оплатил, в балансе появляются обязательства. Это могут быть поставщики, зарплата, налоги или другие долги. В ОПиУ расход уже уменьшил прибыль. В ДДС платёж может произойти позже.", "Баланс также показывает, что прибыль может увеличить капитал собственника. Но увеличение капитала не означает автоматическое увеличение денег. Прибыль могла остаться в дебиторке, запасах или других активах. Поэтому капитал и касса не являются одним и тем же.", "Через баланс собственник видит полную картину месяца. Он видит, что бизнес прибыльный, но деньги застряли в дебиторке. Он видит, какие обязательства нужно закрыть. Он понимает, какие управленческие действия нужны для превращения прибыли в деньги.", "Слайд 13. Почему оба взгляда могут быть правильными", "Что показать на слайде", "Показать две галочки: бухгалтерская прибыль корректна и кассовый риск реален. Между ними поставить знак не «против», а «и». Внизу написать: разные отчёты отвечают на разные вопросы.", "Текст под слайдом", "В кейсе бухгалтер может быть прав. Если выручка признана корректно и расходы начислены корректно, прибыль действительно может быть положительной. Это означает, что бизнес в данном периоде создал экономический результат. Такой вывод важен для оценки бизнес-модели.", "Собственник тоже может быть прав. Если денег не хватает на ближайшие платежи, кассовый риск реален. Бизнес может быть прибыльным, но временно неплатёжеспособным. Для управления деньгами этот вывод критически важен.", "Ошибка начинается, когда стороны спорят о том, какой отчёт главный. На самом деле главный не один отчёт, а правильная связка отчётов. Прибыльность нужно читать через ОПиУ. Платёжеспособность нужно читать через ДДС. Финансовое положение нужно читать через баланс.", "Именно поэтому нужна управленческая система. Она не уничтожает бухгалтерский взгляд. Она дополняет его управленческими разрезами, сроками, метриками и решениями. Тогда собственник перестаёт спорить с цифрами и начинает понимать их назначение.", "Слайд 14. Управленческая отчётность: что она должна показывать", "Что показать на слайде", "Показать набор управленческих отчётов: ОПиУ, ДДС, баланс, план-факт, платёжный календарь, метрики, дашборд. Рядом написать, какой вопрос закрывает каждый отчёт. В центре указать: управленческая отчётность = система решений.", "Текст под слайдом", "Управленческая отчётность должна показывать бизнес с точки зрения решений. Она должна отвечать не только на вопрос, что произошло. Она должна объяснять, почему это произошло. Она должна помогать понять, что делать дальше.", "ОПиУ показывает прибыльность бизнеса. ДДС показывает движение денег и платёжеспособность. Баланс показывает активы, обязательства и капитал. План-факт показывает отклонения от целей.", "Платёжный календарь показывает ближайшие денежные риски. Метрики показывают качество бизнес-модели и эффективность процессов. Дашборд собирает ключевые сигналы в один экран собственника. Но все эти инструменты должны быть связаны между собой.", "Если отчёты существуют отдельно, система не работает. ОПиУ без ДДС не показывает кассовый риск. ДДС без баланса не показывает, где застряли деньги. Метрики без отчётов могут стать красивыми, но пустыми числами.", "Слайд 15. Управленческая учётная политика: внутренние правила бизнеса", "Что показать на слайде", "Показать документ или карточку «Управленческая учётная политика». Внутри карточки указать: признание выручки, классификация расходов, авансы, ОС, долг, ФОТ, налоги, закрытие месяца. Внизу написать: правила нужны до того, как появляются споры о цифрах.", "Текст под слайдом", "Управленческая учётная политика — это внутренние правила, по которым бизнес считает свои управленческие финансы. Это не обязательно юридический документ. Это управленческое соглашение о том, как бизнес будет отражать операции. Без таких правил каждая цифра становится предметом спора.", "В политике нужно определить, когда признаётся выручка. Нужно определить, что является себестоимостью. Нужно определить, какие расходы относятся к маркетингу, коммерции, администрации и управлению. Нужно определить, как учитываются авансы клиентов и предоплаты поставщикам.", "Также нужно определить правила для основных средств, амортизации, долга, процентов, налогов и ФОТ. Например, покупка оборудования не должна случайно попадать в расход одного месяца. Кредит не должен попадать в выручку. Погашение тела кредита не должно считаться операционным расходом.", "Такая политика делает управленческую систему устойчивой. Собственник заранее понимает, по каким правилам построены отчёты. Команда понимает, куда относить операции. Финансовый помощник в приложении сможет работать корректно, если правила заданы заранее.", "Слайд 16. Логическая честность данных", "Что показать на слайде", "Показать три уровня качества данных: источник, классификация, сверка. Рядом показать ошибки: задвоение выручки, кредит как доход, аванс как прибыль, capex как расход, отсутствие сверки денег. Внизу указать: управленка может быть гибкой, но не может быть произвольной.", "Текст под слайдом", "Управленческий учёт может быть гибче бухгалтерского. Но гибкость не означает произвольность. Если цифры можно менять без правил, система перестаёт быть управленческой. Она превращается в набор удобных предположений.", "Логическая честность начинается с источника данных. Нужно понимать, откуда пришла цифра. Это банковская операция, кассовый отчёт, CRM, склад, акт, начисление зарплаты или ручная корректировка. Если источник неизвестен, доверие к цифре снижается.", "Второй уровень честности — правильная классификация. Поступление клиента нужно отличать от кредита. Аванс нужно отличать от выручки. Покупку оборудования нужно отличать от расхода. Возврат дебиторки нужно отличать от новой продажи.", "Третий уровень честности — сверка. Деньги в отчёте должны сходиться с фактическими остатками. Баланс должен сходиться. Остатки должны объясняться движениями. Если сверки нет, отчёты могут выглядеть убедительно, но быть ненадёжными.", "Слайд 17. Почему управленка должна быть быстрее бухгалтерии", "Что показать на слайде", "Показать календарь месяца. В бухгалтерском контуре отчётность появляется позже. В управленческом контуре ежедневные и еженедельные данные появляются быстрее. В центре написать: собственнику нужны решения до того, как проблема стала фактом.", "Текст под слайдом", "Управленческий учёт должен быть быстрее бухгалтерии. Собственнику нужно видеть проблему не через месяц после её возникновения. Ему нужно видеть кассовый риск заранее. Ему нужно понимать падение маржи до того, как месяц окончательно закрыт.", "Бухгалтерские данные часто требуют документов, закрытия периодов и формальной обработки. Это нормально для бухгалтерского контура. Но бизнес управляется каждый день. Решения по платежам, ценам, скидкам, ФОТ и маркетингу нельзя всегда откладывать до финального бухгалтерского закрытия.", "Управленческая система может использовать предварительные данные. Главное — помечать их статус. Данные могут быть предварительными, проверенными или закрытыми. Такой подход позволяет управлять быстро и при этом не терять контроль качества.", "Собственнику нужна система раннего предупреждения. Если кассовый остаток падает ниже резерва, ждать бухгалтерского закрытия нельзя. Если расходы растут быстрее выручки, это нужно видеть в течение месяца. Поэтому управленка должна быть не только точной, но и своевременной.", "Слайд 18. Аналитика: то, чего часто нет в бухгалтерии", "Что показать на слайде", "Показать разрезы управленческой аналитики: филиал, направление, продукт, канал продаж, клиентский сегмент, сотрудник, проект, период. Рядом показать вопрос: где бизнес реально зарабатывает. Внизу указать: без аналитики общая прибыль скрывает правду.", "Текст под слайдом", "Бухгалтерия может показывать общие цифры бизнеса. Но собственнику часто нужны разрезы. Ему нужно знать, какой филиал прибыльный. Ему нужно знать, какой продукт создаёт маржу. Ему нужно знать, какой канал продаж окупается.", "Управленческая аналитика делает бизнес видимым. Она разделяет выручку, расходы, прибыль и деньги по направлениям. Она помогает увидеть, где бизнес растёт качественно, а где только создаёт оборот. Она показывает не только сколько заработали, но и где именно заработали.", "Например, общий бизнес может быть прибыльным. Но один филиал может создавать большую часть прибыли, а другой съедать деньги. Один продукт может привлекать клиентов, но быть низкомаржинальным. Один канал рекламы может давать заявки, но не приводить к оплатам.", "Без аналитики собственник управляет средними цифрами. Средние цифры часто скрывают реальные проблемы. Поэтому управленческая система должна иметь справочники, направления, проекты, статьи и центры ответственности. Это не усложнение ради красоты, а условие нормального управления.", "Слайд 19. Мост между бухгалтерией и управленческим учётом", "Что показать на слайде", "Показать мост: бухгалтерские данные → управленческие корректировки → управленческие отчёты. На мосту указать сверки: деньги, дебиторка, кредиторка, налоги, основные средства, долг. Внизу написать: управленка не должна отрываться от фактов.", "Текст под слайдом", "Управленческий учёт не должен жить отдельно от реальных данных. Если он полностью оторван от бухгалтерии, банка, кассы и документов, он быстро станет ненадёжным. Поэтому между бухгалтерским и управленческим контуром нужен мост. Этот мост позволяет использовать факты и пересобирать их для управления.", "Из бухгалтерии можно брать подтверждённые операции, расчёты, остатки и документы. Из банка можно брать фактические денежные движения. Из CRM можно брать продажи, заявки и клиентов. Из склада или операционной системы можно брать товар, услуги, выпуск и ресурсы.", "Управленческая система затем классифицирует эти данные по своей логике. Она может перегруппировать расходы. Она может распределить доходы по направлениям. Она может показать корректировки, которые нужны собственнику для анализа.", "Но управленка должна сверяться с реальностью. Деньги должны совпадать с фактическими остатками. Долги должны быть объяснены. Дебиторка и кредиторка должны иметь расшифровку. Тогда управленческая система будет не фантазией, а рабочим инструментом.", "Слайд 20. Что нельзя требовать от бухгалтерии", "Что показать на слайде", "Показать список неправильных ожиданий: объяснить маржинальность продукта, оценить окупаемость рекламы, контролировать загрузку, строить бизнес-модель, прогнозировать кассовый разрыв без данных. Рядом показать правильный вывод: для этого нужна управленческая система.", "Текст под слайдом", "От бухгалтерии нельзя требовать того, для чего она не была построена. Бухгалтер может корректно вести документы и отчётность. Но это не значит, что бухгалтер обязан объяснять экономику каждого продукта. Это разные задачи и часто разные компетенции.", "Нельзя ожидать, что бухгалтерия сама покажет окупаемость маркетинга. Для этого нужны данные по каналам, заявкам, продажам, оплатам, марже и повторным покупкам. Бухгалтерия может видеть расходы на рекламу. Но она не всегда видит всю воронку и качество клиентов.", "Нельзя ожидать, что бухгалтерия сама построит операционную модель бизнеса. Для этого нужны данные о загрузке, мощности, часах, визитах, заказах, SKU, проектах или рейсах. Эти данные часто находятся вне бухгалтерии. Они относятся к операционному контуру бизнеса.", "Нельзя ожидать, что бухгалтерия заменит финансовое управление собственника. Бухгалтерия может быть отличной и при этом не отвечать на управленческие вопросы. Поэтому собственнику нужна не борьба с бухгалтерией, а правильное разделение функций. Бухгалтерия ведёт обязательный контур, а управленка строит систему решений.", "Слайд 21. Что должна делать управленческая система собственника", "Что показать на слайде", "Показать управленческую систему как набор функций: ввод данных, классификация, отчёты, сверки, метрики, план-факт, прогноз, решения. В центре поставить собственника. Внизу написать: система должна показывать не только прошлое, но и риски будущего.", "Текст под слайдом", "Управленческая система должна начинаться с правильного ввода данных. Каждая операция должна иметь дату, сумму, статью, направление, тип движения и экономический смысл. Данные должны попадать в систему не хаотично. Они должны быть пригодны для отчётов и анализа.", "Вторая задача системы — классифицировать данные. Нужно отделять выручку от поступлений. Нужно отделять расходы от платежей. Нужно отделять активы от расходов. Нужно отделять кредиты, авансы, дебиторку и вклады собственника.", "Третья задача — формировать отчёты. Собственнику нужны ОПиУ, ДДС, баланс, план-факт, платёжный календарь и дашборд. Эти отчёты должны быть связаны между собой. Если один отчёт показывает прибыль, а другой показывает кассовый риск, система должна объяснять причину расхождения.", "Четвёртая задача — помогать принимать решения. Система должна показывать, где падает маржа. Она должна показывать, где застряли деньги. Она должна показывать, какие обязательства скоро потребуют платежей. Она должна переводить цифры в управленческие действия.", "Слайд 22. Итог: бухгалтерия и управленка не конкурируют", "Что показать на слайде", "Показать две системы рядом. Бухгалтерия — обязательная финансовая дисциплина. Управленка — система управления бизнесом. Между ними поставить связь через данные и сверки, а не конфликт.", "Текст под слайдом", "Главный итог урока состоит в том, что бухгалтерия и управленческий учёт не должны конкурировать. Бухгалтерия нужна бизнесу для обязательного учёта, документов, налогов и корректности. Управленческий учёт нужен собственнику для решений, анализа, планирования и контроля. Эти системы решают разные задачи.", "Если у бизнеса есть только бухгалтерия, собственник может не видеть операционную картину. Он может не видеть прибыльность направлений. Он может не видеть кассовый риск заранее. Он может не понимать, какие решения нужно принимать.", "Если у бизнеса есть только управленческая таблица без связи с фактами, возникает другая опасность. Цифры могут быть красивыми, но непроверенными. Деньги могут не сходиться с банком. Остатки могут не объясняться движениями.", "Правильная система соединяет оба подхода. Бухгалтерия даёт дисциплину и подтверждение фактов. Управленческий учёт превращает факты в картину для решений. Собственник получает не спор между отчётами, а понятную финансовую архитектуру бизнеса.", "Итоговая логика урока", "Урок 3 должен убрать у ученика ложное ожидание, что бухгалтерия автоматически решает задачу финансового управления. Ученик должен понять, что бухгалтерия может быть корректной, но не отвечать на вопросы собственника. Это не делает бухгалтерию бесполезной. Это показывает необходимость отдельного управленческого контура.", "Главная связка урока — бухгалтерский учёт, налоговый учёт и управленческий учёт. Бухгалтерский учёт отвечает за корректное отражение операций. Налоговый учёт отвечает за налоговые обязательства. Управленческий учёт отвечает за решения собственника.", "Кейс с бухгалтерской прибылью и кассовым риском показывает центральную идею. Бизнес может иметь прибыль по отчёту и одновременно испытывать нехватку денег. Оба взгляда могут быть правильными, если они отвечают на разные вопросы. Поэтому спор нужно заменять финансовой картой.", "Уникальное усиление урока — понятие управленческой учётной политики. Ученик должен понять, что управленка не строится на ощущениях. Она строится на внутренних правилах признания выручки, расходов, авансов, активов, долгов и закрытия месяца. Именно эти правила позволяют создать будущую таблицу, финансового помощника и полноценную систему финансового управления в приложении."], "status": "ready"}, {"id": 4, "title": "Экономика бизнес-модели", "objective": "Научить видеть, за счёт чего конкретный бизнес зарабатывает и где у него возникает финансовое ограничение.", "content": "Драйверы выручки, маржи, загрузки, оборачиваемости, мощности, проектных этапов и повторных продаж. Отличия услуг, торговли, производства, проектов, логистики и HoReCa.", "case": "Сравнение салона услуг, магазина и производства при одинаковой выручке. Ученик определяет, почему финансовая логика у них разная.", "result": "Ученик видит бизнес не абстрактно, а через его экономический двигатель.", "fullContent": ["Урок 4. Экономика бизнес-модели", "Общая структура урока", "Название урока: Экономика бизнес-модели.\nЗадача урока: научить ученика видеть, за счёт чего конкретный бизнес зарабатывает и где у него возникает главное финансовое ограничение.\nКоличество слайдов: 28.\nРекомендуемая длительность урока: 120–160 минут.\nФормат урока: теория, отраслевые схемы, формулы драйверов, сравнительный кейс, диагностика экономического двигателя бизнеса.\nТест после урока: не используется.\nПрактическая таблица в рамках урока: не создаётся учеником.\nРезультат ученика: ученик видит бизнес не абстрактно, а через его экономический двигатель: выручку, маржу, мощность, оборачиваемость, повторные продажи, кассовый цикл и главное финансовое ограничение.", "Слайд 1. Почему одинаковая выручка не означает одинаковый бизнес", "Что показать на слайде", "Показать три бизнеса с одинаковой выручкой 3 000 000 ₽: салон услуг, магазин и производство. Визуально показать, что цифра выручки одинаковая, но внутри у каждого бизнеса разные процессы, расходы, остатки и риски. В центре слайда написать: «Одинаковая выручка ≠ одинаковая экономика».", "Текст под слайдом", "Предприниматели часто сравнивают бизнесы по выручке. Если один бизнес делает 3 000 000 ₽ в месяц и другой бизнес делает 3 000 000 ₽ в месяц, кажется, что они находятся на похожем уровне. Но это поверхностное сравнение. Одинаковая выручка может скрывать совершенно разную экономику.", "Салон услуг зарабатывает через время специалистов, загрузку расписания, средний чек, повторные визиты и качество клиентского потока. Магазин зарабатывает через закупку, наценку, оборачиваемость товара, скидки, списания и управление остатками. Производство зарабатывает через выпуск, мощность, себестоимость, загрузку оборудования, брак и управление запасами. Поэтому одна и та же сумма выручки в этих бизнесах означает разные управленческие задачи.", "Если смотреть только на выручку, можно не увидеть главного ограничения. У салона ограничением может быть количество часов специалистов. У магазина ограничением может быть товарный остаток и скорость оборота. У производства ограничением может быть мощность, сырьё, брак или длинный производственный цикл.", "Цель этого урока — научиться видеть бизнес через его экономический двигатель. Экономический двигатель показывает, за счёт чего бизнес создаёт деньги и прибыль. Он также показывает, где бизнес чаще всего ломается. Когда ученик понимает двигатель модели, он перестаёт управлять бизнесом абстрактно.", "Слайд 2. Что такое экономика бизнес-модели", "Что показать на слайде", "Показать схему: спрос → продажа → выполнение → маржа → деньги → повторение → рост. Под схемой указать: экономика бизнес-модели объясняет, как бизнес превращает ресурсы в прибыль и деньги. Справа показать блок «финансовое ограничение».", "Текст под слайдом", "Экономика бизнес-модели — это логика, по которой конкретный бизнес зарабатывает. Она показывает, откуда появляется выручка, где возникает себестоимость, почему появляется маржа и когда бизнес получает деньги. Это не описание продукта и не рекламный оффер. Это финансовая механика бизнеса.", "Любая бизнес-модель имеет свой способ создания ценности. Услуги создают ценность через время, квалификацию и результат работы специалиста. Торговля создаёт ценность через подбор, закупку, наличие, удобство покупки и быструю передачу товара. Производство создаёт ценность через преобразование сырья в продукт с контролируемой себестоимостью.", "Экономика бизнес-модели отвечает на несколько вопросов одновременно. Сколько клиентов или заказов нужно для нужной выручки. Какая маржа остаётся после прямых затрат. Сколько денег застревает в запасах, дебиторке или незавершённых работах. Какое ограничение мешает бизнесу расти дальше.", "Если предприниматель не понимает экономику своей модели, он может принимать неправильные решения. Он может пытаться увеличить рекламу, хотя проблема находится в марже. Он может поднимать выручку, хотя деньги застревают в запасах. Он может расширять производство, хотя узкое место находится в продажах или оплатах клиентов.", "Слайд 3. Экономический двигатель бизнеса", "Что показать на слайде", "Показать двигатель из шести шестерёнок: спрос, конверсия, средний чек, маржа, мощность, денежный цикл. От двигателя идёт стрелка к прибыли и деньгам. Внизу написать: «Чтобы управлять бизнесом, нужно знать, какая шестерёнка главная».", "Текст под слайдом", "Экономический двигатель бизнеса — это набор ключевых механизмов, которые превращают деятельность в финансовый результат. У каждого бизнеса есть спрос, продажа, выполнение, стоимость выполнения, получение денег и повторение цикла. Но значимость этих элементов в разных видах деятельности различается. Именно поэтому нельзя строить один универсальный взгляд на все бизнесы.", "В услугах главная шестерёнка часто связана с загрузкой и повторными визитами. Даже если заявок много, бизнес не заработает больше, если расписание специалистов уже заполнено. Даже если выручка растёт, прибыль может не расти, если ФОТ специалистов или скидки съедают маржу. Поэтому в услугах нужно смотреть не только продажи, но и часы, визиты, загрузку и маржу часа.", "В торговле главная шестерёнка часто связана с товаром и оборотом. Магазин может иметь высокий трафик, но слабую прибыль из-за низкой маржи. Он может иметь хорошую маржу, но плохие деньги из-за зависших остатков. Он может иметь большой склад, но слабую оборачиваемость и высокий риск списаний.", "В производстве двигатель связан с мощностью, себестоимостью и стабильностью выпуска. Производство может иметь заказы, но не иметь возможности произвести нужный объём. Оно может производить много, но терять деньги из-за брака, простоев или высоких накладных расходов. Поэтому у каждого бизнеса нужно искать не просто цифры, а центральный механизм заработка.", "Слайд 4. Четыре вопроса к любой бизнес-модели", "Что показать на слайде", "Показать четыре крупных вопроса: как появляется выручка, где возникает маржа, когда приходят деньги, что ограничивает рост. Под каждым вопросом указать примеры показателей. Внизу написать: «Если ответов нет — финансовая модель бизнеса не понята».", "Текст под слайдом", "Первый вопрос к любой бизнес-модели звучит так: как появляется выручка. Нужно понять, что является единицей продажи. Это визит, чек, заказ, товарная единица, проектный этап, рейс, посадка гостя или подписка. Пока единица выручки не определена, бизнес нельзя нормально считать.", "Второй вопрос звучит так: где возникает маржа. Нужно понять, какие затраты напрямую связаны с выполнением обещания клиенту. В услугах это может быть труд специалиста и расходники. В торговле это закупочная стоимость товара, доставка, скидки и списания. В производстве это сырьё, труд, производственные накладные и брак.", "Третий вопрос звучит так: когда приходят деньги. Бизнес может заработать выручку сейчас, а деньги получить позже. Бизнес может получить деньги сейчас, но выручку заработать позже. Бизнес может иметь прибыль, но испытывать нехватку кассы из-за запасов, дебиторки, авансов поставщикам или крупных платежей.", "Четвёртый вопрос звучит так: что ограничивает рост. У одного бизнеса ограничением является спрос. У другого бизнеса ограничением является мощность. У третьего бизнеса ограничением является оборотный капитал. У четвёртого бизнеса ограничением является команда, качество, время или управляемость.", "Слайд 5. Универсальная формула бизнес-модели", "Что показать на слайде", "Показать базовую формулу: Прибыль = Выручка − Переменные затраты − Постоянные расходы. Ниже показать расширение: Выручка = Объём × Цена × Повторяемость. Отдельно показать: Деньги ≠ Прибыль из-за сроков оплат и остатков.", "Текст под слайдом", "На самом общем уровне бизнес можно описать через простую формулу. Бизнес получает выручку, несёт переменные затраты, оплачивает постоянные расходы и получает прибыль или убыток. Но эта простота обманчива. В разных бизнесах каждая часть формулы устроена по-разному.", "Выручка обычно зависит от объёма, цены и повторяемости. Объём может быть количеством визитов, заказов, чеков, единиц продукции, рейсов, гостей или проектов. Цена может быть средним чеком, тарифом, ставкой, ценой единицы или стоимостью контракта. Повторяемость показывает, возвращается ли клиент и как часто он покупает снова.", "Маржа зависит от того, сколько стоит выполнение обещания клиенту. Если услуга требует дорогого специалиста, маржа ограничена ФОТ. Если товар закупается дорого и часто продаётся со скидкой, маржа ограничена закупкой и промо. Если производство имеет высокий брак, маржа ограничена потерями и неэффективностью.", "Деньги зависят не только от прибыли, но и от сроков. Клиенты могут платить позже. Поставщики могут требовать предоплату. Запасы могут замораживать деньги. Поэтому экономика бизнес-модели должна объяснять не только прибыль, но и денежный цикл.", "Слайд 6. Финансовое ограничение: где бизнес упирается в потолок", "Что показать на слайде", "Показать шесть видов ограничений: спрос, маржа, мощность, оборотный капитал, люди, качество/управляемость. В центре написать: «Рост упирается не в желание собственника, а в ограничение модели». Для каждого ограничения дать маленькую иконку.", "Текст под слайдом", "Финансовое ограничение — это место, которое не даёт бизнесу расти или зарабатывать больше. Ограничение может быть не там, где предприниматель его ожидает. Собственник может думать, что нужно больше рекламы, хотя проблема находится в загрузке команды. Он может думать, что нужно больше продаж, хотя бизнес теряет деньги на каждой продаже.", "Первый тип ограничения — спрос. Бизнесу не хватает клиентов, заявок, трафика или заказов. В этом случае главная задача связана с маркетингом, продажами, оффером и каналами привлечения. Но усиливать спрос можно только тогда, когда модель способна прибыльно обработать этот спрос.", "Второй тип ограничения — мощность. Бизнес может иметь спрос, но не иметь возможности выполнить больше заказов. В услугах это часы специалистов и кабинеты. В производстве это оборудование, смены, сырьё и технологический процесс. В логистике это машины, водители, маршруты и загрузка транспорта.", "Третий тип ограничения — деньги внутри цикла. Бизнес может быть прибыльным, но не иметь денег на рост. Деньги могут застревать в дебиторке, запасах, авансах поставщикам или незавершённых проектах. Тогда проблема решается не только продажами, а управлением оборотным капиталом.", "Слайд 7. Драйверы выручки: из чего собирается верхняя строка", "Что показать на слайде", "Показать формулы выручки по моделям: услуги, торговля, производство, проекты, логистика, HoReCa. Например: услуги = визиты × средний чек, торговля = трафик × конверсия × чек, производство = объём выпуска × цена. Внизу написать: «выручка растёт через драйверы, а не сама по себе».", "Текст под слайдом", "Выручка не появляется как одна цельная цифра. Она собирается из драйверов. Если предприниматель планирует просто «вырасти до 5 000 000 ₽», он планирует итог, но не планирует причину. Драйверный подход заставляет разложить выручку на управляемые элементы.", "В услугах базовая формула может выглядеть так: выручка = количество визитов × средний чек. Более точная формула добавляет доступные часы, загрузку, количество специалистов, повторные визиты и отмены. Если визитов мало, проблема может быть в спросе или конверсии. Если визитов много, но выручка слабая, проблема может быть в среднем чеке или линейке услуг.", "В торговле выручка может раскладываться как трафик × конверсия × средний чек. Для интернет-торговли добавляются сессии, карточки товара, корзины, выкупы и возвраты. Для розницы важны поток покупателей, выкладка, ассортимент, наличие товара и скидки. Один и тот же рост выручки может происходить через большее количество покупателей или через более дорогие покупки.", "В производстве и проектном бизнесе выручка имеет другую природу. Производство зависит от объёма выпуска, цены реализации и способности продать готовую продукцию. Проектный бизнес зависит от портфеля контрактов, этапов выполнения, процента готовности и условий оплаты. Поэтому формула выручки должна соответствовать конкретной модели бизнеса.", "Слайд 8. Драйверы маржи: где бизнес оставляет деньги себе", "Что показать на слайде", "Показать формулу: Валовая прибыль = Выручка − Прямые затраты. Ниже показать, что прямые затраты отличаются по моделям. Для услуг — ФОТ специалистов и расходники, для торговли — закупка и списания, для производства — сырьё и выпуск, для HoReCa — food cost и labor cost.", "Текст под слайдом", "Маржа показывает, сколько остаётся у бизнеса после выполнения основного обещания клиенту. Если клиент заплатил 10 000 ₽, это ещё не значит, что бизнес заработал 10 000 ₽. Нужно понять, сколько стоило оказать услугу, продать товар, произвести продукт или выполнить проект. Только после этого появляется валовая прибыль.", "В услугах маржа часто зависит от ФОТ специалистов, расходников, длительности услуги и цены. Услуга может иметь высокий чек, но низкую маржу, если она требует дорогого специалиста и много времени. Услуга может иметь средний чек, но высокую маржу, если она быстро выполняется и хорошо загружает расписание. Поэтому в услугах важна не только цена, но и выручка на час.", "В торговле маржа зависит от закупочной цены, скидок, логистики, списаний и возвратов. Товар может выглядеть прибыльным по наценке, но терять маржу через промо и остатки. Категория может давать выручку, но не давать валовую прибыль. Поэтому торговлю нельзя анализировать только по обороту.", "В производстве маржа зависит от сырья, норм расхода, производительности, брака и накладных расходов. Если растёт цена сырья, валовая маржа сжимается. Если растёт брак, бизнес теряет деньги до момента продажи. Если оборудование простаивает, себестоимость единицы может становиться выше.", "Слайд 9. Драйверы загрузки и мощности", "Что показать на слайде", "Показать формулу: Загрузка = использованная мощность / доступная мощность. Для услуг показать часы специалистов, для производства оборудование, для логистики транспорт, для HoReCa посадочные места и столы. Внизу написать: «мощность определяет потолок выручки».", "Текст под слайдом", "Мощность показывает, сколько бизнес может физически выполнить. Даже если спрос высокий, бизнес не может бесконечно продавать без ресурса исполнения. У каждой модели есть свой потолок мощности. Этот потолок нужно видеть до того, как бизнес начнёт активно расти.", "В услугах мощность выражается в часах специалистов, кабинетах, рабочих днях и длительности услуги. Если все слоты заняты, дополнительная реклама может только увеличить отказы или ухудшить качество. Если загрузка низкая, проблема может быть в спросе, расписании, конверсии или повторных визитах. Поэтому для услуг загрузка является одной из центральных метрик.", "В производстве мощность выражается в оборудовании, сменах, скорости выпуска, людях и технологических ограничениях. Производство может упереться в один станок, одну операцию, одного специалиста или один этап контроля качества. Если узкое место не найдено, бизнес может нанимать людей или покупать сырьё, но выпуск не вырастет. Поэтому нужно искать ограничение процесса, а не просто увеличивать затраты.", "В HoReCa мощность выражается в посадочных местах, оборачиваемости столов, кухне, скорости обслуживания и пиковых часах. Ресторан может быть пустым днём и перегруженным вечером. Средняя загрузка может скрывать проблему пиков. Поэтому мощность нужно анализировать по времени, а не только за месяц.", "Слайд 10. Драйверы оборачиваемости и денежного цикла", "Что показать на слайде", "Показать цепочку денег: деньги → закупка/ресурс → выполнение/товар → продажа → деньги. Для торговли показать склад, для производства сырьё и незавершёнку, для проектов этапы и оплаты. В центре написать: «прибыль может быть, но деньги застревают в цикле».", "Текст под слайдом", "Оборачиваемость показывает, как быстро деньги возвращаются в бизнес. Это особенно важно для торговли, производства и проектного бизнеса. Бизнес может быть прибыльным на уровне ОПиУ, но испытывать кассовые проблемы из-за длинного цикла. Чем дольше деньги застревают внутри операций, тем больше оборотного капитала нужно бизнесу.", "В торговле деньги часто застревают в товарных остатках. Бизнес закупает товар до продажи. Пока товар лежит на складе или полке, деньги не вернулись. Если оборачиваемость низкая, бизнес может иметь большой ассортимент и слабую кассу.", "В производстве деньги проходят через сырьё, незавершённое производство и готовую продукцию. Сначала бизнес покупает материалы. Затем он тратит ресурсы на производство. Затем готовый продукт нужно продать и получить оплату.", "В проектном бизнесе деньги застревают в этапах и сроках оплат. Бизнес может нести расходы раньше, чем клиент оплачивает следующий этап. Если условия договора слабые, проект может быть прибыльным на бумаге и тяжёлым по деньгам. Поэтому экономика бизнес-модели всегда должна включать денежный цикл.", "Слайд 11. Повторные продажи как скрытый двигатель модели", "Что показать на слайде", "Показать две модели: разовая продажа и повторная продажа. В первой модели каждый раз нужен новый клиент. Во второй модели клиент возвращается и создаёт повторную выручку. Внизу написать: «повторяемость снижает давление на привлечение».", "Текст под слайдом", "Повторные продажи являются одним из ключевых драйверов устойчивости. Если бизнес каждый месяц заново покупает весь клиентский поток, его экономика сильно зависит от маркетинга. Если клиент возвращается, бизнес получает часть выручки без полного повторного затратного привлечения. Поэтому retention и повторяемость часто важнее разового роста заявок.", "В услугах повторные визиты могут быть главным источником стабильной выручки. Если клиент приходит один раз и не возвращается, бизнес постоянно зависит от новых заявок. Если клиент возвращается регулярно, расписание становится предсказуемее. Тогда маркетинг работает не только на первую продажу, но и на создание долгой клиентской ценности.", "В торговле повторные покупки зависят от категории товара, ассортимента, сервиса, наличия и привычки клиента. Продукты ежедневного спроса могут иметь высокую повторяемость. Редкие товары требуют другой логики работы с клиентом. Поэтому экономика магазина зависит не только от среднего чека, но и от частоты покупки.", "В HoReCa повторяемость может быть связана с локацией, качеством, привычкой, сервисом и эмоциональным опытом. В проектном бизнесе повторяемость может проявляться через долгосрочных клиентов и новые контракты. В логистике она может проявляться через постоянные маршруты и регулярных заказчиков. Поэтому повторяемость нужно анализировать в каждой модели отдельно.", "Слайд 12. Бизнес услуг: экономический двигатель", "Что показать на слайде", "Показать формулу услуг: Выручка = доступные часы × загрузка × выручка на час. Дополнительно показать: визиты × средний чек × повторяемость. На схеме показать специалиста, кабинет, расписание, клиента и повторный визит.", "Текст под слайдом", "В бизнесе услуг основной экономический двигатель связан с временем, компетенцией и загрузкой. Услуга обычно не хранится на складе. Если свободный час специалиста не был продан сегодня, его нельзя продать завтра как тот же час. Поэтому незагруженное время является потерянной мощностью.", "Выручку услуг можно разложить через визиты и средний чек. Но более глубокая формула должна учитывать доступные часы, загрузку, длительность услуги и выручку на час. Например, два салона могут иметь одинаковый средний чек. Но салон с более высокой загрузкой и более короткой длительностью услуги может зарабатывать больше на том же количестве специалистов.", "Маржа услуг зависит от ФОТ специалистов, расходников, аренды кабинетов, администраторов, сервиса и маркетинга. Если специалист получает высокий процент, валовая маржа может быть ограничена. Если услуга требует много расходников, себестоимость возрастает. Если услуга занимает много времени, выручка на час может быть слабой даже при хорошем чеке.", "Главное финансовое ограничение услуг часто находится в загрузке и повторяемости. Если загрузка низкая, нужно искать проблему в спросе, оффере, расписании, конверсии или удержании. Если загрузка высокая, но прибыль слабая, нужно смотреть чек, ФОТ, длительность услуги и продуктовую линейку. Поэтому услуги нельзя оценивать только по выручке.", "Слайд 13. Ограничения бизнеса услуг", "Что показать на слайде", "Показать карту ограничений услуг: свободные окна, специалисты, кабинеты, отмены, no-show, средний чек, ФОТ, повторные визиты. В центре написать: «услуги продают время и результат». Отдельно выделить риск: высокая загрузка без прибыли.", "Текст под слайдом", "Первое ограничение услуг — доступная мощность. Она состоит из количества специалистов, рабочих часов, кабинетов и расписания. Если бизнес продаёт больше, чем может выполнить, качество падает. Если бизнес продаёт меньше, чем может выполнить, мощность простаивает.", "Второе ограничение — качество клиентского потока. Заявки сами по себе не гарантируют выручку. Нужно смотреть конверсию в запись, конверсию записи в визит, отмены и повторные визиты. Бизнес может иметь много обращений, но слабую фактическую загрузку.", "Третье ограничение — экономика специалиста. Специалист может создавать выручку, но одновременно забирать большую часть маржи. Если система оплаты не связана с экономикой услуги, рост выручки может не давать роста прибыли. Поэтому нужно смотреть выручку на специалиста, ФОТ на специалиста и маржу после ФОТ.", "Четвёртое ограничение — продуктовая линейка. Одни услуги могут привлекать клиентов, но давать низкую маржу. Другие услуги могут быть прибыльными, но редко покупаться. Третьи услуги могут создавать повторяемость и долгую клиентскую ценность. Собственник должен понимать роль каждой услуги в модели.", "Слайд 14. Торговля: экономический двигатель", "Что показать на слайде", "Показать формулу торговли: Выручка = трафик × конверсия × средний чек. Дополнительно показать: валовая прибыль = выручка − себестоимость проданных товаров. На схеме показать закупку, склад, витрину, продажу и повторную закупку.", "Текст под слайдом", "В торговле экономический двигатель связан с товаром, наценкой и оборачиваемостью. Магазин покупает товар заранее или с отсрочкой, держит его в наличии и продаёт клиенту. Деньги зарабатываются не просто на продаже, а на разнице между ценой продажи и полной стоимостью товара. В эту стоимость входят закупка, доставка, потери, скидки и списания.", "Выручка торговли обычно раскладывается через трафик, конверсию и средний чек. Трафик показывает поток потенциальных покупателей. Конверсия показывает, какая часть потока покупает. Средний чек показывает размер покупки.", "Но выручка в торговле не является главным показателем качества. Важнее понимать валовую прибыль и оборачиваемость. Товар с большой выручкой может иметь слабую маржу. Товар с хорошей маржей может плохо оборачиваться и замораживать деньги.", "Финансовое ограничение торговли часто находится в товарном остатке. Если товара мало, бизнес теряет продажи. Если товара слишком много, деньги замораживаются. Если ассортимент подобран неправильно, бизнес получает склад вместо прибыли. Поэтому торговля требует сильного контроля запасов и категорийной маржи.", "Слайд 15. Ограничения торговли", "Что показать на слайде", "Показать карту ограничений торговли: закупка, наличие, склад, оборачиваемость, скидки, списания, возвраты, маржа по SKU, деньги в товаре. В центре написать: «торговля зарабатывает не оборотом, а маржой на обороте».", "Текст под слайдом", "Первое ограничение торговли — валовая маржа. Если маржа слишком низкая, бизнесу нужно очень много оборота, чтобы покрыть постоянные расходы. Высокая выручка при слабой марже может создавать иллюзию масштаба. Но собственника интересует не оборот сам по себе, а деньги, которые остаются после товара.", "Второе ограничение — оборачиваемость запасов. Товар должен превращаться обратно в деньги с приемлемой скоростью. Если товар продаётся медленно, он замораживает капитал. Если товар устаревает или портится, бизнес теряет деньги через списания и скидки.", "Третье ограничение — ассортимент. Одни товары создают поток клиентов. Другие товары создают маржу. Третьи товары занимают место и деньги, но почти не продаются. Поэтому торговле нужна аналитика по категориям и SKU.", "Четвёртое ограничение — скидки и возвраты. Скидки могут быстро поднять продажи, но уничтожить валовую прибыль. Возвраты могут искажать выручку и маржу. Промо может быть полезным, если оно увеличивает вклад в прибыль, а не просто создаёт оборот.", "Слайд 16. Производство: экономический двигатель", "Что показать на слайде", "Показать формулу производства: Выручка = объём реализованной продукции × цена. Ниже показать: себестоимость = сырьё + труд + производственные накладные + потери. На схеме показать сырьё, производство, незавершёнку, готовую продукцию и продажу.", "Текст под слайдом", "В производстве экономический двигатель связан с преобразованием ресурсов в готовый продукт. Бизнес покупает сырьё, использует труд, оборудование и технологию. Затем он получает готовую продукцию, которую нужно продать. Прибыль возникает только тогда, когда цена реализации превышает полную себестоимость и операционные расходы.", "Производство отличается тем, что между закупкой и продажей есть производственный цикл. Деньги могут сначала уйти в сырьё. Потом они могут находиться в незавершённом производстве. Затем они превращаются в готовую продукцию на складе.", "Выручка производства зависит от объёма реализованной продукции и цены. Но способность заработать зависит от выпуска, брака, норм расхода, загрузки оборудования и производственных накладных. Если оборудование простаивает, себестоимость единицы может расти. Если брак высокий, часть ресурсов превращается в потери.", "Главное ограничение производства часто находится в мощности или себестоимости. Можно иметь спрос, но не иметь возможности произвести нужный объём. Можно иметь оборудование, но терять деньги из-за слабого контроля затрат. Можно производить много, но замораживать деньги в запасах и готовой продукции.", "Слайд 17. Ограничения производства", "Что показать на слайде", "Показать карту ограничений производства: сырьё, мощность, узкое место, смены, брак, WIP, готовая продукция, накладные расходы. В центре написать: «производство управляется через мощность, себестоимость и цикл».", "Текст под слайдом", "Первое ограничение производства — мощность. Она может зависеть от оборудования, людей, сменности, технологии и скорости отдельных операций. Часто всё производство ограничивается одним узким местом. Если его не найти, можно инвестировать в неправильные участки и не получить роста выпуска.", "Второе ограничение — себестоимость. Она складывается из сырья, прямого труда, производственных накладных, брака и потерь. Если себестоимость плохо считается, бизнес не понимает реальную прибыльность продукта. Тогда можно продавать активно и одновременно терять деньги.", "Третье ограничение — качество и брак. Брак уже потребил сырьё, труд, время и мощность. Но он не создаёт полноценной выручки. Поэтому брак является финансовой потерей, а не просто производственной проблемой.", "Четвёртое ограничение — запасы и незавершённое производство. Деньги могут быть вложены в сырьё, полуфабрикаты и готовую продукцию. Пока продукция не продана и не оплачена, деньги не вернулись. Поэтому производство требует контроля оборотного капитала не меньше, чем контроля прибыли.", "Слайд 18. Проектный бизнес и строительство: экономический двигатель", "Что показать на слайде", "Показать формулу проектного бизнеса: Выручка = стоимость контрактов × процент выполнения / этапы признания. Ниже показать: смета, этапы, авансы, субподряд, материалы, WIP, overbilling и underbilling. В центре написать: «проект зарабатывает по этапам, а деньги идут по графику».", "Текст под слайдом", "В проектном бизнесе экономический двигатель связан с контрактами, этапами и управлением бюджетом проекта. Бизнес не продаёт одну одинаковую единицу каждый день. Он выполняет работы по договору, смете, этапам и срокам. Поэтому выручка и деньги могут сильно расходиться.", "Проект может быть прибыльным по смете, но тяжёлым по кассе. Расходы на материалы, подрядчиков и команду могут возникать раньше, чем клиент оплачивает этап. Если авансов мало, бизнес финансирует проект своими деньгами. Если этапы оплаты поставлены неправильно, даже хороший проект может создать кассовый разрыв.", "Маржа проекта зависит от точности сметы и контроля отклонений. Если материалы подорожали, маржа уменьшается. Если сроки растянулись, растут накладные расходы. Если субподрядчик вышел дороже, проектная прибыль снижается.", "Главное ограничение проектного бизнеса — управление портфелем проектов и cash gap. Один проект может выглядеть прибыльным, но потреблять деньги. Несколько проектов могут одновременно создавать нагрузку на команду и кассу. Поэтому проектный бизнес нужно анализировать не только по выручке, но и по этапам, бюджету, выполнению и платежному графику.", "Слайд 19. Ограничения проектного бизнеса", "Что показать на слайде", "Показать карту ограничений: воронка проектов, процент побед, смета, сроки, авансы, этапы, субподряд, перерасход, дебиторка, кассовый разрыв. В центре написать: «проект может быть прибыльным и кассово опасным».", "Текст под слайдом", "Первое ограничение проектного бизнеса — качество входящих проектов. Не каждый большой контракт выгоден. Проект может иметь высокий чек и низкую маржу. Проект может требовать много ресурсов, но давать слабый денежный поток.", "Второе ограничение — смета и контроль исполнения. Если смета сделана неточно, прибыльность проекта может исчезнуть уже в процессе работы. Если фактические расходы не сравниваются с бюджетом, проблема обнаруживается слишком поздно. Поэтому проектный бизнес требует постоянного план-факта по каждому проекту.", "Третье ограничение — график оплат. Если клиент платит после выполнения, бизнес должен заранее финансировать работы. Если аванс маленький, кассовая нагрузка ложится на бизнес. Если этап закрывается долго, деньги застревают в дебиторке.", "Четвёртое ограничение — команда и сроки. Проект может задерживаться из-за людей, подрядчиков, согласований или материалов. Задержка почти всегда имеет финансовое последствие. Она увеличивает накладные расходы, растягивает получение денег и снижает пропускную способность команды.", "Слайд 20. Логистика: экономический двигатель", "Что показать на слайде", "Показать формулу логистики: Выручка = рейсы × ставка за рейс или км × ставка за км. Ниже показать: топливо, водитель, ремонт, амортизация, простои, загрузка транспорта. В центре написать: «логистика зарабатывает на эффективном движении ресурса».", "Текст под слайдом", "В логистике экономический двигатель связан с транспортом, маршрутами, загрузкой и стоимостью выполнения рейса. Выручка может зависеть от количества рейсов, километров, ставки за рейс или ставки за километр. Но прибыль зависит от того, сколько стоит выполнить этот рейс. Поэтому логистику нельзя оценивать только по обороту.", "Основные затраты логистики связаны с топливом, водителями, ремонтом, амортизацией, страховкой, простоем и обслуживанием транспорта. Если ставка за рейс растёт, но топливо и ремонт растут быстрее, маржа может падать. Если машина часто простаивает, постоянные расходы распределяются на меньшее количество рейсов. Если маршрут плохо спланирован, бизнес теряет деньги на пустом пробеге.", "Выручка на машину и маржа рейса являются важными показателями. Машина должна не просто ездить, а зарабатывать с достаточной маржой. Водитель должен быть не просто занят, а выполнять экономически оправданные маршруты. Клиент должен платить не только за движение, но и за полную стоимость сервиса.", "Главное ограничение логистики часто находится в загрузке транспорта, маршрутизации и себестоимости километра. Можно иметь заказы, но терять деньги на неэффективных рейсах. Можно иметь транспорт, но не иметь достаточной загрузки. Можно расти по выручке и одновременно уничтожать прибыль через топливо, ремонт и простой.", "Слайд 21. Ограничения логистики", "Что показать на слайде", "Показать карту ограничений: парк, водители, рейсы, загрузка, пустой пробег, топливо, ремонт, простой, ставка, дебиторка. В центре написать: «главный вопрос логистики — сколько денег приносит единица ресурса».", "Текст под слайдом", "Первое ограничение логистики — загрузка транспорта. Если машина стоит, она всё равно может создавать расходы. Если машина едет полупустой, экономика рейса ухудшается. Если маршрут построен неэффективно, бизнес тратит ресурс без достаточной выручки.", "Второе ограничение — переменная себестоимость. Топливо, платные дороги, обслуживание, износ и ремонт напрямую влияют на маржу рейса. Если эти затраты не считаются на рейс или километр, бизнес может не видеть убыточные маршруты. Тогда выручка создаёт движение, но не создаёт прибыль.", "Третье ограничение — техническая готовность парка. Поломки создают простой, срочные расходы и срыв обязательств перед клиентами. Старый транспорт может выглядеть дешевле по покупке, но дороже по ремонту и простоям. Поэтому в логистике нужно считать не только доход, но и стоимость владения ресурсом.", "Четвёртое ограничение — сроки оплат клиентов. Многие логистические бизнесы работают с отсрочкой. Расходы на топливо и водителей возникают сейчас, а деньги от клиента приходят позже. Поэтому логистика требует контроля дебиторки и платежного календаря.", "Слайд 22. HoReCa: экономический двигатель", "Что показать на слайде", "Показать формулу HoReCa: Выручка = гости × средний чек × повторяемость / оборачиваемость столов. Ниже показать: food cost, labor cost, prime cost, посадка, списания, меню, сезонность. В центре написать: «HoReCa зарабатывает на потоке, чеке, марже и скорости обслуживания».", "Текст под слайдом", "В HoReCa экономический двигатель связан с гостями, средним чеком, посадочными местами, кухней, командой и продуктовой себестоимостью. Ресторан или кафе не просто продаёт блюда. Он управляет временем, посадкой, меню, закупками, списаниями, сменами и клиентским опытом. Поэтому выручка здесь является результатом множества операционных факторов.", "Выручка может зависеть от количества гостей и среднего чека. Но ограничение может находиться в посадке, кухне или скорости обслуживания. Если зал заполнен в пиковое время, рост спроса не всегда превращается в рост выручки. Если кухня не справляется, бизнес теряет качество, скорость и повторные посещения.", "Маржа HoReCa сильно зависит от food cost и labor cost. Food cost показывает долю себестоимости продуктов в выручке. Labor cost показывает нагрузку персонала. Prime cost объединяет ключевую стоимость продукта и труда, поэтому является важным показателем модели.", "Главные ограничения HoReCa связаны с посадкой, меню, списаниями, сменами и сезонностью. Бизнес может иметь высокий чек, но слабую маржу из-за дорогих продуктов. Он может иметь поток гостей, но терять деньги через списания. Он может иметь хорошее меню, но слабую операционную дисциплину.", "Слайд 23. Ограничения HoReCa", "Что показать на слайде", "Показать карту ограничений: посадочные места, оборачиваемость столов, кухня, food cost, labor cost, списания, меню-инжиниринг, сезонность, пиковые часы. В центре написать: «выручка HoReCa ограничена временем, местом и операционной дисциплиной».", "Текст под слайдом", "Первое ограничение HoReCa — посадочная мощность. Количество посадочных мест и оборачиваемость столов определяют физический потолок выручки. В пиковые часы заведение может быть перегружено. В непиковые часы оно может быть недозагружено.", "Второе ограничение — кухня и скорость обслуживания. Если кухня не успевает, гости ждут дольше. Если гости ждут дольше, падает качество опыта и повторяемость. Если кухня работает хаотично, растут ошибки, списания и нагрузка на персонал.", "Третье ограничение — себестоимость меню. Некоторые позиции могут иметь высокую популярность и низкую маржу. Другие позиции могут иметь хорошую маржу, но слабый спрос. Поэтому меню нужно анализировать не только по продажам, но и по вкладу в прибыль.", "Четвёртое ограничение — сезонность и смены. Бизнес может иметь высокую выручку в отдельные дни или сезоны и слабую загрузку в другие периоды. Если ФОТ и аренда остаются постоянными, слабые периоды давят на прибыль. Поэтому HoReCa требует особенно внимательного планирования загрузки, закупок и персонала.", "Слайд 24. Одинаковая выручка: постановка сравнительного кейса", "Что показать на слайде", "Показать три бизнеса с одинаковой месячной выручкой 3 000 000 ₽: салон услуг, магазин и производство. Для каждого бизнеса указать краткую формулу выручки. Внизу написать: «одна выручка — три разные логики управления».", "Текст под слайдом", "Теперь сравним три бизнеса с одинаковой месячной выручкой. Первый бизнес — салон услуг. Второй бизнес — розничный магазин. Третий бизнес — небольшое производство. Каждый из них показывает 3 000 000 ₽ выручки за месяц.", "На первый взгляд эти бизнесы можно считать похожими по размеру. Но внутри они устроены принципиально по-разному. Салон зарабатывает через визиты, средний чек и загрузку специалистов. Магазин зарабатывает через поток покупателей, товарную маржу и оборачиваемость. Производство зарабатывает через выпуск, себестоимость и использование мощности.", "Цель кейса — не определить, какой бизнес лучше. Цель состоит в том, чтобы показать различие экономических двигателей. Один бизнес может иметь высокую маржу, но ограничение по мощности. Другой бизнес может иметь ниже маржу, но быстрее оборот. Третий бизнес может иметь нормальную прибыль, но длинный цикл денег.", "Ученик должен увидеть, что управленческое решение зависит от модели. Нельзя всем трём бизнесам одинаково советовать «увеличьте продажи». В одном случае нужно повышать загрузку. В другом случае нужно чистить ассортимент. В третьем случае нужно снижать себестоимость или устранять узкое место производства.", "Слайд 25. Кейс: салон услуг при выручке 3 000 000 ₽", "Что показать на слайде", "Показать пример салона: 600 визитов × 5 000 ₽ = 3 000 000 ₽. Ниже показать ФОТ специалистов, расходники, аренду, маркетинг, загрузку и повторные визиты. Выделить главный вопрос: «сколько бизнес зарабатывает на часе и визите».", "Текст под слайдом", "Салон услуг получил 3 000 000 ₽ выручки через 600 визитов со средним чеком 5 000 ₽. На уровне выручки модель выглядит простой. Но реальная экономика зависит от того, сколько часов специалистов потребовалось для этих визитов. Если каждый визит занимает много времени, мощность быстро становится ограничением.", "Допустим, прямой ФОТ специалистов и расходники составляют 1 200 000 ₽. Тогда валовая прибыль до остальных расходов составляет 1 800 000 ₽. Но из этой суммы нужно покрыть аренду, администраторов, маркетинг, сервис, управление и прочие расходы. Поэтому высокая выручка не гарантирует сильную чистую прибыль.", "Главная метрика салона — не только количество визитов. Нужно смотреть загрузку, выручку на час, выручку на специалиста, долю ФОТ, повторные визиты и отмены. Если загрузка низкая, бизнес недоиспользует мощность. Если загрузка высокая, но прибыль слабая, проблема находится в цене, ФОТ, длительности услуги или расходах.", "Финансовое ограничение салона может быть в расписании. Оно может быть в слабой повторяемости клиентов. Оно может быть в слишком дешёвой линейке услуг. Оно может быть в оплате специалистов, которая забирает слишком большую долю выручки. Поэтому салон управляется через мощность времени, маржу услуги и повторные продажи.", "Слайд 26. Кейс: магазин при выручке 3 000 000 ₽", "Что показать на слайде", "Показать пример магазина: 1 000 чеков × 3 000 ₽ = 3 000 000 ₽. Ниже показать закупочную стоимость, валовую маржу, товарный остаток, скидки, списания и оборачиваемость. Выделить главный вопрос: «сколько денег остаётся после товара и как быстро товар превращается в деньги».", "Текст под слайдом", "Магазин получил 3 000 000 ₽ выручки через 1 000 чеков со средним чеком 3 000 ₽. На уровне верхней строки он равен салону. Но экономический двигатель магазина другой. Магазин должен закупать товар, держать его в наличии и управлять остатками.", "Допустим, себестоимость проданных товаров составляет 2 100 000 ₽. Тогда валовая прибыль составляет 900 000 ₽. Это заметно ниже валовой прибыли салона в нашем примере. При этом магазин может иметь дополнительные расходы на аренду, продавцов, логистику, списания, упаковку и эквайринг.", "Главный риск магазина находится в марже и товарном остатке. Магазин может показать 3 000 000 ₽ выручки, но иметь слабую прибыль из-за низкой наценки. Он может иметь хорошие продажи, но плохие деньги из-за больших закупок. Он может иметь склад на несколько месяцев и кассовое напряжение.", "Финансовое ограничение магазина может быть в ассортименте. Оно может быть в оборачиваемости товара. Оно может быть в скидках, которые убивают маржу. Оно может быть в неликвидных остатках. Поэтому магазин управляется через категорийную маржу, SKU, оборачиваемость и деньги в товаре.", "Слайд 27. Кейс: производство при выручке 3 000 000 ₽", "Что показать на слайде", "Показать пример производства: 1 500 единиц × 2 000 ₽ = 3 000 000 ₽. Ниже показать сырьё, прямой труд, накладные расходы, брак, мощность, WIP и готовую продукцию. Выделить главный вопрос: «сколько стоит выпуск и где узкое место».", "Текст под слайдом", "Производство получило 3 000 000 ₽ выручки через продажу 1 500 единиц продукции по 2 000 ₽. На уровне выручки оно равно салону и магазину. Но его финансовая логика устроена иначе. Производство сначала превращает сырьё, труд и мощность в готовый продукт, а потом продаёт его.", "Допустим, производственная себестоимость реализованной продукции составляет 1 800 000 ₽. Тогда валовая прибыль составляет 1 200 000 ₽. Но внутри этой себестоимости нужно понимать сырьё, прямой труд, накладные расходы и потери. Если эти элементы не разделены, производство не знает, где именно теряет деньги.", "Главный риск производства находится в мощности и себестоимости. Производство может иметь спрос, но не иметь возможности выпустить больше. Оно может выпускать продукцию, но иметь высокий брак. Оно может иметь нормальную маржу по единице, но слабые деньги из-за запасов сырья, незавершёнки и готовой продукции.", "Финансовое ограничение производства может быть в узком месте процесса. Оно может быть в дорогом сырье. Оно может быть в браке, простоях или низкой загрузке оборудования. Оно может быть в длинном цикле от закупки до оплаты клиентом. Поэтому производство управляется через мощность, себестоимость, выпуск, качество и оборотный капитал.", "Слайд 28. Итог сравнения: почему решения будут разными", "Что показать на слайде", "Показать сравнительную матрицу трёх бизнесов. Строки: выручка, главный драйвер, маржа, ограничение, денежный риск, ключевое решение. Колонки: салон, магазин, производство. Внизу написать: «управлять нужно не выручкой, а экономическим двигателем».", "Текст под слайдом", "Три бизнеса показали одинаковую выручку 3 000 000 ₽. Но это не делает их одинаковыми. У салона главный драйвер связан с визитами, загрузкой и выручкой на час. У магазина главный драйвер связан с трафиком, средним чеком, маржой и оборачиваемостью. У производства главный драйвер связан с выпуском, себестоимостью и мощностью.", "Решения для этих бизнесов должны быть разными. Салону может быть важнее поднять загрузку, изменить линейку услуг, снизить отмены или увеличить повторные визиты. Магазину может быть важнее пересобрать ассортимент, убрать неликвиды, контролировать скидки и увеличить оборачиваемость. Производству может быть важнее найти узкое место, снизить брак, пересчитать себестоимость и улучшить план выпуска.", "Денежные риски тоже разные. У салона риск может быть в авансах клиентов и будущей загрузке. У магазина риск может быть в товарном остатке и закупках. У производства риск может быть в сырье, незавершёнке, готовой продукции и отсрочке оплат. Поэтому один общий финансовый совет для всех трёх моделей будет слишком грубым.", "Главный вывод кейса состоит в том, что выручка показывает масштаб, но не объясняет модель. Чтобы управлять бизнесом, нужно понять, что именно создаёт выручку, маржу и деньги. Нужно найти главное ограничение. После этого финансовые решения становятся точнее.", "Слайд 29. Диагностика экономического двигателя бизнеса", "Что показать на слайде", "Показать диагностическую карту из восьми вопросов. Вопросы: что является единицей продажи, от чего зависит выручка, где прямые затраты, где мощность, где деньги застревают, что создаёт повторяемость, что ограничивает рост, какая главная метрика. В центре написать: «сначала диагностика модели, потом отчёты».", "Текст под слайдом", "Чтобы понять бизнес-модель, нужно задать серию диагностических вопросов. Первый вопрос: что является единицей продажи. Это визит, товар, заказ, проект, рейс, гость, подписка или производственная единица. Если единица продажи не определена, невозможно правильно считать экономику.", "Второй вопрос: от чего зависит выручка. Нужно разложить её на драйверы. Это может быть трафик, конверсия, средний чек, загрузка, объём выпуска, ставка за рейс или этапы проекта. Чем точнее разложение, тем понятнее управление.", "Третий вопрос: где возникает маржа. Нужно понять, какие затраты напрямую связаны с выполнением обещания клиенту. Нужно определить переменные затраты, прямой ФОТ, закупку, сырьё, потери, списания и брак. Без этого бизнес не понимает, сколько реально остаётся после продажи.", "Четвёртый вопрос: где находится ограничение. Оно может быть в спросе, мощности, марже, оборотном капитале, людях, качестве или управляемости. Именно ограничение определяет следующее управленческое действие. Если лечить не то ограничение, бизнес будет тратить деньги без результата.", "Слайд 30. Главная метрика модели и смертельная метрика модели", "Что показать на слайде", "Показать две карточки: главная метрика и смертельная метрика. Для услуг: загрузка и no-show/падение повторов. Для торговли: валовая маржа и мёртвый склад. Для производства: себестоимость и брак/простои. Для проектов: проектная маржа и cash gap.", "Текст под слайдом", "У каждой модели есть главная метрика, которая показывает здоровье двигателя. В услугах это может быть загрузка, выручка на час, повторные визиты или маржа услуги. В торговле это может быть валовая маржа, оборачиваемость или GMROI. В производстве это может быть себестоимость единицы, выпуск, загрузка мощности или уровень брака.", "Но у каждой модели есть и смертельная метрика. Это показатель, который может разрушить бизнес, даже если остальные цифры выглядят хорошо. В услугах это может быть падение повторных визитов или рост отмен. В торговле это может быть мёртвый склад и низкая оборачиваемость. В производстве это может быть высокий брак или простой узкого места.", "Смертельная метрика отличается от обычной метрики тем, что она быстро приводит к финансовой проблеме. Магазин может иметь выручку, но умереть от денег, застрявших в неликвидном товаре. Производство может иметь заказы, но умереть от кассового разрыва в сырье и незавершёнке. Салон может иметь заявки, но не иметь прибыли из-за слабой загрузки и неправильной оплаты специалистов.", "Предприниматель должен знать обе метрики. Главная метрика показывает, на чём держится рост. Смертельная метрика показывает, что нельзя игнорировать. В сильной финансовой системе обе метрики должны быть видны собственнику регулярно.", "Слайд 31. Как экономика модели связана с будущей финансовой системой", "Что показать на слайде", "Показать связку: тип бизнеса → драйверы → данные → отчёты → метрики → финансовый помощник. Отдельно показать, что для каждого вида бизнеса будут свои готовые таблицы и формы. Внизу написать: «сначала модель, потом инструмент».", "Текст под слайдом", "Экономика бизнес-модели нужна не только для понимания. Она определяет, какие данные бизнес должен собирать. Услуги должны собирать визиты, загрузку, часы, отмены, повторные визиты и выручку на специалиста. Торговля должна собирать SKU, остатки, закупку, продажи, маржу, скидки и оборачиваемость.", "Производство должно собирать сырьё, выпуск, брак, незавершённое производство, себестоимость и мощность. Проекты должны собирать сметы, этапы, выполнение, авансы, субподряд, расходы и оплаты. Логистика должна собирать рейсы, километры, топливо, загрузку, простой и маржу рейса. HoReCa должна собирать гостей, чек, food cost, labor cost, списания, посадку и оборачиваемость столов.", "Из этих данных потом формируются отчёты. ОПиУ показывает прибыльность модели. ДДС показывает денежные последствия модели. Баланс показывает, где остались активы и обязательства. Метрики показывают качество модели и ограничения.", "Финансовый помощник в приложении должен учитывать тип бизнеса. Он не должен задавать одинаковые вопросы салону, магазину и производству. Он должен понимать, какой двигатель у выбранной модели. Тогда рекомендации будут не абстрактными, а привязанными к реальной экономике бизнеса.", "Слайд 32. Итог урока: бизнес нужно видеть через его двигатель", "Что показать на слайде", "Показать финальную схему: тип бизнеса → экономический двигатель → главное ограничение → ключевые метрики → управленческое решение. Внизу крупно написать: «выручка показывает размер, двигатель показывает логику заработка».", "Текст под слайдом", "Главный итог урока состоит в том, что бизнес нельзя анализировать только по выручке. Выручка показывает размер бизнеса. Но она не показывает, за счёт чего бизнес зарабатывает. Она не показывает, где возникают ограничения и риски.", "Экономический двигатель показывает финансовую логику конкретной модели. В услугах это время, загрузка, средний чек и повторные визиты. В торговле это маржа, ассортимент, оборачиваемость и товарный остаток. В производстве это мощность, себестоимость, выпуск, качество и цикл денег.", "Финансовое ограничение показывает, куда собственник должен смотреть в первую очередь. Если ограничение находится в спросе, нужно работать с маркетингом и продажами. Если ограничение находится в мощности, нужно работать с ресурсами и процессами. Если ограничение находится в деньгах, нужно работать с оборачиваемостью, дебиторкой, запасами и платежным календарём.", "После этого урока ученик должен перестать мыслить абстрактным бизнесом. Он должен видеть модель через её единицу продажи, драйверы выручки, драйверы маржи, мощность, денежный цикл и ограничение. Это станет основой для следующих уроков по выручке, unit-экономике, себестоимости, точке безубыточности и финансовой диагностике.", "Итоговая логика урока", "Урок 4 должен сформировать у ученика способность видеть бизнес через экономический двигатель. Это означает, что ученик не просто знает, что такое выручка, прибыль и деньги. Он понимает, из каких управляемых драйверов собирается результат. Он также понимает, что разные виды бизнеса нельзя анализировать одинаково.", "Главная образовательная задача урока — разрушить абстрактный взгляд на бизнес. Салон услуг, магазин, производство, проектный бизнес, логистика и HoReCa могут иметь одинаковую выручку, но разную финансовую механику. У них разные ограничения, разные риски, разные метрики и разные управленческие решения. Поэтому финансовый менеджмент должен начинаться с понимания модели.", "Уникальное добавление урока — понятие экономического двигателя и финансового ограничения. Экономический двигатель показывает, за счёт чего бизнес создаёт выручку, маржу и деньги. Финансовое ограничение показывает, что мешает бизнесу расти или зарабатывать больше. Эта связка делает урок практическим и системным.", "После урока ученик должен уметь задать базовые вопросы к любому бизнесу. Что является единицей продажи. От чего зависит выручка. Где возникает маржа. Где находится мощность. Где застревают деньги. Что создаёт повторные продажи. Какая метрика показывает здоровье модели. Какая метрика может разрушить бизнес, если её не контролировать."], "status": "ready"}]}, {"id": 2, "title": "Выручка, продажи и unit-экономика", "description": "Показывает, как возникает выручка, из каких драйверов она состоит и почему продажа сама по себе ещё не гарантирует прибыльность.", "lessons": [{"id": 5, "title": "Выручка: когда бизнес действительно заработал", "objective": "Объяснить момент признания выручки простым предпринимательским языком.", "content": "Оказанная услуга, отгруженный товар, выполненный этап проекта, подписка, абонемент, сертификат, предоплата, рассрочка.", "case": "Клиент оплатил годовой абонемент. Ученик определяет, какая часть является деньгами, какая обязательством, а какая выручкой текущего месяца.", "result": "Ученик не смешивает деньги и заработанную выручку.", "status": "summary"}, {"id": 6, "title": "Unit-экономика", "objective": "Показать экономику одной единицы бизнеса: клиента, визита, заказа, SKU, часа, проекта, рейса или посадки.", "content": "CAC, LTV, средний чек, маржа на единицу, contribution margin, payback CAC, частота покупок, повторные продажи.", "case": "Бизнес привлекает клиента за 1 500 ₽. Ученик считает, окупается ли клиент при одном визите, трёх визитах и годовом цикле.", "result": "Ученик понимает, где бизнес зарабатывает на уровне единицы, а где теряет деньги.", "status": "summary"}, {"id": 7, "title": "Средний чек, конверсия и объём", "objective": "Разложить выручку на управляемые драйверы, а не смотреть на неё как на одно число.", "content": "Поток, лиды, заявки, трафик, конверсия, средний чек, повторяемость, объём продаж, частота покупок.", "case": "Выручка упала на 15%. Ученик определяет, что именно просело: поток, конверсия, чек или повторные продажи.", "result": "Ученик начинает управлять причинами выручки, а не только итоговой суммой.", "status": "summary"}, {"id": 8, "title": "Ценообразование", "objective": "Показать цену как главный финансовый рычаг, а не просто маркетинговое решение.", "content": "Цена от себестоимости, цена от ценности, цена от рынка, цена от загрузки, минимальная цена, ценовые пакеты, абонементы, динамическая цена.", "case": "Бизнес снижает цену на 15% ради спроса. Ученик считает, насколько должен вырасти объём, чтобы прибыль не упала.", "result": "Ученик понимает финансовые последствия изменения цены.", "status": "summary"}, {"id": 9, "title": "Скидки, акции и промо", "objective": "Показать, что скидка бьёт по марже сильнее, чем кажется предпринимателю.", "content": "Скидка, промо, акция, купон, бесплатная услуга, бонус, компенсация скидки объёмом, промо-экономика.", "case": "Акция увеличила продажи на 30%, но прибыль снизилась. Ученик объясняет, почему рост выручки может разрушить маржу.", "result": "Ученик считает акции не по обороту, а по дополнительной прибыли.", "status": "summary"}, {"id": 10, "title": "Продуктовая линейка, ассортимент и портфель услуг", "objective": "Научить видеть продукты и услуги по ролям: привлечение, маржа, повторные продажи, касса, обязательства, нагрузка.", "content": "Продуктовый портфель, SKU, категории, услуги, пакеты, абонементы, маржинальность, оборачиваемость, лид-магниты, флагманские продукты.", "case": "В линейке есть популярная услуга с низкой маржой и редкая услуга с высокой маржой. Ученик решает, что масштабировать и что менять.", "result": "Ученик управляет не только продажами, но и составом продуктовой модели.", "status": "summary"}]}, {"id": 3, "title": "ОПиУ и прибыльность", "description": "Разбирает прибыльность бизнеса: себестоимость, маржу, расходы, EBITDA, чистую прибыль и ошибки, которые искажают финансовый результат.", "lessons": [{"id": 11, "title": "Себестоимость", "objective": "Объяснить, какие затраты напрямую связаны с созданием услуги, продажей товара, выпуском продукта или выполнением проекта.", "content": "Прямые материалы, прямой труд, расходники, закупочная стоимость, доставка, производственные накладные, субподряд, потери и списания.", "case": "Одинаковая выручка в услугах, торговле и производстве даёт разную валовую прибыль. Ученик определяет, какие затраты относятся в себестоимость.", "result": "Ученик понимает основу валовой прибыли и не смешивает прямые и общие расходы.", "status": "summary"}, {"id": 12, "title": "Постоянные, переменные и ступенчатые расходы", "objective": "Показать поведение расходов при изменении объёма бизнеса.", "content": "Переменные, постоянные, полупеременные, ступенчатые, разовые, расходы роста и расходы поддержания.", "case": "Бизнес открывает вторую точку: аренда и администратор появляются скачком. Ученик определяет, почему прибыль временно проседает.", "result": "Ученик понимает, какие расходы растут вместе с объёмом, а какие создают новый уровень обязательств.", "status": "summary"}, {"id": 13, "title": "Валовая прибыль и валовая маржа", "objective": "Научить читать качество основной бизнес-модели через валовую прибыль.", "content": "Валовая прибыль, валовая маржа, прямые расходы, маржа по продуктам, маржа по категориям, маржа по направлениям.", "case": "Выручка выросла, но валовая маржа упала. Ученик ищет причины: скидки, рост себестоимости, слабая линейка или изменение структуры продаж.", "result": "Ученик видит, приносит ли основная деятельность достаточный запас для покрытия остальных расходов.", "status": "summary"}, {"id": 14, "title": "Contribution margin", "objective": "Показать вклад каждой продажи в покрытие постоянных расходов и прибыль.", "content": "Contribution margin, переменные расходы, вклад на покрытие, маржинальный доход, связь с безубыточностью и рекламой.", "case": "Маркетинговая кампания даёт продажи, но с низким contribution margin. Ученик определяет, масштабировать её или остановить.", "result": "Ученик оценивает продажи по их реальному вкладу, а не только по обороту.", "status": "summary"}, {"id": 15, "title": "Операционные расходы", "objective": "Разделить расходы по функциям, чтобы собственник видел, что именно съедает прибыль.", "content": "Маркетинговые, коммерческие, административные, управленческие, производственные и прочие операционные расходы.", "case": "Расходы выросли на 25%. Ученик раскладывает рост по функциям и определяет, где причина ухудшения EBITDA.", "result": "Ученик перестаёт складывать всё в одну категорию и начинает видеть структуру расходов.", "status": "summary"}, {"id": 16, "title": "EBITDA, EBIT и чистая прибыль", "objective": "Объяснить уровни прибыли и управленческий смысл каждого уровня.", "content": "EBITDA, амортизация, EBIT, проценты, налоги, чистая прибыль, операционная сила бизнеса.", "case": "Два бизнеса имеют одинаковую чистую прибыль, но разную EBITDA и долговую нагрузку. Ученик сравнивает качество моделей.", "result": "Ученик понимает, почему один показатель прибыли не может описать весь бизнес.", "status": "summary"}, {"id": 17, "title": "Почему прибыль может быть иллюзией", "objective": "Показать ошибки, из-за которых предприниматель получает красивую, но ложную прибыль.", "content": "Авансы как выручка, кредит как доход, тело долга как расход, capex как расход месяца, отсутствие амортизации, налогов, начислений и закрытия месяца.", "case": "Бизнес показывает прибыль, но баланс и деньги не сходятся. Ученик находит искажения.", "result": "Ученик понимает, что прибыль без правил учёта и контроля может быть опасной иллюзией.", "status": "summary"}]}, {"id": 4, "title": "Безубыточность, масштабирование и операционный рычаг", "description": "Объясняет минимальный объём продаж для выживания, запас прочности и эффект постоянных расходов при росте или падении бизнеса.", "lessons": [{"id": 18, "title": "Точка безубыточности", "objective": "Научить считать минимальный объём, при котором бизнес выходит в ноль.", "content": "Постоянные расходы, contribution margin, минимальная выручка, минимальное количество клиентов, визитов, заказов, рейсов или проектов.", "case": "Салону нужно покрыть 700 000 ₽ постоянных расходов. Ученик считает нужное число визитов при разной марже и среднем чеке.", "result": "Ученик понимает минимальный уровень продаж, ниже которого бизнес убыточен.", "status": "summary"}, {"id": 19, "title": "Запас финансовой прочности", "objective": "Показать, насколько бизнес устойчив к падению выручки.", "content": "Margin of safety, выручка фактическая, выручка безубыточности, запас прочности, устойчивость к снижению спроса.", "case": "Выручка бизнеса 2 млн ₽, точка безубыточности 1,5 млн ₽. Ученик считает допустимое падение и риск модели.", "result": "Ученик видит, насколько бизнес защищён от просадки.", "status": "summary"}, {"id": 20, "title": "Операционный рычаг", "objective": "Показать, как постоянные расходы усиливают рост прибыли и усиливают убытки при падении выручки.", "content": "Операционный рычаг, структура расходов, масштабирование, риск высокой фиксированной базы, чувствительность прибыли к выручке.", "case": "Два бизнеса растут на 20%, но прибыль одного растёт на 60%, а другого на 15%. Ученик объясняет эффект структуры расходов.", "result": "Ученик понимает риск и силу масштабирования.", "status": "summary"}]}, {"id": 5, "title": "ДДС, деньги и ликвидность", "description": "Показывает, почему прибыль не равна деньгам, где возникают кассовые разрывы и как управлять платёжеспособностью.", "lessons": [{"id": 21, "title": "ДДС: как движутся деньги", "objective": "Собрать логику отчёта движения денежных средств.", "content": "Операционный денежный поток, инвестиционный денежный поток, финансовый денежный поток, деньги на начало, деньги на конец, чистое изменение денег.", "case": "За месяц пришли деньги от клиентов, куплено оборудование и погашен кредит. Ученик распределяет движения по OCF, CFI и CFF.", "result": "Ученик понимает, почему деньги двигаются не так, как прибыль.", "status": "summary"}, {"id": 22, "title": "Почему прибыль есть, а денег нет", "objective": "Разобрать ключевой предпринимательский парадокс: бизнес прибыльный, но касса пустая.", "content": "Дебиторка, запасы, авансы поставщикам, capex, погашение долга, налоги прошлых периодов, сезонность, рассрочки.", "case": "Прибыль 300 000 ₽, деньги снизились на 200 000 ₽. Ученик находит причины через рабочий капитал, capex и долг.", "result": "Ученик умеет объяснять расхождение прибыли и денег.", "status": "summary"}, {"id": 23, "title": "Рабочий капитал", "objective": "Показать место, где прибыль превращается или не превращается в деньги.", "content": "Дебиторка, кредиторка, запасы, авансы клиентов, авансы поставщикам, налоги к уплате, ФОТ к выплате.", "case": "Бизнес прибыльный, но деньги застряли в дебиторке и запасах. Ученик определяет, какие остатки давят на cash flow.", "result": "Ученик понимает финансовую роль остатков в обороте.", "status": "summary"}, {"id": 24, "title": "Cash Conversion Cycle", "objective": "Показать, сколько дней деньги застревают в операционном цикле.", "content": "DSO, DIO, DPO, cash conversion cycle, сроки оплаты клиентов, сроки оплаты поставщиков, оборачиваемость запасов.", "case": "Магазин платит поставщику раньше, чем продаёт товар и получает деньги. Ученик считает, сколько дней бизнес финансирует цикл.", "result": "Ученик видит скорость превращения вложений в деньги.", "status": "summary"}, {"id": 25, "title": "Платёжный календарь и кассовый разрыв", "objective": "Научить управлять краткосрочной ликвидностью.", "content": "Поступления, обязательные платежи, переносимые платежи, минимальный остаток, 91-дневный прогноз, дни риска.", "case": "Через 12 дней нужно выплатить зарплату и аренду, а крупная оплата клиента ожидается позже. Ученик строит логику решения кассового разрыва.", "result": "Ученик умеет заранее видеть опасные дни по деньгам.", "status": "summary"}, {"id": 26, "title": "Финансовая безопасность и резервы", "objective": "Показать, зачем бизнесу денежная подушка и резервы под обязательства.", "content": "Резерв ФОТ, аренды, налогов, долга, сезонности, ремонта, падения спроса, минимальный денежный остаток.", "case": "Бизнес работает без резерва и попадает в кассовый разрыв при задержке оплат. Ученик определяет нужный минимальный запас денег.", "result": "Ученик понимает, что свободные деньги и безопасно доступные деньги - не одно и то же.", "status": "summary"}]}, {"id": 6, "title": "Баланс и остатки", "description": "Раскрывает активы, обязательства, капитал, авансы, основные средства и мосты остатков как основу настоящей управленческой картины.", "lessons": [{"id": 27, "title": "Баланс: активы, обязательства и капитал", "objective": "Объяснить баланс предпринимательским языком.", "content": "Активы, обязательства, капитал, балансовое равенство, финансовое положение, снимок бизнеса на дату.", "case": "У бизнеса есть деньги на счёте, но большие долги и авансы клиентов. Ученик определяет, почему бизнес не так силён, как кажется.", "result": "Ученик понимает, что баланс показывает реальную финансовую конструкцию бизнеса.", "status": "summary"}, {"id": 28, "title": "Активы", "objective": "Разобрать, что бизнес контролирует и что может приносить будущую пользу.", "content": "Деньги, дебиторка, запасы, авансы поставщикам, основные средства, НДС к возмещению, прочие активы.", "case": "Купили оборудование и товарный запас. Ученик определяет, почему это не просто расходы месяца.", "result": "Ученик отличает актив от расхода.", "status": "summary"}, {"id": 29, "title": "Обязательства", "objective": "Показать, что бизнес должен клиентам, сотрудникам, поставщикам, государству и кредиторам.", "content": "Кредиторка, авансы клиентов, налоги, ФОТ, кредиты, проценты, НДС к уплате, прочие обязательства.", "case": "Бизнес получил предоплату и отсрочку от поставщика. Ученик определяет, какие обязательства появились.", "result": "Ученик видит будущие выплаты и обязанности, а не только текущую кассу.", "status": "summary"}, {"id": 30, "title": "Капитал собственника", "objective": "Объяснить, что реально остаётся собственнику внутри бизнеса.", "content": "Взносы, изъятия, накопленная прибыль, дивиденды, капитал, стоимость внутри бизнеса.", "case": "Бизнес показывает прибыль, но собственник регулярно забирает деньги. Ученик анализирует влияние изъятий на капитал и устойчивость.", "result": "Ученик понимает разницу между прибылью бизнеса и деньгами, которые можно забрать.", "status": "summary"}, {"id": 31, "title": "Основные средства, capex и амортизация", "objective": "Показать разницу между крупной покупкой, расходом и амортизацией.", "content": "Capex, основные средства, дата ввода, срок полезного использования, амортизация, остаточная стоимость, выбытие.", "case": "Купили оборудование за 500 000 ₽. Ученик показывает влияние на ДДС, ОПиУ и баланс.", "result": "Ученик не списывает инвестиции в расход одного месяца.", "status": "summary"}, {"id": 32, "title": "Авансы клиентов и предоплаты", "objective": "Разобрать обязательства, возникающие при оплате до оказания услуги или поставки товара.", "content": "Абонементы, сертификаты, подписки, предоплаты, неоказанные услуги, признание выручки, обязательства перед клиентом.", "case": "Продали абонементы на 800 000 ₽ и оказали услуг только на 200 000 ₽. Ученик распределяет деньги, выручку и обязательства.", "result": "Ученик понимает, почему авансовые продажи могут улучшить кассу, но не прибыль.", "status": "summary"}, {"id": 33, "title": "Мосты остатков", "objective": "Научить видеть каждый остаток как движение от начала к концу периода.", "content": "Остаток на начало, увеличение, уменьшение, корректировка, остаток на конец. Мосты ДЗ, КЗ, запасов, авансов, ОС, долга, налогов, ФОТ.", "case": "Дебиторка выросла за месяц. Ученик восстанавливает мост: было, начислили, оплатили, осталось.", "result": "Ученик понимает, что баланс должен собираться через логику движения, а не вводиться произвольно.", "status": "summary"}]}, {"id": 7, "title": "Долг, налоги, ФОТ и собственник", "description": "Разбирает крупные блоки, которые часто искажают прибыль и деньги: кредиты, проценты, налоги, команда и личные деньги собственника.", "lessons": [{"id": 34, "title": "Долг, проценты и кредитная нагрузка", "objective": "Показать, как долг влияет на деньги, прибыль, баланс и риск.", "content": "Тело долга, проценты, график платежей, Debt/EBITDA, interest coverage, DSCR, краткосрочный и долгосрочный долг.", "case": "Бизнес берёт кредит на развитие. Ученик разделяет получение денег, проценты, погашение тела и остаток долга.", "result": "Ученик не путает долг с доходом, а погашение тела долга с расходом.", "status": "summary"}, {"id": 35, "title": "Налоги в управленческой системе", "objective": "Объяснить налоги как управленческий блок: начисления, оплаты и обязательства.", "content": "Начисленные налоги, уплаченные налоги, налоги к уплате, НДС, налог на прибыль, зарплатные налоги, налоговый резерв.", "case": "Налог начислен в одном месяце, а уплачен в другом. Ученик показывает влияние на ОПиУ, ДДС и баланс.", "result": "Ученик понимает, что налоги нельзя вести только по факту оплаты.", "status": "summary"}, {"id": 36, "title": "ФОТ и экономика команды", "objective": "Показать фонд оплаты труда как одну из ключевых финансовых систем бизнеса.", "content": "Оклад, переменная часть, премии, взносы, производственный ФОТ, коммерческий ФОТ, административный ФОТ, управленческий ФОТ, ФОТ/выручка.", "case": "Выручка растёт, но ФОТ растёт быстрее. Ученик анализирует влияние команды на маржу и EBITDA.", "result": "Ученик понимает, как команда влияет на себестоимость, расходы и масштабируемость.", "status": "summary"}, {"id": 37, "title": "Деньги бизнеса и деньги собственника", "objective": "Разделить личные финансы собственника и финансы компании.", "content": "Зарплата собственника, дивиденды, изъятия, вклад собственника, займ собственника, свободный денежный поток, безопасное изъятие.", "case": "Собственник забирает деньги из кассы каждый месяц. Ученик определяет, как это отражается в ДДС, балансе и устойчивости.", "result": "Ученик понимает, сколько можно забирать без разрушения бизнеса.", "status": "summary"}]}, {"id": 8, "title": "Планирование, прогнозирование и инвестиции", "description": "Учит смотреть вперёд: план-факт, драйверное бюджетирование, сценарии, стресс-тесты, инвестиции и источники финансирования роста.", "lessons": [{"id": 38, "title": "План-факт", "objective": "Научить сравнивать ожидания и реальность по прибыли, деньгам, остаткам и метрикам.", "content": "План выручки, расходов, прибыли, денег, баланса, отклонения, причины отклонений, потоковые и остаточные показатели.", "case": "План по выручке выполнен, а прибыль нет. Ученик раскладывает отклонение на цену, объём, маржу и расходы.", "result": "Ученик умеет не просто видеть отклонение, а искать его причину.", "status": "summary"}, {"id": 39, "title": "Бюджетирование по драйверам", "objective": "Показать, что планировать нужно причины цифр, а не только итоговые суммы.", "content": "Драйверы выручки, конверсии, среднего чека, загрузки, объёма, мощности, ставок, рейсов, гостей, этапов проекта.", "case": "Услуги планируют выручку через заявки, конверсию, визиты и чек. Ученик строит логику плана без абстрактной суммы сверху.", "result": "Ученик понимает, как строится реалистичный бюджет бизнеса.", "status": "summary"}, {"id": 40, "title": "Сценарии и стресс-тесты", "objective": "Научить проверять устойчивость бизнеса при изменении внешних и внутренних условий.", "content": "Базовый, оптимистичный, пессимистичный, кризисный сценарии. Падение спроса, рост расходов, задержка оплат, снижение маржи, рост долга.", "case": "Выручка падает на 20%, ФОТ не снижается, оплата клиентов задерживается. Ученик оценивает, когда наступит кассовый риск.", "result": "Ученик умеет смотреть не только на план, но и на опасные варианты будущего.", "status": "summary"}, {"id": 41, "title": "Инвестиционные решения", "objective": "Показать, как считать решения о развитии бизнеса.", "content": "Открытие точки, покупка оборудования, найм, ремонт, запуск направления, payback, ROI, NPV на понятном уровне, IRR на понятном уровне, cash impact.", "case": "Бизнес хочет купить оборудование. Ученик оценивает окупаемость, влияние на кассу, риски и сценарии.", "result": "Ученик принимает инвестиционные решения не по желанию, а через финансовую логику.", "status": "summary"}, {"id": 42, "title": "Финансирование роста", "objective": "Разобрать источники денег для развития и цену каждого источника.", "content": "Реинвестирование прибыли, кредит, займ собственника, инвестор, лизинг, отсрочка поставщика, предоплата клиента, факторинг.", "case": "Есть три варианта финансирования новой точки: кредит, инвестор или собственная прибыль. Ученик сравнивает цену, риск и контроль.", "result": "Ученик понимает, что деньги для роста всегда имеют стоимость и последствия.", "status": "summary"}]}, {"id": 9, "title": "Метрики, диагностика и дашборд", "description": "Даёт систему показателей, диагностику бизнеса и логику экрана собственника, чтобы цифры превращались в решения.", "lessons": [{"id": 43, "title": "Универсальные финансовые метрики", "objective": "Собрать базовый набор показателей, которые нужны почти любому бизнесу.", "content": "Выручка, валовая прибыль, валовая маржа, EBITDA, EBITDA margin, чистая прибыль, OCF, Net CF, current ratio, quick ratio, NWC, Debt/EBITDA, DSCR, ROA, ROE, ROI.", "case": "Ученик получает набор показателей по бизнесу и определяет, какие из них говорят о прибыли, какие о деньгах, какие об устойчивости.", "result": "Ученик умеет читать финансовое здоровье бизнеса через набор метрик.", "status": "summary"}, {"id": 44, "title": "Маркетинговые и клиентские метрики", "objective": "Показать связь маркетинга, клиентов и финансового результата.", "content": "CAC, LTV, LTV/CAC, ROMI, ROAS, conversion, retention, churn, повторные покупки, частота покупок, средний чек, когортный анализ на простом уровне.", "case": "ROAS высокий, но прибыль слабая. Ученик определяет, почему маркетинговая метрика может обманывать без маржи и LTV.", "result": "Ученик оценивает маркетинг через деньги, а не только через заявки.", "status": "summary"}, {"id": 45, "title": "Операционные метрики", "objective": "Показать связь процессов с финансовым результатом.", "content": "Загрузка, производительность, выручка на сотрудника, выручка на час, оборачиваемость, срок выполнения заказа, брак, простои, мощность, утилизация ресурсов.", "case": "В салоне высокая загрузка, но прибыль слабая. Ученик проверяет чек, ФОТ, маржу, повторные продажи и потери времени.", "result": "Ученик понимает, что операционные показатели должны объяснять финансовый результат.", "status": "summary"}, {"id": 46, "title": "Метрики, которые обманывают", "objective": "Научить не принимать решения по красивым, но неполным показателям.", "content": "Рост выручки при падении маржи, хороший ROAS при плохой прибыли, EBITDA при отрицательном cash flow, хороший current ratio при мёртвых запасах, завышенный LTV, неполный CAC.", "case": "Бизнес показывает рост всех верхних метрик, но денег становится меньше. Ученик выявляет, какие показатели создают ложное ощущение успеха.", "result": "Ученик читает метрики критически и в связке друг с другом.", "status": "summary"}, {"id": 47, "title": "Финансовая диагностика бизнеса", "objective": "Дать карту поиска проблем по цифрам.", "content": "Проблемы с деньгами, прибылью, маржей, ростом, устойчивостью, долгом, управляемостью и качеством данных.", "case": "У бизнеса просела чистая прибыль. Ученик по диагностической карте проверяет выручку, маржу, расходы, ФОТ, налоги, долг и разовые факторы.", "result": "Ученик умеет превращать отчёты в расследование причин.", "status": "summary"}, {"id": 48, "title": "Дашборд собственника", "objective": "Показать, какой экран нужен собственнику для регулярного контроля бизнеса.", "content": "Главные показатели, красные зоны, период, план-факт, прибыль, деньги, баланс, риск, метрики, качество данных.", "case": "Ученик видит перегруженный дашборд из 80 метрик и собирает версию из 12–15 ключевых показателей.", "result": "Ученик понимает, что дашборд нужен для решений, а не для красоты.", "status": "summary"}]}, {"id": 10, "title": "Отраслевые финансы", "description": "Показывает, что финансы услуг, торговли, производства, проектов, логистики и HoReCa устроены по-разному.", "lessons": [{"id": 49, "title": "Финансы бизнеса услуг", "objective": "Разобрать финансовую механику услуг.", "content": "Заявки, записи, визиты, загрузка, специалисты, ФОТ, абонементы, повторные визиты, выручка на час, маржа услуги.", "case": "Салон услуг растёт по выручке, но не по прибыли. Ученик ищет проблему в загрузке, чеке, ФОТ, линейке и повторных визитах.", "result": "Ученик понимает, как считать и анализировать сервисный бизнес.", "status": "summary"}, {"id": 50, "title": "Финансы торговли", "objective": "Разобрать финансовую механику розничной и оптовой торговли.", "content": "Товарный остаток, закупка, наценка, маржа, оборачиваемость, скидки, списания, категории, SKU, GMROI.", "case": "Магазин имеет высокую выручку, но деньги заморожены в товаре. Ученик анализирует оборачиваемость и маржу.", "result": "Ученик понимает, что торговля живёт через маржу и оборот запасов.", "status": "summary"}, {"id": 51, "title": "Финансы производства", "objective": "Разобрать финансовую механику производственного бизнеса.", "content": "Сырьё, незавершённое производство, готовая продукция, мощность, себестоимость выпуска, брак, производственные накладные, план производства.", "case": "Производство увеличило выпуск, но деньги ухудшились. Ученик анализирует запасы, WIP, оплату поставщикам и сроки реализации.", "result": "Ученик понимает, как производство связывает мощность, себестоимость, запасы и деньги.", "status": "summary"}, {"id": 52, "title": "Финансы строительства и проектного бизнеса", "objective": "Разобрать проектную финансовую модель.", "content": "Этапы, смета, процент выполнения, авансы, WIP, субподряд, overbilling, underbilling, проектный cash gap.", "case": "Проект прибыльный по смете, но требует финансирования до оплаты заказчика. Ученик анализирует проектный cash gap.", "result": "Ученик понимает, почему проектный бизнес может быть прибыльным и одновременно кассово тяжёлым.", "status": "summary"}, {"id": 53, "title": "Финансы логистики", "objective": "Разобрать финансовую механику логистики и перевозок.", "content": "Рейсы, километры, топливо, водители, ремонт, маржа рейса, загрузка транспорта, cost per km, выручка на машину.", "case": "Перевозчик увеличил число рейсов, но прибыль не выросла. Ученик анализирует топливо, пустые пробеги, ремонт и ставки.", "result": "Ученик понимает логистику через рейс, километр, загрузку и маржу маршрута.", "status": "summary"}, {"id": 54, "title": "Финансы HoReCa", "objective": "Разобрать финансовую механику ресторанов, кафе и гостиничных элементов.", "content": "Food cost, labor cost, prime cost, посадка, средний чек, оборачиваемость столов, списания, меню-инжиниринг, сезонность.", "case": "Кафе имеет полную посадку, но низкую прибыль. Ученик ищет проблему в food cost, labor cost, списаниях и меню.", "result": "Ученик понимает HoReCa через маржу меню, труд, загрузку и списания.", "status": "summary"}]}, {"id": 11, "title": "Финансовая система и управление", "description": "Собирает всю финансовую архитектуру в регулярную систему управления: политика учёта, статьи, закрытие месяца, роли, контроль и стадии бизнеса.", "lessons": [{"id": 55, "title": "Управленческая учётная политика", "objective": "Показать, что финансовая система требует заранее установленных правил.", "content": "Как признавать выручку, что считать себестоимостью, как относить расходы, как учитывать авансы, ОС, долги, ФОТ и закрытие месяца.", "case": "Два менеджера по-разному классифицируют один и тот же расход. Ученик определяет, почему нужна управленческая политика.", "result": "Ученик понимает, что без правил данные становятся несравнимыми.", "status": "summary"}, {"id": 56, "title": "Структура статей и справочников", "objective": "Научить строить понятные справочники доходов, расходов, ДДС, активов, обязательств и аналитик.", "content": "Статьи доходов, расходов, ДДС, активов, обязательств, центры ответственности, направления, проекты, филиалы.", "case": "В бизнесе 300 статей расходов и половина операций попадает в прочее. Ученик пересобирает справочник до управляемой структуры.", "result": "Ученик понимает, как избежать хаоса в финансовой классификации.", "status": "summary"}, {"id": 57, "title": "Закрытие месяца", "objective": "Показать закрытие месяца как регулярный управленческий ритуал.", "content": "Сверка денег, выручки, расходов, ФОТ, налогов, остатков, авансов, долга, ОС и баланса.", "case": "Месяц не закрыт, но собственник уже смотрит прибыль. Ученик определяет, почему выводам нельзя доверять.", "result": "Ученик понимает, что отчёты имеют смысл только после закрытия периода.", "status": "summary"}, {"id": 58, "title": "Финансовый календарь собственника", "objective": "Определить, что предприниматель должен смотреть ежедневно, еженедельно, ежемесячно, ежеквартально и ежегодно.", "content": "Ежедневный cash control, еженедельный план-факт, ежемесячное закрытие, квартальные решения, годовой бюджет.", "case": "Собственник смотрит ОПиУ каждый день, но не видит кассовый разрыв. Ученик распределяет контроль по правильным периодам.", "result": "Ученик получает ритм финансового управления.", "status": "summary"}, {"id": 59, "title": "Внутренний контроль и качество данных", "objective": "Показать, как защищать финансовую систему от ошибок, двойного учёта и недостоверных данных.", "content": "Сверка кассы, банка, расходов, остатков, прав доступа, двойной учёт, QA, ошибки ввода, ответственность за данные.", "case": "В кассе не сходится остаток, а расходы задвоены. Ученик определяет, какие проверки должны были это поймать.", "result": "Ученик понимает, что плохие данные опаснее отсутствия отчёта.", "status": "summary"}, {"id": 60, "title": "Финансовые роли в бизнесе", "objective": "Разобрать, кто за что отвечает в финансовой системе компании.", "content": "Собственник, руководитель, администратор, бухгалтер, финансовый менеджер, операционный директор, маркетолог, руководитель продаж.", "case": "Все считают, что за деньги отвечает бухгалтер. Ученик распределяет ответственность между ролями.", "result": "Ученик понимает, какие финансовые функции можно делегировать, а какие собственник должен контролировать лично.", "status": "summary"}, {"id": 61, "title": "Финансовое управление по стадиям бизнеса", "objective": "Показать, что финансовые приоритеты меняются в зависимости от стадии компании.", "content": "Старт, первые продажи, стабилизация, рост, масштабирование, несколько точек, кризис, подготовка к продаже.", "case": "Бизнес масштабируется второй точкой и теряет cash flow. Ученик определяет, какие метрики и риски становятся главными на этой стадии.", "result": "Ученик видит, что один и тот же показатель по-разному читается на разных этапах бизнеса.", "status": "summary"}, {"id": 62, "title": "Итоговая финансовая архитектура бизнеса", "objective": "Собрать весь модуль в единую систему финансового управления.", "content": "Выручка, расходы, прибыль, деньги, баланс, остатки, метрики, план, прогноз, контроль, решения, отраслевые особенности.", "case": "Итоговый кейс: у бизнеса есть данные по продажам, деньгам, расходам, остаткам и плану. Ученик собирает управленческую картину и формулирует решения.", "result": "Ученик понимает бизнес как финансовую архитектуру, а не набор разрозненных цифр.", "extra": ["7. Рекомендуемая логика открытия модуля в приложении", "Слой 1. База собственника: уроки 1–22. Ученик понимает деньги, выручку, прибыль, ОПиУ, ДДС, рабочий капитал и базовую логику бизнеса.", "Слой 2. Управленческая глубина: уроки 23–42. Ученик понимает ликвидность, баланс, остатки, долг, ФОТ, планирование, сценарии и инвестиционные решения.", "Слой 3. Метрики и диагностика: уроки 43–48. Ученик учится читать показатели, видеть ложные метрики и превращать отчёты в диагностику.", "Слой 4. Отраслевые финансы: уроки 49–54. Ученик выбирает свой тип бизнеса и изучает его финансовую механику.", "Слой 5. Финансовая система: уроки 55–62. Ученик понимает, как выстроить регулярный управленческий контур: правила, статьи, закрытие месяца, роли, контроль и стадии развития бизнеса.", "8. Следующий этап работы", "Выбрать один урок из списка.", "Создать полную внутреннюю структуру урока: цель, ключевые тезисы, структура презентации, теория, кейс, типовые ошибки, тест, домашнее задание и визуальные образы.", "После согласования шаблона одного урока использовать его как стандарт для разработки остальных уроков модуля.", "Отдельно создать готовые финансовые инструменты под виды бизнеса: услуги, торговля, производство, проекты, логистика и HoReCa. Ученик не создаёт таблицы с нуля, а применяет готовую систему."], "status": "summary"}]}];
@@ -7539,7 +5680,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
    Исправляет ReferenceError renderFinancialAssistantV77 и доступ из нижнего/бокового меню.
    ===================================================== */
 (function installFinanceV81NavigationFix(){
-  window.APP_UI_VERSION_V81 = 'v86-finance-student-open-manual-callouts-20260629';
+  window.APP_UI_VERSION_V81 = 'v95-stability-refactor-safe-cleanup-20260630';
 
   function hasAccessV81(){
     return !(typeof hasVerifiedAccessV32 === 'function') || hasVerifiedAccessV32();
@@ -7667,7 +5808,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
    v82 — final drawer binding for financial assistant
    ===================================================== */
 (function installFinanceDrawerV82(){
-  window.APP_UI_VERSION_V82 = 'v86-finance-student-open-manual-callouts-20260629';
+  window.APP_UI_VERSION_V82 = 'v95-stability-refactor-safe-cleanup-20260630';
   function isAdminModeV82(){ return typeof isAdminMode === 'function' && isAdminMode(); }
   function openFinanceV82(){
     if (typeof window.renderFinancialAssistantV77 === 'function') return window.renderFinancialAssistantV77();
@@ -7735,7 +5876,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
    and connects the lesson JSON/images by stable paths.
    ===================================================== */
 (function installTradeLesson2V89(){
-  window.APP_UI_VERSION_V89 = 'v89-trade-l02-clean-native-path-20260629';
+  window.APP_UI_VERSION_V89 = 'v95-stability-refactor-safe-cleanup-20260630';
   var TRADE_L02_CODE_V89 = 'ENT-TR-02';
   var TRADE_L02_CONTENT_URL_V89 = 'content/lessons/ENT-TR-02.json';
   var TRADE_L02_META_V89 = {
@@ -8013,4 +6154,182 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
   bindGlobal('renderProgressRulesV40', renderResearchPointsRules);
 
   setTimeout(function(){ awardResearchPointOnce('app:first_open', 'app_first_open', { source:'startup' }); }, 600);
+})();
+
+
+/* =====================================================
+   v95 — safe cleanup marker
+   This block does not override routing. It records the active stabilised build and
+   exposes a tiny diagnostic helper without changing user flows.
+   ===================================================== */
+(function installV95SafeCleanupMarker(){
+  window.APP_UI_VERSION_V95 = 'v95-stability-refactor-safe-cleanup-20260630';
+  window.architectureRuntimeCheckV95 = function(){
+    return {
+      version: window.APP_UI_VERSION_V95,
+      hasHomeworkLinks: typeof HOMEWORK_SHEET_URLS !== 'undefined' && Boolean(HOMEWORK_SHEET_URLS['ENT-TR-02']),
+      hasHomeworkExample: typeof HOMEWORK_EXAMPLE_URLS !== 'undefined' && Boolean(HOMEWORK_EXAMPLE_URLS['ENT-TR-02']),
+      hasResearchPoints: typeof window.getResearchPointsTotalV91 === 'function',
+      hasFinanceAssistant: typeof window.renderFinancialAssistantV77 === 'function',
+      timestamp: new Date().toISOString()
+    };
+  };
+})();
+
+
+/* =====================================================
+   v95 — clean stability layer: единые точки входа без возврата старых ошибок
+   Что делает: не меняет визуальную структуру, а закрепляет финальные маршруты,
+   ДЗ, нижнее меню, правила баллов и защиту от старых перехватчиков.
+   ===================================================== */
+(function installArchitectureCleanStabilityV95(){
+  window.APP_UI_VERSION_V95 = 'v95-clean-stability-audit-20260630';
+
+  function v95Esc(value){
+    if (typeof esc === 'function') return esc(value);
+    return String(value == null ? '' : value).replace(/[&<>'"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]); });
+  }
+  function v95BindGlobal(name, fn){
+    window[name] = fn;
+    try { eval(name + ' = window["' + name + '"];'); } catch(e) {}
+  }
+  function v95Shell(content, active){
+    if (typeof shell === 'function') return shell(content, active || 'home');
+    var root = document.getElementById('app');
+    if (root) root.innerHTML = content;
+  }
+  function v95Card(cls, html){
+    if (typeof card === 'function') return card(cls || '', html || '');
+    return '<section class="card-v2 '+(cls||'')+'">'+(html||'')+'</section>';
+  }
+  function v95ModeAllowed(){
+    try { return !(typeof hasVerifiedAccessV32 === 'function') || hasVerifiedAccessV32(); } catch(e){ return true; }
+  }
+  function v95CurrentLessonCode(){
+    try { return String((state && state.selectedLessonCode) || '').trim(); } catch(e){ return ''; }
+  }
+  function v95OpenUrl(url){
+    var target = String(url || '').trim();
+    if (!target || target === '#') return false;
+    try {
+      if (typeof tg !== 'undefined' && tg && typeof tg.openLink === 'function') tg.openLink(target);
+      else window.open(target, '_blank', 'noopener,noreferrer');
+    } catch(error) { window.open(target, '_blank', 'noopener,noreferrer'); }
+    return true;
+  }
+
+  // Единая финальная нижняя навигация. Старые варианты с «Уроки» и «ДЗ» сюда больше не попадают.
+  window.bottomNav = function(active){
+    if (!v95ModeAllowed()) return '';
+    function safeCall(fn){ return "safeNavigateV32('" + fn + "')"; }
+    function icon(name){
+      try { if (typeof architectureNavIconV35 === 'function') return '<span class="arch-nav-icon">'+architectureNavIconV35(name)+'</span>'; } catch(e) {}
+      return name === 'finance' ? '<span>₽</span>' : (name === 'profile' ? '<span>○</span>' : '<span>⌂</span>');
+    }
+    function item(key,label,call,ic){
+      return '<button class="bottom-item '+(active===key?'active':'')+'" onclick="'+call+'">'+ic+'<b>'+v95Esc(label)+'</b></button>';
+    }
+    return '<nav class="bottom-nav-v2 bottom-nav-v2-three v95-bottom-nav" aria-label="Основное меню">'
+      + item('home','Главная',safeCall('renderHome'),icon('home'))
+      + item('finance','Финансовый помощник','openFinanceAssistantV95()',icon('finance'))
+      + item('profile','Профиль',safeCall('renderProfile'),icon('profile'))
+      + '</nav>';
+  };
+
+  // Единая точка открытия финансового помощника: открыт ученикам; закрытые внутренние блоки не кликаются.
+  window.openFinanceAssistantV95 = function(){
+    if (!v95ModeAllowed()) {
+      if (typeof accessDenied === 'function') return accessDenied('OPEN_FROM_TELEGRAM_REQUIRED');
+      return;
+    }
+    if (typeof window.renderFinancialAssistantV77 === 'function') return window.renderFinancialAssistantV77();
+    if (typeof window.renderFinancialAssistant === 'function') return window.renderFinancialAssistant();
+    alert('Финансовый помощник не загрузился. Обновите приложение.');
+  };
+  window.openFinanceAssistantV81 = window.openFinanceAssistantV95;
+  window.openFinanceV82 = window.openFinanceAssistantV95;
+
+  // ДЗ: финальная точка открытия таблиц. Использует JSON, затем резервные карты HOMEWORK_SHEET_URLS / HOMEWORK_EXAMPLE_URLS.
+  window.openSelfStudyTemplateV43 = function(url){
+    var code = v95CurrentLessonCode();
+    var target = String(url || '').trim();
+    if (!target || target === '#') {
+      try { target = String((typeof homeworkSheetUrl === 'function' && homeworkSheetUrl(code)) || (typeof HOMEWORK_SHEET_URLS !== 'undefined' && HOMEWORK_SHEET_URLS[code]) || '').trim(); } catch(e) {}
+    }
+    if (!target || target === '#') {
+      alert('Рабочая таблица для этого материала пока не подключена.');
+      return;
+    }
+    try {
+      if (typeof completeSelfStudyOnOpenV43 === 'function' && code) {
+        completeSelfStudyOnOpenV43(code).catch(function(error){ console.warn('SELF_STUDY_SAVE_V95', error); });
+      }
+    } catch(error) { console.warn('SELF_STUDY_OPEN_V95', error); }
+    v95OpenUrl(target);
+    setTimeout(function(){ try { if (typeof renderHomework === 'function') renderHomework(); } catch(e) {} }, 400);
+  };
+
+  // ДЗ: финальный рендер только с кнопками; ссылка текстом не выводится.
+  var renderHomeworkBeforeV95 = window.renderHomework;
+  window.renderHomework = async function(){
+    var code = v95CurrentLessonCode();
+    var lesson = null;
+    try { lesson = typeof loadLesson === 'function' ? await loadLesson(code) : null; } catch(e) { console.warn('LOAD_LESSON_HOMEWORK_V95', e); }
+    var hw = (lesson && lesson.homework) || {};
+    var mainUrl = String(hw.url || hw.templateUrl || hw.link || '');
+    var exampleUrl = String(hw.exampleUrl || hw.exampleLink || '');
+    try { if (!mainUrl && typeof homeworkSheetUrl === 'function') mainUrl = homeworkSheetUrl(code) || ''; } catch(e) {}
+    try { if (!mainUrl && typeof HOMEWORK_SHEET_URLS !== 'undefined') mainUrl = HOMEWORK_SHEET_URLS[code] || ''; } catch(e) {}
+    try { if (!exampleUrl && typeof HOMEWORK_EXAMPLE_URLS !== 'undefined') exampleUrl = HOMEWORK_EXAMPLE_URLS[code] || ''; } catch(e) {}
+
+    if (!mainUrl && !exampleUrl && typeof renderHomeworkBeforeV95 === 'function') {
+      return renderHomeworkBeforeV95.apply(this, arguments);
+    }
+
+    var title = hw.title || 'Самостоятельная работа';
+    var desc = hw.description || 'Откройте рабочую таблицу, создайте личную копию и выполните задания по материалу урока. Пример заполнения нужен только для ориентира.';
+    var mainLabel = hw.buttonLabel || hw.button || 'Открыть рабочую таблицу';
+    var exampleLabel = hw.exampleButtonLabel || 'Открыть пример заполнения';
+    var done = false;
+    try { done = typeof isSelfStudyCompletedV39 === 'function' && isSelfStudyCompletedV39(code); } catch(e) {}
+    var buttons = '<div class="homework-actions-v95">';
+    if (mainUrl) buttons += '<button class="btn primary" onclick="openSelfStudyTemplateV43(\''+String(mainUrl).replace(/'/g,"\\'")+'\')">'+v95Esc(mainLabel)+'</button>';
+    if (exampleUrl) buttons += '<button class="btn secondary" onclick="v95OpenExternalUrl(\''+String(exampleUrl).replace(/'/g,"\\'")+'\')">'+v95Esc(exampleLabel)+'</button>';
+    buttons += '</div>';
+    v95Shell(
+      v95Card('blue-card-v2 homework-hero-v95', '<p class="eyebrow">самостоятельная работа</p><h1>'+v95Esc(title)+'</h1><p>'+v95Esc(desc)+'</p>') +
+      v95Card('homework-card-v95', '<h2>Рабочие материалы</h2>'+buttons+'<p class="small">Основную таблицу нужно сохранить личной копией в Google Таблицах. Пример используется только для сверки логики заполнения.</p>'+(done?'<div class="homework-review-notice accepted"><b>Рабочая таблица открыта</b><p>Этап применения засчитан.</p></div>':'')+'<button class="btn secondary" onclick="renderLessonHub()">Вернуться к уроку</button>'),
+      'homework'
+    );
+  };
+  window.v95OpenExternalUrl = function(url){ return v95OpenUrl(url); };
+
+  // Страница правил баллов: единая исследовательская логика. Старые экраны 25/25/25/25 не показываются.
+  function renderResearchRulesV95(){
+    var total = 0, opened = 0;
+    try { total = typeof getResearchPointsTotalV91 === 'function' ? getResearchPointsTotalV91() : (typeof totalPoints === 'function' ? totalPoints() : 0); } catch(e) {}
+    try { opened = typeof getResearchEventsCountV91 === 'function' ? getResearchEventsCountV91() : total; } catch(e) { opened = total; }
+    v95Shell(
+      v95Card('blue-card-v2 progress-rules-hero-v40 research-rules-hero-v95', '<p class="eyebrow">баллы библиотеки</p><h1>Как начисляются баллы</h1><p>Баллы начисляются за исследование библиотеки бизнес-систем: за первое открытие новых модулей, блоков, уроков, слайдов, тестов, саммари и рабочих материалов.</p>')+
+      v95Card('', '<h2>Главное правило</h2><p>Каждое новое действие даёт <b>1 балл</b> только один раз за всё время. Повторное открытие уже изученного элемента баллы не добавляет.</p><div class="score-rule-grid-v40"><div><span>+1</span><b>Модуль</b></div><div><span>+1</span><b>Блок</b></div><div><span>+1</span><b>Урок</b></div><div><span>+1</span><b>Слайд</b></div><div><span>+1</span><b>Тест</b></div><div><span>+1</span><b>Саммари</b></div><div><span>+1</span><b>Рабочий материал</b></div></div>')+
+      v95Card('', '<h2>Текущий счёт</h2><div class="profile-score-grid"><div><span>Всего баллов</span><b>'+v95Esc(Number(total||0).toLocaleString('ru-RU'))+'</b></div><div><span>Открыто элементов</span><b>'+v95Esc(Number(opened||0).toLocaleString('ru-RU'))+'</b></div></div><p class="small">Баллы показывают активность исследования библиотеки. Понимание материала проверяется тестами, тренажёрами и практическими заданиями.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>'),
+      'profile'
+    );
+  }
+  window.renderResearchPointsRulesV91 = renderResearchRulesV95;
+  window.renderPointsRulesV43 = renderResearchRulesV95;
+  window.renderPointsRulesV42 = renderResearchRulesV95;
+  window.renderPointsRulesV41 = renderResearchRulesV95;
+  window.renderProgressRulesV40 = renderResearchRulesV95;
+
+  // Каталог: ENT-TR-02 должен оставаться нативным уроком из content/lessons.
+  window.__ARCHITECTURE_CLEAN_AUDIT_V95 = {
+    version: window.APP_UI_VERSION_V95,
+    notes: [
+      'Финальный bottomNav закреплён в 3 пункта: Главная / Финансовый помощник / Профиль.',
+      'Финальный renderHomework использует JSON и резервные ссылки HOMEWORK_SHEET_URLS/HOMEWORK_EXAMPLE_URLS.',
+      'Старые страницы правил баллов перенаправлены на исследовательские баллы.',
+      'Финансовый помощник открыт ученикам; закрытые внутренние блоки остаются неактивными.'
+    ]
+  };
 })();
