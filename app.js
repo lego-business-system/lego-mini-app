@@ -34,7 +34,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v99-workmaterials-by-block-compact-stats-20260630";
+const APP_CACHE_VERSION = "v100-research-points-supabase-sync-20260630";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -2386,6 +2386,53 @@ function shell(content, activeTab) {
     </div>`;
 }
 
+
+
+/* =====================================================
+   v100 — синхронизация исследовательских баллов из Supabase
+   ===================================================== */
+function researchPointUserSuffixV100(){
+  try {
+    const ids = typeof possibleIds === 'function' ? possibleIds() : [];
+    if (ids && ids[0]) return String(ids[0]).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const names = typeof possibleUsernames === 'function' ? possibleUsernames() : [];
+    if (names && names[0]) return String(names[0]).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const user = typeof getTelegramUser === 'function' ? getTelegramUser() : {};
+    if (user && user.id) return String(user.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+    if (user && user.username) return String(user.username).replace(/[^a-zA-Z0-9_-]/g, '_');
+  } catch(e) {}
+  return 'local';
+}
+function researchPointStorageKeyV100(){
+  return 'architecture_research_point_events_v91_' + researchPointUserSuffixV100();
+}
+function mergeResearchPointEventsFromServerV100(result){
+  try {
+    const rows = (result && (result.research_point_events || result.researchPointEvents)) || [];
+    if (!Array.isArray(rows) || !rows.length) return;
+    const key = researchPointStorageKeyV100();
+    let map = {};
+    try { map = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch(e) { map = {}; }
+    rows.forEach(function(row){
+      const eventKey = String(row.event_key || row.eventKey || '').trim();
+      if (!eventKey) return;
+      if (map[eventKey]) return;
+      map[eventKey] = {
+        eventKey,
+        eventType: String(row.event_type || row.eventType || 'research_event'),
+        points: Number(row.points || 1),
+        payload: row.payload || row.payload_json || {},
+        createdAt: row.created_at || row.createdAt || new Date().toISOString(),
+        source: 'supabase'
+      };
+    });
+    localStorage.setItem(key, JSON.stringify(map));
+    try { state.researchPointEvents = map; } catch(e) {}
+  } catch(e) {
+    console.warn('RESEARCH_POINT_SERVER_MERGE_FAILED', e);
+  }
+}
+
 function bottomNav(active) {
   if (!hasVerifiedAccessV32()) return "";
   const item = (key,label,icon,fn)=>`<button class="bottom-item ${active===key?'active':''}" onclick="safeNavigateV32('${fn.replace("()","")}')"><span>${icon}</span><b>${label}</b></button>`;
@@ -2443,6 +2490,7 @@ async function checkAccess() {
     try { localStorage.setItem('lego_app_mode', 'student'); } catch(e) {}
 
     state.remoteProgressByLesson = result.progress_by_lesson || result.progressByLesson || {};
+    mergeResearchPointEventsFromServerV100(result);
     if (result.progress && result.lesson && result.lesson.code) {
       state.remoteProgressByLesson[result.lesson.code] = result.progress;
     }
@@ -2733,6 +2781,7 @@ window.checkAccess = async function(){
     state.appMode = 'student';
     localStorage.setItem('lego_app_mode', 'student');
     state.remoteProgressByLesson = result.progress_by_lesson || result.progressByLesson || {};
+    mergeResearchPointEventsFromServerV100(result);
     if (result.progress && result.lesson && result.lesson.code) state.remoteProgressByLesson[result.lesson.code] = result.progress;
     // v65: администратор при новом входе остаётся в режиме ученика; администрирование включается вручную.
     await loadCatalog();
@@ -5980,7 +6029,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
    v91 — исследовательские баллы: 1 новое действие = 1 балл
    ===================================================== */
 (function installResearchPointsV91(){
-  window.APP_UI_VERSION_V91 = 'v99-workmaterials-by-block-compact-stats-20260630';
+  window.APP_UI_VERSION_V91 = 'v100-research-points-supabase-sync-20260630';
   try { window.APP_UI_VERSION_V89 = window.APP_UI_VERSION_V91; } catch(e) {}
   try { if (typeof LEGO_V24_CACHE_VERSION !== 'undefined') LEGO_V24_CACHE_VERSION = window.APP_UI_VERSION_V91; } catch(e) {}
   try { contentVersionV24 = function(){ return window.APP_UI_VERSION_V91; }; window.contentVersionV24 = contentVersionV24; } catch(e) {}
@@ -6334,7 +6383,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
    v96 — Топ-100 книг для бизнеса: открытая библиотека вместо ежедневной механики
    ===================================================== */
 (function installTop100BusinessBooksV96(){
-  window.APP_UI_VERSION_V96 = 'v99-workmaterials-by-block-compact-stats-20260630';
+  window.APP_UI_VERSION_V96 = 'v100-research-points-supabase-sync-20260630';
   try { window.APP_UI_VERSION = window.APP_UI_VERSION_V96; } catch(e) {}
   var TOP100_TITLE_V96 = 'Топ-100 книг для бизнеса';
   var TOP100_SUBTITLE_V96 = 'Саммари книг и управленческие идеи для предпринимателя. Все книги открыты без таймера и ежедневных ограничений.';
@@ -6669,7 +6718,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
    - клики по ссылкам не задваивают счётчик "Рабочие материалы".
    ===================================================== */
 (function installProfileStatsAndWorkMaterialsV99(){
-  window.APP_UI_VERSION_V99 = 'v99-workmaterials-by-block-compact-stats-20260630';
+  window.APP_UI_VERSION_V99 = 'v100-research-points-supabase-sync-20260630';
   try { window.APP_UI_VERSION = window.APP_UI_VERSION_V99; } catch(e) {}
   try { window.APP_UI_VERSION_V91 = window.APP_UI_VERSION_V99; } catch(e) {}
   try { window.APP_UI_VERSION_V96 = window.APP_UI_VERSION_V99; } catch(e) {}
