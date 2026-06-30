@@ -21,7 +21,12 @@ const HOMEWORK_SHEET_URLS = {
   "ENT-PR-01": "https://docs.google.com/spreadsheets/d/1x8BPmDvz3AYTqhcOWc_eEHU4OTBBK5Un3DcFNv1Ljkc/edit?gid=595169054#gid=595169054",
   "ENT-BD-01": "https://docs.google.com/spreadsheets/d/1Qe4LN3CgfI0PyHLctWHWgRypV4FxJbKxGgV4sXjgjHY/edit?gid=159267392#gid=159267392",
   "ENT-LG-01": "https://docs.google.com/spreadsheets/d/1zWTruAN4wxppvxp3E0k9oEzNf712-pb9Vuvff9lvNfs/edit?gid=1527408610#gid=1527408610",
-  "ENT-HR-01": "https://docs.google.com/spreadsheets/d/1u2P0Aq8K1jC8ArOumqXqZQxm8yLI51Ew0kfwp47dvdY/edit?gid=2075408749#gid=2075408749"
+  "ENT-HR-01": "https://docs.google.com/spreadsheets/d/1u2P0Aq8K1jC8ArOumqXqZQxm8yLI51Ew0kfwp47dvdY/edit?gid=2075408749#gid=2075408749",
+  "ENT-TR-02": "https://docs.google.com/spreadsheets/d/1536b3X9gdhfw7OLkn6K_Msi9QDDtNONMmQ5fLBkPF6c/edit?gid=2114225953#gid=2114225953"
+};
+
+const HOMEWORK_EXAMPLE_URLS = {
+  "ENT-TR-02": "https://docs.google.com/spreadsheets/d/1Qamceh11e767Ijj3GEJMxs6Vz1gf2R-9m0S3b4Va3aQ/edit?gid=22505350#gid=22505350"
 };
 
 const ADMIN_PANEL_PIN = "2405";
@@ -29,7 +34,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v93-homework-example-button-position-20260629";
+const APP_CACHE_VERSION = "v94-trade-l02-homework-hard-fallback-20260630";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -612,7 +617,27 @@ async function prevBook(){ if(state.bookIndex>0){ state.bookIndex--; await remot
 async function nextBook(){ const lesson=await loadLesson(state.selectedLessonCode); if(state.bookIndex<lesson.bookScreens.length-1){ state.bookIndex++; await remoteSave('book_slide_viewed',{lastBookSlideNumber:state.bookIndex+1}); renderBook(); } else { await remoteSave('books_completed',{lastBookSlideNumber:lesson.bookScreens.length}); renderHomework(); } }
 
 function homeworkSheetUrl(code, hw) {
-  return HOMEWORK_SHEET_URLS[code] || (hw && hw.sheetUrl) || '#';
+  const c = String(code || '').trim();
+  const h = hw || {};
+  return HOMEWORK_SHEET_URLS[c]
+    || h.sheetUrl
+    || h.url
+    || h.templateUrl
+    || h.tableUrl
+    || h.workbookUrl
+    || h.spreadsheetUrl
+    || '#';
+}
+function homeworkExampleUrl(code, hw) {
+  const c = String(code || '').trim();
+  const h = hw || {};
+  return h.exampleUrl
+    || h.exampleSheetUrl
+    || h.sampleUrl
+    || h.exampleFileUrl
+    || h.sampleSheetUrl
+    || HOMEWORK_EXAMPLE_URLS[c]
+    || '';
 }
 async function renderHomework(){
   const lesson = await loadLesson(state.selectedLessonCode);
@@ -3886,9 +3911,9 @@ async function renderHomework(){
   }
   if (hwState === 'none' && isStageDone(code, 'books')) await remoteSave('homework_started',{});
   const hw = lesson.homework || {};
-  const tableButton = hw.buttonLabel || 'Открыть рабочий шаблон';
+  const tableButton = hw.buttonLabel || (code === 'ENT-TR-02' ? 'Открыть основную таблицу ДЗ' : 'Открыть рабочий шаблон');
   const tableUrl = homeworkSheetUrl(code, hw);
-  const exampleUrl = hw.exampleUrl || hw.exampleSheetUrl || hw.sampleUrl || hw.exampleFileUrl || '';
+  const exampleUrl = (typeof homeworkExampleUrl === 'function' ? homeworkExampleUrl(code, hw) : (hw.exampleUrl || hw.exampleSheetUrl || hw.sampleUrl || hw.exampleFileUrl || ''));
   const exampleLabel = hw.exampleButtonLabel || 'Открыть пример заполнения';
   const defaultInstruction = `<h3>Практическая часть урока</h3><p>Заполните прикреплённый шаблон по фактическим данным своего бизнеса. Главная цель — увидеть первичное ограничение, сформулировать действие на 7 дней и выбрать метрику проверки.</p>`;
   const instruction = cleanStudentHtml(hw.instructionHtml || defaultInstruction);
@@ -6057,9 +6082,9 @@ else installArchitectureObserverV35();
       : cleanStudentHtml(hw.instructionHtml || '');
     var tableUrl = homeworkSheetUrl(code, hw);
     var tableJson = JSON.stringify(String(tableUrl || '#'));
-    var tableLabel = hw.buttonLabel || 'Открыть рабочий шаблон';
-    var exampleUrl = hw.exampleUrl || hw.exampleSheetUrl || hw.sampleUrl || hw.exampleFileUrl || '';
-    var exampleLabel = hw.exampleButtonLabel || 'Открыть пример заполнения';
+    var tableLabel = hw.buttonLabel || (code === 'ENT-TR-02' ? 'Открыть основную таблицу ДЗ' : 'Открыть рабочий шаблон');
+    var exampleUrl = (typeof homeworkExampleUrl === 'function' ? homeworkExampleUrl(code, hw) : (hw.exampleUrl || hw.exampleSheetUrl || hw.sampleUrl || hw.exampleFileUrl || ''));
+    var exampleLabel = hw.exampleButtonLabel || (code === 'ENT-TR-02' ? 'Открыть пример заполнения' : 'Открыть пример заполнения');
     var statusPanel = completed ? `<div class="self-study-completed-panel"><b>Материал завершён</b><p>К рабочему шаблону можно возвращаться и дополнять его в любое время.</p></div>` : '';
     var exampleButton = (exampleUrl && exampleUrl !== '#')
       ? externalButton(exampleLabel, exampleUrl, 'secondary')
@@ -7814,7 +7839,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
    v91 — исследовательские баллы: 1 новое действие = 1 балл
    ===================================================== */
 (function installResearchPointsV91(){
-  window.APP_UI_VERSION_V91 = 'v93-homework-example-button-position-20260629';
+  window.APP_UI_VERSION_V91 = 'v94-trade-l02-homework-hard-fallback-20260630';
   try { window.APP_UI_VERSION_V89 = window.APP_UI_VERSION_V91; } catch(e) {}
   try { if (typeof LEGO_V24_CACHE_VERSION !== 'undefined') LEGO_V24_CACHE_VERSION = window.APP_UI_VERSION_V91; } catch(e) {}
   try { contentVersionV24 = function(){ return window.APP_UI_VERSION_V91; }; window.contentVersionV24 = contentVersionV24; } catch(e) {}
