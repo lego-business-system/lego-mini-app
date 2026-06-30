@@ -5980,7 +5980,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
    v91 — исследовательские баллы: 1 новое действие = 1 балл
    ===================================================== */
 (function installResearchPointsV91(){
-  window.APP_UI_VERSION_V91 = 'v97-bottomnav-profile-stat-clarity-20260630';
+  window.APP_UI_VERSION_V91 = 'v98-profile-compact-pages-stats-20260630';
   try { window.APP_UI_VERSION_V89 = window.APP_UI_VERSION_V91; } catch(e) {}
   try { if (typeof LEGO_V24_CACHE_VERSION !== 'undefined') LEGO_V24_CACHE_VERSION = window.APP_UI_VERSION_V91; } catch(e) {}
   try { contentVersionV24 = function(){ return window.APP_UI_VERSION_V91; }; window.contentVersionV24 = contentVersionV24; } catch(e) {}
@@ -6306,13 +6306,13 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
 
   // Страница правил баллов: единая исследовательская логика. Старые экраны 25/25/25/25 не показываются.
   function renderResearchRulesV95(){
-    var total = 0, opened = 0;
+    var total = 0, stats = {};
     try { total = typeof getResearchPointsTotalV91 === 'function' ? getResearchPointsTotalV91() : (typeof totalPoints === 'function' ? totalPoints() : 0); } catch(e) {}
-    try { opened = typeof getResearchEventsCountV91 === 'function' ? getResearchEventsCountV91() : total; } catch(e) { opened = total; }
+    try { stats = typeof window.architectureProfileStatsV96 === 'function' ? window.architectureProfileStatsV96() : {}; } catch(e) { stats = {}; }
     v95Shell(
-      v95Card('blue-card-v2 progress-rules-hero-v40 research-rules-hero-v95', '<p class="eyebrow">баллы библиотеки</p><h1>Как начисляются баллы</h1><p>Баллы начисляются за исследование библиотеки бизнес-систем: за первое открытие новых модулей, блоков, уроков, слайдов, тестов, саммари и рабочих материалов.</p>')+
-      v95Card('', '<h2>Главное правило</h2><p>Каждое новое действие даёт <b>1 балл</b> только один раз за всё время. Повторное открытие уже изученного элемента баллы не добавляет.</p><div class="score-rule-grid-v40"><div><span>+1</span><b>Модуль</b></div><div><span>+1</span><b>Блок</b></div><div><span>+1</span><b>Урок</b></div><div><span>+1</span><b>Слайд</b></div><div><span>+1</span><b>Тест</b></div><div><span>+1</span><b>Саммари</b></div><div><span>+1</span><b>Рабочий материал</b></div></div>')+
-      v95Card('', '<h2>Текущий счёт</h2><div class="profile-score-grid"><div><span>Всего баллов</span><b>'+v95Esc(Number(total||0).toLocaleString('ru-RU'))+'</b></div><div><span>Открыто элементов</span><b>'+v95Esc(Number(opened||0).toLocaleString('ru-RU'))+'</b></div></div><p class="small">Баллы показывают активность исследования библиотеки. Понимание материала проверяется тестами, тренажёрами и практическими заданиями.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>'),
+      v95Card('blue-card-v2 progress-rules-hero-v40 research-rules-hero-v95', '<p class="eyebrow">баллы библиотеки</p><h1>Как начисляются баллы</h1><p>Баллы начисляются за исследование библиотеки бизнес-систем: за первое открытие новых модулей, блоков, уроков, страниц, тестов, книг и рабочих материалов.</p>')+
+      v95Card('', '<h2>Главное правило</h2><p>Каждое новое действие даёт <b>1 балл</b> только один раз за всё время. Повторное открытие уже изученного элемента баллы не добавляет.</p><div class="score-rule-grid-v40"><div><span>+1</span><b>Модуль</b></div><div><span>+1</span><b>Блок</b></div><div><span>+1</span><b>Урок</b></div><div><span>+1</span><b>Страница</b></div><div><span>+1</span><b>Тест</b></div><div><span>+1</span><b>Книга</b></div><div><span>+1</span><b>Рабочий материал</b></div></div>')+
+      v95Card('', '<h2>Текущий счёт</h2><div class="profile-score-grid"><div><span>Всего баллов</span><b>'+v95Esc(Number(total||0).toLocaleString('ru-RU'))+'</b></div><div><span>Страницы</span><b>'+v95Esc(Number(stats.pages||0).toLocaleString('ru-RU'))+'</b></div><div><span>Уроки</span><b>'+v95Esc(Number(stats.lessons||0).toLocaleString('ru-RU'))+'</b></div><div><span>Книги</span><b>'+v95Esc(Number(stats.readBooks||0).toLocaleString('ru-RU'))+'</b></div></div><p class="small">Баллы показывают активность исследования библиотеки. Понимание материала проверяется тестами, тренажёрами и практическими заданиями.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>'),
       'profile'
     );
   }
@@ -6338,7 +6338,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
    v96 — Топ-100 книг для бизнеса: открытая библиотека вместо ежедневной механики
    ===================================================== */
 (function installTop100BusinessBooksV96(){
-  window.APP_UI_VERSION_V96 = 'v97-bottomnav-profile-stat-clarity-20260630';
+  window.APP_UI_VERSION_V96 = 'v98-profile-compact-pages-stats-20260630';
   try { window.APP_UI_VERSION = window.APP_UI_VERSION_V96; } catch(e) {}
   var TOP100_TITLE_V96 = 'Топ-100 книг для бизнеса';
   var TOP100_SUBTITLE_V96 = 'Саммари книг и управленческие идеи для предпринимателя. Все книги открыты без таймера и ежедневных ограничений.';
@@ -6574,45 +6574,77 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
 
   if (typeof globalInstructionPanelHtml === 'function') {
     window.globalInstructionPanelHtml = function(){
-      return '<div id="global-instruction-panel" class="global-instruction-panel v44-instruction-panel" style="display:none"><div class="instruction-head"><b>Как пользоваться приложением</b><button onclick="toggleGlobalInstruction(false)" aria-label="Закрыть инструкцию">×</button></div><div class="instruction-steps"><div><b>1. Главная показывает всю структуру</b><p>На главной собраны доступные и будущие блоки. Открытые разделы можно запускать сразу, а блоки в подготовке отмечены и не нажимаются.</p></div><div><b>2. Откройте направление</b><p>В разделе «Я предприниматель» выберите вид бизнеса и любой опубликованный урок. Нумерация показывает рекомендуемую последовательность.</p></div><div><b>3. Разберите систему</b><p>Каждый урок включает презентацию, тест, саммари и рабочий шаблон для применения материала.</p></div><div><b>4. Используйте Топ-100 книг</b><p>В блоке «Топ-100 книг для бизнеса» все доступные саммари открыты сразу. Прочитанные книги отмечаются зелёным цветом.</p></div><div><b>5. Профиль хранит результат</b><p>В профиле отражаются исследовательские баллы, открытые уроки, слайды, саммари, тесты, рабочие материалы и прочитанные книги.</p></div></div></div>';
+      return '<div id="global-instruction-panel" class="global-instruction-panel v44-instruction-panel" style="display:none"><div class="instruction-head"><b>Как пользоваться приложением</b><button onclick="toggleGlobalInstruction(false)" aria-label="Закрыть инструкцию">×</button></div><div class="instruction-steps"><div><b>1. Главная показывает всю структуру</b><p>На главной собраны доступные и будущие блоки. Открытые разделы можно запускать сразу, а блоки в подготовке отмечены и не нажимаются.</p></div><div><b>2. Откройте направление</b><p>В разделе «Я предприниматель» выберите вид бизнеса и любой опубликованный урок. Нумерация показывает рекомендуемую последовательность.</p></div><div><b>3. Разберите систему</b><p>Каждый урок включает презентацию, тест, саммари и рабочий шаблон для применения материала.</p></div><div><b>4. Используйте Топ-100 книг</b><p>В блоке «Топ-100 книг для бизнеса» все доступные саммари открыты сразу. Прочитанные книги отмечаются зелёным цветом.</p></div><div><b>5. Профиль хранит результат</b><p>В профиле отражаются исследовательские баллы, изученные страницы, открытые уроки, тесты, рабочие материалы и прочитанные книги.</p></div></div></div>';
     };
   }
 
   function v96ResearchMap(){ try { return typeof getResearchPointEventsV91 === 'function' ? getResearchPointEventsV91() : {}; } catch(e) { return {}; } }
   function v96CountEvents(predicate){ var map = v96ResearchMap(); return Object.keys(map).filter(function(k){ return predicate(k, map[k]); }).length; }
+  function v96EventType(record){ return String((record && (record.eventType || record.type)) || ''); }
+  function v96IsPageEvent(key, record){
+    var k = String(key || '');
+    var t = v96EventType(record);
+    return k.indexOf('slide:') === 0
+      || k.indexOf('summary:') === 0
+      || k.indexOf('page:') === 0
+      || k.indexOf('screen:') === 0
+      || k.indexOf('book_page:') === 0
+      || t === 'slide_open'
+      || t === 'summary_page_open'
+      || t === 'page_open'
+      || t === 'screen_open'
+      || t === 'book_page_open'
+      || t === 'article_page_open'
+      || t === 'newspaper_page_open';
+  }
+  function v96IsLessonEvent(key, record){
+    var k = String(key || '');
+    var t = v96EventType(record);
+    return (k.indexOf('lesson:') === 0 && k.indexOf(':presentation') === -1 && k.indexOf(':books') === -1 && k.indexOf(':homework') === -1 && k.indexOf(':trainer') === -1)
+      || t === 'lesson_open';
+  }
+  function v96IsTestEvent(key, record){
+    var k = String(key || '');
+    var t = v96EventType(record);
+    return k.indexOf('quiz_open:') === 0 || t === 'quiz_open' || t === 'test_open';
+  }
+  function v96IsWorkMaterialEvent(key, record){
+    var k = String(key || '');
+    var t = v96EventType(record);
+    return k.indexOf('homework_link:') === 0
+      || k.indexOf('work_material:') === 0
+      || k.indexOf('template:') === 0
+      || (k.indexOf('lesson_part:') === 0 && (k.indexOf(':homework') !== -1 || k.indexOf(':trainer') !== -1 || k.indexOf(':practice') !== -1))
+      || t === 'homework_link_open'
+      || t === 'work_material_open'
+      || t === 'template_open'
+      || t === 'trainer_open';
+  }
   function v96ProfileStats(){
-    var slideCount = v96CountEvents(function(k){ return k.indexOf('slide:') === 0; });
-    var summaryCount = v96CountEvents(function(k){ return k.indexOf('summary:') === 0; });
-    var lessonCount = v96CountEvents(function(k){ return k.indexOf('lesson:') === 0 && k.indexOf(':presentation') === -1 && k.indexOf(':books') === -1 && k.indexOf(':homework') === -1; });
-    var testCount = v96CountEvents(function(k){ return k.indexOf('quiz_open:') === 0; });
-    var homeworkCount = v96CountEvents(function(k){ return k.indexOf('homework_link:') === 0; });
-    var modulesCount = v96CountEvents(function(k){ return k.indexOf('module:') === 0; });
-    var blocksCount = v96CountEvents(function(k){ return k.indexOf('block:') === 0 || k.indexOf('finance_section:') === 0; });
-    var activitiesCount = v96CountEvents(function(k){ return k.indexOf('activity:') === 0; });
+    var pageCount = v96CountEvents(v96IsPageEvent);
+    var lessonCount = v96CountEvents(v96IsLessonEvent);
+    var testCount = v96CountEvents(v96IsTestEvent);
+    var homeworkCount = v96CountEvents(v96IsWorkMaterialEvent);
     var readBooks = v96ReadIds().length;
     var openedElements = typeof getResearchEventsCountV91 === 'function' ? getResearchEventsCountV91() : Object.keys(v96ResearchMap()).length;
     var points = typeof getResearchPointsTotalV91 === 'function' ? getResearchPointsTotalV91() : openedElements;
-    return { points:points, opened:openedElements, modules:modulesCount, blocks:blocksCount, activities:activitiesCount, lessons:lessonCount, slides:slideCount, summaries:summaryCount, tests:testCount, homework:homeworkCount, readBooks:readBooks, pages:slideCount + summaryCount };
+    return { points:points, opened:openedElements, lessons:lessonCount, tests:testCount, homework:homeworkCount, readBooks:readBooks, pages:pageCount };
   }
   window.architectureProfileStatsV96 = v96ProfileStats;
   function v97ProfileStatCell(label, value, hint, id){
     var idAttr = id ? ' id="'+v96Esc(id)+'"' : '';
-    return '<div><span>'+v96Esc(label)+'</span><b'+idAttr+'>'+v96Format(value)+'</b><small>'+v96Esc(hint)+'</small></div>';
+    return '<div><span>'+v96Esc(label)+'</span><b'+idAttr+'>'+v96Format(value)+'</b></div>';
   }
   window.doneSummaryHtml = function(){
     var stats = v96ProfileStats();
-    var grid = '<div class="done-grid done-grid-v96 done-grid-v97">'
-      + v97ProfileStatCell('Новые элементы', stats.opened, 'Все уникальные открытия, за которые начислен исследовательский балл.')
-      + v97ProfileStatCell('Страницы и экраны', stats.pages, 'Слайды уроков, страницы саммари и страницы книг.', 'profile-pages-value-v44')
-      + v97ProfileStatCell('Уроки открыты', stats.lessons, 'Уроки, впервые открытые во всех доступных направлениях и модулях.')
-      + v97ProfileStatCell('Слайды уроков', stats.slides, 'Информационные слайды внутри уроков и финансового модуля.')
-      + v97ProfileStatCell('Страницы саммари', stats.summaries, 'Книжные экраны внутри уроков и страницы блока «Топ-100 книг для бизнеса».')
-      + v97ProfileStatCell('Тесты открыты', stats.tests, 'Факт первого открытия теста. Результат теста считается внутри конкретного урока.')
-      + v97ProfileStatCell('Рабочие материалы', stats.homework, 'ДЗ, таблицы, финтренажёры, шаблоны и другие рабочие ссылки.')
-      + v97ProfileStatCell('Книги прочитаны', stats.readBooks, 'Книги из «Топ-100», где открыта последняя страница саммари.')
+    var grid = '<div class="done-grid done-grid-v96 done-grid-v97 done-grid-v98">'
+      + v97ProfileStatCell('Страницы', stats.pages, 'Все изученные экраны: слайды уроков, страницы саммари, книги, статьи и будущие материалы.', 'profile-pages-value-v44')
+      + v97ProfileStatCell('Уроки', stats.lessons, 'Открытые уроки во всех модулях и видах деятельности.')
+      + v97ProfileStatCell('Книги', stats.readBooks, 'Полностью прочитанные книги из «Топ-100 книг для бизнеса».')
+      + v97ProfileStatCell('Тесты', stats.tests, 'Тесты, впервые открытые внутри уроков и модулей.')
+      + v97ProfileStatCell('Рабочие материалы', stats.homework, 'Открытые таблицы, ДЗ, тренажёры, шаблоны и практические ссылки.')
       + '</div>';
-    var legend = '<div class="profile-stat-legend-v97"><b>Как читать статистику</b><p>Статистика связана с исследовательскими баллами: новое открытое действие даёт 1 балл один раз за всё время. Закрытые блоки и повторные открытия повторно не начисляются.</p><ul><li><b>Элементы</b> — общий счёт новых действий: модули, блоки, виды деятельности, уроки, слайды, тесты, саммари и рабочие материалы.</li><li><b>Страницы и экраны</b> — фактически изученный объём контента: слайды уроков плюс страницы саммари и книг.</li><li><b>Рабочие материалы</b> — переходы к таблицам, ДЗ, тренажёрам и шаблонам.</li></ul></div>';
-    return v96Card('done-summary-card profile-done-compact-v43 profile-done-v44 profile-done-v96 profile-done-v97', '<div class="done-heading-v44"><div><p class="eyebrow">синхронизированная статистика</p><h2>Что уже открыто</h2></div><p>Учитываются действия по всей библиотеке бизнес-систем: модули, направления, уроки, слайды, саммари, тесты, рабочие материалы и книги.</p></div>'+grid+legend);
+    return v96Card('done-summary-card profile-done-compact-v43 profile-done-v44 profile-done-v96 profile-done-v97 profile-done-v98', '<div class="done-heading-v44"><div><p class="eyebrow">статистика изучения</p><h2>Что уже изучено</h2></div><p>Учитываются материалы по всей библиотеке бизнес-систем: уроки, страницы, книги, тесты и рабочие материалы.</p></div>'+grid);
   };
   window.readingStatsV44 = function(){
     var s = v96ProfileStats();

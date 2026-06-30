@@ -5771,3 +5771,12 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
   .profile-done-v97 .done-grid-v97{grid-template-columns:1fr!important;}
   .profile-done-v97 .done-grid-v97>div{min-height:auto;}
 }
+
+
+/* v98 compact profile statistics */
+.profile-done-v98 .done-grid-v98{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;}
+.profile-done-v98 .done-grid-v98>div{min-height:82px!important;justify-content:center!important;padding:13px!important;}
+.profile-done-v98 .done-grid-v98 span{font-size:11px!important;line-height:1.15!important;}
+.profile-done-v98 .done-grid-v98 b{font-size:24px!important;}
+.profile-done-v98 .profile-stat-legend-v97{display:none!important;}
+@media(max-width:420px){.profile-done-v98 .done-grid-v98{grid-template-columns:repeat(2,minmax(0,1fr))!important;}}
