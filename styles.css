@@ -5589,3 +5589,63 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
   font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size:12px;
 }
+
+/* v93 — homework workbook/example buttons */
+.homework-workbook-buttons-v93{display:grid;gap:8px;margin:6px 0 2px;}
+.homework-workbook-buttons-v93 .btn{margin-top:0;}
+
+/* v93 — homework table/example buttons order */
+.homework-link-stack-v93{display:grid;grid-template-columns:1fr;gap:8px;margin:14px 0 10px;}
+.homework-link-stack-v93 .btn{margin:0;}
+.homework-actions-v93{margin-top:8px;}
+
+
+/* v93 — пример заполнения под кнопкой рабочего шаблона */
+.self-study-main-actions-v93 {
+  margin: 18px 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.self-study-main-actions-v93 .btn,
+.self-study-main-actions-v93 button {
+  width: 100%;
+  justify-content: center;
+}
+.self-study-example-box-v93 {
+  margin: 12px 0 18px;
+  padding: 16px;
+  border: 1px solid rgba(24, 54, 91, 0.14);
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.92);
+}
+.self-study-example-box-v93 h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.self-study-example-box-v93 p {
+  margin: 0 0 12px;
+  color: var(--muted, #64748b);
+  line-height: 1.45;
+}
+.self-study-example-box-v93 .btn,
+.self-study-example-box-v93 a.btn {
+  width: 100%;
+  justify-content: center;
+}
+
+/* v93 — main homework template button first, example button directly below */
+.homework-template-stack-v93{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin:16px 0 18px;
+}
+.homework-template-stack-v93 .btn{
+  width:100%;
+  justify-content:center;
+  text-align:center;
+}
+.homework-example-below-v93 .btn{
+  opacity:.96;
+}
