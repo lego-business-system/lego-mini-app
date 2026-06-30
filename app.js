@@ -34,7 +34,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v94-trade-l02-homework-hard-fallback-20260630";
+const APP_CACHE_VERSION = "v99-workmaterials-by-block-compact-stats-20260630";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -5980,7 +5980,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
    v91 — исследовательские баллы: 1 новое действие = 1 балл
    ===================================================== */
 (function installResearchPointsV91(){
-  window.APP_UI_VERSION_V91 = 'v98-profile-compact-pages-stats-20260630';
+  window.APP_UI_VERSION_V91 = 'v99-workmaterials-by-block-compact-stats-20260630';
   try { window.APP_UI_VERSION_V89 = window.APP_UI_VERSION_V91; } catch(e) {}
   try { if (typeof LEGO_V24_CACHE_VERSION !== 'undefined') LEGO_V24_CACHE_VERSION = window.APP_UI_VERSION_V91; } catch(e) {}
   try { contentVersionV24 = function(){ return window.APP_UI_VERSION_V91; }; window.contentVersionV24 = contentVersionV24; } catch(e) {}
@@ -6087,13 +6087,9 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
   wrapBefore('startQuiz', function(){ const code = rpLessonCode(); if (code) awardResearchPointOnce('quiz_open:' + code, 'quiz_open', { lessonCode:code }); });
   wrapBefore('startBooks', function(){ const code = rpLessonCode(); if (code) awardResearchPointOnce('lesson_part:' + code + ':books', 'lesson_part_open', { lessonCode:code, part:'books' }); });
   wrapAfter('renderBook', function(){ const code = rpLessonCode(); const screenNo = Number((state && state.bookIndex) || 0) + 1; if (code && screenNo > 0) awardResearchPointOnce('summary:' + code + ':' + rpPad(screenNo, 3), 'summary_page_open', { lessonCode:code, screenNo }); });
-  wrapBefore('renderHomework', function(){
-    const code = rpLessonCode();
-    if (!code) return;
-    let canOpen = false;
-    try { canOpen = Boolean((typeof isAdminMode === 'function' && isAdminMode()) || (typeof isStageDone === 'function' && isStageDone(code,'books')) || (typeof isSelfStudyCompletedV39 === 'function' && isSelfStudyCompletedV39(code))); } catch(e) {}
-    if (canOpen) awardResearchPointOnce('lesson_part:' + code + ':homework', 'lesson_part_open', { lessonCode:code, part:'homework' });
-  });
+  // v99: блок ДЗ сам по себе больше не считается рабочим материалом.
+  // Рабочие материалы засчитываются отдельными ключами work_material:* при первом открытии блока практики.
+  wrapBefore('renderHomework', function(){ /* handled by v99 work-material normalizer */ });
   wrapBefore('openSelfStudyTemplateV43', function(url){ const code = rpLessonCode(); const target = String(url || '').trim(); if (code && target && target !== '#') awardResearchPointOnce('homework_link:' + code, 'homework_link_open', { lessonCode:code, url:target }); });
 
   ['openFinanceAssistantV81','openFinanceV82','renderFinancialAssistantV77','renderFinancialAssistant'].forEach(function(name){ wrapBefore(name, function(){ awardResearchPointOnce('module:finance_assistant', 'module_open', { module:'finance_assistant' }); }); });
@@ -6145,7 +6141,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
     const summaries = getResearchCountByPrefix('summary:');
     rpShell(`${rpCard('blue-card-v2 progress-rules-hero-v40 research-rules-hero-v91', `<p class="eyebrow">баллы библиотеки</p><h1>Как начисляются баллы</h1><p>Баллы начисляются за исследование библиотеки бизнес-систем: за первое открытие новых модулей, блоков, уроков, слайдов, тестов, саммари и рабочих материалов.</p>`)}
       ${rpCard('', `<h2>Главное правило</h2><p>Каждое новое действие даёт <b>1 балл</b> только один раз за всё время. Повторное открытие уже изученного элемента баллы не добавляет.</p><div class="score-rule-grid-v40"><div><span>+1</span><b>Первый вход</b></div><div><span>+1</span><b>Модуль</b></div><div><span>+1</span><b>Блок</b></div><div><span>+1</span><b>Урок</b></div><div><span>+1</span><b>Слайд</b></div><div><span>+1</span><b>Тест</b></div><div><span>+1</span><b>Саммари</b></div><div><span>+1</span><b>Рабочий материал</b></div></div>`)}
-      ${rpCard('', `<h2>Текущий счёт</h2><div class="profile-score-grid"><div><span>Всего баллов</span><b>${rpFormat(total)}</b></div><div><span>Открыто элементов</span><b>${rpFormat(opened)}</b></div><div><span>Слайды</span><b>${rpFormat(slides)}</b></div><div><span>Саммари</span><b>${rpFormat(summaries)}</b></div></div><p class="small">Баллы показывают активность исследования библиотеки. Понимание материала по-прежнему проверяется тестами, тренажёрами и практическими заданиями.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`, 'profile');
+      ${rpCard('', `<h2>Текущий счёт</h2><div class="profile-score-grid"><div><span>Всего баллов</span><b>${rpFormat(total)}</b></div><div><span>Страницы</span><b>${rpFormat(slides + summaries)}</b></div><div><span>Уроки</span><b>—</b></div><div><span>Рабочие материалы</span><b>—</b></div></div><p class="small">Баллы показывают активность исследования библиотеки. Понимание материала по-прежнему проверяется тестами, тренажёрами и практическими заданиями.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`, 'profile');
   }
   bindGlobal('renderResearchPointsRulesV91', renderResearchPointsRules);
   bindGlobal('renderPointsRulesV43', renderResearchPointsRules);
@@ -6338,7 +6334,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
    v96 — Топ-100 книг для бизнеса: открытая библиотека вместо ежедневной механики
    ===================================================== */
 (function installTop100BusinessBooksV96(){
-  window.APP_UI_VERSION_V96 = 'v98-profile-compact-pages-stats-20260630';
+  window.APP_UI_VERSION_V96 = 'v99-workmaterials-by-block-compact-stats-20260630';
   try { window.APP_UI_VERSION = window.APP_UI_VERSION_V96; } catch(e) {}
   var TOP100_TITLE_V96 = 'Топ-100 книг для бизнеса';
   var TOP100_SUBTITLE_V96 = 'Саммари книг и управленческие идеи для предпринимателя. Все книги открыты без таймера и ежедневных ограничений.';
@@ -6660,3 +6656,302 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
     readStatus: 'last screen viewed marks book as read'
   };
 })();
+
+
+
+/* =====================================================
+   v99 — нормализация статистики профиля и рабочих материалов
+   Логика:
+   - максимум по доступной библиотеке не выводим;
+   - страницы = все учебные экраны: слайды, summary, книги, статьи, газета;
+   - рабочие материалы считаются при первом открытии блока ДЗ/практики/тренажёра;
+   - если внутри блока 2 таблицы, засчитываются 2 отдельных материала;
+   - клики по ссылкам не задваивают счётчик "Рабочие материалы".
+   ===================================================== */
+(function installProfileStatsAndWorkMaterialsV99(){
+  window.APP_UI_VERSION_V99 = 'v99-workmaterials-by-block-compact-stats-20260630';
+  try { window.APP_UI_VERSION = window.APP_UI_VERSION_V99; } catch(e) {}
+  try { window.APP_UI_VERSION_V91 = window.APP_UI_VERSION_V99; } catch(e) {}
+  try { window.APP_UI_VERSION_V96 = window.APP_UI_VERSION_V99; } catch(e) {}
+  try { window.APP_UI_VERSION_V98 = window.APP_UI_VERSION_V99; } catch(e) {}
+  try { if (typeof LEGO_V24_CACHE_VERSION !== 'undefined') LEGO_V24_CACHE_VERSION = window.APP_UI_VERSION_V99; } catch(e) {}
+  try { contentVersionV24 = function(){ return window.APP_UI_VERSION_V99; }; window.contentVersionV24 = contentVersionV24; } catch(e) {}
+
+  function v99Esc(value){
+    if (typeof esc === 'function') return esc(value);
+    return String(value == null ? '' : value).replace(/[&<>'"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]); });
+  }
+  function v99Fmt(value){
+    var n = Number(value || 0);
+    try { return n.toLocaleString('ru-RU'); } catch(e) { return String(n); }
+  }
+  function v99Card(cls, html){
+    if (typeof card === 'function') return card(cls || '', html || '');
+    return '<section class="card-v2 ' + (cls || '') + '">' + (html || '') + '</section>';
+  }
+  function v99BindGlobal(name, fn){
+    window[name] = fn;
+    try { eval(name + ' = window["' + name + '"];'); } catch(e) {}
+  }
+  function v99CurrentLessonCode(){
+    try { return String((state && state.selectedLessonCode) || '').trim(); } catch(e) { return ''; }
+  }
+  function v99Award(eventKey, eventType, payload){
+    try {
+      if (typeof window.awardResearchPointOnceV91 === 'function') {
+        return window.awardResearchPointOnceV91(eventKey, eventType, payload || {});
+      }
+    } catch(e) {}
+    return { awarded:false, reason:'NO_RESEARCH_ENGINE' };
+  }
+  function v99ResearchMap(){
+    try { return typeof window.getResearchPointEventsV91 === 'function' ? window.getResearchPointEventsV91() : {}; } catch(e) { return {}; }
+  }
+  function v99EventType(record){
+    return String((record && (record.eventType || record.type)) || '');
+  }
+  function v99NormalizeMaterialId(value){
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'material';
+  }
+  function v99FirstUrl(){
+    for (var i = 0; i < arguments.length; i++) {
+      var v = String(arguments[i] || '').trim();
+      if (v && v !== '#') return v;
+    }
+    return '';
+  }
+  function v99HomeworkMainUrl(code, hw){
+    hw = hw || {};
+    var byCode = '';
+    try { byCode = typeof HOMEWORK_SHEET_URLS !== 'undefined' ? HOMEWORK_SHEET_URLS[code] : ''; } catch(e) {}
+    return v99FirstUrl(hw.sheetUrl, hw.url, hw.templateUrl, hw.tableUrl, hw.workbookUrl, hw.link, byCode);
+  }
+  function v99HomeworkExampleUrl(code, hw){
+    hw = hw || {};
+    var byCode = '';
+    try { byCode = typeof HOMEWORK_EXAMPLE_URLS !== 'undefined' ? HOMEWORK_EXAMPLE_URLS[code] : ''; } catch(e) {}
+    return v99FirstUrl(hw.exampleUrl, hw.exampleSheetUrl, hw.exampleLink, hw.exampleTableUrl, byCode);
+  }
+  function v99MaterialsFromHomework(code, lesson){
+    var hw = (lesson && lesson.homework) || {};
+    var result = [];
+    var seen = {};
+
+    function add(id, label, url, source){
+      var clean = v99NormalizeMaterialId(id);
+      var target = String(url || '').trim();
+      if (!clean || !target || target === '#' || seen[clean]) return;
+      seen[clean] = true;
+      result.push({ id:clean, label:String(label || clean), url:target, source:source || 'homework' });
+    }
+
+    add('main_homework', (hw.buttonLabel || hw.button || 'Основная таблица ДЗ'), v99HomeworkMainUrl(code, hw), 'main_homework');
+    add('example_homework', (hw.exampleButtonLabel || 'Пример заполнения'), v99HomeworkExampleUrl(code, hw), 'example_homework');
+
+    // Поддержка будущей структуры: массив материалов внутри homework.
+    var lists = [];
+    if (Array.isArray(hw.materials)) lists.push(hw.materials);
+    if (Array.isArray(hw.links)) lists.push(hw.links);
+    if (Array.isArray(hw.resources)) lists.push(hw.resources);
+    lists.forEach(function(list, listIndex){
+      list.forEach(function(item, index){
+        if (!item) return;
+        if (typeof item === 'string') {
+          add('extra_' + (listIndex+1) + '_' + (index+1), 'Рабочий материал ' + (index+1), item, 'extra');
+        } else {
+          var url = v99FirstUrl(item.url, item.href, item.link, item.sheetUrl, item.templateUrl);
+          var id = item.id || item.key || item.type || ('extra_' + (listIndex+1) + '_' + (index+1));
+          var label = item.label || item.title || item.buttonLabel || item.name || ('Рабочий материал ' + (index+1));
+          add(id, label, url, 'extra');
+        }
+      });
+    });
+
+    return result;
+  }
+  async function v99LoadLessonSafe(code){
+    if (!code) return null;
+    try {
+      if (typeof loadLesson === 'function') return await loadLesson(code);
+    } catch(e) {}
+    try {
+      if (state && state.currentLesson && state.selectedLessonCode === code) return state.currentLesson;
+    } catch(e) {}
+    return null;
+  }
+  async function v99AwardHomeworkBlockMaterials(code){
+    code = String(code || v99CurrentLessonCode()).trim();
+    if (!code) return;
+    var lesson = await v99LoadLessonSafe(code);
+    var materials = v99MaterialsFromHomework(code, lesson);
+    materials.forEach(function(m){
+      v99Award('work_material:' + code + ':' + m.id, 'work_material_open', {
+        lessonCode: code,
+        materialId: m.id,
+        label: m.label,
+        source: m.source,
+        url: m.url
+      });
+    });
+  }
+  function v99AwardFinanceTrainer(){
+    v99Award('work_material:FIN-S01:trainer', 'work_material_open', {
+      module:'finance_assistant',
+      sectionId:1,
+      materialId:'trainer',
+      label:'Финтренажёр раздела 1'
+    });
+  }
+
+  // При первом открытии блока ДЗ/практики засчитываем все реальные материалы внутри блока.
+  (function wrapHomeworkV99(){
+    var original = window.renderHomework;
+    if (typeof original !== 'function' || original.__workMaterialsByBlockV99) return;
+    var wrapped = async function(){
+      var result = await original.apply(this, arguments);
+      try { await v99AwardHomeworkBlockMaterials(v99CurrentLessonCode()); } catch(e) { console.warn('V99_WORK_MATERIALS_HOMEWORK', e); }
+      return result;
+    };
+    wrapped.__workMaterialsByBlockV99 = true;
+    window.renderHomework = wrapped;
+    try { renderHomework = window.renderHomework; } catch(e) {}
+  })();
+
+  // Финтренажёр в финансовом помощнике — это рабочий материал, засчитывается при открытии блока тренажёра.
+  ['renderFinanceTrainerSection1V77','renderFinanceTrainerSection1'].forEach(function(name){
+    var original = window[name];
+    if (typeof original !== 'function' || original.__workMaterialsByBlockV99) return;
+    var wrapped = function(){
+      v99AwardFinanceTrainer();
+      return original.apply(this, arguments);
+    };
+    wrapped.__workMaterialsByBlockV99 = true;
+    window[name] = wrapped;
+    try { eval(name + ' = window["' + name + '"];'); } catch(e) {}
+  });
+
+  function v99CountEvents(predicate){
+    var map = v99ResearchMap();
+    return Object.keys(map).filter(function(k){ return predicate(k, map[k]); }).length;
+  }
+  function v99IsPageEvent(key, record){
+    var k = String(key || '');
+    var t = v99EventType(record);
+    return k.indexOf('slide:') === 0
+      || k.indexOf('summary:') === 0
+      || k.indexOf('page:') === 0
+      || k.indexOf('screen:') === 0
+      || k.indexOf('book_page:') === 0
+      || t === 'slide_open'
+      || t === 'summary_page_open'
+      || t === 'page_open'
+      || t === 'screen_open'
+      || t === 'book_page_open'
+      || t === 'article_page_open'
+      || t === 'newspaper_page_open';
+  }
+  function v99IsLessonEvent(key, record){
+    var k = String(key || '');
+    var t = v99EventType(record);
+    return (k.indexOf('lesson:') === 0 && k.indexOf(':presentation') === -1 && k.indexOf(':books') === -1 && k.indexOf(':homework') === -1 && k.indexOf(':trainer') === -1 && k.indexOf(':practice') === -1)
+      || t === 'lesson_open';
+  }
+  function v99IsTestEvent(key, record){
+    var k = String(key || '');
+    var t = v99EventType(record);
+    return k.indexOf('quiz_open:') === 0 || t === 'quiz_open' || t === 'test_open';
+  }
+  function v99IsWorkMaterialEvent(key, record){
+    var k = String(key || '');
+    var t = v99EventType(record);
+    // Рабочие материалы считаем только по нормализованным материалам.
+    // Открытие экрана ДЗ и клики по ссылкам не задваивают этот показатель.
+    return k.indexOf('work_material:') === 0 || t === 'work_material_open';
+  }
+  function v99ReadBooksCount(){
+    try {
+      var prev = typeof window.__v98ProfileStatsBeforeV99 === 'function'
+        ? window.__v98ProfileStatsBeforeV99()
+        : (typeof window.architectureProfileStatsV96 === 'function' ? window.architectureProfileStatsV96() : {});
+      return Number(prev && prev.readBooks || 0);
+    } catch(e) { return 0; }
+  }
+
+  if (!window.__v98ProfileStatsBeforeV99 && typeof window.architectureProfileStatsV96 === 'function') {
+    window.__v98ProfileStatsBeforeV99 = window.architectureProfileStatsV96;
+  }
+
+  function v99ProfileStats(){
+    var map = v99ResearchMap();
+    var opened = Object.keys(map).length;
+    var points = typeof window.getResearchPointsTotalV91 === 'function' ? window.getResearchPointsTotalV91() : opened;
+    return {
+      points: points,
+      opened: opened,
+      pages: v99CountEvents(v99IsPageEvent),
+      lessons: v99CountEvents(v99IsLessonEvent),
+      readBooks: v99ReadBooksCount(),
+      tests: v99CountEvents(v99IsTestEvent),
+      homework: v99CountEvents(v99IsWorkMaterialEvent)
+    };
+  }
+  window.architectureProfileStatsV96 = v99ProfileStats;
+  window.architectureProfileStatsV99 = v99ProfileStats;
+
+  function v99ProfileStatCell(label, value, id){
+    var idAttr = id ? ' id="'+v99Esc(id)+'"' : '';
+    return '<div><span>'+v99Esc(label)+'</span><b'+idAttr+'>'+v99Fmt(value)+'</b></div>';
+  }
+  window.doneSummaryHtml = function(){
+    var stats = v99ProfileStats();
+    var grid = '<div class="done-grid done-grid-v96 done-grid-v97 done-grid-v98 done-grid-v99">'
+      + v99ProfileStatCell('Страницы', stats.pages, 'profile-pages-value-v44')
+      + v99ProfileStatCell('Уроки', stats.lessons)
+      + v99ProfileStatCell('Книги', stats.readBooks)
+      + v99ProfileStatCell('Тесты', stats.tests)
+      + v99ProfileStatCell('Рабочие материалы', stats.homework)
+      + '</div>';
+    return v99Card('done-summary-card profile-done-compact-v43 profile-done-v44 profile-done-v96 profile-done-v97 profile-done-v98 profile-done-v99',
+      '<div class="done-heading-v44"><div><p class="eyebrow">статистика изучения</p><h2>Что уже изучено</h2></div><p>Показаны фактически открытые материалы: страницы, уроки, книги, тесты и рабочие материалы. Максимум не выводится, потому что библиотека регулярно пополняется.</p></div>' + grid
+      + '<div class="profile-stat-explain-v99"><p><b>Страницы</b> — все учебные экраны: слайды уроков, страницы саммари, страницы книг, будущие статьи и газета.</p><p><b>Книги</b> — полностью прочитанные книги из блока «Топ-100 книг для бизнеса».</p><p><b>Рабочие материалы</b> — таблицы, примеры, тренажёры и шаблоны. Если в одном практическом блоке две таблицы, засчитываются обе.</p></div>'
+    );
+  };
+  window.readingStatsV44 = function(){
+    var s = v99ProfileStats();
+    return { presentations:s.lessons, pages:s.pages, tests:s.tests, bookSummaries:s.readBooks, templates:s.homework, insights:0 };
+  };
+
+  function renderResearchRulesV99(){
+    var stats = v99ProfileStats();
+    var total = stats.points || 0;
+    var shellFn = typeof shell === 'function' ? shell : function(html){ var root=document.getElementById('app'); if(root) root.innerHTML=html; };
+    shellFn(
+      v99Card('blue-card-v2 progress-rules-hero-v40 research-rules-hero-v95 research-rules-hero-v99',
+        '<p class="eyebrow">баллы библиотеки</p><h1>Как начисляются баллы</h1><p>Баллы начисляются за исследование библиотеки бизнес-систем: за первое открытие новых модулей, блоков, уроков, страниц, тестов, книг и рабочих материалов.</p>'
+      )
+      + v99Card('',
+        '<h2>Главное правило</h2><p>Каждое новое действие даёт <b>1 балл</b> только один раз за всё время. Повторное открытие уже изученного элемента баллы не добавляет.</p><p class="small">Рабочие материалы засчитываются при первом открытии практического блока. Если внутри расположены основная таблица и пример заполнения, учитываются обе единицы.</p><div class="score-rule-grid-v40"><div><span>+1</span><b>Модуль</b></div><div><span>+1</span><b>Блок</b></div><div><span>+1</span><b>Урок</b></div><div><span>+1</span><b>Страница</b></div><div><span>+1</span><b>Тест</b></div><div><span>+1</span><b>Книга</b></div><div><span>+1</span><b>Рабочий материал</b></div></div>'
+      )
+      + v99Card('',
+        '<h2>Текущий счёт</h2><div class="profile-score-grid"><div><span>Всего баллов</span><b>'+v99Fmt(total)+'</b></div><div><span>Страницы</span><b>'+v99Fmt(stats.pages)+'</b></div><div><span>Уроки</span><b>'+v99Fmt(stats.lessons)+'</b></div><div><span>Книги</span><b>'+v99Fmt(stats.readBooks)+'</b></div><div><span>Тесты</span><b>'+v99Fmt(stats.tests)+'</b></div><div><span>Рабочие материалы</span><b>'+v99Fmt(stats.homework)+'</b></div></div><p class="small">Баллы показывают активность исследования библиотеки. Понимание материала проверяется тестами, тренажёрами и практическими заданиями.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>'
+      ),
+      'profile'
+    );
+  }
+  v99BindGlobal('renderResearchPointsRulesV91', renderResearchRulesV99);
+  v99BindGlobal('renderPointsRulesV43', renderResearchRulesV99);
+  v99BindGlobal('renderPointsRulesV42', renderResearchRulesV99);
+  v99BindGlobal('renderPointsRulesV41', renderResearchRulesV99);
+  v99BindGlobal('renderProgressRulesV40', renderResearchRulesV99);
+
+  window.__ARCHITECTURE_PROFILE_STATS_V99 = {
+    version: window.APP_UI_VERSION_V99,
+    stats: v99ProfileStats,
+    workMaterials: 'counted by work_material:* events awarded when practice/homework block is opened'
+  };
+})();
+

@@ -5780,3 +5780,25 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
 .profile-done-v98 .done-grid-v98 b{font-size:24px!important;}
 .profile-done-v98 .profile-stat-legend-v97{display:none!important;}
 @media(max-width:420px){.profile-done-v98 .done-grid-v98{grid-template-columns:repeat(2,minmax(0,1fr))!important;}}
+
+
+/* v99 — компактное пояснение статистики профиля */
+.profile-stat-explain-v99{
+  margin-top:12px;
+  display:grid;
+  gap:8px;
+  font-size:12px;
+  line-height:1.45;
+  color:rgba(20,33,54,.72);
+}
+.profile-stat-explain-v99 p{
+  margin:0;
+}
+.done-grid-v99{
+  grid-template-columns:repeat(5,minmax(0,1fr));
+}
+@media (max-width: 520px){
+  .done-grid-v99{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
