@@ -5681,3 +5681,93 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
 .profile-done-v96 .done-grid-v96{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(min-width:720px){.profile-done-v96 .done-grid-v96{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:520px){.top100-progress-v96{grid-template-columns:1fr}.top100-nav-v96{grid-template-columns:1fr}}
+
+
+/* =====================================================
+   v97 — корректное нижнее меню и понятная профильная статистика
+   ===================================================== */
+.bottom-nav-v2.bottom-nav-v2-three,
+.bottom-nav-v2.v95-bottom-nav,
+.bottom-nav-v2.finance-bottom-nav-v83{
+  position:fixed!important;
+  left:50%!important;
+  right:auto!important;
+  bottom:0!important;
+  transform:translateX(-50%)!important;
+  z-index:40!important;
+  width:100%!important;
+  max-width:480px!important;
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:4px!important;
+  padding:8px 8px calc(10px + env(safe-area-inset-bottom))!important;
+  background:rgba(255,255,255,.96)!important;
+  border-top:1px solid var(--lego-border,#DDE5EF)!important;
+  box-shadow:0 -10px 28px rgba(7,27,53,.08)!important;
+  backdrop-filter:blur(16px)!important;
+}
+.bottom-nav-v2.bottom-nav-v2-three .bottom-item,
+.bottom-nav-v2.v95-bottom-nav .bottom-item,
+.bottom-nav-v2.finance-bottom-nav-v83 .bottom-item{
+  width:100%!important;
+  min-width:0!important;
+  justify-self:stretch!important;
+}
+.bottom-nav-v2.bottom-nav-v2-three .bottom-item b,
+.bottom-nav-v2.v95-bottom-nav .bottom-item b,
+.bottom-nav-v2.finance-bottom-nav-v83 .bottom-item b{
+  white-space:normal!important;
+  text-align:center!important;
+  line-height:1.12!important;
+}
+.profile-done-v97 .done-grid-v97{
+  gap:10px!important;
+}
+.profile-done-v97 .done-grid-v97>div{
+  min-height:118px;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:flex-start!important;
+}
+.profile-done-v97 .done-grid-v97 small{
+  display:block;
+  margin-top:7px;
+  color:var(--lego-gray-500,#7D8A99);
+  font-size:11px;
+  line-height:1.32;
+  font-weight:700;
+  text-transform:none;
+  letter-spacing:0;
+}
+.profile-stat-legend-v97{
+  margin-top:12px;
+  padding:13px;
+  border-radius:16px;
+  background:var(--lego-gray-100,#F6F8FC);
+  border:1px solid var(--lego-border,#DDE5EF);
+}
+.profile-stat-legend-v97 b{
+  display:block;
+  color:var(--lego-navy,#071B35);
+  margin-bottom:6px;
+}
+.profile-stat-legend-v97 p{
+  margin:0 0 8px;
+  font-size:13px;
+  line-height:1.45;
+  color:var(--lego-gray-700,#4D5B6B);
+}
+.profile-stat-legend-v97 ul{
+  margin:0;
+  padding-left:18px;
+}
+.profile-stat-legend-v97 li{
+  margin:6px 0;
+  font-size:13px;
+  line-height:1.42;
+  color:var(--lego-gray-700,#4D5B6B);
+}
+@media(max-width:420px){
+  .profile-done-v97 .done-grid-v97{grid-template-columns:1fr!important;}
+  .profile-done-v97 .done-grid-v97>div{min-height:auto;}
+}

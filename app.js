@@ -5980,7 +5980,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
    v91 — исследовательские баллы: 1 новое действие = 1 балл
    ===================================================== */
 (function installResearchPointsV91(){
-  window.APP_UI_VERSION_V91 = 'v94-trade-l02-homework-hard-fallback-20260630';
+  window.APP_UI_VERSION_V91 = 'v97-bottomnav-profile-stat-clarity-20260630';
   try { window.APP_UI_VERSION_V89 = window.APP_UI_VERSION_V91; } catch(e) {}
   try { if (typeof LEGO_V24_CACHE_VERSION !== 'undefined') LEGO_V24_CACHE_VERSION = window.APP_UI_VERSION_V91; } catch(e) {}
   try { contentVersionV24 = function(){ return window.APP_UI_VERSION_V91; }; window.contentVersionV24 = contentVersionV24; } catch(e) {}
@@ -6338,7 +6338,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
    v96 — Топ-100 книг для бизнеса: открытая библиотека вместо ежедневной механики
    ===================================================== */
 (function installTop100BusinessBooksV96(){
-  window.APP_UI_VERSION_V96 = 'v96-top100-business-books-and-profile-sync-20260630';
+  window.APP_UI_VERSION_V96 = 'v97-bottomnav-profile-stat-clarity-20260630';
   try { window.APP_UI_VERSION = window.APP_UI_VERSION_V96; } catch(e) {}
   var TOP100_TITLE_V96 = 'Топ-100 книг для бизнеса';
   var TOP100_SUBTITLE_V96 = 'Саммари книг и управленческие идеи для предпринимателя. Все книги открыты без таймера и ежедневных ограничений.';
@@ -6595,9 +6595,24 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
     return { points:points, opened:openedElements, modules:modulesCount, blocks:blocksCount, activities:activitiesCount, lessons:lessonCount, slides:slideCount, summaries:summaryCount, tests:testCount, homework:homeworkCount, readBooks:readBooks, pages:slideCount + summaryCount };
   }
   window.architectureProfileStatsV96 = v96ProfileStats;
+  function v97ProfileStatCell(label, value, hint, id){
+    var idAttr = id ? ' id="'+v96Esc(id)+'"' : '';
+    return '<div><span>'+v96Esc(label)+'</span><b'+idAttr+'>'+v96Format(value)+'</b><small>'+v96Esc(hint)+'</small></div>';
+  }
   window.doneSummaryHtml = function(){
     var stats = v96ProfileStats();
-    return v96Card('done-summary-card profile-done-compact-v43 profile-done-v44 profile-done-v96', '<div class="done-heading-v44"><div><p class="eyebrow">синхронизированная статистика</p><h2>Что уже открыто</h2></div><p>Учитываются все исследовательские события приложения: модули, уроки, слайды, саммари, тесты, рабочие материалы и книги.</p></div><div class="done-grid done-grid-v96"><div><span>Элементы</span><b>'+v96Format(stats.opened)+'</b></div><div><span>Страницы/экраны</span><b id="profile-pages-value-v44">'+v96Format(stats.pages)+'</b></div><div><span>Уроки</span><b>'+v96Format(stats.lessons)+'</b></div><div><span>Слайды</span><b>'+v96Format(stats.slides)+'</b></div><div><span>Саммари</span><b>'+v96Format(stats.summaries)+'</b></div><div><span>Тесты</span><b>'+v96Format(stats.tests)+'</b></div><div><span>Рабочие материалы</span><b>'+v96Format(stats.homework)+'</b></div><div><span>Книги прочитаны</span><b>'+v96Format(stats.readBooks)+'</b></div></div>');
+    var grid = '<div class="done-grid done-grid-v96 done-grid-v97">'
+      + v97ProfileStatCell('Новые элементы', stats.opened, 'Все уникальные открытия, за которые начислен исследовательский балл.')
+      + v97ProfileStatCell('Страницы и экраны', stats.pages, 'Слайды уроков, страницы саммари и страницы книг.', 'profile-pages-value-v44')
+      + v97ProfileStatCell('Уроки открыты', stats.lessons, 'Уроки, впервые открытые во всех доступных направлениях и модулях.')
+      + v97ProfileStatCell('Слайды уроков', stats.slides, 'Информационные слайды внутри уроков и финансового модуля.')
+      + v97ProfileStatCell('Страницы саммари', stats.summaries, 'Книжные экраны внутри уроков и страницы блока «Топ-100 книг для бизнеса».')
+      + v97ProfileStatCell('Тесты открыты', stats.tests, 'Факт первого открытия теста. Результат теста считается внутри конкретного урока.')
+      + v97ProfileStatCell('Рабочие материалы', stats.homework, 'ДЗ, таблицы, финтренажёры, шаблоны и другие рабочие ссылки.')
+      + v97ProfileStatCell('Книги прочитаны', stats.readBooks, 'Книги из «Топ-100», где открыта последняя страница саммари.')
+      + '</div>';
+    var legend = '<div class="profile-stat-legend-v97"><b>Как читать статистику</b><p>Статистика связана с исследовательскими баллами: новое открытое действие даёт 1 балл один раз за всё время. Закрытые блоки и повторные открытия повторно не начисляются.</p><ul><li><b>Элементы</b> — общий счёт новых действий: модули, блоки, виды деятельности, уроки, слайды, тесты, саммари и рабочие материалы.</li><li><b>Страницы и экраны</b> — фактически изученный объём контента: слайды уроков плюс страницы саммари и книг.</li><li><b>Рабочие материалы</b> — переходы к таблицам, ДЗ, тренажёрам и шаблонам.</li></ul></div>';
+    return v96Card('done-summary-card profile-done-compact-v43 profile-done-v44 profile-done-v96 profile-done-v97', '<div class="done-heading-v44"><div><p class="eyebrow">синхронизированная статистика</p><h2>Что уже открыто</h2></div><p>Учитываются действия по всей библиотеке бизнес-систем: модули, направления, уроки, слайды, саммари, тесты, рабочие материалы и книги.</p></div>'+grid+legend);
   };
   window.readingStatsV44 = function(){
     var s = v96ProfileStats();
