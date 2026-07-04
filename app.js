@@ -34,7 +34,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v110-additional-materials-direct-20260704";
+const APP_CACHE_VERSION = "v111-architecture-public-20260705";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -2885,34 +2885,20 @@ var ARCHITECTURE_UI_V35 = (function(){
     var query = new URLSearchParams(window.location.search || '');
     var hashText = String(window.location.hash || '').replace(/^#/, '');
     var hash = new URLSearchParams(hashText);
-    var tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : {};
-    var startParam = tg && tg.initDataUnsafe ? String(tg.initDataUnsafe.start_param || '') : '';
 
+    // Новый интерфейс АРХИТЕКТУРЫ теперь является основным для всех пользователей.
+    // Параметр ui=legacy оставлен только как аварийный ручной откат для проверки.
+    // Администрирование от этого не открывается: права по-прежнему проверяются через isAdminUser() и isAdminMode().
     var forcedLegacy = [query.get('ui'), hash.get('ui')].some(function(value){
       return String(value || '').toLowerCase() === 'legacy';
     });
+
     if (forcedLegacy) return false;
-
-    var previewValues = [
-      query.get('ui'),
-      query.get('startapp'),
-      query.get('tgWebAppStartParam'),
-      hash.get('ui'),
-      hash.get('startapp'),
-      hash.get('tgWebAppStartParam'),
-      startParam
-    ].map(function(value){ return String(value || '').toLowerCase(); });
-
-    var byPreviewParam = previewValues.includes('architecture');
-    var byAdminId = ['1762603232'].includes(String(tgUser.id || ''));
-    var byAdminUsername = ['prosvewenie2000'].includes(String(tgUser.username || '').replace('@','').toLowerCase());
-
-    // Надёжный предпросмотр: у владельца новая оболочка включается автоматически,
-    // даже если Telegram не передал startapp-параметр. Обычные ученики продолжают
-    // видеть прежнюю версию до общего запуска.
-    return byPreviewParam || byAdminId || byAdminUsername;
+    return true;
   }
-  catch(e) { return false; }
+  catch(e) {
+    return true;
+  }
 })();
 
 function architectureModeV35(){ return Boolean(ARCHITECTURE_UI_V35); }
