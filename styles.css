@@ -5804,119 +5804,37 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
 }
 
 
-/* v109 additional materials lesson styles */
-.additional-materials-entry-v106{
-  border-color:rgba(47,95,159,.28)!important;
-  background:linear-gradient(135deg,#fff,#F4F9FF)!important;
-}
-.additional-materials-entry-v106 em{
-  background:var(--lego-turquoise-soft)!important;
-  color:#086c63!important;
-}
-.additional-materials-hero-v106,.break-even-hero-v106,.break-even-table-hero-v106{
-  background:linear-gradient(135deg,var(--lego-navy),var(--lego-steel-2))!important;
-}
-.additional-section-v106 .section-heading-v35{
-  margin-bottom:12px;
-}
-.additional-list-v106{
-  gap:10px;
-}
-.additional-lesson-row-v106{
-  background:linear-gradient(180deg,#fff,#F8FBFF)!important;
-  border-color:rgba(47,95,159,.22)!important;
-}
-.break-even-preview-v106{
-  margin:8px 0 14px;
-}
-.break-even-preview-v106>div span{
-  background:var(--lego-steel-light);
-  color:var(--lego-steel-2);
-}
-.break-even-media-v106 img{
-  background:#fff;
-}
-.break-even-slide-text-v106 .slide-callouts-v87{
-  display:grid;
-  gap:10px;
-  margin-top:14px;
-}
-.break-even-slide-text-v106 .slide-callout-v87{
-  padding:12px 13px;
-  border-radius:16px;
-  border:1px solid var(--lego-border);
-  background:#F8FBFF;
-}
-.break-even-slide-text-v106 .slide-callout-v87 span{
-  display:block;
-  margin-bottom:5px;
-  font-size:11px;
-  text-transform:uppercase;
-  letter-spacing:.07em;
-  font-weight:900;
-  color:var(--lego-gray-500);
-}
-.break-even-slide-text-v106 .slide-callout-v87 p{
-  margin:0;
-  font-size:14px;
-  line-height:20px;
-}
-.break-even-slide-text-v106 .slide-callout-v87.thought{border-color:rgba(47,95,159,.25);background:#F3F8FE}
-.break-even-slide-text-v106 .slide-callout-v87.error{border-color:rgba(242,140,40,.32);background:var(--lego-orange-soft)}
-.break-even-slide-text-v106 .slide-callout-v87.conclusion{border-color:rgba(22,168,154,.32);background:var(--lego-turquoise-soft)}
-.break-even-steps-v106{
-  display:grid;
-  gap:10px;
-  margin:10px 0 14px;
-}
-.break-even-steps-v106>div{
-  padding:12px 13px;
-  border-radius:16px;
-  background:#F8FBFF;
-  border:1px solid var(--lego-border);
-}
-.break-even-steps-v106 b{
-  color:var(--lego-navy);
-}
-.break-even-steps-v106 p{
-  margin:5px 0 0;
-  font-size:14px;
-  line-height:20px;
-}
-@media(min-width:640px){
-  .break-even-slide-text-v106 .slide-callouts-v87{grid-template-columns:1fr 1fr 1fr;}
-}
-
-
 /* =====================================================
-   v107 — Additional material: Единое уравнение бизнеса
+   v110 — Additional materials direct integration
    ===================================================== */
-.business-equation-hero-v107,
-.business-equation-table-hero-v107{
-  background:linear-gradient(135deg,#071B35,#123D6B)!important;
+.additional-materials-entry-v110{
+  border-color:rgba(22,168,154,.42)!important;
+  background:linear-gradient(135deg,#fff,var(--lego-turquoise-soft))!important;
 }
-.business-equation-row-v107{
-  border-color:rgba(47,95,159,.28)!important;
-  background:linear-gradient(180deg,#FFFFFF,#F7FAFE)!important;
+.additional-materials-entry-v110 em{
+  background:var(--lego-turquoise-soft)!important;
+  color:#08796F!important;
 }
-.business-equation-row-v107 b{color:var(--lego-navy)!important;}
-.business-equation-preview-v107 div span{
-  background:var(--lego-steel-light)!important;
-  color:var(--lego-steel-2)!important;
+.additional-materials-hero-v110,.additional-lesson-hero-v110,.additional-table-hero-v110{
+  background:linear-gradient(135deg,var(--lego-navy),#12345b)!important;
 }
-.business-equation-slide-text-v107 .slide-callouts-v87,
-.business-equation-table-card-v107{
-  margin-top:12px;
-}
-.additional-media-v107 .image-missing-v2 small{
-  display:block;
-  margin-top:8px;
-  color:rgba(255,255,255,.72);
-  font-size:11px;
-  word-break:break-word;
-}
-
-
-/* v109 — видимость Дополнительных материалов */
-.additional-materials-entry-v109{border-color:rgba(22,168,154,.42)!important;background:linear-gradient(135deg,#fff,var(--lego-turquoise-soft))!important;}
-.additional-materials-entry-v109 em{background:var(--lego-turquoise-soft)!important;color:#08796F!important;}
+.additional-list-v110{display:grid;gap:10px;}
+.additional-preview-v110{display:grid;gap:10px;margin:12px 0;}
+.additional-preview-v110>div{display:grid;grid-template-columns:42px 1fr;gap:10px;align-items:start;padding:12px;border-radius:16px;background:var(--lego-gray-100);border:1px solid var(--lego-border);}
+.additional-preview-v110 span{display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:var(--lego-steel);color:#fff;font-weight:900;}
+.additional-preview-v110 b{display:block;color:var(--lego-navy);margin-bottom:4px;}
+.additional-preview-v110 p{margin:0;font-size:13px;line-height:1.45;}
+.additional-mini-stats-v110{margin:12px 0;}
+.additional-media-v110 img{display:block;width:100%;height:auto;background:#fff;}
+.additional-slide-text-v110 .slide-callouts-v87{display:grid;gap:10px;margin-top:12px;}
+.additional-slide-text-v110 .slide-callout-v87{border-radius:16px;border:1px solid var(--lego-border);padding:12px;background:#fff;}
+.additional-slide-text-v110 .slide-callout-v87 span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;margin-bottom:5px;color:var(--lego-gray-500);}
+.additional-slide-text-v110 .slide-callout-v87 p{margin:0;font-size:13px;line-height:1.45;}
+.additional-slide-text-v110 .slide-callout-v87.thought{border-color:rgba(47,95,159,.25);background:#F3F8FE;}
+.additional-slide-text-v110 .slide-callout-v87.error{border-color:rgba(242,140,40,.32);background:var(--lego-orange-soft);}
+.additional-slide-text-v110 .slide-callout-v87.conclusion{border-color:rgba(22,168,154,.32);background:var(--lego-turquoise-soft);}
+.additional-table-steps-v110{display:grid;gap:10px;margin:12px 0;}
+.additional-table-steps-v110>div{padding:12px;border-radius:16px;background:var(--lego-gray-100);border:1px solid var(--lego-border);}
+.additional-table-steps-v110 b{display:block;color:var(--lego-navy);margin-bottom:4px;}
+.additional-table-steps-v110 p{margin:0;font-size:13px;line-height:1.45;}
+@media(min-width:640px){.additional-slide-text-v110 .slide-callouts-v87{grid-template-columns:repeat(3,1fr);}}
