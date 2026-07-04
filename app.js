@@ -34,7 +34,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v105-break-even-additional-only-20260704";
+const APP_CACHE_VERSION = "v106-break-even-additional-materials-fixed-20260704";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -582,7 +582,8 @@ async function renderBook(){
 }
 /* removed obsolete duplicate function renderBookChallenge in v95 cleanup */
 function renderAdditionalMaterials(){
-  return renderBreakEvenAdditionalMaterialsV105();
+  if (typeof renderAdditionalMaterialsV106 === 'function') return renderAdditionalMaterialsV106();
+  shell(`${card('blue-card-v2', `<p class="eyebrow">дополнительные материалы</p><h1>Дополнительные материалы</h1><p>Материал загружается. Если карточка не появилась, обновите приложение.</p>`)}${card('', `<button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
 }
 function doneSummaryHtml() {
   const lessons = readyCoreLessons();
@@ -3553,7 +3554,7 @@ else installArchitectureObserverV35();
       {title:'Предпринимательские статьи',status:'скоро',action:'renderEntrepreneurArticlesV40()'},
       {title:'Прямые разборы',status:'скоро',action:'renderDirectReviewsV40()'},
       {title:'Что посмотреть',status:'скоро',action:'renderWatchV40()'},
-      {title:'Дополнительные материалы',status:'доступно',action:'renderAdditionalMaterials()'},
+      {title:'Дополнительные материалы',status:'скоро',action:'renderAdditionalMaterials()'},
       {title:'VIP уровень',status:'в разработке',action:'renderVipV40()'}
     ];
   }
@@ -5749,7 +5750,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
       ${mainCardV81('Предпринимательские статьи','Практические статьи о ситуациях, цифрах, решениях и последствиях.','скоро','renderEntrepreneurArticlesV40()','soon compact-card')}
       ${mainCardV81('Прямые разборы','Гарвардские и другие бизнес-кейсы с разбором вариантов решения.','скоро','renderDirectReviewsV40()','soon compact-card')}
       ${mainCardV81('Что посмотреть','Фильмы, интервью, лекции и видео с управленческими выводами.','скоро','renderWatchV40()','soon compact-card')}
-      ${mainCardV81('Дополнительные материалы','Практические уроки, таблицы и инструменты вне основного маршрута.','доступно','renderAdditionalMaterials()','active compact-card additional-open-v105')}
+      ${mainCardV81('Дополнительные материалы','Шаблоны, инструкции, документы и инструменты вне основных направлений.','скоро','renderAdditionalMaterials()','soon compact-card')}
       ${mainCardV81('VIP уровень','Расширенные разборы, инструменты и закрытые возможности.','в разработке','renderVipV40()','soon compact-card')}
     </div>`;
   };
@@ -6593,7 +6594,7 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
       + v96MainCard('Предпринимательские статьи','Практические статьи о ситуациях, цифрах, решениях и последствиях.','скоро','renderEntrepreneurArticlesV40()','soon compact-card')
       + v96MainCard('Прямые разборы','Гарвардские и другие бизнес-кейсы с разбором вариантов решения.','скоро','renderDirectReviewsV40()','soon compact-card')
       + v96MainCard('Что посмотреть','Фильмы, интервью, лекции и видео с управленческими выводами.','скоро','renderWatchV40()','soon compact-card')
-      + v96MainCard('Дополнительные материалы','Практические уроки, таблицы и инструменты вне основного маршрута.','доступно','renderAdditionalMaterials()','active compact-card additional-open-v105')
+      + v96MainCard('Дополнительные материалы','Шаблоны, инструкции, документы и инструменты вне основных направлений.','скоро','renderAdditionalMaterials()','soon compact-card')
       + v96MainCard('VIP уровень','Расширенные разборы, инструменты и закрытые возможности.','в разработке','renderVipV40()','soon compact-card')
       + '</div>';
   };
@@ -6611,7 +6612,7 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
         {title:'Предпринимательские статьи',status:'скоро',action:'renderEntrepreneurArticlesV40()'},
         {title:'Прямые разборы',status:'скоро',action:'renderDirectReviewsV40()'},
         {title:'Что посмотреть',status:'скоро',action:'renderWatchV40()'},
-        {title:'Дополнительные материалы',status:'доступно',action:'renderAdditionalMaterials()'},
+        {title:'Дополнительные материалы',status:'скоро',action:'renderAdditionalMaterials()'},
         {title:'VIP уровень',status:'в разработке',action:'renderVipV40()'}
       ];
     };
@@ -7036,210 +7037,287 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
 
 
 /* =====================================================
-   v105 — Дополнительные материалы: расчёт точки безубыточности
-   Внедрено в текущую рабочую версию без изменения финансового помощника,
-   Топ-100 книг, форума, профиля и торгового урока.
+   v106 — Дополнительные материалы: Расчёт точки безубыточности
+   Только добавляет рабочий материал, не меняет финансовый помощник, профиль,
+   форум, Топ-100 книг и уроки торговли.
    ===================================================== */
-const BREAK_EVEN_VERSION_V105 = 'v105-break-even-additional-only-20260704';
-const BREAK_EVEN_LESSON_CODE_V105 = 'ADD-BEP-01';
-const BREAK_EVEN_SHEET_URL_V105 = 'https://docs.google.com/spreadsheets/d/1z3rPU1YJhmfaGKZcXnKh4cEepwdmOP19/edit?gid=1853890209#gid=1853890209';
-const BREAK_EVEN_IMG_BASE_V105 = 'assets/additional/break_even/slides/';
+(function installBreakEvenAdditionalMaterialV106(){
+  window.APP_UI_VERSION_V106 = 'v106-break-even-additional-fixed-20260704';
+  try { if (typeof LEGO_V24_CACHE_VERSION !== 'undefined') LEGO_V24_CACHE_VERSION = window.APP_UI_VERSION_V106; } catch(e) {}
+  try { contentVersionV24 = function(){ return window.APP_UI_VERSION_V106; }; window.contentVersionV24 = contentVersionV24; } catch(e) {}
 
-function beEscV105(value){
-  if (typeof esc === 'function') return esc(value);
-  return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch]; });
-}
-function beCardV105(cls, html){ return typeof card === 'function' ? card(cls || '', html || '') : `<section class="card-v2 ${beEscV105(cls||'')}">${html || ''}</section>`; }
-function beShellV105(html, active){ return typeof shell === 'function' ? shell(html, active || 'home') : (document.getElementById('app').innerHTML = html); }
-function bePadV105(n){ return String(Number(n || 0)).padStart(3, '0'); }
-function beAwardV105(eventKey, eventType, payload){
+  const BEP_CODE = 'ADD-BEP-01';
+  const BEP_TABLE_URL = 'https://docs.google.com/spreadsheets/d/1z3rPU1YJhmfaGKZcXnKh4cEepwdmOP19/edit?gid=1853890209#gid=1853890209';
+  const BEP_SLIDES = [
+  {
+    "number": 1,
+    "title": "Главный вопрос точки безубыточности",
+    "main": "Сколько нужно продать, чтобы бизнес перестал работать в минус?",
+    "image": "assets/additional/break_even/slides/add_bep_001.png",
+    "descriptionHtml": "<h3>Слайд 1. Главный вопрос точки безубыточности</h3><p>Точка безубыточности отвечает на главный управленческий вопрос: какой минимальный объём продаж нужен, чтобы бизнес перестал работать в минус. Собственнику важно видеть не только желаемую выручку, но и финансовый порог, ниже которого бизнес начинает создавать убыток.</p><p>Ошибка начинается тогда, когда предприниматель смотрит только на остаток денег или делит все расходы на средний чек. Средний чек не равен прибыли: из каждой продажи сначала уходят переменные расходы — товар, материалы, сдельная оплата, комиссии, доставка, расходники.</p><p>Поэтому точка безубыточности считается через маржинальный доход. Бизнес выходит в ноль, когда маржинальный доход полностью покрывает постоянные расходы.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Бизнес выходит в ноль, когда маржинальный доход покрывает постоянные расходы.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Делить все расходы на средний чек и считать это точкой безубыточности.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Сначала нужно понять, сколько остаётся с каждой продажи после переменных затрат.</p></div></div>"
+  },
+  {
+    "number": 2,
+    "title": "Почему “выручка минус расходы” не подходит",
+    "main": "Точка безубыточности считается через маржинальный доход, а не через весь чек.",
+    "image": "assets/additional/break_even/slides/add_bep_002.png",
+    "descriptionHtml": "<h3>Слайд 2. Почему “выручка минус расходы” не подходит</h3><p>Грубый расчёт «все расходы разделить на средний чек» почти всегда искажает реальность. Клиент может заплатить 5 000 ₽, но бизнес не оставляет себе весь чек.</p><p>Из выручки уходят переменные расходы: закупка, расходники, комиссия мастера, эквайринг, доставка, упаковка, маркетплейс или сдельная оплата. Только остаток после этих затрат покрывает аренду, оклады, фиксированный маркетинг и управление.</p><p>Правильная цепочка такая: выручка минус переменные расходы равняется маржинальному доходу. Маржинальный доход минус постоянные расходы равняется прибыли.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Выручка сама по себе не покрывает постоянные расходы — их покрывает маржинальный доход.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Считать весь чек доступным для покрытия аренды, окладов и маркетинга.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Нужно отделять оборот от финансового вклада каждой продажи.</p></div></div>"
+  },
+  {
+    "number": 3,
+    "title": "Маржинальный доход",
+    "main": "Маржинальный доход показывает, сколько осталось после переменных расходов.",
+    "image": "assets/additional/break_even/slides/add_bep_003.png",
+    "descriptionHtml": "<h3>Слайд 3. Маржинальный доход</h3><p>Маржинальный доход показывает, сколько денег остаётся после расходов, которые напрямую связаны с продажами. Это ещё не чистая прибыль. Это сумма, из которой бизнес дальше покрывает аренду, оклады, фиксированный маркетинг, управление, сервисы и другие постоянные расходы.</p><p>Если маржинальный доход слабый, бизнесу нужно очень много выручки, чтобы выйти в ноль. Если маржинальный доход высокий, бизнес может покрыть постоянные расходы при меньшем обороте.</p><p>Поэтому анализ начинается с вопроса: сколько остаётся после переменных затрат. Без этого нельзя корректно посчитать точку безубыточности, запас прочности и плановую выручку для желаемой прибыли.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Маржинальный доход — топливо для покрытия постоянной базы бизнеса.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Путать маржинальный доход с чистой прибылью.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Если маржинальный доход слабый, точка безубыточности будет высокой.</p></div></div>"
+  },
+  {
+    "number": 4,
+    "title": "Маржинальность",
+    "main": "Маржинальность показывает, какая доля выручки остаётся после переменных расходов.",
+    "image": "assets/additional/break_even/slides/add_bep_004.png",
+    "descriptionHtml": "<h3>Слайд 4. Маржинальность</h3><p>Маржинальность показывает долю выручки, которая остаётся после переменных расходов. Если маржинальность равна 60%, значит из каждого рубля выручки около 60 копеек остаётся на покрытие постоянных расходов и прибыли.</p><p>Чем выше маржинальность, тем ниже точка безубыточности. Чем больше переменные расходы забирают из каждой продажи, тем больше оборота требуется для покрытия одной и той же постоянной базы.</p><p>Маржинальность нельзя брать “на глаз”. Если в бизнесе несколько товаров, услуг или направлений, нужно считать средневзвешенную маржинальность по структуре выручки.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Маржинальность показывает, какая часть выручки реально работает на покрытие постоянных расходов.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Использовать примерную маржу без проверки структуры продаж.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Точность точки безубыточности зависит от точности расчёта маржинальности.</p></div></div>"
+  },
+  {
+    "number": 5,
+    "title": "Главная формула точки безубыточности",
+    "main": "ТБ в выручке = Постоянные расходы / Маржинальность.",
+    "image": "assets/additional/break_even/slides/add_bep_005.png",
+    "descriptionHtml": "<h3>Слайд 5. Главная формула точки безубыточности</h3><p>Главная формула показывает минимальную выручку, при которой бизнес покрывает постоянные расходы и выходит в ноль. В этой точке прибыли ещё нет, но убытка уже нет.</p><p>Если постоянные расходы составляют 360 000 ₽, а маржинальность равна 60%, бизнесу нужно сделать 600 000 ₽ выручки. При такой выручке маржинальный доход составит 360 000 ₽ и полностью покроет постоянные расходы.</p><p>Формула универсальна для услуг, торговли, производства, общепита, логистики, онлайн-бизнеса и проектной модели. Но она работает только после правильного разделения расходов на переменные и постоянные.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Точка безубыточности — это постоянные расходы, делённые на долю маржинального дохода.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Применять формулу без правильного разделения расходов.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Сначала классификация расходов, потом формула.</p></div></div>"
+  },
+  {
+    "number": 6,
+    "title": "Переменные расходы",
+    "main": "Переменные расходы растут вместе с продажами.",
+    "image": "assets/additional/break_even/slides/add_bep_006.png",
+    "descriptionHtml": "<h3>Слайд 6. Переменные расходы</h3><p>Переменные расходы — это расходы, которые растут вместе с продажами. Если продаж стало больше, такие расходы тоже увеличиваются. Если продаж нет, они снижаются или исчезают.</p><p>В торговле это закупочная стоимость товара, упаковка, доставка, комиссии. В услугах — расходники и сдельная оплата специалиста. В производстве — сырьё, материалы, брак и прямая производственная работа. В логистике — топливо и рейсовые затраты.</p><p>Важно не относить в переменные расходы всё подряд. Оклад администратора, аренда или фиксированная CRM не становятся переменными только потому, что они оплачиваются каждый месяц.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Переменные расходы привязаны к объёму продаж.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Относить аренду или фиксированный оклад в переменные расходы.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Переменные расходы показывают, сколько бизнес теряет из каждого чека до покрытия постоянной базы.</p></div></div>"
+  },
+  {
+    "number": 7,
+    "title": "Постоянные расходы",
+    "main": "Постоянные расходы создают минимальную финансовую планку бизнеса.",
+    "image": "assets/additional/break_even/slides/add_bep_007.png",
+    "descriptionHtml": "<h3>Слайд 7. Постоянные расходы</h3><p>Постоянные расходы — это база бизнеса, которую нужно покрывать каждый период. Они есть даже тогда, когда продаж мало или они временно просели.</p><p>К постоянным расходам обычно относятся аренда, оклады, фиксированный маркетинг, бухгалтерия, сервисы, CRM, связь, банк, юридические услуги и управленческие расходы.</p><p>Чем выше постоянные расходы, тем выше точка безубыточности. Если постоянная база слишком тяжёлая, бизнесу приходится делать большой оборот только для выхода в ноль.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Постоянные расходы создают минимальную финансовую планку бизнеса.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Забывать управленческие расходы и труд собственника.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Снижая постоянную базу, бизнес снижает точку безубыточности.</p></div></div>"
+  },
+  {
+    "number": 8,
+    "title": "Расчёт точки безубыточности в единицах",
+    "main": "ТБ можно перевести из рублей в продажи, клиентов, процедуры, часы или заказы.",
+    "image": "assets/additional/break_even/slides/add_bep_008.png",
+    "descriptionHtml": "<h3>Слайд 8. Расчёт точки безубыточности в единицах</h3><p>Иногда собственнику удобнее видеть точку безубыточности не в выручке, а в количестве продаж, процедур, заказов, клиентов, рейсов или часов. Для этого нужно знать маржинальный доход с одной единицы.</p><p>Если процедура стоит 5 000 ₽, а переменные расходы на неё составляют 2 000 ₽, с каждой процедуры остаётся 3 000 ₽ маржинального дохода. При постоянных расходах 600 000 ₽ нужно 200 процедур, чтобы выйти в ноль.</p><p>Этот расчёт переводит финансовую задачу в язык расписания, продаж, загрузки, клиентов или производственного объёма.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Точку безубыточности можно перевести из денег в количество действий.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Делить постоянные расходы на цену, а не на маржинальный доход единицы.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Собственнику нужно понимать, сколько продаж, процедур или заказов реально требуется.</p></div></div>"
+  },
+  {
+    "number": 9,
+    "title": "Средневзвешенная маржинальность",
+    "main": "Если продуктов несколько, точку безубыточности считают через микс продаж.",
+    "image": "assets/additional/break_even/slides/add_bep_009.png",
+    "descriptionHtml": "<h3>Слайд 9. Средневзвешенная маржинальность</h3><p>Если у бизнеса несколько направлений, товаров или услуг, нельзя брать одну случайную маржу. Разные продукты могут давать разный вклад: один привлекает клиентов, другой создаёт прибыль, третий занимает ресурсы, но почти не зарабатывает.</p><p>Средневзвешенная маржинальность учитывает не только маржу каждого направления, но и его долю в общей выручке. Поэтому итоговая маржинальность бизнеса — это не среднее арифметическое, а взвешенная величина.</p><p>Изменение структуры продаж может менять точку безубыточности даже без изменения общей выручки.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Бизнес с разными продуктами нужно считать через микс.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Брать маржу самого прибыльного продукта и считать по ней весь бизнес.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Структура продаж влияет на точку безубыточности не меньше, чем общий оборот.</p></div></div>"
+  },
+  {
+    "number": 10,
+    "title": "Плановая выручка для желаемой прибыли",
+    "main": "Плановая выручка = (Постоянные расходы + Желаемая прибыль) / Маржинальность.",
+    "image": "assets/additional/break_even/slides/add_bep_010.png",
+    "descriptionHtml": "<h3>Слайд 10. Плановая выручка для желаемой прибыли</h3><p>Точка безубыточности показывает только уровень нуля. Но собственнику обычно нужен не ноль, а прибыль. Поэтому формулу можно расширить: к постоянным расходам добавляется желаемая прибыль.</p><p>Если постоянные расходы составляют 600 000 ₽, маржинальность 50%, а собственник хочет заработать 300 000 ₽ прибыли, бизнесу нужно сделать 1 800 000 ₽ выручки.</p><p>После расчёта нужно проверить, достижим ли такой объём с точки зрения рынка, мощности, команды, расписания, запасов и денежного цикла.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Плановая прибыль требует большего объёма, чем точка безубыточности.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Ставить желаемую прибыль без проверки реальной мощности бизнеса.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Цель по прибыли нужно переводить в выручку, клиентов и операционную нагрузку.</p></div></div>"
+  },
+  {
+    "number": 11,
+    "title": "Прибыльная и денежная точка безубыточности",
+    "main": "Прибыльная устойчивость и денежная устойчивость — разные вопросы.",
+    "image": "assets/additional/break_even/slides/add_bep_011.png",
+    "descriptionHtml": "<h3>Слайд 11. Прибыльная и денежная точка безубыточности</h3><p>В управленческой модели полезно разделять два вида точки безубыточности. Первая — прибыльная точка безубыточности. Она показывает, при какой выручке бизнес перестаёт быть убыточным по ОПиУ.</p><p>Вторая — денежная точка безубыточности. Она показывает, при каком уровне поступлений бизнес перестаёт сжигать деньги. В неё могут попадать платежи по кредитам, закупка оборудования, инвестиции, погашение долгов и другие денежные обязательства.</p><p>Эти точки могут отличаться. Бизнес может быть прибыльным по отчёту о прибылях и убытках, но испытывать кассовый разрыв из-за кредитов, запасов, дебиторки или крупных платежей.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Прибыльная устойчивость и денежная устойчивость — разные вопросы.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Считать, что прибыль по ОПиУ автоматически означает нормальную кассу.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Точку безубыточности нужно смотреть и по прибыли, и по деньгам.</p></div></div>"
+  },
+  {
+    "number": 12,
+    "title": "Денежные обязательства",
+    "main": "Денежная точка учитывает платежи, которые не всегда являются расходами.",
+    "image": "assets/additional/break_even/slides/add_bep_012.png",
+    "descriptionHtml": "<h3>Слайд 12. Денежные обязательства</h3><p>Денежные обязательства отличаются от обычных расходов. Например, тело кредита не является расходом в ОПиУ, но деньги из бизнеса оно забирает. Покупка оборудования может быть активом, но кассу она уменьшает сразу.</p><p>Поэтому для оценки денежной устойчивости нужно добавить отдельный cash-блок. Он помогает понять, какой объём поступлений нужен бизнесу, чтобы не просто быть прибыльным, но и не терять деньги на обязательных платежах.</p><p>Такой расчёт особенно важен для бизнеса с кредитами, инвестициями, закупками, ремонтом, оборудованием и отсрочками оплат.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Денежная точка учитывает платежи, которые не всегда являются расходами.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Не включать тело кредита и инвестиции в денежную устойчивость.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Касса требует отдельного контроля, даже если прибыль выглядит нормально.</p></div></div>"
+  },
+  {
+    "number": 13,
+    "title": "Пример расчёта бизнеса услуг",
+    "main": "Формула превращается в управленческий порог.",
+    "image": "assets/additional/break_even/slides/add_bep_013.png",
+    "descriptionHtml": "<h3>Слайд 13. Пример расчёта бизнеса услуг</h3><p>Разберём пример бизнеса услуг. За месяц бизнес заработал 1 200 000 ₽ выручки. Переменные расходы составили 474 000 ₽. После их вычета осталось 726 000 ₽ маржинального дохода.</p><p>Маржинальность равна 60,5%. Это означает, что из каждого рубля выручки после переменных расходов остаётся около 60 копеек. Постоянные расходы бизнеса составляют 570 000 ₽.</p><p>Точка безубыточности равна примерно 942 149 ₽ выручки. Если бизнес делает выручку выше этого уровня, он начинает получать прибыль. Если ниже — работает в убыток.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Пример показывает, как формула превращается в управленческий порог.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Смотреть только на выручку и не видеть структуру расходов.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Бизнес выше точки безубыточности, но нужно смотреть запас прочности и кассу.</p></div></div>"
+  },
+  {
+    "number": 14,
+    "title": "Запас прочности",
+    "main": "Точка безубыточности показывает порог, а запас прочности показывает устойчивость.",
+    "image": "assets/additional/break_even/slides/add_bep_014.png",
+    "descriptionHtml": "<h3>Слайд 14. Запас прочности</h3><p>Запас прочности показывает, насколько бизнес выше точки безубыточности. Если выручка бизнеса равна 1 200 000 ₽, а точка безубыточности — 942 149 ₽, запас прочности составляет около 257 851 ₽.</p><p>Этот показатель отвечает на вопрос: насколько может просесть выручка, прежде чем бизнес снова уйдёт в ноль или в убыток. Чем меньше запас прочности, тем опаснее сезонность, отмены, падение спроса или рост расходов.</p><p>Если запас слабый, бизнесу опасно увеличивать постоянные расходы, брать кредит или расширяться без проверки спроса.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Точка безубыточности показывает порог, а запас прочности показывает устойчивость.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Радоваться прибыли, не понимая, насколько она хрупкая.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Слабый запас прочности требует резерва, контроля расходов и осторожного роста.</p></div></div>"
+  },
+  {
+    "number": 15,
+    "title": "Какие рычаги меняют точку безубыточности",
+    "main": "Точка безубыточности меняется вместе с моделью бизнеса.",
+    "image": "assets/additional/break_even/slides/add_bep_015.png",
+    "descriptionHtml": "<h3>Слайд 15. Какие рычаги меняют точку безубыточности</h3><p>Точка безубыточности не является неизменной цифрой. Её можно снижать или повышать управленческими решениями. Основные рычаги — цена, переменные расходы, постоянные расходы, средний чек и структура продаж.</p><p>Если бизнес повышает маржинальность, точка безубыточности снижается. Это может происходить через рост цены, снижение закупочной стоимости, уменьшение сдельной доли, снижение комиссий или улучшение продуктового микса.</p><p>Если бизнес увеличивает постоянные расходы, точка безубыточности растёт. Новая аренда, оклады, кредитная нагрузка или фиксированный маркетинг должны проверяться через новый порог безубыточности.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Точка безубыточности меняется вместе с моделью бизнеса.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Считать ТБ один раз и использовать её месяцами без пересчёта.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>После изменения цены, расходов или команды нужно пересчитать точку безубыточности.</p></div></div>"
+  },
+  {
+    "number": 16,
+    "title": "Типовые ошибки в расчёте",
+    "main": "Формула точная только тогда, когда данные классифицированы правильно.",
+    "image": "assets/additional/break_even/slides/add_bep_016.png",
+    "descriptionHtml": "<h3>Слайд 16. Типовые ошибки в расчёте</h3><p>Точка безубыточности становится бесполезной, если исходные данные собраны неправильно. Самая частая ошибка — считать любые поступления выручкой. Кредит, вклад собственника, возврат старого долга и аванс клиента не должны автоматически попадать в выручку.</p><p>Вторая ошибка — неправильное разделение расходов. Переменные расходы должны расти вместе с продажами. Постоянные расходы должны отражать базу бизнеса. Если смешать эти блоки, маржинальность и точка безубыточности будут неверными.</p><p>Третья ошибка — смешивать прибыльную и денежную логику. Тело кредита, инвестиции и покупка оборудования могут сильно влиять на кассу, но не должны автоматически становиться расходами ОПиУ.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Формула точная только тогда, когда данные классифицированы правильно.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Пытаться получить точный результат из грязных вводных.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Перед расчётом нужно проверить смысл каждой суммы.</p></div></div>"
+  },
+  {
+    "number": 17,
+    "title": "Как устроена рабочая таблица",
+    "main": "Ученик заполняет вводные, а расчёты и график строятся автоматически.",
+    "image": "assets/additional/break_even/slides/add_bep_017.png",
+    "descriptionHtml": "<h3>Слайд 17. Как устроена рабочая таблица</h3><p>После теории ученик переходит к рабочей таблице. Таблица устроена так, чтобы сначала объяснить порядок работы, затем собрать вводные, посчитать точку безубыточности и показать результат на графике.</p><p>Основной рабочий лист — ввод данных. Там заполняются вид бизнеса, период, единица расчёта, выручка, средний чек, переменные расходы, постоянные расходы и денежные обязательства.</p><p>Расчётный лист и график считаются автоматически. Их не нужно редактировать руками. Пример помогает сверить логику заполнения.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Ученик заполняет вводные, а расчёты и график строятся автоматически.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Менять формулы на расчётном листе.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Работать нужно по инструкции и не ломать расчётные зоны.</p></div></div>"
+  },
+  {
+    "number": 18,
+    "title": "Практический порядок работы",
+    "main": "Таблица нужна не для красивого расчёта, а для управленческого решения.",
+    "image": "assets/additional/break_even/slides/add_bep_018.png",
+    "descriptionHtml": "<h3>Слайд 18. Практический порядок работы</h3><p>Перед заполнением таблицу нужно открыть и создать личную копию. Нельзя работать в исходном шаблоне, потому что он должен оставаться чистым для других пользователей. В Google Таблицах для этого используется путь: Файл → Создать копию.</p><p>После создания копии нужно идти строго по инструкции: выбрать период и единицу расчёта, ввести выручку, средний чек и желаемую прибыль, затем разделить расходы на переменные, постоянные и денежные обязательства.</p><p>Финальный результат — не только цифра точки безубыточности, а управленческий вывод: что нужно изменить в бизнесе, чтобы снизить порог, поднять маржу или укрепить денежную устойчивость.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Таблица нужна не для красивого расчёта, а для управленческого решения.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Заполнить цифры и не сделать вывод.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>После расчёта нужно выбрать действие: маржа, расходы, чек, микс продаж или денежные обязательства.</p></div></div>"
+  }
+];
+
+  function bepEsc(value){
+    if (typeof esc === 'function') return esc(value);
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; });
+  }
+  function bepCard(cls, html){ return typeof card === 'function' ? card(cls || '', html || '') : '<section class="card-v2 '+bepEsc(cls||'')+'">'+(html||'')+'</section>'; }
+  function bepShell(html, tab){ if (typeof shell === 'function') return shell(html, tab || 'home'); var root=document.getElementById('app'); if(root) root.innerHTML=html; }
+  function bepAward(key, type, payload){ try { if (typeof window.awardResearchPointOnceV91 === 'function') return window.awardResearchPointOnceV91(key, type, payload || {}); } catch(e) {} return null; }
+  function bepPad(n){ return String(Number(n||0)).padStart(3,'0'); }
+  function bepOpenUrl(url){
+    try { if (tg && typeof tg.openLink === 'function') return tg.openLink(url); } catch(e) {}
+    try { window.open(url, '_blank', 'noopener,noreferrer'); } catch(e) { location.href = url; }
+  }
+  function bepAssertAccess(){
+    try { if (typeof hasVerifiedAccessV32 === 'function' && !hasVerifiedAccessV32()) { if (typeof accessDenied === 'function') accessDenied('OPEN_FROM_TELEGRAM_REQUIRED'); return false; } } catch(e) {}
+    try { if (state && state.access === false) { if (typeof accessDenied === 'function') accessDenied('OPEN_FROM_TELEGRAM_REQUIRED'); return false; } } catch(e) {}
+    return true;
+  }
+  function bepBind(name, fn){ window[name] = fn; try { eval(name + ' = window["' + name + '"];'); } catch(e) {} }
+
+  function bepMedia(slide){
+    const image = slide.image || '';
+    return '<div class="media-counter">Слайд: '+slide.number+'/'+BEP_SLIDES.length+'</div>'+
+      '<div class="media-box-v2 break-even-media-v106"><img src="'+bepEsc(image)+'?v='+bepEsc(window.APP_UI_VERSION_V106)+'" data-label="Слайд" data-index="'+slide.number+'" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';"><div class="image-missing-v2" style="display:none"><b>Слайд '+slide.number+'</b><p>Иллюстрация будет добавлена после генерации изображения.</p></div></div>';
+  }
+  function bepNav(index){
+    const prevDisabled = index <= 0 ? 'disabled' : '';
+    const nextLabel = index >= BEP_SLIDES.length - 1 ? 'К таблице' : 'Далее';
+    const nextAction = index >= BEP_SLIDES.length - 1 ? 'renderBreakEvenTableV106()' : 'renderBreakEvenSlideV106('+(index+1)+')';
+    return '<div class="nav-panel-v2 nav-panel-v2-three break-even-nav-v106"><button class="btn secondary" onclick="renderBreakEvenIntroV106()">К материалу</button><button class="btn secondary" '+prevDisabled+' onclick="renderBreakEvenSlideV106('+(index-1)+')">Назад</button><button class="btn primary" onclick="'+nextAction+'">'+nextLabel+'</button></div>';
+  }
+
+  function renderBreakEvenIntro(){
+    if (!bepAssertAccess()) return;
+    bepAward('block:additional_materials', 'block_open', { block:'additional_materials' });
+    bepAward('lesson:' + BEP_CODE, 'lesson_open', { lessonCode:BEP_CODE, module:'additional_materials' });
+    bepShell(
+      bepCard('blue-card-v2 break-even-hero-v106', '<p class="eyebrow">дополнительные материалы</p><h1>Расчёт точки безубыточности в моём бизнесе</h1><p>18 слайдов теории, затем практическая таблица для самостоятельного расчёта.</p>')+
+      bepCard('break-even-intro-v106', '<h2>Что вы разберёте</h2><div class="content-preview-list-v40 break-even-preview-v106"><div><span>01</span><section><b>Формула точки безубыточности</b><p>Как постоянные расходы, переменные расходы и маржинальность связаны между собой.</p></section></div><div><span>02</span><section><b>Точка в выручке и единицах</b><p>Как перевести расчёт в клиентов, продажи, процедуры, часы или заказы.</p></section></div><div><span>03</span><section><b>Денежная устойчивость</b><p>Почему прибыльная ТБ и денежная ТБ могут отличаться.</p></section></div><div><span>04</span><section><b>Практическая таблица</b><p>Как создать копию таблицы и пройти расчёт по инструкции.</p></section></div></div><div class="grid-v2"><button class="btn primary" onclick="renderBreakEvenSlideV106(0)">Начать урок</button><button class="btn secondary" onclick="renderBreakEvenTableV106()">Открыть практическую таблицу</button><button class="btn secondary" onclick="renderAdditionalMaterials()">К дополнительным материалам</button></div>'),
+      'home'
+    );
+  }
+
+  function renderBreakEvenSlide(index){
+    if (!bepAssertAccess()) return;
+    const i = Math.max(0, Math.min(Number(index||0), BEP_SLIDES.length-1));
+    const slide = BEP_SLIDES[i];
+    bepAward('lesson:' + BEP_CODE, 'lesson_open', { lessonCode:BEP_CODE, module:'additional_materials' });
+    bepAward('slide:' + BEP_CODE + ':' + bepPad(slide.number), 'slide_open', { lessonCode:BEP_CODE, slideNo:slide.number, module:'additional_materials' });
+    bepShell(bepNav(i)+bepMedia(slide)+'<section class="slide-text-v2 break-even-slide-text-v106">'+slide.descriptionHtml+'</section>', 'home');
+  }
+
+  function renderBreakEvenTable(){
+    if (!bepAssertAccess()) return;
+    bepAward('work_material:' + BEP_CODE + ':break_even_table', 'work_material_open', { lessonCode:BEP_CODE, materialId:'break_even_table', label:'Таблица расчёта точки безубыточности', url:BEP_TABLE_URL, source:'additional_materials' });
+    bepShell(
+      bepCard('blue-card-v2 break-even-table-hero-v106', '<p class="eyebrow">практический инструмент</p><h1>Практическая таблица</h1><p>Сначала создайте личную копию файла, затем заполните таблицу по инструкции.</p>')+
+      bepCard('break-even-table-card-v106', '<h2>Порядок работы</h2><div class="break-even-steps-v106"><div><b>1. Откройте таблицу</b><p>Нажмите кнопку ниже и дождитесь загрузки Google Таблицы.</p></div><div><b>2. Создайте копию</b><p>В Google Таблицах выберите: <b>Файл → Создать копию</b>. Работайте только в своей копии.</p></div><div><b>3. Заполните вводные</b><p>Идите по листам таблицы по порядку. Не меняйте расчётные формулы.</p></div><div><b>4. Сформулируйте вывод</b><p>Определите, что делать: поднять маржу, снизить расходы, увеличить чек, изменить микс или проверить денежные обязательства.</p></div></div><div class="grid-v2"><button class="btn primary" onclick="openBreakEvenTableV106()">Открыть таблицу</button><button class="btn secondary" onclick="renderBreakEvenSlideV106(17)">Вернуться к уроку</button><button class="btn secondary" onclick="renderAdditionalMaterials()">К дополнительным материалам</button></div>'),
+      'home'
+    );
+  }
+  function openBreakEvenTable(){ bepAward('work_material:' + BEP_CODE + ':break_even_table', 'work_material_open', { lessonCode:BEP_CODE, materialId:'break_even_table', label:'Таблица расчёта точки безубыточности', url:BEP_TABLE_URL, source:'additional_materials' }); bepOpenUrl(BEP_TABLE_URL); }
+
+  function renderAdditionalMaterialsV106(){
+    if (!bepAssertAccess()) return;
+    bepAward('block:additional_materials', 'block_open', { block:'additional_materials' });
+    bepShell(
+      bepCard('blue-card-v2 additional-materials-hero-v106', '<p class="eyebrow">библиотека бизнес-систем</p><h1>Дополнительные материалы</h1><p>Отдельные уроки, инструменты и шаблоны, которые дополняют основной маршрут.</p>')+
+      bepCard('additional-section-v106', '<div class="section-heading-v35"><div><p class="eyebrow">финансы и учёт</p><h2>Практические инструменты</h2></div><p>Материалы можно открывать отдельно от основного маршрута.</p></div><div class="lesson-list-v2 additional-list-v106"><button class="lesson-row-v2 additional-lesson-row-v106" onclick="renderBreakEvenIntroV106()"><div><b>Расчёт точки безубыточности в моём бизнесе</b><p>18 слайдов теории · рабочая Google Таблица · инструкция для самостоятельного расчёта</p></div><span>→</span></button></div>')+
+      bepCard('', '<button class="btn secondary" onclick="renderHome()">На главную</button>'),
+      'home'
+    );
+  }
+
+  function additionalMainCard(title, text, status, action, cls){
+    const t = bepEsc(title), d = bepEsc(text), st = bepEsc(status || 'доступно');
+    return '<button class="track-card '+bepEsc(cls || '')+'" onclick="'+bepEsc(action || 'renderAdditionalMaterials()')+'"><b>'+t+'</b><p>'+d+'</p><em>'+st+'</em></button>';
+  }
+
+  const renderMainBlockBeforeV106 = window.renderMainBlockCard;
+  window.renderMainBlockCard = function(title, text, status, action, cls){
+    if (String(title || '').trim() === 'Дополнительные материалы') {
+      return additionalMainCard('Дополнительные материалы', text || 'Отдельные уроки, инструкции и практические инструменты вне основных направлений.', 'доступно', 'renderAdditionalMaterials()', String(cls || '').split('soon').join('active').split('disabled').join('') + ' additional-materials-entry-v106 compact-card');
+    }
+    return typeof renderMainBlockBeforeV106 === 'function' ? renderMainBlockBeforeV106.apply(this, arguments) : '';
+  };
+  try { renderMainBlockCard = window.renderMainBlockCard; } catch(e) {}
+
+  // Убираем блок из закрытого списка для ученика, не трогая остальные закрытые разделы.
   try {
-    if (typeof awardResearchPointOnceV91 === 'function') return awardResearchPointOnceV91(eventKey, eventType || 'research_event', payload || {});
-  } catch(e) {}
-  try {
-    const key = 'architecture_research_point_events_v1_local';
-    const map = JSON.parse(localStorage.getItem(key) || '{}') || {};
-    if (!map[eventKey]) {
-      map[eventKey] = { eventKey, eventType:eventType || 'research_event', points:1, payload:payload || {}, createdAt:new Date().toISOString() };
-      localStorage.setItem(key, JSON.stringify(map));
+    if (Array.isArray(window.studentLockedBlocksV41)) {
+      for (let i = window.studentLockedBlocksV41.length - 1; i >= 0; i--) {
+        if (String(window.studentLockedBlocksV41[i]).trim() === 'Дополнительные материалы') window.studentLockedBlocksV41.splice(i, 1);
+      }
     }
   } catch(e) {}
-  return null;
-}
-function beOpenUrlV105(url){
-  const target = String(url || '').trim();
-  if (!target || target === '#') { alert('Ссылка будет подключена позже.'); return; }
-  try { if (typeof tg !== 'undefined' && tg && typeof tg.openLink === 'function') tg.openLink(target); else window.open(target, '_blank', 'noopener,noreferrer'); }
-  catch(e) { window.open(target, '_blank', 'noopener,noreferrer'); }
-}
-const BREAK_EVEN_SLIDES_V105 = [
-    {
-      n:1,
-      title:'Главный вопрос точки безубыточности',
-      image: BREAK_EVEN_IMG_BASE_V105 + 'add_bep_001.png',
-      html:`<h3>Слайд 1. Главный вопрос точки безубыточности</h3><p>Точка безубыточности отвечает на вопрос: какой минимальный объём бизнеса нужен, чтобы перестать работать в минус. Собственнику важно видеть не только желаемую выручку, но и тот уровень, ниже которого бизнес начинает создавать убыток.</p><p>Бизнес выходит в ноль не тогда, когда «денег пришло много», а когда маржинальный доход покрывает постоянные расходы. Поэтому расчёт начинается не с кассы и не со среднего чека, а с понимания того, сколько остаётся после переменных затрат.</p><div class="slide-insight-v102"><b>Главная мысль:</b> бизнес выходит в ноль, когда маржинальный доход покрывает постоянные расходы.<br><b>Типовая ошибка:</b> делить все расходы на средний чек.<br><b>Управленческий вывод:</b> сначала нужно понять вклад продажи после переменных затрат.</div>`
-    },
-    {
-      n:2,
-      title:'Почему “выручка минус расходы” не подходит',
-      image: BREAK_EVEN_IMG_BASE_V105 + 'add_bep_002.png',
-      html:`<h3>Слайд 2. Почему «выручка минус расходы» не подходит</h3><p>Многие считают точку безубыточности слишком грубо: берут все расходы и делят на средний чек. Такой расчёт искажает реальность, потому что из каждого чека бизнес оставляет себе не всю сумму.</p><p>Если клиент заплатил 5 000 ₽, это ещё не значит, что бизнес заработал 5 000 ₽. Из этой суммы могут уйти товар, расходники, сдельная оплата, комиссия, доставка, эквайринг или маркетплейс.</p><div class="slide-insight-v102"><b>Главная мысль:</b> постоянные расходы покрывает не вся выручка, а маржинальный доход.<br><b>Типовая ошибка:</b> считать весь чек доступным для покрытия аренды, окладов и маркетинга.<br><b>Управленческий вывод:</b> нужно отделять оборот от финансового вклада.</div>`
-    },
-    {
-      n:3,
-      title:'Маржинальный доход',
-      image: BREAK_EVEN_IMG_BASE_V105 + 'add_bep_003.png',
-      html:`<h3>Слайд 3. Маржинальный доход</h3><p>Маржинальный доход показывает, сколько денег остаётся после расходов, напрямую связанных с продажами. Это ещё не чистая прибыль. Это сумма, из которой бизнес дальше покрывает аренду, оклады, фиксированный маркетинг, управление и сервисы.</p><p>Если маржинальный доход слабый, бизнесу нужно очень много выручки, чтобы выйти в ноль. Если маржинальный доход высокий, бизнес может покрыть постоянные расходы при меньшем обороте.</p><div class="slide-insight-v102"><b>Формула:</b> Маржинальный доход = Выручка − Переменные расходы.<br><b>Типовая ошибка:</b> путать маржинальный доход с чистой прибылью.<br><b>Управленческий вывод:</b> слабый маржинальный доход поднимает точку безубыточности.</div>`
-    },
-    {
-      n:4,
-      title:'Маржинальность',
-      image: BREAK_EVEN_IMG_BASE_V105 + 'add_bep_004.png',
-      html:`<h3>Слайд 4. Маржинальность</h3><p>Маржинальность показывает, какая доля выручки остаётся после переменных расходов. Если маржинальность равна 60%, это значит, что из каждого рубля выручки 60 копеек остаётся на покрытие постоянных расходов и прибыли.</p><p>Чем выше маржинальность, тем ниже точка безубыточности. Если переменные расходы забирают большую часть выручки, бизнесу нужно делать намного больше оборота для покрытия той же постоянной базы.</p><div class="slide-insight-v102"><b>Формула:</b> Маржинальность = Маржинальный доход / Выручка.<br><b>Типовая ошибка:</b> использовать примерную маржу «на глаз».<br><b>Управленческий вывод:</b> точность ТБ зависит от качества расчёта маржинальности.</div>`
-    },
-    {
-      n:5,
-      title:'Главная формула точки безубыточности',
-      image: BREAK_EVEN_IMG_BASE_V105 + 'add_bep_005.png',
-      html:`<h3>Слайд 5. Главная формула точки безубыточности</h3><p>Главная формула показывает минимальную выручку, при которой бизнес покрывает постоянные расходы и выходит в ноль. В этой точке прибыли ещё нет, но убытка уже нет.</p><p>Если постоянные расходы составляют 360 000 ₽, а маржинальность равна 60%, бизнесу нужно сделать 600 000 ₽ выручки. При такой выручке маржинальный доход составит 360 000 ₽ и покроет постоянные расходы.</p><div class="slide-insight-v102"><b>Формула:</b> ТБ в выручке = Постоянные расходы / Маржинальность.<br><b>Типовая ошибка:</b> применять формулу без разделения расходов.<br><b>Управленческий вывод:</b> сначала классификация, потом формула.</div>`
-    },
-    {
-      n:6,
-      title:'Переменные расходы',
-      image: BREAK_EVEN_IMG_BASE_V105 + 'add_bep_006.png',
-      html:`<h3>Слайд 6. Переменные расходы</h3><p>Переменные расходы — это расходы, которые растут вместе с продажами. Если продаж стало больше, такие расходы тоже увеличиваются. Если продаж нет, они резко снижаются или исчезают.</p><p>В торговле это закупка товара, упаковка и доставка. В услугах — расходники, сдельная оплата и комиссии агрегаторов. В производстве — сырьё, материалы, прямой труд и брак. В HoReCa — продукты, упаковка и часть производственного ФОТ.</p><div class="slide-insight-v102"><b>Главная мысль:</b> переменные расходы привязаны к объёму продаж.<br><b>Типовая ошибка:</b> относить аренду или фиксированный оклад в переменные расходы.<br><b>Управленческий вывод:</b> переменные расходы показывают, сколько бизнес теряет из каждого чека до покрытия постоянной базы.</div>`
-    },
-    {
-      n:7,
-      title:'Постоянные расходы',
-      image: BREAK_EVEN_IMG_BASE_V105 + 'add_bep_007.png',
-      html:`<h3>Слайд 7. Постоянные расходы</h3><p>Постоянные расходы — это база бизнеса, которую нужно покрывать каждый период. Они есть даже тогда, когда продаж мало или они временно просели.</p><p>К ним обычно относятся аренда, оклады, фиксированный маркетинг, бухгалтерия, CRM, связь, банк, юридические услуги и управленческие расходы. Чем выше постоянная база, тем выше точка безубыточности.</p><div class="slide-insight-v102"><b>Главная мысль:</b> постоянные расходы создают минимальную финансовую планку бизнеса.<br><b>Типовая ошибка:</b> забывать управленческие расходы и труд собственника.<br><b>Управленческий вывод:</b> снижая постоянную базу, бизнес снижает точку безубыточности.</div>`
-    },
-    {
-      n:8,
-      title:'Точка безубыточности в единицах',
-      image: BREAK_EVEN_IMG_BASE_V105 + 'add_bep_008.png',
-      html:`<h3>Слайд 8. Точка безубыточности в единицах</h3><p>Иногда собственнику удобнее видеть точку безубыточности не в выручке, а в количестве продаж, процедур, заказов, клиентов, рейсов или часов. Для этого нужно знать маржинальный доход с одной единицы.</p><p>Если процедура стоит 5 000 ₽, а переменные расходы на неё составляют 2 000 ₽, с каждой процедуры остаётся 3 000 ₽ маржинального дохода. При постоянных расходах 600 000 ₽ нужно 200 процедур, чтобы выйти в ноль.</p><div class="slide-insight-v102"><b>Формула:</b> ТБ в единицах = Постоянные расходы / (Цена − Переменные расходы на единицу).<br><b>Типовая ошибка:</b> делить постоянные расходы на цену, а не на вклад единицы.<br><b>Управленческий вывод:</b> финансовая цель должна переводиться в продажи, визиты, часы или заказы.</div>`
-    },
-    {
-      n:9,
-      title:'Средневзвешенная маржинальность',
-      image: BREAK_EVEN_IMG_BASE_V105 + 'add_bep_009.png',
-      html:`<h3>Слайд 9. Средневзвешенная маржинальность</h3><p>Если у бизнеса несколько товаров, услуг или направлений, нельзя брать одну случайную маржу. Разные продукты могут давать разный вклад: один создаёт поток, другой прибыль, третий занимает ресурс, но почти не зарабатывает.</p><p>Для такой модели используется средневзвешенная маржинальность. Она учитывает не только маржу каждого направления, но и его долю в общей выручке.</p><div class="slide-insight-v102"><b>Пример:</b> 50% × 70% + 30% × 50% + 20% × 30% = 56%.<br><b>Типовая ошибка:</b> считать весь бизнес по марже самого прибыльного продукта.<br><b>Управленческий вывод:</b> изменение структуры продаж меняет точку безубыточности даже без изменения общей выручки.</div>`
-    },
-    {
-      n:10,
-      title:'Плановая выручка для желаемой прибыли',
-      image: BREAK_EVEN_IMG_BASE_V105 + 'add_bep_010.png',
-      html:`<h3>Слайд 10. Плановая выручка для желаемой прибыли</h3><p>Точка безубыточности показывает только уровень нуля. Но собственнику обычно нужен не ноль, а прибыль. Поэтому к постоянным расходам добавляется желаемая прибыль.</p><p>Если постоянные расходы составляют 600 000 ₽, маржинальность 50%, а собственник хочет заработать 300 000 ₽ прибыли, бизнесу нужно сделать 1 800 000 ₽ выручки.</p><div class="slide-insight-v102"><b>Формула:</b> Плановая выручка = (Постоянные расходы + Желаемая прибыль) / Маржинальность.<br><b>Типовая ошибка:</b> ставить желаемую прибыль без проверки мощности бизнеса.<br><b>Управленческий вывод:</b> прибыль нужно переводить в выручку, клиентов и операционную нагрузку.</div>`
-    },
-    {
-      n:11,
-      title:'Прибыльная и денежная точка безубыточности',
-      image: BREAK_EVEN_IMG_BASE_V105 + 'add_bep_011.png',
-      html:`<h3>Слайд 11. Прибыльная и денежная точка безубыточности</h3><p>В управленческой модели полезно разделять два вида точки безубыточности. Прибыльная точка показывает, при какой выручке бизнес перестаёт быть убыточным по ОПиУ.</p><p>Денежная точка показывает, при каком уровне поступлений бизнес перестаёт сжигать деньги. В неё могут попадать платежи по кредитам, закупка оборудования, инвестиции, погашение долгов и другие денежные обязательства.</p><div class="slide-insight-v102"><b>Главная мысль:</b> прибыльная устойчивость и денежная устойчивость — разные вопросы.<br><b>Типовая ошибка:</b> считать прибыль по ОПиУ гарантией нормальной кассы.<br><b>Управленческий вывод:</b> ТБ нужно смотреть и по прибыли, и по деньгам.</div>`
-    },
-    {
-      n:12,
-      title:'Денежные обязательства',
-      image: BREAK_EVEN_IMG_BASE_V105 + 'add_bep_012.png',
-      html:`<h3>Слайд 12. Денежные обязательства</h3><p>Денежные обязательства отличаются от обычных расходов. Тело кредита не является расходом в ОПиУ, но деньги из бизнеса оно забирает. Покупка оборудования может быть активом, но кассу она уменьшает сразу.</p><p>Для оценки денежной устойчивости нужен отдельный cash-блок. Он показывает, какой объём поступлений нужен бизнесу, чтобы не просто быть прибыльным, но и не терять деньги на обязательных платежах.</p><div class="slide-insight-v102"><b>Формула:</b> Денежная ТБ = (Постоянные расходы + Денежные обязательства) / Маржинальность.<br><b>Типовая ошибка:</b> не включать тело кредита и инвестиции в денежную устойчивость.<br><b>Управленческий вывод:</b> касса требует отдельного контроля.</div>`
-    },
-    {
-      n:13,
-      title:'Пример расчёта бизнеса услуг',
-      image: BREAK_EVEN_IMG_BASE_V105 + 'add_bep_013.png',
-      html:`<h3>Слайд 13. Пример расчёта бизнеса услуг</h3><p>За месяц бизнес заработал 1 200 000 ₽ выручки. Переменные расходы составили 474 000 ₽. После их вычета осталось 726 000 ₽ маржинального дохода.</p><p>Маржинальность равна 60,5%. Постоянные расходы составляют 570 000 ₽. Точка безубыточности такой модели равна примерно 942 149 ₽ выручки.</p><div class="slide-insight-v102"><b>Главная мысль:</b> пример превращает формулу в управленческий порог.<br><b>Типовая ошибка:</b> смотреть только на выручку и не видеть структуру расходов.<br><b>Управленческий вывод:</b> бизнес выше ТБ, но нужно смотреть запас прочности и кассу.</div>`
-    },
-    {
-      n:14,
-      title:'Запас прочности',
-      image: BREAK_EVEN_IMG_BASE_V105 + 'add_bep_014.png',
-      html:`<h3>Слайд 14. Запас прочности</h3><p>Запас прочности показывает, насколько бизнес выше точки безубыточности. Если выручка равна 1 200 000 ₽, а точка безубыточности — 942 149 ₽, запас прочности составляет около 257 851 ₽.</p><p>Этот показатель отвечает на вопрос: насколько может просесть выручка, прежде чем бизнес снова уйдёт в ноль или убыток. Чем меньше запас, тем опаснее сезонность, отмены, падение спроса или рост расходов.</p><div class="slide-insight-v102"><b>Формулы:</b> Запас в ₽ = Выручка − ТБ; Запас в % = Запас / Выручка.<br><b>Типовая ошибка:</b> радоваться прибыли, не понимая её хрупкость.<br><b>Управленческий вывод:</b> слабый запас требует резерва и осторожного роста.</div>`
-    },
-    {
-      n:15,
-      title:'Рычаги, которые меняют точку безубыточности',
-      image: BREAK_EVEN_IMG_BASE_V105 + 'add_bep_015.png',
-      html:`<h3>Слайд 15. Рычаги, которые меняют точку безубыточности</h3><p>Точка безубыточности не является неизменной цифрой. Её меняют цена, переменные расходы, постоянные расходы, средний чек и структура продаж.</p><p>Если бизнес повышает маржинальность, точка безубыточности снижается. Если бизнес увеличивает постоянные расходы, точка безубыточности растёт. Поэтому новые оклады, аренда, кредит и фиксированный маркетинг должны проверяться через новый порог безубыточности.</p><div class="slide-insight-v102"><b>Главная мысль:</b> ТБ меняется вместе с моделью бизнеса.<br><b>Типовая ошибка:</b> считать ТБ один раз и использовать её месяцами.<br><b>Управленческий вывод:</b> после изменения цены, расходов или команды нужно пересчитать ТБ.</div>`
-    },
-    {
-      n:16,
-      title:'Типовые ошибки в расчёте',
-      image: BREAK_EVEN_IMG_BASE_V105 + 'add_bep_016.png',
-      html:`<h3>Слайд 16. Типовые ошибки в расчёте</h3><p>Точка безубыточности становится бесполезной, если исходные данные собраны неправильно. Самая частая ошибка — считать любые поступления выручкой. Кредит, вклад собственника, возврат старого долга и аванс клиента не должны автоматически попадать в выручку.</p><p>Вторая ошибка — неправильное разделение расходов. Третья — смешение прибыльной и денежной логики: тело кредита, инвестиции и покупка оборудования влияют на кассу, но не должны автоматически становиться расходами ОПиУ.</p><div class="slide-insight-v102"><b>Главная мысль:</b> формула точна только при правильной классификации данных.<br><b>Типовая ошибка:</b> получать точный результат из грязных вводных.<br><b>Управленческий вывод:</b> перед расчётом нужно проверить смысл каждой суммы.</div>`
-    },
-    {
-      n:17,
-      title:'Как устроена рабочая таблица',
-      image: BREAK_EVEN_IMG_BASE_V105 + 'add_bep_017.png',
-      html:`<h3>Слайд 17. Как устроена рабочая таблица</h3><p>После теории ученик переходит к рабочей таблице. Таблица устроена так, чтобы сначала объяснить порядок работы, затем собрать вводные, посчитать точку безубыточности и показать результат на графике.</p><p>Основной рабочий лист — ввод данных. Расчётный лист считается автоматически. Отдельный пример помогает сверить логику заполнения, а график показывает точку пересечения выручки и расходов.</p><div class="slide-insight-v102"><b>Главная мысль:</b> ученик заполняет вводные, а расчёты строятся автоматически.<br><b>Типовая ошибка:</b> менять формулы на расчётном листе.<br><b>Управленческий вывод:</b> работать нужно по инструкции и не ломать расчётные зоны.</div>`
-    },
-    {
-      n:18,
-      title:'Практический порядок работы',
-      image: BREAK_EVEN_IMG_BASE_V105 + 'add_bep_018.png',
-      html:`<h3>Слайд 18. Практический порядок работы</h3><p>Перед заполнением таблицу нужно открыть и создать личную копию. Нельзя работать в исходном шаблоне, потому что он должен оставаться чистым для других пользователей. В Google Таблицах путь такой: «Файл → Создать копию».</p><p>После создания копии нужно идти строго по инструкции: выбрать период, ввести выручку и средний чек, разнести переменные и постоянные расходы, добавить денежные обязательства, посмотреть расчёт, график и сформулировать вывод.</p><div class="slide-insight-v102"><b>Главная мысль:</b> таблица нужна не для красивого расчёта, а для управленческого решения.<br><b>Типовая ошибка:</b> заполнить цифры и не сделать вывод.<br><b>Управленческий вывод:</b> после расчёта выбрать действие: поднять маржу, снизить постоянные расходы, увеличить чек, изменить микс или проверить денежные обязательства.</div>`
-    }
-  ];
 
+  // Финальный список дополнительных блоков на главной: меняем только статус Дополнительных материалов.
+  window.secondaryBlocksHtmlV40 = function(){
+    const top100Title = window.TOP100_TITLE_V96 || 'Топ-100 книг для бизнеса';
+    const forumReady = Boolean(typeof forumVisibleInNavigationV38 === 'function' && forumVisibleInNavigationV38() && typeof window.renderBusinessForum === 'function');
+    const forumStatus = forumReady ? ((typeof isAdminMode === 'function' && isAdminMode()) ? 'тестирование' : 'доступно') : 'в подготовке';
+    const forumClass = forumReady ? 'active' : 'soon';
+    function cardFn(title, text, status, action, cls){ return typeof mainCardV81 === 'function' ? mainCardV81(title, text, status, action, cls) : window.renderMainBlockCard(title, text, status, action, cls); }
+    return '<div class="secondary-track-grid-v22 architecture-secondary-tracks-v40">'
+      + cardFn('Бизнес-форум','Вопросы по системам, обсуждение практических ситуаций и обмен опытом участников.',forumStatus,'openForumBlockV40()',forumClass + ' compact-card')
+      + cardFn(top100Title,'Открытая библиотека саммари: книги можно читать в любом порядке, без таймера и ежедневных ограничений.','доступно','renderBookChallenge()','active books100-entry compact-card top100-entry-v96')
+      + cardFn('Газета','Новости бизнеса и приложения в формате цифровых газетных выпусков.','скоро','renderNewspaperV40()','soon compact-card')
+      + cardFn('Предпринимательские статьи','Практические статьи о ситуациях, цифрах, решениях и последствиях.','скоро','renderEntrepreneurArticlesV40()','soon compact-card')
+      + cardFn('Прямые разборы','Гарвардские и другие бизнес-кейсы с разбором вариантов решения.','скоро','renderDirectReviewsV40()','soon compact-card')
+      + cardFn('Что посмотреть','Фильмы, интервью, лекции и видео с управленческими выводами.','скоро','renderWatchV40()','soon compact-card')
+      + cardFn('Дополнительные материалы','Расчёт точки безубыточности и практические инструменты вне основного маршрута.','доступно','renderAdditionalMaterials()','active compact-card additional-materials-entry-v106')
+      + cardFn('VIP уровень','Расширенные разборы, инструменты и закрытые возможности.','в разработке','renderVipV40()','soon compact-card')
+      + '</div>';
+  };
 
-function renderBreakEvenAdditionalMaterialsV105(){
-  beAwardV105('block:additional_materials', 'block_open', { block:'additional_materials' });
-  const html = `
-    ${beCardV105('blue-card-v2 additional-hero-v102 additional-hero-v105', `<p class="eyebrow">дополнительные материалы</p><h1>Дополнительные материалы</h1><p>Практические уроки, инструменты и таблицы, которые можно проходить отдельно от основного маршрута.</p>`)}
-    ${beCardV105('', `<h2>Финансы и учёт</h2><div class="additional-list-v102 additional-list-v105"><button class="additional-material-card-v102 additional-material-card-v105" onclick="renderBreakEvenHubV105()"><span>ТБ</span><div><b>Расчёт точки безубыточности в моём бизнесе</b><p>18 слайдов теории, затем рабочая таблица для самостоятельного расчёта.</p><em>доступно · 18 страниц · 1 рабочий материал</em></div></button></div>`)}
-    ${beCardV105('', `<h2>Скоро</h2><div class="list-clean"><div><b>Финансовые коэффициенты</b><p>Ликвидность, устойчивость, маржинальность и диагностика бизнеса.</p></div><div><b>Платёжный календарь</b><p>Практический инструмент для контроля кассовых разрывов.</p></div></div><button class="btn secondary" onclick="renderHome()">На главную</button>`)}
-  `;
-  beShellV105(html, 'home');
-}
-function renderBreakEvenHubV105(){
-  beAwardV105('lesson:' + BREAK_EVEN_LESSON_CODE_V105, 'lesson_open', { lessonCode:BREAK_EVEN_LESSON_CODE_V105, module:'additional_materials', title:'Расчёт точки безубыточности в моём бизнесе' });
-  const html = `
-    ${beCardV105('blue-card-v2 bep-hub-v102 bep-hub-v105', `<p class="eyebrow">практический урок</p><h1>Расчёт точки безубыточности в моём бизнесе</h1><p>Урок объясняет, как определить минимальную выручку, количество продаж и денежный порог, при котором бизнес перестаёт работать в минус.</p>`)}
-    ${beCardV105('', `<h2>Как устроен материал</h2><div class="list-clean"><div><b>1. Теория</b><p>18 страниц: маржинальный доход, маржинальность, постоянные и переменные расходы, ТБ в выручке, ТБ в единицах, денежная ТБ и запас прочности.</p></div><div><b>2. Практическая таблица</b><p>После урока открывается Google Таблица. Её нужно скопировать себе и заполнить по инструкции.</p></div><div><b>3. Управленческий вывод</b><p>Финальный результат — не просто цифра ТБ, а решение: что менять в цене, марже, расходах, чеке, миксе или денежной нагрузке.</p></div></div><div class="grid-v2"><button class="btn primary" onclick="startBreakEvenSlidesV105()">Начать урок</button><button class="btn secondary" onclick="renderBreakEvenTableV105()">Открыть практическую таблицу</button><button class="btn secondary" onclick="renderAdditionalMaterials()">К дополнительным материалам</button></div>`)}
-  `;
-  beShellV105(html, 'home');
-}
-function startBreakEvenSlidesV105(){
-  localStorage.setItem('architecture_bep_slide_index_v105', '0');
-  renderBreakEvenSlideV105(0);
-}
-function renderBreakEvenSlideV105(index){
-  const max = BREAK_EVEN_SLIDES_V105.length;
-  const i = Math.max(0, Math.min(Number(index || 0), max - 1));
-  const slide = BREAK_EVEN_SLIDES_V105[i];
-  localStorage.setItem('architecture_bep_slide_index_v105', String(i));
-  beAwardV105('lesson:' + BREAK_EVEN_LESSON_CODE_V105, 'lesson_open', { lessonCode:BREAK_EVEN_LESSON_CODE_V105, module:'additional_materials' });
-  beAwardV105('slide:' + BREAK_EVEN_LESSON_CODE_V105 + ':' + bePadV105(slide.n), 'slide_open', { lessonCode:BREAK_EVEN_LESSON_CODE_V105, slideNo:slide.n, module:'additional_materials' });
-  const prevDisabled = i === 0 ? 'disabled' : '';
-  const nextText = i === max - 1 ? 'К таблице' : 'Далее';
-  const nextAction = i === max - 1 ? 'renderBreakEvenTableV105()' : `renderBreakEvenSlideV105(${i + 1})`;
-  const img = `<img src="${slide.image}?v=${BREAK_EVEN_VERSION_V105}" alt="${beEscV105(slide.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="image-missing-v2" style="display:none"><b>Слайд ${slide.n}</b><p>Иллюстрация будет добавлена после генерации изображения.</p></div>`;
-  const html = `
-    <div class="nav-panel-v2 nav-panel-v2-three"><button class="btn secondary" onclick="renderBreakEvenHubV105()">К уроку</button><button class="btn secondary" ${prevDisabled} onclick="renderBreakEvenSlideV105(${i - 1})">Назад</button><button class="btn primary" onclick="${nextAction}">${nextText}</button></div>
-    <div class="media-counter">Расчёт точки безубыточности · страница ${slide.n}/${max}</div>
-    <div class="media-box-v2 bep-media-v102 bep-media-v105">${img}</div>
-    <section class="slide-text-v2 bep-slide-text-v102 bep-slide-text-v105">${slide.html}</section>
-  `;
-  beShellV105(html, 'home');
-}
-function renderBreakEvenTableV105(){
-  beAwardV105('lesson:' + BREAK_EVEN_LESSON_CODE_V105, 'lesson_open', { lessonCode:BREAK_EVEN_LESSON_CODE_V105, module:'additional_materials' });
-  beAwardV105('work_material:' + BREAK_EVEN_LESSON_CODE_V105 + ':break_even_table', 'work_material_open', {
-    lessonCode:BREAK_EVEN_LESSON_CODE_V105,
-    materialId:'break_even_table',
-    materialType:'google_sheet',
-    title:'Таблица расчёта точки безубыточности',
-    countSource:'additional_material_table_block_open'
-  });
-  const html = `
-    ${beCardV105('blue-card-v2 bep-table-hero-v102 bep-table-hero-v105', `<p class="eyebrow">практическая таблица</p><h1>Таблица расчёта точки безубыточности</h1><p>Теперь нужно открыть таблицу, создать личную копию и заполнить её по инструкции.</p>`)}
-    ${beCardV105('', `<h2>Как пользоваться таблицей</h2><div class="list-clean"><div><b>1. Откройте таблицу</b><p>Нажмите кнопку ниже. Таблица откроется в Google Sheets.</p></div><div><b>2. Создайте личную копию</b><p>В Google Таблицах выберите: <b>Файл → Создать копию</b>. Работать нужно только в своей копии.</p></div><div><b>3. Идите по инструкции</b><p>Сначала откройте лист инструкции, затем заполните вводные данные, посмотрите расчёт, пример и график.</p></div><div><b>4. Не меняйте расчётные формулы</b><p>Заполняйте только поля ввода. Расчётные листы и график должны считаться автоматически.</p></div><div><b>5. Сделайте управленческий вывод</b><p>После расчёта зафиксируйте: какая ТБ получилась, какой запас прочности, что нужно изменить в модели бизнеса.</p></div></div><div class="grid-v2"><button class="btn primary" onclick="openBreakEvenTableV105()">Открыть таблицу</button><button class="btn secondary" onclick="renderBreakEvenSlideV105(17)">Вернуться к последнему слайду</button><button class="btn secondary" onclick="renderAdditionalMaterials()">К дополнительным материалам</button></div>`)}
-  `;
-  beShellV105(html, 'home');
-}
-function openBreakEvenTableV105(){
-  // Рабочий материал уже засчитан при открытии блока таблицы. Клик по кнопке повторно статистику не увеличивает.
-  beOpenUrlV105(BREAK_EVEN_SHEET_URL_V105);
-}
+  try {
+    drawerItemsV40 = function(){
+      const top100Title = window.TOP100_TITLE_V96 || 'Топ-100 книг для бизнеса';
+      const forumStatus = (typeof forumReadyForCurrentModeV40 === 'function' && forumReadyForCurrentModeV40()) ? 'доступно' : 'в подготовке';
+      return [
+        {title:'Я предприниматель',status:'доступно',action:'renderLearning()'},
+        {title:'Нет своего бизнеса',status:'скоро',action:'renderNoBusinessV40()'},
+        {title:'Я сотрудник',status:'скоро',action:'renderEmployeeRouteV40()'},
+        {title:'Бизнес-форум',status:forumStatus,action:'openForumBlockV40()'},
+        {title:top100Title,status:'доступно',action:'renderBookChallenge()'},
+        {title:'Газета',status:'скоро',action:'renderNewspaperV40()'},
+        {title:'Предпринимательские статьи',status:'скоро',action:'renderEntrepreneurArticlesV40()'},
+        {title:'Прямые разборы',status:'скоро',action:'renderDirectReviewsV40()'},
+        {title:'Что посмотреть',status:'скоро',action:'renderWatchV40()'},
+        {title:'Дополнительные материалы',status:'доступно',action:'renderAdditionalMaterials()'},
+        {title:'VIP уровень',status:'в разработке',action:'renderVipV40()'}
+      ];
+    };
+    window.drawerItemsV40 = drawerItemsV40;
+  } catch(e) {}
+
+  bepBind('renderAdditionalMaterials', renderAdditionalMaterialsV106);
+  bepBind('renderBreakEvenIntroV106', renderBreakEvenIntro);
+  bepBind('renderBreakEvenSlideV106', renderBreakEvenSlide);
+  bepBind('renderBreakEvenTableV106', renderBreakEvenTable);
+  bepBind('openBreakEvenTableV106', openBreakEvenTable);
+
+  window.__BREAK_EVEN_ADDITIONAL_V106 = { version: window.APP_UI_VERSION_V106, slides: BEP_SLIDES.length, tableUrl: BEP_TABLE_URL };
+})();
