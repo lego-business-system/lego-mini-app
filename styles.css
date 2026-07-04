@@ -5802,3 +5802,9 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
     grid-template-columns:repeat(2,minmax(0,1fr));
   }
 }
+
+
+/* =====================================================
+   v105 — Дополнительные материалы: расчёт точки безубыточности
+   ===================================================== */
+.additional-list-v105{display:grid;gap:10px;margin-top:10px}.additional-material-card-v105{width:100%;display:grid;grid-template-columns:54px 1fr;gap:12px;align-items:center;text-align:left;padding:14px;border-radius:18px;background:#fff;border:1px solid var(--lego-border,#DDE5EF);box-shadow:0 8px 20px rgba(7,27,53,.05)}.additional-material-card-v105 span{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:var(--lego-yellow-soft,#FFF3C8);color:var(--lego-navy,#071B35);font-size:18px;font-weight:950}.additional-material-card-v105 b{display:block;color:var(--lego-navy,#071B35);font-size:16px;line-height:1.2;margin-bottom:5px}.additional-material-card-v105 p{margin:0 0 7px;font-size:13px;line-height:1.35;color:var(--lego-gray-700,#4D5B6B)}.additional-material-card-v105 em{display:inline-flex;padding:6px 9px;border-radius:999px;background:var(--lego-steel-light,#E7F0FA);color:var(--lego-steel,#2F5F9F);font-size:11px;font-weight:900;font-style:normal}.bep-slide-text-v105 .slide-insight-v102{margin:14px 0 0;padding:13px 14px;border-radius:16px;background:var(--lego-yellow-soft,#FFF3C8);border:1px solid rgba(246,195,67,.55);color:var(--lego-navy,#071B35);font-size:14px;line-height:1.5}.bep-slide-text-v105 .slide-insight-v102 b{color:var(--lego-navy,#071B35)}.bep-media-v105{min-height:190px}.bep-table-hero-v105 p,.bep-hub-v105 p,.additional-hero-v105 p{max-width:680px}@media(max-width:420px){.additional-material-card-v105{grid-template-columns:44px 1fr;padding:12px}.additional-material-card-v105 span{width:44px;height:44px;font-size:15px}}
