@@ -5888,3 +5888,32 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
 @media(min-width:640px){
   .break-even-slide-text-v106 .slide-callouts-v87{grid-template-columns:1fr 1fr 1fr;}
 }
+
+
+/* =====================================================
+   v107 — Additional material: Единое уравнение бизнеса
+   ===================================================== */
+.business-equation-hero-v107,
+.business-equation-table-hero-v107{
+  background:linear-gradient(135deg,#071B35,#123D6B)!important;
+}
+.business-equation-row-v107{
+  border-color:rgba(47,95,159,.28)!important;
+  background:linear-gradient(180deg,#FFFFFF,#F7FAFE)!important;
+}
+.business-equation-row-v107 b{color:var(--lego-navy)!important;}
+.business-equation-preview-v107 div span{
+  background:var(--lego-steel-light)!important;
+  color:var(--lego-steel-2)!important;
+}
+.business-equation-slide-text-v107 .slide-callouts-v87,
+.business-equation-table-card-v107{
+  margin-top:12px;
+}
+.additional-media-v107 .image-missing-v2 small{
+  display:block;
+  margin-top:8px;
+  color:rgba(255,255,255,.72);
+  font-size:11px;
+  word-break:break-word;
+}

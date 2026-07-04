@@ -34,7 +34,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v106-break-even-additional-materials-fixed-20260704";
+const APP_CACHE_VERSION = "v108-business-equation-google-sheet-20260704";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -7042,7 +7042,9 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
    форум, Топ-100 книг и уроки торговли.
    ===================================================== */
 (function installBreakEvenAdditionalMaterialV106(){
-  window.APP_UI_VERSION_V106 = 'v106-break-even-additional-fixed-20260704';
+  window.APP_UI_VERSION_V106 = 'v108-business-equation-google-sheet-20260704';
+  window.APP_UI_VERSION_V107 = 'v108-business-equation-google-sheet-20260704';
+  window.APP_UI_VERSION_V108 = 'v108-business-equation-google-sheet-20260704';
   try { if (typeof LEGO_V24_CACHE_VERSION !== 'undefined') LEGO_V24_CACHE_VERSION = window.APP_UI_VERSION_V106; } catch(e) {}
   try { contentVersionV24 = function(){ return window.APP_UI_VERSION_V106; }; window.contentVersionV24 = contentVersionV24; } catch(e) {}
 
@@ -7239,12 +7241,205 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
   }
   function openBreakEvenTable(){ bepAward('work_material:' + BEP_CODE + ':break_even_table', 'work_material_open', { lessonCode:BEP_CODE, materialId:'break_even_table', label:'Таблица расчёта точки безубыточности', url:BEP_TABLE_URL, source:'additional_materials' }); bepOpenUrl(BEP_TABLE_URL); }
 
+
+
+  const EQ_CODE = 'ADD-EQ-01';
+  const EQ_TABLE_URL = 'https://docs.google.com/spreadsheets/d/14NophgCw5e8DhOFR3RzhQgqGg6yYZ1KZ/edit?gid=1795302417#gid=1795302417';
+  const EQ_SLIDES = [
+  {
+    "number": 1,
+    "title": "Зачем нужно единое уравнение бизнеса",
+    "main": "Бизнес нужно считать по свободному денежному потоку, а не только по выручке.",
+    "image": "assets/additional/business_equation/slides/add_eq_001.png",
+    "descriptionHtml": "<h3>Слайд 1. Зачем нужно единое уравнение бизнеса</h3><p>Единое уравнение бизнеса нужно не для красивой математики. Оно нужно, чтобы собственник видел бизнес как систему, которая превращает спрос в свободный денежный поток. В бизнесе важен не только объём продаж, но и то, сколько денег остаётся после ограничений, расходов, налогов, оборотного капитала, инвестиций и риска.</p><p>Формула показывает, почему высокая выручка не всегда означает сильный бизнес. Спрос может быть высоким, но мощность может ограничивать выполнение. Маржа может быть хорошей, но расходы, налоги, оборотный капитал и инвестиции могут почти полностью съедать результат.</p><p>Именно поэтому урок начинается с управленческой логики: спрос превращается в оплату, оплата — в выполненную работу, выполненная работа — в маржу, а маржа должна пережить всю финансовую нагрузку бизнеса.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Бизнес нужно считать по свободному денежному потоку, а не только по выручке.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Считать, что рост продаж автоматически означает рост финансовой силы.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Собственник должен видеть всю цепочку от спроса до свободных денег.</p></div></div>"
+  },
+  {
+    "number": 2,
+    "title": "Полная логика формулы",
+    "main": "Формула считает всю денежную силу бизнес-системы.",
+    "image": "assets/additional/business_equation/slides/add_eq_002.png",
+    "descriptionHtml": "<h3>Слайд 2. Полная логика формулы</h3><p>Полная формула складывает свободные денежные потоки всех периодов. В каждом периоде сначала считается реальный объём, который бизнес может выполнить. Затем этот объём превращается в выручку и маржу. После этого из результата вычитаются постоянные расходы, расходы на рост, налоги, оборотный капитал и инвестиции.</p><p>В конце к сумме периодов добавляется чистая финальная часть: остаточная стоимость бизнеса плюс деньги минус долги. Это нужно, если собственник оценивает не только один месяц, а будущую ценность бизнеса.</p><p>Так формула соединяет операционную часть, финансовую часть и стоимость бизнеса. Она показывает не одну цифру, а систему причин, которые приводят к денежному результату.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Формула считает не один показатель, а всю денежную силу бизнес-системы.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Смотреть только на один месяц и не учитывать то, что останется в бизнесе.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Бизнес оценивается через периоды, риск, активы, деньги и долги.</p></div></div>"
+  },
+  {
+    "number": 3,
+    "title": "Формула как управленческая цепочка",
+    "main": "Денежный результат начинается с операционной цепочки.",
+    "image": "assets/additional/business_equation/slides/add_eq_003.png",
+    "descriptionHtml": "<h3>Слайд 3. Формула как управленческая цепочка</h3><p>Формула начинается не с денег, а с потока. Поток показывает количество входящих возможностей: заявок, посетителей, лидов, гостей, заказов или запросов. Но поток сам по себе ещё не создаёт результат.</p><p>Дальше поток проходит через конверсию и повторяемость. После этого бизнес сравнивает потенциальный спрос с мощностью. Это ключевой момент: бизнес не может выполнить больше, чем позволяют люди, оборудование, склад, кабинеты, маршруты или процессы.</p><p>Только после определения реального объёма можно переходить к среднему чеку, марже, расходам, налогам и свободному денежному потоку.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Денежный результат начинается с операционной цепочки, а не с финансовой строки.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Считать поток выручкой.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Сначала нужно понять, сколько бизнес реально способен выполнить.</p></div></div>"
+  },
+  {
+    "number": 4,
+    "title": "Математические символы человеческим языком",
+    "main": "Формула читается как управленческая инструкция.",
+    "image": "assets/additional/business_equation/slides/add_eq_004.png",
+    "descriptionHtml": "<h3>Слайд 4. Математические символы человеческим языком</h3><p>Математические символы в формуле нужны только для компактной записи управленческой логики. Сигма означает сложить результаты всех периодов. Индекс t показывает конкретный месяц, квартал или год. T показывает последний период расчёта.</p><p>Функция min означает, что нужно взять меньшее значение. Именно она защищает расчёт от иллюзии: если спрос способен дать 108 процедур, а мощность позволяет выполнить только 100, считать нужно 100.</p><p>Также важно правильно переводить проценты в коэффициенты: 30% — это 0,30, 70% — это 0,70, а 2% — это 0,02. Ошибка в процентах сразу ломает весь расчёт.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Формула читается как управленческая инструкция, а не как академическая математика.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Подставлять проценты как 30, 70 или 2.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Перед расчётом нужно привести все показатели к правильному формату.</p></div></div>"
+  },
+  {
+    "number": 5,
+    "title": "Поток, конверсия и повторяемость",
+    "main": "Поток становится объёмом только после конверсии и повторяемости.",
+    "image": "assets/additional/business_equation/slides/add_eq_005.png",
+    "descriptionHtml": "<h3>Слайд 5. Поток, конверсия и повторяемость</h3><p>Поток показывает входящий спрос за период. Это могут быть заявки, звонки, посетители, лиды, заказы, бронирования или запросы. Но поток ещё не является оплатой.</p><p>Конверсия показывает, какая часть потока стала оплатой или подписанным заказом. Повторяемость показывает, сколько продаж, визитов, заказов или процедур приходится на одного платящего клиента.</p><p>В примере 300 заявок, конверсия 30% и повторяемость 1,2 дают 108 потенциальных процедур. Но это ещё не значит, что бизнес выполнит все 108 процедур: дальше нужно проверить мощность.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Поток превращается в потенциальный объём только после конверсии и повторяемости.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Считать все заявки будущими продажами.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Нужно управлять не только количеством входящих, но и переходом в оплату.</p></div></div>"
+  },
+  {
+    "number": 6,
+    "title": "Мощность и ограничение через min()",
+    "main": "Бизнес зарабатывает по меньшему из спроса и мощности.",
+    "image": "assets/additional/business_equation/slides/add_eq_006.png",
+    "descriptionHtml": "<h3>Слайд 6. Мощность и ограничение через min()</h3><p>Мощность показывает, сколько бизнес реально может выполнить без перегруза. В услугах это кабинеты, специалисты, рабочие часы и длительность услуги. В торговле это склад, кассы, продавцы и наличие товара. В производстве — станки, смены, сырьё и производственный цикл.</p><p>В примере спрос после продаж способен дать 108 процедур, но мощность ограничена 100. Поэтому реальный объём для расчёта — 100 процедур.</p><p>Дополнительный спрос без расширения мощности не создаст дополнительный результат. Он может даже ухудшить качество, сроки, клиентский опыт и повторяемость.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Бизнес зарабатывает не по спросу, а по меньшему из спроса и мощности.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Планировать выручку выше фактической мощности.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Рост продаж бесполезен, если бизнес не способен выполнить рост.</p></div></div>"
+  },
+  {
+    "number": 7,
+    "title": "Средний чек и выручка",
+    "main": "Выручка показывает масштаб, но не свободные деньги.",
+    "image": "assets/additional/business_equation/slides/add_eq_007.png",
+    "descriptionHtml": "<h3>Слайд 7. Средний чек и выручка</h3><p>После определения реального объёма можно посчитать выручку. В примере бизнес способен выполнить 100 процедур. Средний чек составляет 4 000 ₽. Значит, выручка за период равна 400 000 ₽.</p><p>Но эта сумма ещё не показывает финансовую силу бизнеса. Из неё нужно убрать прямые переменные затраты через маржу, затем постоянные расходы, расходы на рост, налоги, оборотный капитал и инвестиции.</p><p>Выручка важна как показатель масштаба. Но управленческий результат начинается только после того, как собственник видит, сколько из этой выручки доживает до свободного денежного потока.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Выручка показывает масштаб продаж, но не показывает свободный денежный результат.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Радоваться обороту без расчёта маржи и вычетов.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>После выручки нужно сразу переходить к марже.</p></div></div>"
+  },
+  {
+    "number": 8,
+    "title": "Маржа и валовая прибыль",
+    "main": "Валовая прибыль ближе к реальности, но это ещё не свободный поток.",
+    "image": "assets/additional/business_equation/slides/add_eq_008.png",
+    "descriptionHtml": "<h3>Слайд 8. Маржа и валовая прибыль</h3><p>Маржа показывает, какая часть выручки остаётся после прямых переменных затрат. В услугах это могут быть выплаты специалистам, расходники и комиссии. В торговле — себестоимость товара, логистика и комиссии. В производстве — материалы, упаковка, сдельная оплата и часть производственных затрат.</p><p>В примере маржа составляет 70%, то есть 0,70. При 100 процедурах и среднем чеке 4 000 ₽ валовая прибыль равна 280 000 ₽.</p><p>Это уже ближе к реальности, чем выручка, но это всё ещё не свободный денежный поток. Из валовой прибыли дальше нужно вычесть постоянную и инвестиционную нагрузку периода.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Валовая прибыль показывает результат после прямых затрат, но до всей денежной нагрузки.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Считать валовую прибыль чистым результатом собственника.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Дальше нужно проверить, переживает ли маржа все вычеты периода.</p></div></div>"
+  },
+  {
+    "number": 9,
+    "title": "Пять вычетов после валовой прибыли",
+    "main": "Свободный поток появляется только после всех вычетов периода.",
+    "image": "assets/additional/business_equation/slides/add_eq_009.png",
+    "descriptionHtml": "<h3>Слайд 9. Пять вычетов после валовой прибыли</h3><p>После валовой прибыли бизнес сталкивается с денежной нагрузкой периода. В примере таких блоков пять: постоянные расходы, расходы на рост, налоги, рост оборотного капитала и инвестиции.</p><p>Сумма вычетов составляет 265 000 ₽. Именно она объясняет, почему при выручке 400 000 ₽ и валовой прибыли 280 000 ₽ свободных денег остаётся очень мало.</p><p>Формула полезна тем, что не даёт результату “исчезнуть” в общей массе расходов. Она показывает, какой именно блок съедает маржу и где нужно искать ограничение.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Свободный денежный поток появляется только после всех вычетов периода.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Забывать налоги, оборотный капитал или инвестиции.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Собственник должен видеть не только маржу, но и всю денежную нагрузку.</p></div></div>"
+  },
+  {
+    "number": 10,
+    "title": "Свободный денежный поток до риска",
+    "main": "Ключевой показатель — сколько свободных денег остаётся после всей системы.",
+    "image": "assets/additional/business_equation/slides/add_eq_010.png",
+    "descriptionHtml": "<h3>Слайд 10. Свободный денежный поток до риска</h3><p>Свободный денежный поток периода — это результат, который остаётся после валовой прибыли, расходов, налогов, оборотного капитала и инвестиций. Это не то же самое, что бухгалтерская прибыль. Это управленческий денежный результат.</p><p>В примере бизнес продал на 400 000 ₽, создал 280 000 ₽ валовой прибыли, но после всех вычетов свободными до риска осталось только 15 000 ₽.</p><p>Это главный промежуточный итог расчёта. Он показывает, что бизнес может выглядеть нормальным по обороту и марже, но оставлять собственнику очень тонкий денежный результат.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Бизнес может выглядеть нормальным по выручке, но иметь очень тонкий свободный поток.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Считать бизнес сильным только по продажам.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Ключевой показатель — сколько свободных денег остаётся после всей системы.</p></div></div>"
+  },
+  {
+    "number": 11,
+    "title": "Риск и время",
+    "main": "Будущие деньги менее надёжны, чем деньги сейчас.",
+    "image": "assets/additional/business_equation/slides/add_eq_011.png",
+    "descriptionHtml": "<h3>Слайд 11. Риск и время</h3><p>Риск нужен не для ежедневной кассы, а для оценки будущих денег. Деньги сейчас надёжнее денег позже, потому что за время до получения денег могут измениться спрос, команда, расходы, конкуренция, долги, налоги и качество управления.</p><p>В примере риск равен 2% за месяц. Период один, поэтому расчёт небольшой: 15 000 / 1,02 = 14 706 ₽. Если периодов будет больше, каждый будущий период будет делиться на свой коэффициент риска.</p><p>Так формула показывает не просто ожидаемый поток, а поток с поправкой на риск и время. Это особенно важно, когда собственник оценивает несколько будущих периодов или стоимость бизнеса как актива.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Будущие деньги менее надёжны, чем деньги сейчас.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Считать будущий результат таким же ценным, как текущий.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Риск должен снижать оценку будущего потока.</p></div></div>"
+  },
+  {
+    "number": 12,
+    "title": "Остаточная стоимость, деньги и долги",
+    "main": "Бизнес оценивается не только по потоку периода, но и по тому, что останется после него.",
+    "image": "assets/additional/business_equation/slides/add_eq_012.png",
+    "descriptionHtml": "<h3>Слайд 12. Остаточная стоимость, деньги и долги</h3><p>После суммы периодов в полной формуле добавляется финальная часть. Она показывает, что останется в бизнесе в конце горизонта: остаточная стоимость бизнеса, деньги и долги. Это важно, если собственник оценивает не один месяц, а бизнес как актив.</p><p>В примере финальная часть равна нулю, потому что задача — показать расчёт одного месяца. Но в реальной модели здесь могут быть оборудование, клиентская база, склад, деньги на счетах, кредиты и обязательства.</p><p>Если у бизнеса есть сильные активы и деньги, финальная часть может усилить оценку. Если у бизнеса много долгов, итоговая ценность может быть ниже суммы периодических потоков.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Бизнес оценивается не только по потоку периода, но и по тому, что останется после него.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Забывать долги и активы в конце горизонта.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Финальная стоимость может усилить или ослабить общий результат.</p></div></div>"
+  },
+  {
+    "number": 13,
+    "title": "Заполненный пример целиком",
+    "main": "Пример показывает путь от спроса до итоговой денежной ценности.",
+    "image": "assets/additional/business_equation/slides/add_eq_013.png",
+    "descriptionHtml": "<h3>Слайд 13. Заполненный пример целиком</h3><p>Теперь вся логика собирается в один пример. Входящий поток составляет 300 заявок. Конверсия — 30%, повторяемость — 1,2, мощность — 100 процедур. Средний чек составляет 4 000 ₽, маржа — 70%.</p><p>После расчёта бизнес создаёт 400 000 ₽ выручки и 280 000 ₽ валовой прибыли. Но после постоянных расходов, расходов на рост, налогов, оборотного капитала и инвестиций свободный поток до риска составляет только 15 000 ₽.</p><p>После поправки на риск итог равен 14 706 ₽. Эта цифра не является всей картиной. Её нужно читать вместе с цепочкой причин, которые к ней привели.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Пример показывает путь от спроса до итоговой денежной ценности.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Смотреть только на первые строки расчёта.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Итог нужно читать вместе со всей цепочкой причин.</p></div></div>"
+  },
+  {
+    "number": 14,
+    "title": "Расшифровка результата на бизнес-языке",
+    "main": "Итог формулы показывает не только результат, но и причину результата.",
+    "image": "assets/additional/business_equation/slides/add_eq_014.png",
+    "descriptionHtml": "<h3>Слайд 14. Расшифровка результата на бизнес-языке</h3><p>Итог формулы нужно читать не как сухую цифру, а как управленческую картину. В примере бизнес не слабый по спросу: поток есть, конверсия есть, повторяемость даёт потенциал. Но бизнес упирается в мощность и почти полностью теряет валовую прибыль на вычетах.</p><p>Жёсткий вывод такой: бизнес продаёт на 400 000 ₽, но свободными после всех вычетов остаётся только 15 000 ₽ до риска. Главная зона контроля — не “ещё больше заявок любой ценой”, а мощность, расходы, оборотный капитал, инвестиции и качество маржи.</p><p>Так формула помогает собственнику не просто увидеть итог, а понять, какой участок системы требует решения.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Итог формулы показывает не только результат, но и причину результата.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Видеть 14 706 ₽ как просто “маленькую прибыль”.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Нужно искать ограничение, которое съедает денежный результат.</p></div></div>"
+  },
+  {
+    "number": 15,
+    "title": "Типовые ошибки при использовании формулы",
+    "main": "Сложная формула не спасает от неправильных вводных.",
+    "image": "assets/additional/business_equation/slides/add_eq_015.png",
+    "descriptionHtml": "<h3>Слайд 15. Типовые ошибки при использовании формулы</h3><p>Формула становится опасной, если в неё подставлены неправильные данные. Самая частая ошибка — подставить проценты как 30, 70 или 2 вместо 0,30, 0,70 и 0,02. Вторая ошибка — считать выручку прибылью.</p><p>Также нельзя игнорировать мощность. Если спрос даёт 108 процедур, а мощность только 100, расчёт должен брать 100. Нельзя одновременно считать маржу в процентах и в рублях. Нельзя забывать оборотный капитал, инвестиции, долги и риск.</p><p>Перед расчётом нужно проверить единицу результата, период, источник данных, проценты, маржу, мощность и денежные вычеты. Без этого формула создаст видимость точности.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Сложная формула не спасает от неправильных вводных.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Получить точный расчёт из неверной классификации.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Перед расчётом нужно проверить смысл каждого показателя.</p></div></div>"
+  },
+  {
+    "number": 16,
+    "title": "Маржа в процентах и маржа в рублях",
+    "main": "Маржу можно считать в процентах или в рублях, но не двумя способами сразу.",
+    "image": "assets/additional/business_equation/slides/add_eq_016.png",
+    "descriptionHtml": "<h3>Слайд 16. Маржа в процентах и маржа в рублях</h3><p>В формуле можно считать маржу двумя способами. Первый способ — через процент маржи. Тогда реальный объём умножается на средний чек и на маржу в процентах. Второй способ — через маржу в рублях на единицу. Тогда реальный объём умножается сразу на рублёвую маржу.</p><p>Оба способа допустимы, но нельзя использовать их одновременно. Если умножить на чек, на процент маржи и ещё раз на маржу в рублях, результат будет завышен.</p><p>В таблице должен быть заранее выбран один способ расчёта. Это защищает модель от задвоения и делает итог понятным для собственника.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Маржу можно считать в процентах или в рублях, но не двумя способами сразу.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Задвоить маржу.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Таблица должна заранее фиксировать способ расчёта маржи.</p></div></div>"
+  },
+  {
+    "number": 17,
+    "title": "Как применять формулу в разных бизнесах",
+    "main": "Формула универсальна, если правильно определить единицу результата.",
+    "image": "assets/additional/business_equation/slides/add_eq_017.png",
+    "descriptionHtml": "<h3>Слайд 17. Как применять формулу в разных бизнесах</h3><p>Главный принцип адаптации — не менять логику формулы, а правильно назвать единицу результата. В одном бизнесе это процедура, в другом заказ, в третьем партия продукции, маршрут, проект, стол, чек или контракт.</p><p>В услугах важны заявки, записи, кабинеты и специалисты. В торговле — посетители, трафик, склад и кассы. В производстве — заказы, станки, смены и сырьё. В строительстве — лиды, сметы, бригады и этапы. В логистике — рейсы, маршруты, парк и водители. В HoReCa — гости, брони, столы и кухня.</p><p>Логика остаётся одной: поток проходит через конверсию, упирается в мощность, превращается в выручку, маржу и свободный денежный поток.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Формула универсальна, если правильно определить единицу результата.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Считать все бизнесы одинаковыми словами.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Перед расчётом нужно перевести формулу на язык конкретного бизнеса.</p></div></div>"
+  },
+  {
+    "number": 18,
+    "title": "Откуда брать данные",
+    "main": "Каждый элемент формулы должен иметь источник данных.",
+    "image": "assets/additional/business_equation/slides/add_eq_018.png",
+    "descriptionHtml": "<h3>Слайд 18. Откуда брать данные</h3><p>Формула работает только если данные не придуманы “на глаз”. Для учебного расчёта допустимы оценки, но для реального управления нужны источники. У каждого элемента формулы должен быть свой источник: CRM, касса, склад, график, производственный план, ОПиУ, ДДС, баланс или банковские выписки.</p><p>Особенно важно контролировать оборотный капитал, инвестиции, деньги и долги. Эти блоки часто не видны в обычной выручке, но именно они объясняют, почему прибыль не превращается в свободные деньги.</p><p>Если источник данных неизвестен, показатель нужно пометить как оценочный. Это честнее, чем выдавать предположение за факт.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Каждый элемент формулы должен иметь источник данных.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Заполнять формулу оценками без понимания источников.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Таблица должна быть связана с реальными отчётами и операционными данными.</p></div></div>"
+  },
+  {
+    "number": 19,
+    "title": "Управленческие рычаги",
+    "main": "Формула показывает, какой рычаг действительно изменит результат.",
+    "image": "assets/additional/business_equation/slides/add_eq_019.png",
+    "descriptionHtml": "<h3>Слайд 19. Управленческие рычаги</h3><p>Формула полезна не только для расчёта, но и для поиска рычагов управления. Каждый элемент показывает, где можно улучшить бизнес и где улучшение не даст эффекта из-за другого ограничения.</p><p>В примере увеличение потока теоретически даст больше потенциальных процедур, но без роста мощности часть спроса не будет выполнена. Повышение конверсии тоже упрётся в мощность. Увеличение мощности может дать эффект, если спрос сохраняется.</p><p>Поэтому управленческое решение должно учитывать всю систему, а не один показатель. Сначала нужно найти ограничение, а уже потом выбирать действие.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Формула показывает, какой рычаг действительно изменит результат.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Улучшать показатель, который уже упирается в другое ограничение.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Сначала найти ограничение, потом выбирать управленческое действие.</p></div></div>"
+  },
+  {
+    "number": 20,
+    "title": "Практический порядок расчёта",
+    "main": "Формула должна превращаться в таблицу и порядок действий.",
+    "image": "assets/additional/business_equation/slides/add_eq_020.png",
+    "descriptionHtml": "<h3>Слайд 20. Практический порядок расчёта</h3><p>Для регулярного управления формулу лучше разложить на таблицу. Сначала фиксируется период и единица результата. Затем считаются поток, конверсия, повторяемость и мощность. После этого определяется реальный объём, средний чек, маржа и валовая прибыль.</p><p>Дальше из результата вычитаются постоянные расходы, расходы на рост, налоги, изменение оборотного капитала и инвестиции. После этого получается свободный поток до риска. Если нужно оценить будущие деньги, применяется коэффициент риска и времени.</p><p>Финальный шаг — не просто получить число, а принять управленческое решение: что менять в бизнесе, где ограничение и какой показатель контролировать дальше.</p><div class=\"slide-callouts-v87\"><div class=\"slide-callout-v87 thought\"><span>Главная мысль</span><p>Формула должна превращаться в таблицу и управленческий порядок действий.</p></div><div class=\"slide-callout-v87 error\"><span>Типовая ошибка</span><p>Считать формулу вручную без структуры данных.</p></div><div class=\"slide-callout-v87 conclusion\"><span>Управленческий вывод</span><p>Результат расчёта должен завершаться решением: что менять в бизнесе.</p></div></div>"
+  }
+];
+
+  function eqAbsoluteUrl() {
+    try { return new URL(EQ_TABLE_URL, window.location.href).href; } catch(e) { return EQ_TABLE_URL; }
+  }
+  function eqNav(index) {
+    const prevDisabled = index <= 0 ? 'disabled' : '';
+    const nextLabel = index >= EQ_SLIDES.length - 1 ? 'К таблице' : 'Далее';
+    const nextAction = index >= EQ_SLIDES.length - 1 ? 'renderBusinessEquationTableV107()' : 'renderBusinessEquationSlideV107(' + (index + 1) + ')';
+    return '<div class="nav-panel-v2 nav-panel-v2-three"><button class="btn secondary" onclick="renderBusinessEquationIntroV107()">К уроку</button><button class="btn secondary" '+prevDisabled+' onclick="renderBusinessEquationSlideV107(' + (index - 1) + ')">Назад</button><button class="btn primary" onclick="' + nextAction + '">' + nextLabel + '</button></div>';
+  }
+  function eqMedia(slide) {
+    const src = slide.image || '';
+    return '<div class="media-counter">Слайд: ' + slide.number + '/' + EQ_SLIDES.length + '</div><div class="media-box-v2 additional-media-v107"><img src="' + bepEsc(src) + '?v=' + (window.APP_UI_VERSION_V107 || window.APP_UI_VERSION_V106 || 'v107') + '" alt="' + bepEsc(slide.title || '') + '" loading="lazy" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';"><div class="image-missing-v2" style="display:none"><b>Слайд ' + slide.number + '</b><p>Иллюстрация будет добавлена после генерации изображения.</p><small>' + bepEsc(src) + '</small></div></div>';
+  }
+  function renderBusinessEquationIntro() {
+    if (!bepAssertAccess()) return;
+    bepAward('lesson:' + EQ_CODE, 'lesson_open', { lessonCode:EQ_CODE, module:'additional_materials' });
+    bepShell(
+      bepCard('blue-card-v2 business-equation-hero-v107', '<p class="eyebrow">финансы и учёт</p><h1>Единое уравнение бизнеса</h1><p>Как связать поток, конверсию, мощность, чек, маржу, расходы, оборотный капитал, инвестиции, риск и свободный денежный поток.</p>')+
+      bepCard('business-equation-intro-v107', '<h2>Что вы разберёте</h2><div class="content-preview-list-v40 business-equation-preview-v107"><div><span>01</span><section><b>От спроса до свободного потока</b><p>Почему бизнес нельзя оценивать только по выручке и деньгам на счёте.</p></section></div><div><span>02</span><section><b>Поток, конверсия, повторяемость и мощность</b><p>Как определить реальный объём, который бизнес способен выполнить.</p></section></div><div><span>03</span><section><b>Маржа, вычеты, риск и стоимость</b><p>Как выручка превращается в свободный денежный поток после всех ограничений.</p></section></div><div><span>04</span><section><b>Практическая таблица</b><p>Как разложить формулу на управленческий порядок действий.</p></section></div></div><div class="grid-v2"><button class="btn primary" onclick="renderBusinessEquationSlideV107(0)">Начать урок</button><button class="btn secondary" onclick="renderBusinessEquationTableV107()">Открыть практическую таблицу</button><button class="btn secondary" onclick="renderAdditionalMaterials()">К дополнительным материалам</button></div>'),
+      'home'
+    );
+  }
+  function renderBusinessEquationSlide(index) {
+    if (!bepAssertAccess()) return;
+    const i = Math.max(0, Math.min(Number(index||0), EQ_SLIDES.length-1));
+    const slide = EQ_SLIDES[i];
+    bepAward('lesson:' + EQ_CODE, 'lesson_open', { lessonCode:EQ_CODE, module:'additional_materials' });
+    bepAward('slide:' + EQ_CODE + ':' + bepPad(slide.number), 'slide_open', { lessonCode:EQ_CODE, slideNo:slide.number, module:'additional_materials' });
+    bepShell(eqNav(i)+eqMedia(slide)+'<section class="slide-text-v2 business-equation-slide-text-v107">'+slide.descriptionHtml+'</section>', 'home');
+  }
+  function renderBusinessEquationTable() {
+    if (!bepAssertAccess()) return;
+    const url = eqAbsoluteUrl();
+    bepAward('work_material:' + EQ_CODE + ':business_equation_table', 'work_material_open', { lessonCode:EQ_CODE, materialId:'business_equation_table', label:'Таблица единого уравнения бизнеса', url:url, source:'additional_materials' });
+    bepShell(
+      bepCard('blue-card-v2 business-equation-table-hero-v107', '<p class="eyebrow">практический инструмент</p><h1>Практическая таблица</h1><p>Откройте Google Таблицу, создайте личную копию через «Файл → Создать копию» и заполните её по инструкции.</p>')+
+      bepCard('business-equation-table-card-v107', '<h2>Порядок работы</h2><div class="break-even-steps-v106 business-equation-steps-v107"><div><b>1. Откройте Google Таблицу</b><p>Нажмите кнопку ниже и дождитесь загрузки таблицы в Google Sheets.</p></div><div><b>2. Создайте личную копию</b><p>В верхнем меню выберите: <b>Файл → Создать копию</b>. Работайте только в своей копии, исходный шаблон не редактируйте.</p></div><div><b>3. Идите по логике формулы</b><p>Период и единица результата → поток, конверсия и мощность → чек и маржа → расходы, налоги, оборотка и инвестиции.</p></div><div><b>4. Сделайте управленческий вывод</b><p>Найдите ограничение и выберите действие: поток, конверсия, мощность, маржа, расходы, оборотный капитал или инвестиции.</p></div></div><div class="grid-v2"><button class="btn primary" onclick="openBusinessEquationTableV107()">Открыть Google Таблицу</button><button class="btn secondary" onclick="renderBusinessEquationSlideV107(19)">Вернуться к уроку</button><button class="btn secondary" onclick="renderAdditionalMaterials()">К дополнительным материалам</button></div>'),
+      'home'
+    );
+  }
+  function openBusinessEquationTable() {
+    const url = eqAbsoluteUrl();
+    bepAward('work_material:' + EQ_CODE + ':business_equation_table', 'work_material_open', { lessonCode:EQ_CODE, materialId:'business_equation_table', label:'Таблица единого уравнения бизнеса', url:url, source:'additional_materials' });
+    bepOpenUrl(url);
+  }
+
   function renderAdditionalMaterialsV106(){
     if (!bepAssertAccess()) return;
     bepAward('block:additional_materials', 'block_open', { block:'additional_materials' });
     bepShell(
       bepCard('blue-card-v2 additional-materials-hero-v106', '<p class="eyebrow">библиотека бизнес-систем</p><h1>Дополнительные материалы</h1><p>Отдельные уроки, инструменты и шаблоны, которые дополняют основной маршрут.</p>')+
-      bepCard('additional-section-v106', '<div class="section-heading-v35"><div><p class="eyebrow">финансы и учёт</p><h2>Практические инструменты</h2></div><p>Материалы можно открывать отдельно от основного маршрута.</p></div><div class="lesson-list-v2 additional-list-v106"><button class="lesson-row-v2 additional-lesson-row-v106" onclick="renderBreakEvenIntroV106()"><div><b>Расчёт точки безубыточности в моём бизнесе</b><p>18 слайдов теории · рабочая Google Таблица · инструкция для самостоятельного расчёта</p></div><span>→</span></button></div>')+
+      bepCard('additional-section-v106', '<div class="section-heading-v35"><div><p class="eyebrow">финансы и учёт</p><h2>Практические инструменты</h2></div><p>Материалы можно открывать отдельно от основного маршрута.</p></div><div class="lesson-list-v2 additional-list-v106"><button class="lesson-row-v2 additional-lesson-row-v106" onclick="renderBreakEvenIntroV106()"><div><b>Расчёт точки безубыточности в моём бизнесе</b><p>18 слайдов теории · рабочая Google Таблица · инструкция для самостоятельного расчёта</p></div><span>→</span></button><button class="lesson-row-v2 additional-lesson-row-v106 business-equation-row-v107" onclick="renderBusinessEquationIntroV107()"><div><b>Единое уравнение бизнеса</b><p>20 слайдов теории · рабочая Google Таблица · свободный денежный поток и ограничения модели</p></div><span>→</span></button></div>')+
       bepCard('', '<button class="btn secondary" onclick="renderHome()">На главную</button>'),
       'home'
     );
@@ -7287,7 +7482,7 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
       + cardFn('Предпринимательские статьи','Практические статьи о ситуациях, цифрах, решениях и последствиях.','скоро','renderEntrepreneurArticlesV40()','soon compact-card')
       + cardFn('Прямые разборы','Гарвардские и другие бизнес-кейсы с разбором вариантов решения.','скоро','renderDirectReviewsV40()','soon compact-card')
       + cardFn('Что посмотреть','Фильмы, интервью, лекции и видео с управленческими выводами.','скоро','renderWatchV40()','soon compact-card')
-      + cardFn('Дополнительные материалы','Расчёт точки безубыточности и практические инструменты вне основного маршрута.','доступно','renderAdditionalMaterials()','active compact-card additional-materials-entry-v106')
+      + cardFn('Дополнительные материалы','Точка безубыточности, единое уравнение бизнеса и практические инструменты вне основного маршрута.','доступно','renderAdditionalMaterials()','active compact-card additional-materials-entry-v106')
       + cardFn('VIP уровень','Расширенные разборы, инструменты и закрытые возможности.','в разработке','renderVipV40()','soon compact-card')
       + '</div>';
   };
@@ -7318,6 +7513,11 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
   bepBind('renderBreakEvenSlideV106', renderBreakEvenSlide);
   bepBind('renderBreakEvenTableV106', renderBreakEvenTable);
   bepBind('openBreakEvenTableV106', openBreakEvenTable);
+  bepBind('renderBusinessEquationIntroV107', renderBusinessEquationIntro);
+  bepBind('renderBusinessEquationSlideV107', renderBusinessEquationSlide);
+  bepBind('renderBusinessEquationTableV107', renderBusinessEquationTable);
+  bepBind('openBusinessEquationTableV107', openBusinessEquationTable);
 
-  window.__BREAK_EVEN_ADDITIONAL_V106 = { version: window.APP_UI_VERSION_V106, slides: BEP_SLIDES.length, tableUrl: BEP_TABLE_URL };
+  window.__BREAK_EVEN_ADDITIONAL_V106 = { version: window.APP_UI_VERSION_V107 || window.APP_UI_VERSION_V106, slides: BEP_SLIDES.length, tableUrl: BEP_TABLE_URL };
+  window.__BUSINESS_EQUATION_ADDITIONAL_V107 = { version: window.APP_UI_VERSION_V107 || window.APP_UI_VERSION_V106, slides: EQ_SLIDES.length, tableUrl: EQ_TABLE_URL };
 })();
