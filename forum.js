@@ -28,7 +28,7 @@ const forumState = {
 };
 
 function forumPublicUiAllowed() {
-  return true;
+  return window.FORUM_PUBLIC_UI_V38 === true;
 }
 
 function forumVisibleForCurrentMode() {
@@ -330,13 +330,17 @@ async function loadForumBootstrap(force) {
 
 async function renderBusinessForum() {
   if (!ensureForumAccess()) return;
+  if (!forumVisibleForCurrentMode()) {
+    forumShell(`${card("blue-card-v2 forum-hero", `<p class="eyebrow">Бизнес-форум</p><h1>Раздел пока закрыт</h1><p>Форум проходит доработку и пока доступен только в режиме администратора.</p><button class="btn secondary" onclick="renderHome()">Вернуться на главную</button>`)}`);
+    return;
+  }
   forumLoading("Бизнес-форум", "Проверяем доступ и состояние форума.");
   try {
     const bootstrap = await loadForumBootstrap(true);
     const accepted = forumRulesAccepted(bootstrap);
     const isBossUi = forumIsBossMode();
     const bossNote = isBossUi
-      ? `<div class="forum-boss-note"><b>Режим администрирования</b><span>Административные функции и публикации доступны без временных ограничений.</span></div>`
+      ? `<div class="forum-boss-note"><b>Режим администратора</b><span>Административные функции и публикации доступны без временных ограничений.</span></div>`
       : "";
     const locked = accepted ? "" : "locked";
     const disabled = accepted ? "" : "disabled";
@@ -1020,4 +1024,18 @@ Object.assign(window, {
 });
 
 
-/* v101: форум открыт для учеников. Дополнительная клиентская блокировка отключена. */
+/* =====================================================
+   v41 — форум закрыт для интерфейса ученика
+   ===================================================== */
+(function installForumStudentGuardV41(){
+  var originalRenderBusinessForumV41 = window.renderBusinessForum;
+  if (typeof originalRenderBusinessForumV41 !== 'function') return;
+  window.renderBusinessForum = function(){
+    if (!(typeof isAdminMode === 'function' && isAdminMode())) {
+      alert('Раздел «Бизнес-форум» находится в подготовке.');
+      if (typeof renderHome === 'function') renderHome();
+      return;
+    }
+    return originalRenderBusinessForumV41.apply(this, arguments);
+  };
+})();
