@@ -34,7 +34,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v108-business-equation-google-sheet-20260704";
+const APP_CACHE_VERSION = "v109-additional-two-lessons-fixed-20260704";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -582,8 +582,7 @@ async function renderBook(){
 }
 /* removed obsolete duplicate function renderBookChallenge in v95 cleanup */
 function renderAdditionalMaterials(){
-  if (typeof renderAdditionalMaterialsV106 === 'function') return renderAdditionalMaterialsV106();
-  shell(`${card('blue-card-v2', `<p class="eyebrow">дополнительные материалы</p><h1>Дополнительные материалы</h1><p>Материал загружается. Если карточка не появилась, обновите приложение.</p>`)}${card('', `<button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
+  shell(`${card('blue-card-v2 soon-page-card', `<p class="eyebrow">скоро</p><h1>Дополнительные материалы</h1><p>Раздел скоро откроется. Здесь будут отдельные уроки, разборы, шаблоны и материалы, которые дополняют основной маршрут.</p>`)}${card('', `<button class="btn secondary" onclick="renderHome()">На главную</button>`)}`,'home');
 }
 function doneSummaryHtml() {
   const lessons = readyCoreLessons();
@@ -2133,7 +2132,7 @@ function renderHome() {
       <div class="secondary-track-grid-v22">
         ${renderMainBlockCard('Топ-100 книг для бизнеса','Саммари бизнес-книг без таймера и ежедневных ограничений.','доступно','renderBookChallenge()','active books100-entry compact-card')}
         ${renderMainBlockCard('Бизнес-факты','Короткие практические статьи о реальных бизнес-ситуациях: ошибки, решения, цифры и выводы, которые можно применить в своей системе.','скоро','','disabled compact-card')}
-        ${renderMainBlockCard('Дополнительные материалы','Отдельные уроки, разборы и материалы, которые дополняют основной маршрут.','скоро','','disabled compact-card')}
+        ${renderMainBlockCard('Дополнительные материалы','Точка безубыточности, единое уравнение бизнеса и практические инструменты вне основного маршрута.','доступно','renderAdditionalMaterials()','active compact-card additional-materials-entry-v109')}
         ${renderMainBlockCard('VIP уровень','Более подробные разборы, инструменты и активность.','в разработке','','disabled compact-card')}
         ${renderMainBlockCard('Бизнес-медиа','Подборки фильмов, сериалов, интервью и полезных видео о бизнесе с управленческими выводами для практики.','скоро','','disabled compact-card compact-card-wide')}
         ${isAdminMode() ? renderMainBlockCard('Бизнес-форум','Практические вопросы, обсуждения и обмен опытом участников по видам деятельности.','тестирование','renderBusinessForum()','active compact-card compact-card-wide') : ''}
@@ -2677,7 +2676,7 @@ window.renderHome = function(){
         ${renderMainBlockCard('Топ-100 книг для бизнеса','Саммари бизнес-книг без таймера и ежедневных ограничений.','доступно','renderBookChallenge()','active books100-entry compact-card')}
         ${forumVisibleInNavigationV38() ? renderMainBlockCard('Бизнес-форум','Практические вопросы и обмен опытом по видам деятельности.','тестирование','renderBusinessForum()','active compact-card') : ''}
         ${renderMainBlockCard('Бизнес-факты','Короткие практические статьи о реальных бизнес-ситуациях.','скоро','','disabled compact-card')}
-        ${renderMainBlockCard('Дополнительные материалы','Разборы, шаблоны и материалы вне основного маршрута.','скоро','','disabled compact-card')}
+        ${renderMainBlockCard('Дополнительные материалы','Точка безубыточности, единое уравнение бизнеса и практические инструменты вне основного маршрута.','доступно','renderAdditionalMaterials()','active compact-card additional-materials-entry-v109')}
         ${renderMainBlockCard('VIP уровень','Расширенные разборы и дополнительные возможности.','в разработке','','disabled compact-card')}
         ${renderMainBlockCard('Бизнес-медиа','Фильмы, интервью и видео с управленческими выводами.','скоро','','disabled compact-card')}
       </div>`)}
@@ -3466,7 +3465,7 @@ else installArchitectureObserverV35();
       ${renderMainBlockCard('Предпринимательские статьи','Практические статьи о ситуациях, цифрах, решениях и последствиях.','скоро','renderEntrepreneurArticlesV40()','soon compact-card')}
       ${renderMainBlockCard('Прямые разборы','Гарвардские и другие бизнес-кейсы с разбором вариантов решения.','скоро','renderDirectReviewsV40()','soon compact-card')}
       ${renderMainBlockCard('Что посмотреть','Фильмы, интервью, лекции и видео с управленческими выводами.','скоро','renderWatchV40()','soon compact-card')}
-      ${renderMainBlockCard('Дополнительные материалы','Шаблоны, инструкции и материалы вне основного маршрута.','скоро','renderAdditionalMaterials()','soon compact-card')}
+      ${renderMainBlockCard('Дополнительные материалы','Точка безубыточности, единое уравнение бизнеса и практические инструменты вне основного маршрута.','доступно','renderAdditionalMaterials()','active compact-card additional-materials-entry-v109')}
       ${renderMainBlockCard('VIP уровень','Расширенные разборы, инструменты и закрытые возможности.','в разработке','renderVipV40()','soon compact-card')}
     </div>`;
   }
@@ -3554,7 +3553,7 @@ else installArchitectureObserverV35();
       {title:'Предпринимательские статьи',status:'скоро',action:'renderEntrepreneurArticlesV40()'},
       {title:'Прямые разборы',status:'скоро',action:'renderDirectReviewsV40()'},
       {title:'Что посмотреть',status:'скоро',action:'renderWatchV40()'},
-      {title:'Дополнительные материалы',status:'скоро',action:'renderAdditionalMaterials()'},
+      {title:'Дополнительные материалы',status:'доступно',action:'renderAdditionalMaterials()'},
       {title:'VIP уровень',status:'в разработке',action:'renderVipV40()'}
     ];
   }
@@ -3946,6 +3945,7 @@ else installArchitectureObserverV35();
     ['renderEntrepreneurArticlesV40','Предпринимательские статьи'],
     ['renderDirectReviewsV40','Прямые разборы'],
     ['renderWatchV40','Что посмотреть'],
+    ['renderAdditionalMaterials','Дополнительные материалы'],
     ['renderVipV40','VIP уровень']
   ].forEach(function(row){
     var name = row[0];
@@ -4105,7 +4105,7 @@ else installArchitectureObserverV35();
       ${renderMainBlockCard('Предпринимательские статьи','Практические статьи о ситуациях, цифрах, решениях и последствиях.','скоро','renderEntrepreneurArticlesV40()','soon compact-card')}
       ${renderMainBlockCard('Прямые разборы','Гарвардские и другие бизнес-кейсы с разбором вариантов решения.','скоро','renderDirectReviewsV40()','soon compact-card')}
       ${renderMainBlockCard('Что посмотреть','Фильмы, интервью, лекции и видео с управленческими выводами.','скоро','renderWatchV40()','soon compact-card')}
-      ${renderMainBlockCard('Дополнительные материалы','Шаблоны, инструкции, документы и инструменты вне основных направлений.','скоро','renderAdditionalMaterials()','soon compact-card')}
+      ${renderMainBlockCard('Дополнительные материалы','Точка безубыточности, единое уравнение бизнеса и практические инструменты вне основного маршрута.','доступно','renderAdditionalMaterials()','active compact-card additional-materials-entry-v109')}
       ${renderMainBlockCard('VIP уровень','Расширенные разборы, инструменты и закрытые возможности.','в разработке','renderVipV40()','soon compact-card')}
     </div>`;
   };
@@ -5750,7 +5750,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
       ${mainCardV81('Предпринимательские статьи','Практические статьи о ситуациях, цифрах, решениях и последствиях.','скоро','renderEntrepreneurArticlesV40()','soon compact-card')}
       ${mainCardV81('Прямые разборы','Гарвардские и другие бизнес-кейсы с разбором вариантов решения.','скоро','renderDirectReviewsV40()','soon compact-card')}
       ${mainCardV81('Что посмотреть','Фильмы, интервью, лекции и видео с управленческими выводами.','скоро','renderWatchV40()','soon compact-card')}
-      ${mainCardV81('Дополнительные материалы','Шаблоны, инструкции, документы и инструменты вне основных направлений.','скоро','renderAdditionalMaterials()','soon compact-card')}
+      ${mainCardV81('Дополнительные материалы','Точка безубыточности, единое уравнение бизнеса и практические инструменты вне основного маршрута.','доступно','renderAdditionalMaterials()','active compact-card additional-materials-entry-v109')}
       ${mainCardV81('VIP уровень','Расширенные разборы, инструменты и закрытые возможности.','в разработке','renderVipV40()','soon compact-card')}
     </div>`;
   };
@@ -6594,7 +6594,7 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
       + v96MainCard('Предпринимательские статьи','Практические статьи о ситуациях, цифрах, решениях и последствиях.','скоро','renderEntrepreneurArticlesV40()','soon compact-card')
       + v96MainCard('Прямые разборы','Гарвардские и другие бизнес-кейсы с разбором вариантов решения.','скоро','renderDirectReviewsV40()','soon compact-card')
       + v96MainCard('Что посмотреть','Фильмы, интервью, лекции и видео с управленческими выводами.','скоро','renderWatchV40()','soon compact-card')
-      + v96MainCard('Дополнительные материалы','Шаблоны, инструкции, документы и инструменты вне основных направлений.','скоро','renderAdditionalMaterials()','soon compact-card')
+      + v96MainCard('Дополнительные материалы','Точка безубыточности, единое уравнение бизнеса и практические инструменты вне основного маршрута.','доступно','renderAdditionalMaterials()','active compact-card additional-materials-entry-v109')
       + v96MainCard('VIP уровень','Расширенные разборы, инструменты и закрытые возможности.','в разработке','renderVipV40()','soon compact-card')
       + '</div>';
   };
@@ -6612,7 +6612,7 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
         {title:'Предпринимательские статьи',status:'скоро',action:'renderEntrepreneurArticlesV40()'},
         {title:'Прямые разборы',status:'скоро',action:'renderDirectReviewsV40()'},
         {title:'Что посмотреть',status:'скоро',action:'renderWatchV40()'},
-        {title:'Дополнительные материалы',status:'скоро',action:'renderAdditionalMaterials()'},
+        {title:'Дополнительные материалы',status:'доступно',action:'renderAdditionalMaterials()'},
         {title:'VIP уровень',status:'в разработке',action:'renderVipV40()'}
       ];
     };
@@ -7042,9 +7042,8 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
    форум, Топ-100 книг и уроки торговли.
    ===================================================== */
 (function installBreakEvenAdditionalMaterialV106(){
-  window.APP_UI_VERSION_V106 = 'v108-business-equation-google-sheet-20260704';
-  window.APP_UI_VERSION_V107 = 'v108-business-equation-google-sheet-20260704';
-  window.APP_UI_VERSION_V108 = 'v108-business-equation-google-sheet-20260704';
+  window.APP_UI_VERSION_V106 = 'v109-additional-two-lessons-fixed-20260704';
+  window.APP_UI_VERSION_V107 = 'v109-additional-two-lessons-fixed-20260704';
   try { if (typeof LEGO_V24_CACHE_VERSION !== 'undefined') LEGO_V24_CACHE_VERSION = window.APP_UI_VERSION_V106; } catch(e) {}
   try { contentVersionV24 = function(){ return window.APP_UI_VERSION_V106; }; window.contentVersionV24 = contentVersionV24; } catch(e) {}
 
@@ -7423,8 +7422,8 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
     const url = eqAbsoluteUrl();
     bepAward('work_material:' + EQ_CODE + ':business_equation_table', 'work_material_open', { lessonCode:EQ_CODE, materialId:'business_equation_table', label:'Таблица единого уравнения бизнеса', url:url, source:'additional_materials' });
     bepShell(
-      bepCard('blue-card-v2 business-equation-table-hero-v107', '<p class="eyebrow">практический инструмент</p><h1>Практическая таблица</h1><p>Откройте Google Таблицу, создайте личную копию через «Файл → Создать копию» и заполните её по инструкции.</p>')+
-      bepCard('business-equation-table-card-v107', '<h2>Порядок работы</h2><div class="break-even-steps-v106 business-equation-steps-v107"><div><b>1. Откройте Google Таблицу</b><p>Нажмите кнопку ниже и дождитесь загрузки таблицы в Google Sheets.</p></div><div><b>2. Создайте личную копию</b><p>В верхнем меню выберите: <b>Файл → Создать копию</b>. Работайте только в своей копии, исходный шаблон не редактируйте.</p></div><div><b>3. Идите по логике формулы</b><p>Период и единица результата → поток, конверсия и мощность → чек и маржа → расходы, налоги, оборотка и инвестиции.</p></div><div><b>4. Сделайте управленческий вывод</b><p>Найдите ограничение и выберите действие: поток, конверсия, мощность, маржа, расходы, оборотный капитал или инвестиции.</p></div></div><div class="grid-v2"><button class="btn primary" onclick="openBusinessEquationTableV107()">Открыть Google Таблицу</button><button class="btn secondary" onclick="renderBusinessEquationSlideV107(19)">Вернуться к уроку</button><button class="btn secondary" onclick="renderAdditionalMaterials()">К дополнительным материалам</button></div>'),
+      bepCard('blue-card-v2 business-equation-table-hero-v107', '<p class="eyebrow">практический инструмент</p><h1>Практическая таблица</h1><p>Откройте Google Таблицу, создайте личную копию через <b>Файл → Создать копию</b> и заполняйте только свою версию.</p>')+
+      bepCard('business-equation-table-card-v107', '<h2>Порядок работы</h2><div class="break-even-steps-v106 business-equation-steps-v107"><div><b>1. Откройте Google Таблицу</b><p>Нажмите кнопку ниже и дождитесь загрузки таблицы.</p></div><div><b>2. Создайте личную копию</b><p>В Google Таблицах выберите: <b>Файл → Создать копию</b>. Исходный шаблон не редактируйте.</p></div><div><b>3. Идите по логике формулы</b><p>Период и единица результата → поток, конверсия и мощность → чек и маржа → расходы, налоги, оборотка и инвестиции.</p></div><div><b>4. Сделайте управленческий вывод</b><p>Найдите ограничение и выберите действие: поток, конверсия, мощность, маржа, расходы, оборотный капитал или инвестиции.</p></div></div><div class="grid-v2"><button class="btn primary" onclick="openBusinessEquationTableV107()">Открыть Google Таблицу</button><button class="btn secondary" onclick="renderBusinessEquationSlideV107(19)">Вернуться к уроку</button><button class="btn secondary" onclick="renderAdditionalMaterials()">К дополнительным материалам</button></div>'),
       'home'
     );
   }
@@ -7520,4 +7519,36 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
 
   window.__BREAK_EVEN_ADDITIONAL_V106 = { version: window.APP_UI_VERSION_V107 || window.APP_UI_VERSION_V106, slides: BEP_SLIDES.length, tableUrl: BEP_TABLE_URL };
   window.__BUSINESS_EQUATION_ADDITIONAL_V107 = { version: window.APP_UI_VERSION_V107 || window.APP_UI_VERSION_V106, slides: EQ_SLIDES.length, tableUrl: EQ_TABLE_URL };
+})();
+
+
+/* =====================================================
+   v109 — жёсткая фиксация видимости дополнительных материалов
+   ===================================================== */
+(function ensureAdditionalMaterialsReallyVisibleV109(){
+  var V = 'v109-additional-two-lessons-fixed-20260704';
+  try { window.APP_UI_VERSION_V109 = V; } catch(e) {}
+  try {
+    if (Array.isArray(window.studentLockedBlocksV41)) {
+      for (var i = window.studentLockedBlocksV41.length - 1; i >= 0; i--) {
+        if (String(window.studentLockedBlocksV41[i] || '').trim() === 'Дополнительные материалы') window.studentLockedBlocksV41.splice(i, 1);
+      }
+    }
+    if (typeof studentLockedBlocksV41 !== 'undefined' && Array.isArray(studentLockedBlocksV41)) {
+      for (var j = studentLockedBlocksV41.length - 1; j >= 0; j--) {
+        if (String(studentLockedBlocksV41[j] || '').trim() === 'Дополнительные материалы') studentLockedBlocksV41.splice(j, 1);
+      }
+    }
+  } catch(e) {}
+  try {
+    var addCardHtml = function() {
+      return '<button class="track-card active compact-card additional-materials-entry-v109" onclick="renderAdditionalMaterials()"><b>Дополнительные материалы</b><p>Точка безубыточности, единое уравнение бизнеса и практические инструменты вне основного маршрута.</p><em>доступно</em></button>';
+    };
+    var oldRenderMainBlockCard = window.renderMainBlockCard;
+    window.renderMainBlockCard = function(title, text, status, action, cls) {
+      if (String(title || '').trim() === 'Дополнительные материалы') return addCardHtml();
+      return typeof oldRenderMainBlockCard === 'function' ? oldRenderMainBlockCard.apply(this, arguments) : '';
+    };
+    try { renderMainBlockCard = window.renderMainBlockCard; } catch(e) {}
+  } catch(e) {}
 })();

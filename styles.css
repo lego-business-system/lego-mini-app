@@ -5804,9 +5804,7 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
 }
 
 
-/* =====================================================
-   v106 — Дополнительные материалы: точка безубыточности
-   ===================================================== */
+/* v109 additional materials lesson styles */
 .additional-materials-entry-v106{
   border-color:rgba(47,95,159,.28)!important;
   background:linear-gradient(135deg,#fff,#F4F9FF)!important;
@@ -5917,3 +5915,8 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
   font-size:11px;
   word-break:break-word;
 }
+
+
+/* v109 — видимость Дополнительных материалов */
+.additional-materials-entry-v109{border-color:rgba(22,168,154,.42)!important;background:linear-gradient(135deg,#fff,var(--lego-turquoise-soft))!important;}
+.additional-materials-entry-v109 em{background:var(--lego-turquoise-soft)!important;color:#08796F!important;}
