@@ -34,7 +34,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v111-architecture-public-20260705";
+const APP_CACHE_VERSION = "v112-architecture-public-hard-20260705";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -2880,28 +2880,9 @@ function forumVisibleInNavigationV38(){
    остаются без изменений. Меняется только видимая оболочка.
    ===================================================== */
 
-var ARCHITECTURE_UI_V35 = (function(){
-  try {
-    var query = new URLSearchParams(window.location.search || '');
-    var hashText = String(window.location.hash || '').replace(/^#/, '');
-    var hash = new URLSearchParams(hashText);
+var ARCHITECTURE_UI_V35 = true;
 
-    // Новый интерфейс АРХИТЕКТУРЫ теперь является основным для всех пользователей.
-    // Параметр ui=legacy оставлен только как аварийный ручной откат для проверки.
-    // Администрирование от этого не открывается: права по-прежнему проверяются через isAdminUser() и isAdminMode().
-    var forcedLegacy = [query.get('ui'), hash.get('ui')].some(function(value){
-      return String(value || '').toLowerCase() === 'legacy';
-    });
-
-    if (forcedLegacy) return false;
-    return true;
-  }
-  catch(e) {
-    return true;
-  }
-})();
-
-function architectureModeV35(){ return Boolean(ARCHITECTURE_UI_V35); }
+function architectureModeV35(){ return true; }
 
 if (architectureModeV35()) {
   document.documentElement.classList.add('theme-architecture');
