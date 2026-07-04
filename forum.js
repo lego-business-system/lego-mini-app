@@ -28,7 +28,7 @@ const forumState = {
 };
 
 function forumPublicUiAllowed() {
-  return window.FORUM_PUBLIC_UI_V38 === true;
+  return true;
 }
 
 function forumVisibleForCurrentMode() {
@@ -330,17 +330,13 @@ async function loadForumBootstrap(force) {
 
 async function renderBusinessForum() {
   if (!ensureForumAccess()) return;
-  if (!forumVisibleForCurrentMode()) {
-    forumShell(`${card("blue-card-v2 forum-hero", `<p class="eyebrow">Бизнес-форум</p><h1>Раздел пока закрыт</h1><p>Форум проходит доработку и пока доступен только в режиме администратора.</p><button class="btn secondary" onclick="renderHome()">Вернуться на главную</button>`)}`);
-    return;
-  }
   forumLoading("Бизнес-форум", "Проверяем доступ и состояние форума.");
   try {
     const bootstrap = await loadForumBootstrap(true);
     const accepted = forumRulesAccepted(bootstrap);
     const isBossUi = forumIsBossMode();
     const bossNote = isBossUi
-      ? `<div class="forum-boss-note"><b>Режим администратора</b><span>Административные функции и публикации доступны без временных ограничений.</span></div>`
+      ? `<div class="forum-boss-note"><b>Режим администрирования</b><span>Административные функции и публикации доступны без временных ограничений.</span></div>`
       : "";
     const locked = accepted ? "" : "locked";
     const disabled = accepted ? "" : "disabled";
@@ -1024,11 +1020,4 @@ Object.assign(window, {
 });
 
 
-/* =====================================================
-   v104 — форум открыт для учеников после восстановления app.js
-   ===================================================== */
-(function openForumForStudentsV104(){
-  window.FORUM_PUBLIC_UI_V38 = true;
-  window.forumVisibleInNavigationV38 = function(){ return true; };
-  window.forumReadyForCurrentModeV40 = function(){ return typeof window.renderBusinessForum === 'function'; };
-})();
+/* v101: форум открыт для учеников. Дополнительная клиентская блокировка отключена. */
