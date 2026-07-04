@@ -1025,17 +1025,10 @@ Object.assign(window, {
 
 
 /* =====================================================
-   v41 — форум закрыт для интерфейса ученика
+   v104 — форум открыт для учеников после восстановления app.js
    ===================================================== */
-(function installForumStudentGuardV41(){
-  var originalRenderBusinessForumV41 = window.renderBusinessForum;
-  if (typeof originalRenderBusinessForumV41 !== 'function') return;
-  window.renderBusinessForum = function(){
-    if (!(typeof isAdminMode === 'function' && isAdminMode())) {
-      alert('Раздел «Бизнес-форум» находится в подготовке.');
-      if (typeof renderHome === 'function') renderHome();
-      return;
-    }
-    return originalRenderBusinessForumV41.apply(this, arguments);
-  };
+(function openForumForStudentsV104(){
+  window.FORUM_PUBLIC_UI_V38 = true;
+  window.forumVisibleInNavigationV38 = function(){ return true; };
+  window.forumReadyForCurrentModeV40 = function(){ return typeof window.renderBusinessForum === 'function'; };
 })();

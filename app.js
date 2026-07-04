@@ -29,7 +29,7 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v103-break-even-full-files-20260704";
+const APP_CACHE_VERSION = "v104-restore-top100-finance-forum-points-20260704";
 const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
@@ -6935,5 +6935,532 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
       ${typeof safeActiveChallengeCardHtmlV24 === 'function' ? safeActiveChallengeCardHtmlV24() : ''}
     `;
     shell(html, 'home');
+  };
+})();
+
+/* =====================================================
+   v104 — восстановление актуальной логики после регресса базы v103
+   Что фиксирует финально:
+   1) Топ-100 книг для бизнеса = открытая библиотека без таймера и челленджа.
+   2) Финансовый помощник и финансовый тренажёр снова доступны ученикам.
+   3) Исследовательские баллы: 1 новое действие = 1 балл, один раз.
+   4) Профиль показывает компактную статистику: страницы / уроки / книги / тесты / рабочие материалы.
+   5) Бизнес-форум открыт ученикам, но не попадает в нижнее меню.
+   6) Дополнительные материалы остаются открытыми, включая урок по точке безубыточности.
+   ===================================================== */
+(function installArchitectureV104Restore(){
+  var V104_VERSION = 'v104-restore-top100-finance-forum-points-20260704';
+  try { window.APP_UI_VERSION = V104_VERSION; } catch(e) {}
+  try { window.APP_UI_VERSION_V104 = V104_VERSION; } catch(e) {}
+  try { window.FORUM_PUBLIC_UI_V38 = true; } catch(e) {}
+
+  function v104Esc(value){
+    if (typeof esc === 'function') return esc(value);
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]); });
+  }
+  function v104Fmt(value){
+    var n = Number(value || 0);
+    try { return n.toLocaleString('ru-RU'); } catch(e) { return String(n); }
+  }
+  function v104Card(cls, html){
+    if (typeof card === 'function') return card(cls || '', html || '');
+    return '<section class="card-v2 '+(cls||'')+'">'+(html||'')+'</section>';
+  }
+  function v104Shell(html, active){
+    if (typeof shell === 'function') return shell(html || '', active || 'home');
+    var root = document.getElementById('app');
+    if (root) root.innerHTML = html || '';
+  }
+  function v104Bind(name, fn){
+    window[name] = fn;
+    try { eval(name + ' = window["' + name + '"];'); } catch(e) {}
+  }
+  function v104Now(){ return typeof nowIso === 'function' ? nowIso() : new Date().toISOString(); }
+  function v104IsAdminMode(){ try { return typeof isAdminMode === 'function' && isAdminMode(); } catch(e) { return false; } }
+  function v104HasAccess(){
+    try { if (typeof hasVerifiedAccessV32 === 'function' && !hasVerifiedAccessV32()) return false; } catch(e) {}
+    try { if (state && state.access === false) return false; } catch(e) {}
+    return true;
+  }
+  function v104UserSuffix(){
+    try {
+      var ids = typeof possibleIds === 'function' ? possibleIds() : [];
+      if (ids && ids[0]) return String(ids[0]).replace(/[^a-zA-Z0-9_-]/g, '_');
+      var names = typeof possibleUsernames === 'function' ? possibleUsernames() : [];
+      if (names && names[0]) return String(names[0]).replace(/[^a-zA-Z0-9_-]/g, '_');
+      var user = typeof getTelegramUser === 'function' ? getTelegramUser() : {};
+      if (user && user.id) return String(user.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+      if (user && user.username) return String(user.username).replace(/[^a-zA-Z0-9_-]/g, '_');
+    } catch(e) {}
+    return 'local';
+  }
+  function v104OpenUrl(url){
+    var target = String(url || '').trim();
+    if (!target || target === '#') { alert('Ссылка будет добавлена позже.'); return false; }
+    try {
+      if (typeof tg !== 'undefined' && tg && typeof tg.openLink === 'function') tg.openLink(target);
+      else window.open(target, '_blank', 'noopener,noreferrer');
+    } catch(e) { window.open(target, '_blank', 'noopener,noreferrer'); }
+    return true;
+  }
+
+  /* ---------- Закрытые блоки: не даём старому списку снова закрыть актуальные разделы ---------- */
+  function v104RemoveFromLocked(title){
+    try {
+      var arr = window.studentLockedBlocksV41;
+      if (!Array.isArray(arr)) return;
+      for (var i = arr.length - 1; i >= 0; i--) {
+        if (String(arr[i] || '').trim() === title) arr.splice(i, 1);
+      }
+    } catch(e) {}
+  }
+  ['Бизнес-форум','Дополнительные материалы'].forEach(v104RemoveFromLocked);
+
+  /* ---------- Исследовательские баллы ---------- */
+  var RP_PREFIX = 'architecture_research_point_events_v91_';
+  function rpKey(){ return RP_PREFIX + v104UserSuffix(); }
+  function rpRead(){
+    try { var data = JSON.parse(localStorage.getItem(rpKey()) || '{}'); return data && typeof data === 'object' ? data : {}; }
+    catch(e) { return {}; }
+  }
+  function rpWrite(map){ try { localStorage.setItem(rpKey(), JSON.stringify(map || {})); } catch(e) {} }
+  function v104Award(eventKey, eventType, payload){
+    eventKey = String(eventKey || '').trim();
+    eventType = String(eventType || 'research_event').trim() || 'research_event';
+    if (!eventKey) return { awarded:false, reason:'EMPTY_EVENT_KEY' };
+    if (!v104HasAccess()) return { awarded:false, reason:'NO_ACCESS' };
+    if (v104IsAdminMode()) return { awarded:false, reason:'ADMIN_MODE' };
+    var map = rpRead();
+    if (map[eventKey]) return { awarded:false, reason:'ALREADY_AWARDED', record: map[eventKey] };
+    var record = { eventKey:eventKey, eventType:eventType, points:1, payload:payload || {}, createdAt:v104Now() };
+    map[eventKey] = record;
+    rpWrite(map);
+    try {
+      if (typeof remoteSave === 'function') {
+        remoteSave('research_point_awarded', { eventKey:eventKey, eventType:eventType, points:1, payload:payload || {}, createdAt:record.createdAt });
+      }
+    } catch(e) {}
+    return { awarded:true, record:record };
+  }
+  function v104Events(){ return rpRead(); }
+  function v104EventsArray(){ var map = rpRead(); return Object.keys(map).map(function(k){ return map[k]; }); }
+  function v104PointsTotal(){ return v104EventsArray().reduce(function(sum, row){ return sum + Number(row && row.points || 1); }, 0); }
+  v104Bind('awardResearchPointOnceV91', v104Award);
+  v104Bind('getResearchPointEventsV91', v104Events);
+  v104Bind('getResearchPointsTotalV91', v104PointsTotal);
+
+  // Миграция событий точки безубыточности, если пользователь уже успел открыть материал до восстановления v104.
+  (function migrateBreakEvenV103EventsToResearchV104(){
+    try {
+      var map = rpRead();
+      var changed = false;
+      for (var i = 0; i < localStorage.length; i++) {
+        var keyName = localStorage.key(i) || '';
+        if (keyName.indexOf('architecture_extra_material_events_v103_') !== 0) continue;
+        var oldMap = JSON.parse(localStorage.getItem(keyName) || '{}');
+        Object.keys(oldMap || {}).forEach(function(eventKey){
+          if (!eventKey || map[eventKey]) return;
+          var row = oldMap[eventKey] || {};
+          map[eventKey] = { eventKey:eventKey, eventType:row.eventType || 'research_event', points:Number(row.points || 1) || 1, payload:row.payload || {}, createdAt:row.createdAt || v104Now() };
+          changed = true;
+        });
+      }
+      if (changed) rpWrite(map);
+    } catch(e) {}
+  })();
+
+  function v104ReadIdsKey(){ return 'architecture_top100_read_ids_v96_' + v104UserSuffix(); }
+  function v104ReadIds(){
+    try { var arr = JSON.parse(localStorage.getItem(v104ReadIdsKey()) || '[]'); return Array.isArray(arr) ? Array.from(new Set(arr.map(String))) : []; }
+    catch(e) { return []; }
+  }
+  function v104SaveReadIds(ids){ try { localStorage.setItem(v104ReadIdsKey(), JSON.stringify(Array.from(new Set((ids || []).map(String))))); } catch(e) {} }
+  function v104ProfileStats(){
+    var rows = v104EventsArray();
+    var pages = 0, lessons = 0, tests = 0, work = 0;
+    var read = v104ReadIds();
+    rows.forEach(function(row){
+      var key = String(row && row.eventKey || '');
+      var type = String(row && row.eventType || '');
+      if (key.indexOf('slide:') === 0 || key.indexOf('summary:') === 0 || key.indexOf('page:') === 0 || key.indexOf('screen:') === 0 || key.indexOf('book_page:') === 0 || /^(slide_open|summary_page_open|page_open|screen_open|book_page_open|article_page_open|newspaper_page_open)$/.test(type)) pages++;
+      if (key.indexOf('lesson:') === 0 || type === 'lesson_open') lessons++;
+      if (key.indexOf('quiz_open:') === 0 || key.indexOf('test_open:') === 0 || type === 'quiz_open' || type === 'test_open') tests++;
+      if (key.indexOf('work_material:') === 0 || key.indexOf('template:') === 0 || type === 'work_material_open' || type === 'template_open' || type === 'trainer_open') work++;
+      if (key.indexOf('book_read:books100:') === 0) {
+        var id = key.split(':').pop();
+        if (id && read.indexOf(id) === -1) read.push(id);
+      }
+    });
+    return { pages:pages, lessons:lessons, tests:tests, homework:work, workMaterials:work, readBooks:read.length, books:read.length, points:v104PointsTotal() };
+  }
+  v104Bind('architectureProfileStatsV96', v104ProfileStats);
+  v104Bind('architectureProfileStatsV99', v104ProfileStats);
+  v104Bind('readingStatsV44', function(){ var s = v104ProfileStats(); return { presentations:s.lessons, pages:s.pages, tests:s.tests, bookSummaries:s.readBooks, templates:s.homework, insights:0 }; });
+  v104Bind('totalPoints', v104PointsTotal);
+
+  function doneSummaryHtmlV104(){
+    var s = v104ProfileStats();
+    function cell(label, value){ return '<div><span>'+v104Esc(label)+'</span><b>'+v104Fmt(value)+'</b></div>'; }
+    return v104Card('done-summary-card profile-done-v104',
+      '<div class="done-heading-v44"><div><p class="eyebrow">статистика изучения</p><h2>Что уже изучено</h2></div><p>Показаны фактически открытые материалы: страницы, уроки, книги, тесты и рабочие материалы. Максимум не выводится, потому что библиотека регулярно пополняется.</p></div>'+
+      '<div class="done-grid done-grid-v104">'+cell('Страницы', s.pages)+cell('Уроки', s.lessons)+cell('Книги', s.readBooks)+cell('Тесты', s.tests)+cell('Рабочие материалы', s.homework)+'</div>'+
+      '<div class="profile-stat-explain-v104"><p><b>Страницы</b> — учебные экраны: слайды уроков, страницы саммари, страницы книг, будущие статьи и газета.</p><p><b>Книги</b> — полностью прочитанные книги из блока «Топ-100 книг для бизнеса».</p><p><b>Рабочие материалы</b> — таблицы, примеры, тренажёры и шаблоны.</p></div>'
+    );
+  }
+  v104Bind('doneSummaryHtml', doneSummaryHtmlV104);
+  v104Bind('renderResearchPointsRulesV91', function(){
+    var s = v104ProfileStats();
+    v104Shell(
+      v104Card('blue-card-v2 research-rules-hero-v104', '<p class="eyebrow">баллы библиотеки</p><h1>Как начисляются баллы</h1><p>Баллы начисляются за исследование библиотеки бизнес-систем: за первое открытие новых модулей, блоков, уроков, страниц, тестов, книг и рабочих материалов.</p>')+
+      v104Card('', '<h2>Главное правило</h2><p>Каждое новое действие даёт <b>1 балл</b> только один раз за всё время. Повторное открытие уже изученного элемента баллы не добавляет.</p><div class="score-rule-grid-v40"><div><span>+1</span><b>Модуль</b></div><div><span>+1</span><b>Блок</b></div><div><span>+1</span><b>Урок</b></div><div><span>+1</span><b>Страница</b></div><div><span>+1</span><b>Тест</b></div><div><span>+1</span><b>Книга</b></div><div><span>+1</span><b>Рабочий материал</b></div></div>')+
+      v104Card('', '<h2>Текущий счёт</h2><div class="profile-score-grid"><div><span>Всего баллов</span><b>'+v104Fmt(s.points)+'</b></div><div><span>Страницы</span><b>'+v104Fmt(s.pages)+'</b></div><div><span>Уроки</span><b>'+v104Fmt(s.lessons)+'</b></div><div><span>Книги</span><b>'+v104Fmt(s.readBooks)+'</b></div><div><span>Тесты</span><b>'+v104Fmt(s.tests)+'</b></div><div><span>Рабочие материалы</span><b>'+v104Fmt(s.homework)+'</b></div></div><p class="small">Баллы показывают активность исследования библиотеки. Понимание материала проверяется тестами, тренажёрами и практическими заданиями.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>'),
+      'profile'
+    );
+  });
+  window.renderProgressRulesV40 = window.renderPointsRulesV41 = window.renderPointsRulesV42 = window.renderPointsRulesV43 = window.renderResearchPointsRulesV91;
+
+  /* ---------- Нижнее меню ---------- */
+  window.bottomNav = function(active){
+    if (!v104HasAccess()) return '';
+    function call(fn){ return typeof safeNavigateV32 === 'function' ? "safeNavigateV32('"+fn+"')" : (fn + '()'); }
+    function icon(key, fallback){
+      try { if (typeof architectureNavIconV35 === 'function') return '<span class="arch-nav-icon">'+architectureNavIconV35(key)+'</span>'; } catch(e) {}
+      return '<span>'+fallback+'</span>';
+    }
+    function item(key, label, fn, fallback){
+      return '<button class="bottom-item '+(active===key?'active':'')+'" onclick="'+call(fn)+'">'+icon(key, fallback)+'<b>'+v104Esc(label)+'</b></button>';
+    }
+    return '<nav class="bottom-nav-v2 bottom-nav-v2-three v104-bottom-nav" aria-label="Основное меню">'+
+      item('home','Главная','renderHome','⌂')+
+      item('finance','Финансовый помощник','renderFinancialAssistantV104','₽')+
+      item('profile','Профиль','renderProfile','○')+
+      '</nav>';
+  };
+
+  /* ---------- Карточки разделов без старого блокирующего wrapper ---------- */
+  function blockCardV104(title, text, status, action, cls){
+    var disabled = !action;
+    return '<button class="track-card '+(cls||'')+' '+(disabled?'disabled':'')+'" '+(action ? 'onclick="'+action+'"' : 'disabled')+'><b>'+v104Esc(title)+'</b><p>'+v104Esc(text)+'</p><em>'+v104Esc(status)+'</em></button>';
+  }
+  v104Bind('primaryRoutesHtmlV40', function(){
+    return '<div class="top-track-grid architecture-main-tracks-v40">'+
+      blockCardV104('Я предприниматель','Архитектуры управления по шести видам бизнеса: системы, схемы, тесты, конспекты и рабочие шаблоны.','доступно','renderLearning()','active main-block-card v40-primary-card')+
+      blockCardV104('Нет своего бизнеса','Системы подготовки к запуску: выбор модели, проверка идеи, экономика и первые управленческие решения.','скоро','','soon main-block-card v40-primary-card')+
+      blockCardV104('Я сотрудник','Материалы для руководителей, управляющих и ключевых сотрудников: процессы, ответственность и показатели.','скоро','','soon main-block-card v40-primary-card')+
+      '</div>';
+  });
+  v104Bind('secondaryBlocksHtmlV40', function(){
+    return '<div class="secondary-track-grid-v22 architecture-secondary-tracks-v40 architecture-secondary-tracks-v104">'+
+      blockCardV104('Финансовый помощник','Финансовый модуль, аналитика и готовые шаблоны.','доступно','renderFinancialAssistantV104()','active compact-card finance-home-card-v104')+
+      blockCardV104('Топ-100 книг для бизнеса','Саммари бизнес-книг без таймера, ежедневных ограничений и старой механики челленджа.','доступно','renderBookChallenge()','active compact-card top100-home-card-v104')+
+      blockCardV104('Бизнес-форум','Практические вопросы, обсуждения и обмен опытом участников по видам деятельности.','доступно','openForumBlockV40()','active compact-card forum-home-card-v104')+
+      blockCardV104('Дополнительные материалы','Разборы, шаблоны и материалы вне основного маршрута.','доступно','renderAdditionalMaterials()','active compact-card additional-home-card-v104')+
+      blockCardV104('Бизнес-факты','Короткие практические статьи о реальных бизнес-ситуациях.','скоро','','disabled compact-card')+
+      blockCardV104('Бизнес-медиа','Фильмы, интервью и видео с управленческими выводами.','скоро','','disabled compact-card')+
+      blockCardV104('VIP уровень','Расширенные разборы и дополнительные возможности.','в разработке','','disabled compact-card')+
+      '</div>';
+  });
+
+  /* ---------- Форум открыт ---------- */
+  v104Bind('forumVisibleInNavigationV38', function(){ return true; });
+  v104Bind('forumReadyForCurrentModeV40', function(){ return typeof window.renderBusinessForum === 'function'; });
+  v104Bind('openForumBlockV40', function(){
+    if (typeof window.renderBusinessForum === 'function') return window.renderBusinessForum();
+    return v104Shell(v104Card('blue-card-v2', '<h1>Бизнес-форум</h1><p>Модуль форума загружается. Проверьте, что файл forum.js заменён на актуальную версию.</p><button class="btn secondary" onclick="renderHome()">На главную</button>'), 'home');
+  });
+
+  /* ---------- Топ-100 книг как открытая библиотека ---------- */
+  var TOP100_TITLE = 'Топ-100 книг для бизнеса';
+  function top100MetaId(book){ return String((book && (book.id || book.bookId || ('day_'+book.day))) || '').trim() || 'book'; }
+  function top100Day(book){ return Number((book && (book.day || book.bookDay)) || 0); }
+  function top100ReadSet(){ return new Set(v104ReadIds()); }
+  function top100BookByDay(index, day){
+    var books = index && Array.isArray(index.books) ? index.books : [];
+    var n = Number(day || 0);
+    return books.find(function(b){ return Number(b.day || b.bookDay || 0) === n; }) || books[n-1] || null;
+  }
+  async function top100Index(){
+    if (typeof loadBooks100Index === 'function') return await loadBooks100Index();
+    var res = await fetch('content/challenges/books100/index.json?v=' + V104_VERSION);
+    if (!res.ok) throw new Error('TOP100_INDEX_LOAD_FAILED');
+    return await res.json();
+  }
+  async function top100Book(bookMeta){
+    if (typeof loadBooks100Book === 'function') return await loadBooks100Book(bookMeta);
+    var url = bookMeta && (bookMeta.contentUrl || bookMeta.url);
+    if (!url) throw new Error('TOP100_BOOK_URL_MISSING');
+    var res = await fetch(url + '?v=' + V104_VERSION);
+    if (!res.ok) throw new Error('TOP100_BOOK_LOAD_FAILED');
+    return await res.json();
+  }
+  function top100BookCard(book, readSet){
+    var id = top100MetaId(book);
+    var day = top100Day(book);
+    var read = readSet.has(id) || readSet.has(String(day));
+    var title = book.title || book.bookTitle || ('Книга ' + day);
+    var author = book.author || book.bookAuthor || '';
+    var cover = book.coverImage || ('assets/challenges/books100/' + String(day || 1).padStart(3,'0') + '/screen_01.png');
+    return '<button class="top100-book-card-v104 '+(read?'passed':'')+'" onclick="openBooks100Book('+Number(day || 1)+', false)">'+
+      '<div class="top100-cover-v104"><img src="'+v104Esc(cover)+'?v='+V104_VERSION+'" alt="'+v104Esc(title)+'" onerror="this.style.display=\'none\'; this.parentElement.classList.add(\'no-img\');"><span>'+String(day || '').padStart(3,'0')+'</span></div>'+
+      '<div><b>'+v104Esc(title)+'</b><p>'+v104Esc(author)+'</p><em>'+(read?'прочитано':'открыто')+'</em></div></button>';
+  }
+  async function renderTop100BusinessBooksV104(){
+    try { if (typeof stopBooks100LiveTimerV19 === 'function') stopBooks100LiveTimerV19(); } catch(e) {}
+    try { if (typeof setArchitectureViewV44 === 'function') setArchitectureViewV44('books100'); } catch(e) {}
+    v104Award('block:top100_books', 'block_open', { title:TOP100_TITLE });
+    try {
+      var index = await top100Index();
+      var books = Array.isArray(index.books) ? index.books : [];
+      var readSet = top100ReadSet();
+      v104Shell(
+        v104Card('blue-card-v2 top100-hero-v104', '<p class="eyebrow">библиотека книг</p><h1>'+TOP100_TITLE+'</h1><p>Саммари книг и управленческие идеи для предпринимателя. Все книги открыты сразу: без таймера, без режима «книга дня» и без ежедневных блокировок.</p><div class="top100-progress-v104"><div><span>Подключено</span><b>'+v104Fmt(books.length)+'</b></div><div><span>Прочитано</span><b>'+v104Fmt(readSet.size)+'</b></div><div><span>Режим</span><b>Библиотека</b></div></div>')+
+        v104Card('', '<h2>Список книг</h2><p class="small">Прочитанная книга подсвечивается зелёным после открытия последней страницы саммари.</p><div class="top100-list-v104">'+books.map(function(b){ return top100BookCard(b, readSet); }).join('')+'</div><button class="btn secondary" onclick="renderHome()">На главную</button>'),
+        'home'
+      );
+    } catch(e) {
+      console.error(e);
+      v104Shell(v104Card('result-bad-v2', '<h1>Книги не загрузились</h1><p>Проверьте файл <b>content/challenges/books100/index.json</b>.</p><p class="small">'+v104Esc(e.message || e)+'</p><button class="btn secondary" onclick="renderHome()">На главную</button>'), 'home');
+    }
+  }
+  async function openTop100BookV104(day, adminPreview){
+    try { if (typeof setArchitectureViewV44 === 'function') setArchitectureViewV44('books100'); } catch(e) {}
+    var index = await top100Index();
+    var bookMeta = top100BookByDay(index, day);
+    if (!bookMeta) { alert('Книга не найдена.'); return; }
+    state.books100ActiveBookDay = Number(top100Day(bookMeta) || day || 1);
+    state.books100ScreenIndex = 0;
+    state.books100AdminPreview = Boolean(adminPreview);
+    v104Award('book_open:books100:' + top100MetaId(bookMeta), 'book_open', { bookId:top100MetaId(bookMeta), day:state.books100ActiveBookDay, title:bookMeta.title || bookMeta.bookTitle || '' });
+    return renderTop100ReadingV104();
+  }
+  async function renderTop100ReadingV104(){
+    try {
+      var index = await top100Index();
+      var bookMeta = top100BookByDay(index, state.books100ActiveBookDay || 1);
+      var book = await top100Book(bookMeta);
+      var screens = Array.isArray(book.screens) ? book.screens : (Array.isArray(book.bookScreens) ? book.bookScreens : []);
+      if (!screens.length) screens = [{ number:1, title:book.title || bookMeta.title || 'Саммари', textHtml:book.summaryHtml || book.fullSummaryHtml || '<p>Саммари книги будет добавлено после редакторской проверки.</p>' }];
+      var i = Math.max(0, Math.min(Number(state.books100ScreenIndex || 0), screens.length - 1));
+      state.books100ScreenIndex = i;
+      var screen = screens[i] || {};
+      var id = top100MetaId(bookMeta);
+      var day = Number(top100Day(bookMeta) || state.books100ActiveBookDay || 1);
+      var image = screen.image || screen.imageUrl || ('assets/challenges/books100/' + String(day).padStart(3,'0') + '/screen_' + String(i+1).padStart(2,'0') + '.png');
+      v104Award('book_page:books100:' + id + ':' + String(i+1).padStart(3,'0'), 'book_page_open', { bookId:id, day:day, page:i+1, title:book.title || bookMeta.title || '' });
+      if (i >= screens.length - 1) markTop100BookReadV104(id, bookMeta, false);
+      var body = screen.textHtml || screen.descriptionHtml || (screen.text ? '<p>'+v104Esc(screen.text)+'</p>' : '<p>Текст страницы будет добавлен после редакторской проверки.</p>');
+      var nav = '<div class="nav-panel-v2 nav-panel-v2-three"><button class="btn secondary" onclick="renderBookChallenge()">К списку книг</button><button class="btn secondary" '+(i===0?'disabled':'')+' onclick="prevBooks100Screen()">Назад</button><button class="btn primary" onclick="nextBooks100Screen()">'+(i>=screens.length-1?'Завершить книгу':'Далее')+'</button></div>';
+      v104Shell(nav+'<div class="media-counter">Книга '+String(day).padStart(3,'0')+': страница '+(i+1)+'/'+screens.length+'</div><div class="media-box-v2"><img src="'+v104Esc(image)+'?v='+V104_VERSION+'" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';"><div class="image-missing-v2" style="display:none"><b>Страница '+(i+1)+'</b><p>Иллюстрация в подготовке.</p></div></div><section class="slide-text-v2 books100-text"><p class="eyebrow">Книга: '+v104Esc(book.title || bookMeta.title || '')+'</p><h3>'+v104Esc(screen.title || ('Страница ' + (i+1)))+'</h3>'+body+(i>=screens.length-1?'<div class="top100-read-notice-v104"><b>Книга отмечена как прочитанная</b><p>Она подсветится зелёным в списке книг.</p></div>':'')+'</section>', 'home');
+    } catch(e) {
+      console.error(e);
+      v104Shell(v104Card('result-bad-v2', '<h1>Книга не открылась</h1><p class="small">'+v104Esc(e.message || e)+'</p><button class="btn secondary" onclick="renderBookChallenge()">К списку книг</button>'), 'home');
+    }
+  }
+  function markTop100BookReadV104(id, bookMeta, rerender){
+    id = String(id || top100MetaId(bookMeta) || '').trim();
+    if (!id) return;
+    var ids = v104ReadIds();
+    if (ids.indexOf(id) === -1) ids.push(id);
+    v104SaveReadIds(ids);
+    v104Award('book_read:books100:' + id, 'book_read', { bookId:id, day:top100Day(bookMeta), title:(bookMeta && (bookMeta.title || bookMeta.bookTitle)) || '' });
+    if (rerender) renderBookChallenge();
+  }
+  function prevTop100ScreenV104(){ if (Number(state.books100ScreenIndex || 0) > 0) { state.books100ScreenIndex = Number(state.books100ScreenIndex || 0) - 1; renderTop100ReadingV104(); } }
+  async function nextTop100ScreenV104(){
+    var index = await top100Index();
+    var bookMeta = top100BookByDay(index, state.books100ActiveBookDay || 1);
+    var book = await top100Book(bookMeta);
+    var screens = Array.isArray(book.screens) ? book.screens : (Array.isArray(book.bookScreens) ? book.bookScreens : []);
+    var total = screens.length || 1;
+    if (Number(state.books100ScreenIndex || 0) < total - 1) { state.books100ScreenIndex = Number(state.books100ScreenIndex || 0) + 1; return renderTop100ReadingV104(); }
+    markTop100BookReadV104(top100MetaId(bookMeta), bookMeta, false);
+    return renderBookChallenge();
+  }
+  v104Bind('renderBookChallenge', renderTop100BusinessBooksV104);
+  v104Bind('startBookChallenge', renderTop100BusinessBooksV104);
+  v104Bind('openBooks100Book', openTop100BookV104);
+  v104Bind('renderBooks100Reading', renderTop100ReadingV104);
+  v104Bind('prevBooks100Screen', prevTop100ScreenV104);
+  v104Bind('nextBooks100Screen', nextTop100ScreenV104);
+  v104Bind('startBooks100Quiz', function(){ markTop100BookReadV104(null, null, true); });
+  v104Bind('renderBooks100QuizQuestion', renderTop100BusinessBooksV104);
+  v104Bind('finishBooks100Quiz', renderTop100BusinessBooksV104);
+  window.__ARCHITECTURE_TOP100_V104 = { title:TOP100_TITLE, oldMechanicsDisabled:true, dailyTimerDisabled:true, quizGateDisabled:true, allBooksOpen:true, readStatus:'last screen viewed marks book as read' };
+
+  /* ---------- Финансовый помощник и тренажёр ---------- */
+  var FIN_TRAINER_URL = 'https://docs.google.com/spreadsheets/d/1WsPb_DHt3ksIpCAZIMxgMDuSojIbztbV_5tthhdJ3Eg/copy';
+  var FIN_TRAINER_VIEW_URL = 'https://docs.google.com/spreadsheets/d/1WsPb_DHt3ksIpCAZIMxgMDuSojIbztbV_5tthhdJ3Eg/edit?gid=972184137#gid=972184137';
+  var FIN_SECTION1_LESSONS = [
+    { n:1, title:'Деньги, прибыль и выручка', note:'Почему предприниматель ошибается, когда смотрит только на кассу.' },
+    { n:2, title:'Финансовая карта бизнеса', note:'ОПиУ, ДДС, баланс и метрики как единая карта решений.' },
+    { n:3, title:'Управленческий учёт против бухгалтерии', note:'Почему бухгалтерия и управленка решают разные задачи.' },
+    { n:4, title:'Экономика бизнес-модели', note:'Как видеть бизнес через его двигатель: выручку, маржу, мощность и деньги.' }
+  ];
+  function renderFinancialAssistantV104(){
+    v104Award('block:financial_assistant', 'block_open', { title:'Финансовый помощник' });
+    v104Shell(
+      v104Card('blue-card-v2 finance-hero-v104', '<p class="eyebrow">финансовый помощник</p><h1>Финансовый помощник</h1><p>Финансовый модуль, практические тренажёры и будущие шаблоны. Сейчас открыт учебный финансовый модуль и финансовый тренажёр первого раздела.</p>')+
+      v104Card('', '<div class="finance-grid-v104"><button class="finance-card-v104 active" onclick="renderFinanceModuleHomeV104()"><b>Финансовый модуль</b><p>Уроки, разделы и тренажёр по финансовому мышлению собственника.</p><em>доступно</em></button><button class="finance-card-v104 locked" onclick="renderFinanceAnalyticsV104()"><b>Моя аналитика</b><p>Персональная аналитика бизнеса пока закрыта.</p><em>закрыто</em></button><button class="finance-card-v104 soon" onclick="renderFinanceTemplatesV104()"><b>Готовые шаблоны</b><p>Готовые таблицы и формы будут подключены позже.</p><em>скоро</em></button></div><button class="btn secondary" onclick="renderHome()">На главную</button>'),
+      'finance'
+    );
+  }
+  function renderFinanceModuleHomeV104(){
+    v104Award('module:finance_module', 'module_open', { title:'Финансовый модуль' });
+    var sections = [
+      ['1','Финансовое мышление собственника','4 урока + тренажёр','renderFinanceSectionV104(1)','active'],
+      ['2','Выручка, продажи и unit-экономика','скоро','','soon'],
+      ['3','ОПиУ и прибыльность','скоро','','soon'],
+      ['4','Безубыточность и масштабирование','скоро','','soon'],
+      ['5','ДДС, деньги и ликвидность','скоро','','soon'],
+      ['6','Баланс и остатки','скоро','','soon'],
+      ['7','Долг, налоги, ФОТ и собственник','скоро','','soon'],
+      ['8','Планирование и инвестиции','скоро','','soon'],
+      ['9','Метрики, диагностика и дашборд','скоро','','soon'],
+      ['10','Отраслевые финансы','скоро','','soon'],
+      ['11','Финансовая система и управление','скоро','','soon']
+    ];
+    v104Shell(
+      v104Card('blue-card-v2', '<p class="eyebrow">финансовая архитектура бизнеса</p><h1>Финансовый модуль</h1><p>Модуль формирует финансовое мышление собственника: прибыль, деньги, остатки, баланс, метрики и управленческие решения.</p>')+
+      v104Card('', '<h2>Разделы</h2><div class="finance-section-list-v104">'+sections.map(function(s){ return '<button class="lesson-row-v2 '+(s[4]==='active'?'':'locked')+'" '+(s[3]?'onclick="'+s[3]+'"':'disabled')+'><div><b>'+s[0]+'. '+v104Esc(s[1])+'</b><p>'+v104Esc(s[2])+'</p></div><span>'+(s[3]?'→':'🔒')+'</span></button>'; }).join('')+'</div><button class="btn secondary" onclick="renderFinancialAssistantV104()">← К финансовому помощнику</button>'),
+      'finance'
+    );
+  }
+  function renderFinanceSectionV104(section){
+    section = Number(section || 1);
+    if (section !== 1) return renderFinanceTemplatesV104();
+    v104Award('block:finance_section_01', 'block_open', { title:'Финансовое мышление собственника' });
+    v104Shell(
+      v104Card('blue-card-v2', '<p class="eyebrow">раздел 1</p><h1>Финансовое мышление собственника</h1><p>Первый раздел объясняет, почему деньги не равны прибыли, зачем нужны ОПиУ, ДДС и баланс, чем управленка отличается от бухгалтерии и почему бизнес нужно видеть через экономический двигатель.</p>')+
+      v104Card('', '<h2>Уроки раздела</h2><div class="lesson-list-v2">'+FIN_SECTION1_LESSONS.map(function(l){ return '<button class="lesson-row-v2" onclick="renderFinanceLessonV104('+l.n+')"><div><b>'+l.n+'. '+v104Esc(l.title)+'</b><p>'+v104Esc(l.note)+'</p></div><span>→</span></button>'; }).join('')+'</div>')+
+      v104Card('finance-trainer-card-v104', '<p class="eyebrow">практика</p><h2>Финансовый тренажёр</h2><p>Excel/Google Sheets-тренажёр по первым четырём урокам. Он проверяет классификацию операций, числовые кейсы и понимание финансовой модели.</p><button class="btn primary" onclick="renderFinanceTrainerSection1V104()">Открыть финансовый тренажёр</button><button class="btn secondary" onclick="renderFinanceModuleHomeV104()">← К разделам</button>'),
+      'finance'
+    );
+  }
+  function renderFinanceLessonV104(n){
+    n = Number(n || 1);
+    var lesson = FIN_SECTION1_LESSONS.find(function(l){ return l.n === n; }) || FIN_SECTION1_LESSONS[0];
+    v104Award('lesson:FIN-S01-L'+String(n).padStart(2,'0'), 'lesson_open', { title:lesson.title, module:'finance' });
+    v104Shell(
+      v104Card('blue-card-v2', '<p class="eyebrow">финансовый модуль · раздел 1</p><h1>'+v104Esc(lesson.title)+'</h1><p>'+v104Esc(lesson.note)+'</p>')+
+      v104Card('', '<h2>Как работать с уроком</h2><p>Теоретические слайды этого раздела уже вынесены в финансовый модуль приложения. После изучения первых четырёх уроков нужно пройти финансовый тренажёр, чтобы проверить не запоминание терминов, а управленческую логику.</p><div class="grid-v2"><button class="btn primary" onclick="renderFinanceTrainerSection1V104()">Перейти к тренажёру</button><button class="btn secondary" onclick="renderFinanceSectionV104(1)">К разделу 1</button></div>'),
+      'finance'
+    );
+  }
+  function renderFinanceTrainerSection1V104(){
+    v104Award('work_material:FIN-S01:trainer', 'work_material_open', { title:'Финансовый тренажёр. Раздел 1', url:FIN_TRAINER_URL });
+    v104Shell(
+      v104Card('blue-card-v2', '<p class="eyebrow">финансовый тренажёр</p><h1>Excel-тренажёр проверки знаний</h1><p>Тренажёр проверяет первые четыре урока раздела «Финансовое мышление собственника».</p>')+
+      v104Card('', '<h2>Порядок работы</h2><div class="list-clean"><div><b>1. Создайте личную копию</b><p>Кнопка открывает Google Sheets в режиме копирования. В исходном шаблоне работать нельзя.</p></div><div><b>2. Проходите листы по порядку</b><p>Кейсы → Операции → Числовые_кейсы → Модель.</p></div><div><b>3. Заполняйте только рабочие поля</b><p>Не редактируйте служебные листы проверки, банк вопросов и справочники.</p></div><div><b>4. Смотрите результат</b><p>Итог находится на листах «Отчет» и «Разбор_ошибок».</p></div></div><div class="grid-v2"><button class="btn primary" onclick="openFinanceTrainerV104()">Открыть финансовый тренажёр</button><button class="btn secondary" onclick="openFinanceTrainerViewV104()">Открыть резервную ссылку</button><button class="btn secondary" onclick="renderFinanceSectionV104(1)">← К разделу 1</button></div>'),
+      'finance'
+    );
+  }
+  function openFinanceTrainerV104(){ v104Award('work_material:FIN-S01:trainer', 'work_material_open', { title:'Финансовый тренажёр. Раздел 1', url:FIN_TRAINER_URL }); v104OpenUrl(FIN_TRAINER_URL); }
+  function openFinanceTrainerViewV104(){ v104Award('work_material:FIN-S01:trainer', 'work_material_open', { title:'Финансовый тренажёр. Раздел 1', url:FIN_TRAINER_VIEW_URL }); v104OpenUrl(FIN_TRAINER_VIEW_URL); }
+  function renderFinanceAnalyticsV104(){ alert('Блок «Моя аналитика» пока закрыт. Он будет подключён отдельно, когда будет готова персональная аналитика бизнеса.'); return renderFinancialAssistantV104(); }
+  function renderFinanceTemplatesV104(){ alert('Готовые шаблоны скоро появятся. Этот блок пока не открыт.'); return renderFinancialAssistantV104(); }
+  v104Bind('renderFinancialAssistantV104', renderFinancialAssistantV104);
+  v104Bind('renderFinancialAssistantV77', renderFinancialAssistantV104);
+  v104Bind('renderFinancialAssistant', renderFinancialAssistantV104);
+  v104Bind('renderMyBusiness', renderFinancialAssistantV104);
+  v104Bind('renderFinanceModuleHomeV104', renderFinanceModuleHomeV104);
+  v104Bind('renderFinanceModuleHomeV77', renderFinanceModuleHomeV104);
+  v104Bind('renderFinanceModuleHome', renderFinanceModuleHomeV104);
+  v104Bind('renderFinanceSectionV104', renderFinanceSectionV104);
+  v104Bind('renderFinanceSectionV77', renderFinanceSectionV104);
+  v104Bind('renderFinanceSection', renderFinanceSectionV104);
+  v104Bind('renderFinanceLessonV104', renderFinanceLessonV104);
+  v104Bind('renderFinanceLessonV77', renderFinanceLessonV104);
+  v104Bind('renderFinanceLesson', renderFinanceLessonV104);
+  v104Bind('renderFinanceTrainerSection1V104', renderFinanceTrainerSection1V104);
+  v104Bind('renderFinanceTrainerSection1V77', renderFinanceTrainerSection1V104);
+  v104Bind('renderFinanceTrainerSection1', renderFinanceTrainerSection1V104);
+  v104Bind('openFinanceTrainerV104', openFinanceTrainerV104);
+  v104Bind('openFinanceTrainerViewV104', openFinanceTrainerViewV104);
+  v104Bind('renderFinanceAnalyticsV104', renderFinanceAnalyticsV104);
+  v104Bind('renderFinanceAnalyticsV77', renderFinanceAnalyticsV104);
+  v104Bind('renderFinanceAnalytics', renderFinanceAnalyticsV104);
+  v104Bind('renderFinanceTemplatesV104', renderFinanceTemplatesV104);
+  v104Bind('renderFinanceTemplatesV77', renderFinanceTemplatesV104);
+  v104Bind('renderFinanceTemplates', renderFinanceTemplatesV104);
+
+  /* ---------- Главная и профиль ---------- */
+  v104Bind('safeActiveChallengeCardHtmlV24', function(){ return ''; });
+  v104Bind('activeChallengeCardHtml', function(){ return ''; });
+  var renderHomeBeforeV104 = window.renderHome;
+  window.renderHome = function(){
+    try { if (typeof setArchitectureViewV44 === 'function') setArchitectureViewV44('home'); } catch(e) {}
+    try { if (typeof stopBooks100LiveTimerV19 === 'function') stopBooks100LiveTimerV19(); } catch(e) {}
+    var stats = v104ProfileStats();
+    var title = 'АРХИТЕКТУРА';
+    try { if (typeof studentTitleInfo === 'function') title = studentTitleInfo().current.title || title; } catch(e) {}
+    var html = v104Card('hero-dashboard main-dashboard-card v104-main-hero', '<div class="hero-layout"><div><p class="eyebrow">библиотека бизнес-систем</p><h1>АРХИТЕКТУРА</h1><p>Системы, уроки, книги, финансовые инструменты и практические материалы для предпринимателя.</p></div><div class="v104-mini-points"><span>Баллы</span><b>'+v104Fmt(stats.points)+'</b><small>'+v104Esc(title)+'</small></div></div>')+
+      v104Card('', '<h2>Выбрать блок</h2><p>Выберите направление работы внутри платформы.</p>'+primaryRoutesHtmlV40()+secondaryBlocksHtmlV40());
+    return v104Shell(html, 'home');
+  };
+  var renderProfileBeforeV104 = window.renderProfile;
+  window.renderProfile = function(){
+    try { if (typeof setArchitectureViewV44 === 'function') setArchitectureViewV44('profile'); } catch(e) {}
+    var first = '';
+    try { first = (state && state.user && state.user.first_name) || 'Пользователь'; } catch(e) { first = 'Пользователь'; }
+    var stats = v104ProfileStats();
+    var admin = '';
+    try { if (typeof isAdminUser === 'function' && isAdminUser()) admin = v104Card('', '<h2>Администрирование</h2><p>Этот блок виден только администратору.</p><button class="btn primary" onclick="renderAdmin()">Панель администратора</button>'); } catch(e) {}
+    return v104Shell(
+      v104Card('blue-card-v2', '<h1>Профиль</h1><p>'+v104Esc(first)+' · участник</p>')+
+      v104Card('', '<h2>Баллы</h2><p>Баллы начисляются за исследование библиотеки бизнес-систем.</p><div class="profile-score-grid"><div><span>Всего баллов</span><b>'+v104Fmt(stats.points)+'</b></div><div><span>Формат</span><b>+1 за действие</b></div></div><button class="btn secondary" onclick="renderResearchPointsRulesV91()">Как считаются баллы</button>')+
+      doneSummaryHtmlV104()+
+      admin+
+      v104Card('', '<h2>Поддержка</h2>'+ (typeof externalButton === 'function' ? externalButton('Задать вопрос', SUPPORT_FORM_URL, 'secondary') + externalButton('Предложить идею', IDEA_FORM_URL, 'secondary') : '')),
+      'profile'
+    );
+  };
+
+  window.__ARCHITECTURE_V104_RESTORE = {
+    version: V104_VERSION,
+    restored: ['top100_open_library','financial_assistant','finance_trainer','research_points','compact_profile_stats','business_forum_open','additional_materials_open'],
+    reason: 'v103 break-even file was built on an older base and overwritten newer v96/v99/v101 routes'
+  };
+})();
+
+/* v104.1 — актуальное боковое меню без старого названия челленджа */
+(function installV104DrawerOverride(){
+  function esc104(v){ return typeof esc === 'function' ? esc(v) : String(v == null ? '' : v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function item(title,status,action){
+    var disabled = !action;
+    return '<button class="app-drawer-item-v40 '+(disabled?'disabled':'')+'" '+(action?'onclick="closeAppDrawerV40();'+action+'"':'disabled')+'><span>'+esc104(title)+'</span><em>'+esc104(status)+'</em></button>';
+  }
+  function drawerHtml(){
+    var rows = [
+      item('Я предприниматель','доступно','renderLearning()'),
+      item('Финансовый помощник','доступно','renderFinancialAssistantV104()'),
+      item('Топ-100 книг для бизнеса','доступно','renderBookChallenge()'),
+      item('Бизнес-форум','доступно','openForumBlockV40()'),
+      item('Дополнительные материалы','доступно','renderAdditionalMaterials()'),
+      item('Нет своего бизнеса','скоро',''),
+      item('Я сотрудник','скоро',''),
+      item('Бизнес-факты','скоро',''),
+      item('Бизнес-медиа','скоро',''),
+      item('VIP уровень','в разработке','')
+    ].join('');
+    return '<div class="app-drawer-overlay-v40" id="app-drawer-overlay-v40" onclick="closeAppDrawerV40()" aria-hidden="true"><aside class="app-drawer-v40" role="dialog" aria-modal="true" aria-label="Все разделы приложения" onclick="event.stopPropagation()"><div class="app-drawer-head-v40"><div><p>АРХИТЕКТУРА</p><span>Все разделы</span></div><button onclick="closeAppDrawerV40()" aria-label="Закрыть меню">×</button></div><div class="app-drawer-list-v40">'+rows+'</div></aside></div>';
+  }
+  window.openAppDrawerV40 = function(){
+    var shellRoot = document.querySelector('.app-shell-v2') || document.body;
+    var old = document.getElementById('app-drawer-overlay-v40');
+    if (old) old.remove();
+    shellRoot.insertAdjacentHTML('beforeend', drawerHtml());
+    var overlay = document.getElementById('app-drawer-overlay-v40');
+    if (!overlay) return;
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden','false');
+    document.body.classList.add('app-drawer-open-v40');
+  };
+  window.closeAppDrawerV40 = function(){
+    var overlay = document.getElementById('app-drawer-overlay-v40');
+    if (overlay) {
+      overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden','true');
+    }
+    document.body.classList.remove('app-drawer-open-v40');
   };
 })();

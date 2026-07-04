@@ -3965,3 +3965,288 @@ html.theme-architecture .v48-dashboard .v44-instruction-panel{
    Вставить в конец styles.css.
    ===================================================== */
 .additional-list-v102{display:grid;gap:10px;margin-top:10px}.additional-material-card-v102{width:100%;display:grid;grid-template-columns:54px 1fr;gap:12px;align-items:center;text-align:left;padding:14px;border-radius:18px;background:#fff;border:1px solid var(--lego-border,#DDE5EF);box-shadow:0 8px 20px rgba(7,27,53,.05)}.additional-material-card-v102 span{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:var(--lego-yellow-soft,#FFF3C8);color:var(--lego-navy,#071B35);font-size:18px;font-weight:950}.additional-material-card-v102 b{display:block;color:var(--lego-navy,#071B35);font-size:16px;line-height:1.2;margin-bottom:5px}.additional-material-card-v102 p{margin:0 0 7px;font-size:13px;line-height:1.35;color:var(--lego-gray-700,#4D5B6B)}.additional-material-card-v102 em{display:inline-flex;padding:6px 9px;border-radius:999px;background:var(--lego-steel-light,#E7F0FA);color:var(--lego-steel,#2F5F9F);font-size:11px;font-weight:900;font-style:normal}.bep-slide-text-v102 .slide-insight-v102{margin:14px 0 0;padding:13px 14px;border-radius:16px;background:var(--lego-yellow-soft,#FFF3C8);border:1px solid rgba(246,195,67,.55);color:var(--lego-navy,#071B35);font-size:14px;line-height:1.5}.bep-slide-text-v102 .slide-insight-v102 b{color:var(--lego-navy,#071B35)}.bep-media-v102{min-height:190px}.bep-table-hero-v102 p,.bep-hub-v102 p,.additional-hero-v102 p{max-width:680px}@media(max-width:420px){.additional-material-card-v102{grid-template-columns:44px 1fr;padding:12px}.additional-material-card-v102 span{width:44px;height:44px;font-size:15px}}
+
+/* =====================================================
+   v104 — восстановление главных маршрутов и актуального интерфейса
+   ===================================================== */
+.bottom-nav-v2.v104-bottom-nav,
+.bottom-nav-v2.bottom-nav-v2-three.v104-bottom-nav{
+  position:fixed!important;
+  left:50%!important;
+  right:auto!important;
+  bottom:0!important;
+  transform:translateX(-50%)!important;
+  z-index:50!important;
+  width:100%!important;
+  max-width:480px!important;
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:4px!important;
+  padding:8px 8px calc(10px + env(safe-area-inset-bottom))!important;
+  background:rgba(255,255,255,.96)!important;
+  border-top:1px solid var(--lego-border,#DDE5EF)!important;
+  box-shadow:0 -10px 28px rgba(7,27,53,.08)!important;
+}
+.v104-bottom-nav .bottom-item{
+  min-width:0!important;
+  text-align:center!important;
+}
+.v104-bottom-nav .bottom-item b{
+  font-size:10px!important;
+  line-height:1.08!important;
+  text-align:center!important;
+  white-space:normal!important;
+}
+.v104-main-hero .v104-mini-points{
+  min-width:106px;
+  border-radius:20px;
+  padding:14px 12px;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.18);
+  text-align:center;
+}
+.v104-mini-points span,
+.top100-progress-v104 span{
+  display:block;
+  font-size:10px;
+  line-height:1.1;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  opacity:.78;
+}
+.v104-mini-points b{
+  display:block;
+  margin-top:6px;
+  font-size:25px;
+  line-height:1;
+  color:#fff!important;
+}
+.v104-mini-points small{
+  display:block;
+  margin-top:6px;
+  color:rgba(255,255,255,.74);
+  font-size:10px;
+  line-height:1.2;
+}
+.architecture-secondary-tracks-v104{
+  margin-top:12px;
+}
+.finance-grid-v104{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+}
+.finance-card-v104{
+  width:100%;
+  text-align:left;
+  border-radius:18px;
+  padding:16px;
+  background:#fff;
+  border:1px solid var(--lego-border,#DDE5EF);
+  box-shadow:0 8px 20px rgba(7,27,53,.05);
+}
+.finance-card-v104 b{
+  display:block;
+  color:var(--lego-navy,#071B35);
+  font-size:18px;
+  margin-bottom:6px;
+}
+.finance-card-v104 p{
+  margin:0 0 10px;
+  font-size:14px;
+  line-height:1.45;
+}
+.finance-card-v104 em{
+  display:inline-flex;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#E7F0FA;
+  color:#1F4F8A;
+  font-style:normal;
+  font-size:12px;
+  font-weight:900;
+}
+.finance-card-v104.active{
+  background:linear-gradient(135deg,#fff,#FFF3C8);
+  border-color:rgba(246,195,67,.65);
+}
+.finance-card-v104.locked,
+.finance-card-v104.soon{
+  opacity:.76;
+}
+.finance-card-v104.locked em,
+.finance-card-v104.soon em{
+  background:#EEF2F6;
+  color:#64748B;
+}
+.finance-section-list-v104{
+  display:grid;
+  gap:10px;
+}
+.finance-trainer-card-v104{
+  border-color:rgba(47,95,159,.22);
+  background:linear-gradient(180deg,#fff,#F8FBFF);
+}
+.top100-progress-v104{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  margin-top:16px;
+}
+.top100-progress-v104>div{
+  padding:12px;
+  border-radius:16px;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.18);
+}
+.top100-progress-v104 b{
+  display:block;
+  margin-top:6px;
+  color:#fff!important;
+  font-size:20px;
+  line-height:1.1;
+}
+.top100-list-v104{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+}
+.top100-book-card-v104{
+  width:100%;
+  display:grid;
+  grid-template-columns:64px 1fr;
+  gap:12px;
+  align-items:center;
+  text-align:left;
+  padding:12px;
+  border-radius:18px;
+  background:#fff;
+  border:1px solid var(--lego-border,#DDE5EF);
+  box-shadow:0 8px 18px rgba(7,27,53,.05);
+}
+.top100-book-card-v104.passed{
+  background:#EDF8F2;
+  border-color:rgba(34,167,93,.35);
+  box-shadow:0 10px 24px rgba(34,167,93,.10);
+}
+.top100-book-card-v104 b{
+  display:block;
+  color:var(--lego-navy,#071B35);
+  font-size:16px;
+  line-height:1.2;
+  margin-bottom:4px;
+}
+.top100-book-card-v104 p{
+  margin:0 0 8px;
+  font-size:13px;
+  color:#64748B;
+}
+.top100-book-card-v104 em{
+  display:inline-flex;
+  padding:5px 9px;
+  border-radius:999px;
+  background:#E7F0FA;
+  color:#1F4F8A;
+  font-style:normal;
+  font-size:11px;
+  font-weight:900;
+}
+.top100-book-card-v104.passed em{
+  background:#D9F3E5;
+  color:#0F7A3C;
+}
+.top100-cover-v104{
+  width:64px;
+  height:64px;
+  border-radius:16px;
+  overflow:hidden;
+  position:relative;
+  display:grid;
+  place-items:center;
+  background:#E7F0FA;
+  color:#1F4F8A;
+  font-weight:900;
+}
+.top100-cover-v104 img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+.top100-cover-v104 span{
+  position:absolute;
+  inset:auto 6px 6px auto;
+  min-width:32px;
+  padding:3px 5px;
+  border-radius:999px;
+  background:rgba(7,27,53,.84);
+  color:#fff;
+  font-size:10px;
+  text-align:center;
+}
+.top100-cover-v104.no-img span{
+  position:static;
+  background:transparent;
+  color:#1F4F8A;
+  font-size:15px;
+}
+.top100-read-notice-v104,
+.profile-stat-explain-v104{
+  margin-top:12px;
+  padding:14px 16px;
+  border-radius:18px;
+  background:#EDF8F2;
+  border:1px solid rgba(34,167,93,.35);
+  color:#143A26;
+}
+.top100-read-notice-v104 b{
+  display:block;
+  margin-bottom:4px;
+}
+.top100-read-notice-v104 p,
+.profile-stat-explain-v104 p{
+  margin:0 0 8px;
+  font-size:14px;
+  line-height:1.45;
+}
+.profile-stat-explain-v104 p:last-child{
+  margin-bottom:0;
+}
+.profile-done-v104 .done-grid-v104{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin-top:12px;
+}
+.profile-done-v104 .done-grid-v104>div{
+  padding:13px;
+  border-radius:16px;
+  background:#F6F8FC;
+  border:1px solid #DDE5EF;
+}
+.profile-done-v104 .done-grid-v104 span{
+  display:block;
+  font-size:11px;
+  color:#64748B;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  font-weight:900;
+}
+.profile-done-v104 .done-grid-v104 b{
+  display:block;
+  margin-top:5px;
+  color:#071B35;
+  font-size:22px;
+}
+@media(min-width:720px){
+  .profile-done-v104 .done-grid-v104{grid-template-columns:repeat(5,minmax(0,1fr));}
+}
+@media(max-width:420px){
+  .v104-main-hero .hero-layout{grid-template-columns:1fr!important;}
+  .v104-main-hero .v104-mini-points{max-width:180px;}
+  .top100-progress-v104{grid-template-columns:1fr;}
+  .top100-book-card-v104{grid-template-columns:56px 1fr;}
+  .top100-cover-v104{width:56px;height:56px;}
+  .profile-done-v104 .done-grid-v104{grid-template-columns:1fr;}
+}
