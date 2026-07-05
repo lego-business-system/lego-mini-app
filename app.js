@@ -8584,3 +8584,141 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
   setTimeout(rp123CleanDom, 0);
   setTimeout(rp123CleanDom, 300);
 })();
+/* =====================================================
+   v124 — финальная чистка названия показателя
+   Термин в интерфейсе: «баллы исследования».
+   Не меняет логику баллов, доступ, уроки, тесты, форум и Supabase.
+   ===================================================== */
+(function installResearchPointsCleanFinalV124(){
+  window.APP_UI_VERSION_V124 = 'v124-research-points-clean-final-20260706';
+
+  function rp124Num(raw){
+    return Number(String(raw || '').replace(/\s/g, '').replace(/,/g, '.')) || 0;
+  }
+
+  function rp124Word(raw){
+    var n = Math.abs(rp124Num(raw));
+    var mod100 = n % 100;
+    var mod10 = n % 10;
+    if (mod100 >= 11 && mod100 <= 19) return 'баллов исследования';
+    if (mod10 === 1) return 'балл исследования';
+    if (mod10 >= 2 && mod10 <= 4) return 'балла исследования';
+    return 'баллов исследования';
+  }
+
+  function rp124NormalizeText(value){
+    var out = String(value == null ? '' : value);
+
+    // Убираем старый визуальный лимит 25 уровней.
+    out = out.replace(/\s*\/\s*25\b/g, '');
+
+    // Самые частые кривые формы после старых автозамен:
+    // «единица освоенияы», «единица освоенияов», «единиц освоения», «единицы освоения».
+    out = out.replace(/(\d[\d\s]*)\s*\/\s*(\d[\d\s]*)\s*единиц[а-яё]*\s+освоени[а-яё]*/gi, function(_, a, b){
+      return a + ' / ' + b + ' баллов исследования';
+    });
+    out = out.replace(/(\d[\d\s]*)\s*единиц[а-яё]*\s+освоени[а-яё]*/gi, function(_, n){
+      return n + ' ' + rp124Word(n);
+    });
+    out = out.replace(/(\d[\d\s]*)\s*единиц[а-яё]*/gi, function(_, n){
+      return n + ' ' + rp124Word(n);
+    });
+
+    out = out.replace(/Всего\s+единиц[а-яё]*\s+освоени[а-яё]*/gi, 'Всего баллов исследования');
+    out = out.replace(/Единиц[а-яё]*\s+освоени[а-яё]*/g, 'Баллы исследования');
+    out = out.replace(/единиц[а-яё]*\s+освоени[а-яё]*/gi, 'баллы исследования');
+    out = out.replace(/Единиц[а-яё]*/g, 'Баллы исследования');
+    out = out.replace(/единиц[а-яё]*/gi, 'баллы исследования');
+
+    // Старые нормальные варианты.
+    out = out.replace(/Учебные\s+единицы/gi, 'Баллы исследования');
+    out = out.replace(/учебных\s+единиц/gi, 'баллов исследования');
+    out = out.replace(/учебные\s+единицы/gi, 'баллы исследования');
+    out = out.replace(/единицы\s+освоения/gi, 'баллы исследования');
+    out = out.replace(/единиц\s+освоения/gi, 'баллов исследования');
+    out = out.replace(/единица\s+освоения/gi, 'баллы исследования');
+
+    // Короткие подписи «Баллы» тоже приводим к единому термину,
+    // но не трогаем уже готовое «баллы исследования».
+    out = out.replace(/\bБаллы\b(?!\s+исследования)/g, 'Баллы исследования');
+    out = out.replace(/\bбаллы\b(?!\s+исследования)/g, 'баллы исследования');
+    out = out.replace(/\bбаллов\b(?!\s+исследования)/g, 'баллов исследования');
+    out = out.replace(/\bбалла\b(?!\s+исследования)/g, 'балла исследования');
+    out = out.replace(/\bбалл\b(?!\s+исследования)/g, 'балл исследования');
+
+    // Чистим возможные повторы после нескольких слоёв.
+    out = out.replace(/баллы\s+исследования\s+исследования/gi, 'баллы исследования');
+    out = out.replace(/баллов\s+исследования\s+исследования/gi, 'баллов исследования');
+    out = out.replace(/балла\s+исследования\s+исследования/gi, 'балла исследования');
+    out = out.replace(/балл\s+исследования\s+исследования/gi, 'балл исследования');
+
+    return out;
+  }
+  window.rp124NormalizeText = rp124NormalizeText;
+
+  function rp124CleanDom(){
+    try {
+      var root = document.getElementById('app');
+      if (!root) return;
+
+      // ВАЖНО: чистим именно текстовые узлы, а не только элементы без children.
+      // Так исправляются подписи внутри сложных карточек и вложенных блоков.
+      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+      var node;
+      while ((node = walker.nextNode())) {
+        var current = node.nodeValue || '';
+        if (!current || !current.trim()) continue;
+        var next = rp124NormalizeText(current);
+        if (next !== current) node.nodeValue = next;
+      }
+
+      root.querySelectorAll('[aria-label],[title],[placeholder],[alt]').forEach(function(el){
+        ['aria-label','title','placeholder','alt'].forEach(function(attr){
+          if (!el.hasAttribute(attr)) return;
+          var current = el.getAttribute(attr) || '';
+          var next = rp124NormalizeText(current);
+          if (next !== current) el.setAttribute(attr, next);
+        });
+      });
+    } catch(e) {}
+  }
+  window.rp124CleanDom = rp124CleanDom;
+
+  // Последний shell-перехват: чистим до и после рендера.
+  var shellBeforeV124 = window.shell;
+  if (typeof shellBeforeV124 === 'function' && !shellBeforeV124.__researchPointsCleanFinalV124) {
+    var shellWrappedV124 = function(content, activeTab){
+      var result = shellBeforeV124(rp124NormalizeText(content), activeTab);
+      setTimeout(rp124CleanDom, 0);
+      setTimeout(rp124CleanDom, 80);
+      setTimeout(rp124CleanDom, 240);
+      setTimeout(rp124CleanDom, 600);
+      return result;
+    };
+    shellWrappedV124.__researchPointsCleanFinalV124 = true;
+    window.shell = shellWrappedV124;
+    try { shell = window.shell; } catch(e) {}
+  }
+
+  // Наблюдатель нужен, потому что старые слои могут менять текст уже после shell().
+  function rp124InstallObserver(){
+    try {
+      var root = document.getElementById('app');
+      if (!root || window.__rp124ObserverInstalled) return;
+      window.__rp124ObserverInstalled = true;
+      var pending = false;
+      var observer = new MutationObserver(function(){
+        if (pending) return;
+        pending = true;
+        setTimeout(function(){ pending = false; rp124CleanDom(); }, 20);
+      });
+      observer.observe(root, { childList:true, subtree:true, characterData:true });
+      window.__rp124Observer = observer;
+    } catch(e) {}
+  }
+
+  setTimeout(rp124InstallObserver, 0);
+  setTimeout(rp124CleanDom, 0);
+  setTimeout(rp124CleanDom, 200);
+  setTimeout(rp124CleanDom, 800);
+})();
