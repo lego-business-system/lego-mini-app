@@ -8457,3 +8457,130 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
 
   setTimeout(v122CleanResearchTextInDom, 0);
 })();
+
+
+/* =====================================================
+   v123 — единое название показателя: «баллы исследования»
+   Безопасный текстовый слой. Не меняет логику приложения,
+   доступ, уроки, тесты, форум, Supabase и прогресс.
+   ===================================================== */
+(function installResearchPointsTextV123(){
+  window.APP_UI_VERSION_V123 = 'v123-research-points-text-fix-20260706';
+
+  function rp123Word(n){
+    var x = Math.abs(Number(n || 0));
+    var mod100 = x % 100;
+    var mod10 = x % 10;
+    if (mod100 >= 11 && mod100 <= 19) return 'баллов исследования';
+    if (mod10 === 1) return 'балл исследования';
+    if (mod10 >= 2 && mod10 <= 4) return 'балла исследования';
+    return 'баллов исследования';
+  }
+
+  function rp123Number(raw){
+    return Number(String(raw || '').replace(/\s/g, '').replace(/,/g, '.')) || 0;
+  }
+
+  function rp123NormalizeText(value){
+    var out = String(value == null ? '' : value);
+
+    // Убираем старый визуальный лимит уровней.
+    out = out.replace(/\s*\/\s*25\b/g, '');
+
+    // Исправляем кривые формы после старых автозамен: «единица освоенияы», «единица освоенияов» и т.д.
+    out = out.replace(/(\d[\d\s]*)\s*\/\s*(\d[\d\s]*)\s*единиц\w*\s+освоения\w*/gi, function(_, a, b){
+      return a + ' / ' + b + ' баллов исследования';
+    });
+    out = out.replace(/(\d[\d\s]*)\s*единиц\w*\s+освоения\w*/gi, function(_, n){
+      return n + ' ' + rp123Word(rp123Number(n));
+    });
+    out = out.replace(/(\d[\d\s]*)\s*единиц\w*/gi, function(_, n){
+      return n + ' ' + rp123Word(rp123Number(n));
+    });
+
+    out = out.replace(/Всего\s+единиц\w*\s+освоения\w*/gi, 'Всего баллов исследования');
+    out = out.replace(/Единиц\w*\s+освоения\w*/g, 'Баллы исследования');
+    out = out.replace(/единиц\w*\s+освоения\w*/gi, 'баллы исследования');
+    out = out.replace(/Единиц\w*/g, 'Баллы исследования');
+    out = out.replace(/единиц\w*/gi, 'баллы исследования');
+
+    // Старые нормальные формы тоже переводим в новый термин.
+    out = out.replace(/Учебные\s+единицы/gi, 'Баллы исследования');
+    out = out.replace(/учебных\s+единиц/gi, 'баллов исследования');
+    out = out.replace(/учебные\s+единицы/gi, 'баллы исследования');
+    out = out.replace(/единицы\s+освоения/gi, 'баллы исследования');
+    out = out.replace(/единиц\s+освоения/gi, 'баллов исследования');
+    out = out.replace(/единица\s+освоения/gi, 'баллы исследования');
+
+    // Если где-то осталось просто «Баллы», делаем термин единым.
+    out = out.replace(/\bБаллы\b(?!\s+исследования)/g, 'Баллы исследования');
+    out = out.replace(/\bбаллы\b(?!\s+исследования)/g, 'баллы исследования');
+    out = out.replace(/\bбаллов\b(?!\s+исследования)/g, 'баллов исследования');
+    out = out.replace(/\bбалла\b(?!\s+исследования)/g, 'балла исследования');
+    out = out.replace(/\bбалл\b(?!\s+исследования)/g, 'балл исследования');
+
+    // Чистим случайные повторы, если старые слои уже что-то заменили.
+    out = out.replace(/баллы\s+исследования\s+исследования/gi, 'баллы исследования');
+    out = out.replace(/баллов\s+исследования\s+исследования/gi, 'баллов исследования');
+    out = out.replace(/балла\s+исследования\s+исследования/gi, 'балла исследования');
+    out = out.replace(/балл\s+исследования\s+исследования/gi, 'балл исследования');
+
+    return out;
+  }
+  window.rp123NormalizeText = rp123NormalizeText;
+
+  // Перехватываем общий рендер: до вставки HTML и после вставки в DOM.
+  var shellBeforeV123 = window.shell;
+  if (typeof shellBeforeV123 === 'function' && !shellBeforeV123.__researchPointsTextV123) {
+    var shellWrappedV123 = function(content, activeTab){
+      var result = shellBeforeV123(rp123NormalizeText(content), activeTab);
+      setTimeout(rp123CleanDom, 0);
+      setTimeout(rp123CleanDom, 80);
+      setTimeout(rp123CleanDom, 240);
+      return result;
+    };
+    shellWrappedV123.__researchPointsTextV123 = true;
+    window.shell = shellWrappedV123;
+    try { shell = window.shell; } catch(e) {}
+  }
+
+  function rp123CleanDom(){
+    try {
+      var root = document.getElementById('app');
+      if (!root) return;
+      root.querySelectorAll('span,b,p,em,h1,h2,h3,button,small,a,label,strong,div').forEach(function(node){
+        if (node.children && node.children.length) return;
+        var current = node.textContent || '';
+        if (!current || !current.trim()) return;
+        var next = rp123NormalizeText(current);
+        if (next !== current) node.textContent = next;
+      });
+      root.querySelectorAll('[aria-label],[title],[placeholder],[alt]').forEach(function(node){
+        ['aria-label','title','placeholder','alt'].forEach(function(attr){
+          if (!node.hasAttribute(attr)) return;
+          var current = node.getAttribute(attr) || '';
+          var next = rp123NormalizeText(current);
+          if (next !== current) node.setAttribute(attr, next);
+        });
+      });
+    } catch(e) {}
+  }
+  window.rp123CleanDom = rp123CleanDom;
+
+  // Дополнительно усиливаем страницу правил, если она вызывается старым именем.
+  var renderPointsBeforeV123 = window.renderPointsRulesV43 || window.renderProgressRulesV40;
+  if (typeof renderPointsBeforeV123 === 'function') {
+    window.renderPointsRulesV43 = function(){
+      var result = renderPointsBeforeV123.apply(this, arguments);
+      setTimeout(rp123CleanDom, 0);
+      setTimeout(rp123CleanDom, 100);
+      return result;
+    };
+    window.renderPointsRulesV42 = window.renderPointsRulesV43;
+    window.renderPointsRulesV41 = window.renderPointsRulesV43;
+    window.renderProgressRulesV40 = window.renderPointsRulesV43;
+  }
+
+  setTimeout(rp123CleanDom, 0);
+  setTimeout(rp123CleanDom, 300);
+})();
