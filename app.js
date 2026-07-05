@@ -7665,3 +7665,395 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
   setTimeout(v120CleanLevelText, 0);
 })();
 
+/* =====================================================
+   v121 — финальная правка отображения уровней
+   Что делает:
+   - убирает видимое "/25" на главной и в профиле;
+   - считает уровень строго от баллов: 1 уровень = 1000 баллов;
+   - оставляет 25 именных уровней как справочник достижений;
+   - после 25-го уровня счёт продолжается автоматически;
+   - не меняет доступ, уроки, тесты, практику, форум, финпомощник и Supabase.
+   ===================================================== */
+(function installArchitectureLevelsDisplayV121(){
+  window.APP_UI_VERSION_V121 = 'v121-levels-display-fixed-20260706';
+
+  var POINTS_PER_LEVEL_V121 = 1000;
+  var previousTotalPointsV121 = window.totalPoints;
+
+  function v121Int(value){
+    var n = Math.floor(Number(value || 0));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }
+
+  function v121Fmt(value){
+    try {
+      return typeof formatPoints === 'function'
+        ? formatPoints(value)
+        : Number(value || 0).toLocaleString('ru-RU');
+    } catch(e) {
+      return String(value || 0);
+    }
+  }
+
+  function v121Esc(value){
+    if (typeof esc === 'function') return esc(value);
+    return String(value == null ? '' : value).replace(/[&<>'"]/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]);
+    });
+  }
+
+  function v121Card(cls, html){
+    if (typeof card === 'function') return card(cls || '', html || '');
+    return '<section class="card-v2 ' + (cls || '') + '">' + (html || '') + '</section>';
+  }
+
+  function v121SafePercent(value){
+    if (typeof safePercent === 'function') return safePercent(value);
+    return Math.max(0, Math.min(100, Math.round(Number(value || 0))));
+  }
+
+  function v121ResearchPointsTotal(){
+    try {
+      if (typeof window.getResearchPointsTotalV91 === 'function') {
+        return v121Int(window.getResearchPointsTotalV91());
+      }
+    } catch(e) {}
+
+    try {
+      if (typeof getResearchPointsTotalV91 === 'function') {
+        return v121Int(getResearchPointsTotalV91());
+      }
+    } catch(e) {}
+
+    try {
+      if (typeof previousTotalPointsV121 === 'function') {
+        return v121Int(previousTotalPointsV121());
+      }
+    } catch(e) {}
+
+    return 0;
+  }
+
+  function v121NamedLevelRows(){
+    var fallback = [
+      'Наблюдатель системы',
+      'Сборщик фактов',
+      'Ученик операционного цикла',
+      'Разборщик процессов',
+      'Практик диагностики',
+      'Исследователь причин',
+      'Настройщик фокуса',
+      'Аналитик ограничений',
+      'Проверяющий гипотез',
+      'Держатель метрик',
+      'Архитектор решений',
+      'Системный практик',
+      'Навигатор роста',
+      'Мастер управленческого вывода',
+      'Проектировщик изменений',
+      'Инженер операционной системы',
+      'Управленческий стратег',
+      'Архитектор бизнес-модели',
+      'Куратор внедрения',
+      'Мастер системного контроля',
+      'Строитель управляемого бизнеса',
+      'Директор операционного мышления',
+      'Эксперт управленческой архитектуры',
+      'Наставник системного роста',
+      'Мастер системного управления'
+    ];
+
+    var rows = [];
+    try {
+      if (typeof LEGO_LEVELS !== 'undefined' && Array.isArray(LEGO_LEVELS) && LEGO_LEVELS.length) {
+        rows = LEGO_LEVELS.slice(0, 25).map(function(row, index){
+          var title = String(row && row.title ? row.title : fallback[index] || ('Уровень ' + (index + 1)));
+          title = title.replace(/Мастер\s+Л\.Е\.Г\.О\.?/gi, 'Мастер системного управления');
+          if (typeof libraryPositioningTextV43 === 'function') title = libraryPositioningTextV43(title);
+          return { level:index + 1, title:title };
+        });
+      }
+    } catch(e) { rows = []; }
+
+    if (!rows.length) {
+      rows = fallback.map(function(title, index){ return { level:index + 1, title:title }; });
+    }
+
+    return rows;
+  }
+
+  function v121TitleForLevel(level){
+    var l = Math.max(1, v121Int(level));
+    var rows = v121NamedLevelRows();
+    var found = rows.find(function(row){ return Number(row.level) === l; });
+    if (found) return found.title;
+    return 'Архитектор системы ' + l;
+  }
+
+  function v121StudentTitleInfo(){
+    var points = v121ResearchPointsTotal();
+    var level = Math.floor(points / POINTS_PER_LEVEL_V121) + 1;
+    var levelStart = (level - 1) * POINTS_PER_LEVEL_V121;
+    var nextLevelAt = level * POINTS_PER_LEVEL_V121;
+    var inside = points - levelStart;
+    var left = Math.max(0, nextLevelAt - points);
+    var percent = v121SafePercent((inside / POINTS_PER_LEVEL_V121) * 100);
+
+    return {
+      points: points,
+      units: points,
+      current: {
+        level: level,
+        min: levelStart,
+        max: nextLevelAt - 1,
+        title: v121TitleForLevel(level)
+      },
+      next: {
+        level: level + 1,
+        min: nextLevelAt,
+        max: nextLevelAt + POINTS_PER_LEVEL_V121 - 1,
+        title: v121TitleForLevel(level + 1)
+      },
+      inside: inside,
+      span: POINTS_PER_LEVEL_V121,
+      percent: percent,
+      left: left,
+      secretUnlocked: points >= 24000
+    };
+  }
+
+  window.totalPoints = function(){ return v121ResearchPointsTotal(); };
+  window.completedLearningUnits = function(){ return v121ResearchPointsTotal(); };
+  window.studentTitleInfo = v121StudentTitleInfo;
+
+  window.levelBarHtml = function(info){
+    info = info || v121StudentTitleInfo();
+    var segments = 10;
+    var active = Math.max(0, Math.min(segments, Math.round(Number(info.percent || 0) / 10)));
+    var cells = Array.from({ length:segments }, function(_, i){
+      return '<span class="' + (i < active ? 'active' : '') + '"></span>';
+    }).join('');
+
+    return '<div class="level-bar-wrap">'
+      + '<div class="level-bar-segments">' + cells + '</div>'
+      + '<div class="level-bar-caption">'
+      + '<span>' + v121Fmt(info.inside) + ' / ' + v121Fmt(info.span) + ' баллов внутри уровня</span>'
+      + '<b>Уровень ' + v121Fmt(info.current.level) + '</b>'
+      + '</div></div>';
+  };
+
+  function v121LevelGuideRows(){
+    var rows = v121NamedLevelRows();
+    return rows.map(function(row){
+      var min = (Number(row.level) - 1) * POINTS_PER_LEVEL_V121;
+      var max = Number(row.level) * POINTS_PER_LEVEL_V121 - 1;
+      return '<div class="level-guide-row-v44">'
+        + '<span>' + String(row.level).padStart(2, '0') + '</span>'
+        + '<div><b>' + v121Esc(row.title) + '</b><p>' + v121Esc('Диапазон уровня: ' + v121Fmt(min) + '–' + v121Fmt(max) + ' баллов.') + '</p></div>'
+        + '<em>' + v121Fmt(min) + '–' + v121Fmt(max) + ' баллов</em>'
+        + '</div>';
+    }).join('')
+      + '<div class="level-guide-row-v44">'
+      + '<span>∞</span><div><b>Дальше система растёт автоматически</b><p>После 25-го именного уровня приложение продолжает считать уровни по тому же правилу.</p></div>'
+      + '<em>каждые +1 000 баллов</em></div>';
+  }
+
+  window.titleHelpHtml = function(){
+    var info = v121StudentTitleInfo();
+    return '<div id="title-help-panel" class="title-help-panel" style="display:none">'
+      + '<div class="title-help-head"><b>Как работают уровни</b><button onclick="toggleTitleHelp(false)" aria-label="Закрыть">×</button></div>'
+      + '<p>Баллы начисляются за первое открытие нового элемента библиотеки: блока, урока, слайда, саммари, теста, таблицы или рабочего материала.</p>'
+      + '<p>Повторное открытие того же элемента баллы не добавляет.</p>'
+      + '<p><b>1 уровень = 1000 баллов.</b> Именных уровней в справочнике 25, но технического ограничения по росту нет.</p>'
+      + '<div class="level-help-list">'
+      + '<div><b>Текущий уровень</b><span>' + v121Fmt(info.current.level) + '</span></div>'
+      + '<div><b>Текущий диапазон</b><span>' + v121Fmt(info.current.min) + '–' + v121Fmt(info.current.max) + ' баллов</span></div>'
+      + '<div><b>Следующий уровень</b><span>с ' + v121Fmt(info.next.min) + ' баллов</span></div>'
+      + '<div><b>Осталось до следующего уровня</b><span>' + v121Fmt(info.left) + ' баллов</span></div>'
+      + '</div></div>';
+  };
+
+  window.titleCardHtml = function(){
+    var info = v121StudentTitleInfo();
+    return v121Card('title-card-v12', '<div class="title-card-head"><div><p class="eyebrow">уровень участника</p><h2>'
+      + v121Esc(info.current.title)
+      + '</h2></div><button class="help-dot" onclick="toggleTitleHelp()" aria-label="Как работают уровни">?</button></div>'
+      + titleHelpHtml()
+      + '<div class="title-stat-row"><div><span>Уровень</span><b>' + v121Fmt(info.current.level) + '</b></div><div><span>Баллы</span><b>' + v121Fmt(info.points) + '</b></div></div>'
+      + levelBarHtml(info)
+      + '<p class="small title-note">До следующего уровня: ' + v121Fmt(info.left) + ' баллов.</p>');
+  };
+
+  window.achievementInlineHtml = function(){
+    var info = v121StudentTitleInfo();
+    return '<div class="achievement-inline"><div class="achievement-head"><div><span>Достижение</span><b>'
+      + v121Esc(info.current.title)
+      + '</b></div><button class="help-dot" onclick="toggleTitleHelp()" aria-label="Как работают уровни">?</button></div>'
+      + titleHelpHtml()
+      + levelBarHtml(info)
+      + '</div>';
+  };
+
+  function v121LevelDetailsCard(info){
+    info = info || v121StudentTitleInfo();
+    return v121Card('levels-card-v44', '<div class="levels-head-v44"><div><p class="eyebrow">уровни и достижения</p><h2>'
+      + v121Esc(info.current.title)
+      + '</h2></div><button class="level-help-v44" onclick="toggleLevelGuideV44()" aria-label="Что означают уровни">?</button></div>'
+      + '<div class="levels-summary-v44"><div><span>Текущий уровень</span><b>' + v121Fmt(info.current.level) + '</b></div><div><span>Баллы</span><b>' + v121Fmt(info.points) + '</b></div></div>'
+      + levelBarHtml(info)
+      + '<p class="small">До следующего уровня: ' + v121Fmt(info.left) + ' баллов.</p>'
+      + '<div id="level-guide-panel-v44" class="level-guide-panel-v44" hidden>'
+      + '<div class="level-guide-title-v44"><b>Что означает каждый уровень</b><button onclick="toggleLevelGuideV44(false)" aria-label="Закрыть">×</button></div>'
+      + v121LevelGuideRows()
+      + '</div>');
+  }
+
+  window.toggleLevelGuideV44 = function(force){
+    var panel = document.getElementById('level-guide-panel-v44');
+    if (!panel) return;
+    var open = force === undefined ? panel.hidden : Boolean(force);
+    panel.hidden = !open;
+    if (open) panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  };
+
+  function v121SetView(view){
+    try {
+      if (typeof setArchitectureViewV44 === 'function') setArchitectureViewV44(view);
+      else window.__architectureCurrentViewV44 = view;
+    } catch(e) {}
+  }
+
+  window.renderHome = function(){
+    if (typeof hasVerifiedAccessV32 === 'function' && !hasVerifiedAccessV32()) {
+      if (typeof accessDenied === 'function') return accessDenied('OPEN_FROM_TELEGRAM_REQUIRED');
+    }
+
+    v121SetView('home');
+
+    var progress = typeof globalStageProgress === 'function' ? globalStageProgress() : { done:0, total:0, percent:0 };
+    var points = v121ResearchPointsTotal();
+    var titleInfo = v121StudentTitleInfo();
+    var achievement = titleInfo.current.title;
+    if (typeof libraryPositioningTextV43 === 'function') achievement = libraryPositioningTextV43(achievement);
+
+    var html = ''
+      + v121Card('hero-dashboard main-dashboard-card architecture-dashboard v40-dashboard v41-dashboard v43-dashboard v44-dashboard v48-dashboard',
+        '<div class="v48-dashboard-title"><h1>Общий прогресс</h1></div>'
+        + '<div class="v48-dashboard-action-row"><button class="instruction-link v48-instruction-link" onclick="toggleGlobalInstruction()">как пользоваться</button>'
+        + (typeof compactProgressRing === 'function' ? compactProgressRing(progress.percent) : '')
+        + '</div>'
+        + '<div class="v48-primary-metrics">'
+        + '<div><span>Баллы</span><b>' + v121Fmt(points) + '</b></div>'
+        + '<div><span>Уровень</span><b>' + v121Fmt(titleInfo.current.level) + '</b></div>'
+        + '</div>'
+        + '<div class="v48-achievement-metric"><span>Достижение</span><b>' + v121Esc(achievement) + '</b></div>'
+        + (typeof globalInstructionPanelHtml === 'function' ? globalInstructionPanelHtml() : '')
+      )
+      + v121Card('architecture-blocks-card v40-blocks-card', '<div class="section-heading-v35"><div><p class="eyebrow">структура библиотеки</p><h2>Выберите блок</h2></div><p>Архитектуры, системы, разборы и материалы собраны в единой структуре.</p></div>'
+        + (typeof primaryRoutesHtmlV40 === 'function' ? primaryRoutesHtmlV40() : '')
+        + (typeof secondaryBlocksHtmlV40 === 'function' ? secondaryBlocksHtmlV40() : '')
+      )
+      + (typeof safeActiveChallengeCardHtmlV24 === 'function' ? safeActiveChallengeCardHtmlV24() : '');
+
+    if (typeof shell === 'function') return shell(html, 'home');
+    var root = document.getElementById('app');
+    if (root) root.innerHTML = html;
+  };
+
+  window.renderProfile = function(){
+    if (typeof hasVerifiedAccessV32 === 'function' && !hasVerifiedAccessV32()) {
+      if (typeof accessDenied === 'function') return accessDenied('OPEN_FROM_TELEGRAM_REQUIRED');
+    }
+
+    v121SetView('profile');
+
+    var progress = typeof globalStageProgress === 'function' ? globalStageProgress() : { done:0, total:0, percent:0 };
+    var points = v121ResearchPointsTotal();
+    var titleInfo = v121StudentTitleInfo();
+    var achievement = titleInfo.current.title;
+    if (typeof libraryPositioningTextV43 === 'function') achievement = libraryPositioningTextV43(achievement);
+
+    var name = 'Пользователь';
+    try {
+      name = (state.user && state.user.first_name)
+        || (typeof getTelegramUser === 'function' && getTelegramUser().first_name)
+        || 'Пользователь';
+    } catch(e) {}
+
+    var adminBlock = '';
+    try {
+      if (typeof isAdminMode === 'function' && isAdminMode()) {
+        adminBlock = v121Card('boss-panel-card profile-admin-compact-v43', '<h2>Панель администратора</h2><p>Предпросмотр опубликованных материалов и служебные инструменты.</p><button class="btn primary" onclick="renderAdmin()">Открыть панель</button>');
+      }
+    } catch(e) {}
+
+    var html = ''
+      + v121Card('profile-overview-v44', '<div class="profile-identity-v44"><p class="eyebrow">профиль</p><h1>' + v121Esc(name) + '</h1></div>'
+        + '<div class="profile-overview-layout-v44">'
+        + (typeof compactProgressRing === 'function' ? compactProgressRing(progress.percent) : '')
+        + '<div class="profile-metrics-v44">'
+        + '<div class="profile-points-v44"><span>Всего баллов</span><b>' + v121Fmt(points) + '</b><button class="points-help-v43" onclick="renderPointsRulesV43()" aria-label="Как начисляются баллы">?</button></div>'
+        + '<div><span>Уровень</span><b>' + v121Fmt(titleInfo.current.level) + '</b></div>'
+        + '<div class="profile-achievement-v44"><span>Достижение</span><b>' + v121Esc(achievement) + '</b></div>'
+        + '</div></div><p class="profile-progress-caption-v44">Изучено <b>' + v121Fmt(progress.done) + ' из ' + v121Fmt(progress.total) + '</b> информационных этапов библиотеки.</p>'
+      )
+      + v121LevelDetailsCard(titleInfo)
+      + (typeof doneSummaryHtml === 'function' ? doneSummaryHtml() : '')
+      + (typeof insightsProfileHtml === 'function' ? insightsProfileHtml() : '')
+      + (typeof consultationCardsHtml === 'function' ? consultationCardsHtml() : '')
+      + adminBlock
+      + v121Card('profile-support-v43', '<h2>Связь</h2>'
+        + (typeof externalButton === 'function' ? externalButton('Задать вопрос', SUPPORT_FORM_URL, 'secondary') : '')
+        + (typeof externalButton === 'function' ? externalButton('Предложить идею', IDEA_FORM_URL, 'secondary') : '')
+      );
+
+    if (typeof shell === 'function') shell(html, 'profile');
+    else {
+      var root = document.getElementById('app');
+      if (root) root.innerHTML = html;
+    }
+
+    try { if (typeof refreshChallengePagesV44 === 'function') setTimeout(refreshChallengePagesV44, 0); } catch(e) {}
+  };
+
+  window.renderPointsRulesV43 = window.renderPointsRulesV43 || window.renderProgressRulesV40;
+  window.renderPointsRulesV42 = window.renderPointsRulesV43;
+  window.renderPointsRulesV41 = window.renderPointsRulesV43;
+
+  function v121CleanOldLevelText(){
+    try {
+      var root = document.getElementById('app');
+      if (!root) return;
+      root.querySelectorAll('span,b,p,em,h1,h2,h3,button,small').forEach(function(node){
+        if (node.children && node.children.length) return;
+        var t = node.textContent || '';
+        var next = t
+          .replace(/\s*\/\s*25\b/g, '')
+          .replace(/Единицы освоения/g, 'Баллы')
+          .replace(/единиц освоения/g, 'баллов')
+          .replace(/единицы освоения/g, 'баллы')
+          .replace(/учебных единиц/g, 'баллов')
+          .replace(/учебные единицы/g, 'баллы')
+          .replace(/Учебные единицы/g, 'Баллы');
+        if (next !== t) node.textContent = next;
+      });
+    } catch(e) {}
+  }
+
+  var shellBeforeV121 = window.shell;
+  if (typeof shellBeforeV121 === 'function' && !shellBeforeV121.__levelsDisplayV121) {
+    var shellWrappedV121 = function(content, activeTab){
+      var result = shellBeforeV121(content, activeTab);
+      setTimeout(v121CleanOldLevelText, 0);
+      setTimeout(v121CleanOldLevelText, 80);
+      setTimeout(v121CleanOldLevelText, 200);
+      return result;
+    };
+    shellWrappedV121.__levelsDisplayV121 = true;
+    window.shell = shellWrappedV121;
+    try { shell = window.shell; } catch(e) {}
+  }
+
+  setTimeout(v121CleanOldLevelText, 0);
+})();
+
