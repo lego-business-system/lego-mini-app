@@ -34,8 +34,8 @@ const ADMIN_TELEGRAM_IDS = ["1762603232"];
 const ADMIN_TELEGRAM_USERNAMES = ["prosvewenie2000"];
 
 const CATALOG_URL = "content/catalog.json";
-const APP_CACHE_VERSION = "v113-full-instruction-20260705";
-const MODULE_SCORE_RULES = { presentation: 10, quiz: 10, books: 10, homeworkVerified: 70, total: 100 };
+const APP_CACHE_VERSION = "v120-points-levels-safe-20260706";
+const MODULE_SCORE_RULES = { presentation: 0, quiz: 0, books: 0, homeworkVerified: 0, total: 0, deprecated: true };
 const CONSULTATION_COST = 25000;
 const READY_FIRST_LESSON_CODES = ["ENT-TR-01", "ENT-SV-01", "ENT-PR-01", "ENT-BD-01"];
 
@@ -110,12 +110,10 @@ function getProgress(code) {
 }
 /* removed obsolete duplicate function isStageDone in v95 cleanup */
 function lessonScore(code) {
-  let score = 0;
-  if (isStageDone(code,"presentation")) score += 10;
-  if (isStageDone(code,"quiz")) score += 10;
-  if (isStageDone(code,"books")) score += 10;
-  if (isStageDone(code,"homeworkVerified")) score += 70;
-  return score;
+  // v120: legacy per-lesson scoring is disabled.
+  // Баллы теперь начисляются только через user_research_point_events:
+  // 1 уникальное действие = 1 балл.
+  return 0;
 }
 /* removed obsolete duplicate function lessonStageLabel in v95 cleanup */
 /* removed obsolete duplicate function lessonStageAction in v95 cleanup */
@@ -485,9 +483,9 @@ function estimateChallengePoints(count) {
   return total;
 }
 function challengeRewardForDay(dayNumber) {
-  const d = Math.max(1, Math.min(100, Number(dayNumber || 1)));
-  if (d >= 100) return 250;
-  return 50 + (d - 1) * 2;
+  // v120: старая награда книжного челленджа 50/+2/250 отключена.
+  // Книги и страницы дают баллы только через research_point_awarded: 1 действие = 1 балл.
+  return 0;
 }
 /* removed obsolete duplicate function currentChallengeDay in v95 cleanup */
 /* removed obsolete duplicate function currentChallengeReward in v95 cleanup */
@@ -1022,18 +1020,18 @@ function progressBarHtml(percent, cls) {
 /* removed obsolete duplicate function lessonProgressMini in v95 cleanup */
 
 function titleHelpHtml() {
-  const rows = LEGO_LEVELS.map(row => `<div><b>${row.level}. ${esc(row.title)}</b><span>${row.level === 25 ? '1000+ учебных единиц' : `${row.min}–${row.max} учебных единиц`}</span></div>`).join('');
+  const rows = LEGO_LEVELS.map(row => `<div><b>${row.level}. ${esc(row.title)}</b><span>${row.level === 25 ? '1000+ баллов' : `${row.min}–${row.max} баллов`}</span></div>`).join('');
   return `<div id="title-help-panel" class="title-help-panel" style="display:none">
     <div class="title-help-head"><b>Как работает уровень</b><button onclick="toggleTitleHelp(false)" aria-label="Закрыть">×</button></div>
-    <p>Уровень показывает накопленный учебный опыт. Учебные единицы начисляются за полностью закрытые уроки, книги из блока «Топ-100 книг для бизнеса» после мини-теста, дополнительные материалы и специальные задания.</p>
+    <p>Уровень показывает накопленный учебный опыт. Баллы начисляются за полностью закрытые уроки, книги из блока «Топ-100 книг для бизнеса» после мини-теста, дополнительные материалы и специальные задания.</p>
     <p>В блоке «Топ-100 книг для бизнеса» книги открыты сразу, а прочитанные саммари отмечаются в профиле.</p>
-    <p>Достижение «Мастер Л.Е.Г.О» открывается после 1000 учебных единиц. На последнем уровне будет доступен суперсекретный бонус.</p>
+    <p>Достижение «Мастер Л.Е.Г.О» открывается после 1000 баллов. На последнем уровне будет доступен суперсекретный бонус.</p>
     <div class="level-help-list">${rows}</div>
   </div>`;
 }
 function titleCardHtml() {
   const info = studentTitleInfo();
-  return card('title-card-v12', `<div class="title-card-head"><div><p class="eyebrow">уровень ученика</p><h2>${esc(info.current.title)}</h2></div><button class="help-dot" onclick="toggleTitleHelp()" aria-label="Как работают уровни">?</button></div>${titleHelpHtml()}<div class="title-stat-row"><div><span>Уровень</span><b>${info.current.level} / 25</b></div><div><span>Учебные единицы</span><b>${formatPoints(info.units)}</b></div></div>${levelBarHtml(info)}<p class="small title-note">${info.secretUnlocked ? 'Суперсекретный бонус открыт.' : `До следующего уровня: ${formatPoints(info.left)} учебных единиц.`}</p>`);
+  return card('title-card-v12', `<div class="title-card-head"><div><p class="eyebrow">уровень ученика</p><h2>${esc(info.current.title)}</h2></div><button class="help-dot" onclick="toggleTitleHelp()" aria-label="Как работают уровни">?</button></div>${titleHelpHtml()}<div class="title-stat-row"><div><span>Уровень</span><b>${info.current.level}</b></div><div><span>Баллы</span><b>${formatPoints(info.units)}</b></div></div>${levelBarHtml(info)}<p class="small title-note">${info.secretUnlocked ? 'Суперсекретный бонус открыт.' : `До следующего уровня: ${formatPoints(info.left)} баллов.`}</p>`);
 }
 function achievementInlineHtml() {
   const info = studentTitleInfo();
@@ -1198,7 +1196,7 @@ function renderProfile(){
   const adminBlock = isAdminUser()
     ? card('boss-panel-card', `<h2>Панель администратора</h2><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Просмотр как ученик</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Режим администрирования</button></div><p class="small">Панель управления, проверка ДЗ и полный предпросмотр уроков доступны только владельцу системы.</p>${actionButton('Открыть панель администратора','renderAdmin()','primary')}`)
     : '';
-  shell(`${card('blue-card-v2 profile-head-card', `<h1>Профиль</h1><p class="profile-name-line">${esc(state.user?.first_name || 'Пользователь')} · ${studentRoleLabel()}</p>`)}${titleCardHtml()}${card('', `<h2>Прогресс и баллы</h2>${progressRing(gp.percent,'общий',`${gp.done} из ${gp.total || 0}`)}<div class="profile-score-grid"><div><span>Всего баллов</span><b>${formatPoints(points)}</b></div><div><span>Текущий урок</span><b>${lp.percent}%</b></div><div><span>Учебные единицы</span><b>${formatPoints(titleInfo.units)}</b></div><div><span>Готовые уроки</span><b>${readyCoreLessons().length}</b></div></div>`)}${doneSummaryHtml()}${insightsProfileHtml()}${adminBlock}${consultationCardsHtml(points)}${card('', `<h2>Поддержка</h2>${externalButton('Задать вопрос',SUPPORT_FORM_URL,'secondary')}${externalButton('Предложить идею',IDEA_FORM_URL,'secondary')}`)}${myBusinessCardHtml()}`,'profile');
+  shell(`${card('blue-card-v2 profile-head-card', `<h1>Профиль</h1><p class="profile-name-line">${esc(state.user?.first_name || 'Пользователь')} · ${studentRoleLabel()}</p>`)}${titleCardHtml()}${card('', `<h2>Прогресс и баллы</h2>${progressRing(gp.percent,'общий',`${gp.done} из ${gp.total || 0}`)}<div class="profile-score-grid"><div><span>Всего баллов</span><b>${formatPoints(points)}</b></div><div><span>Текущий урок</span><b>${lp.percent}%</b></div><div><span>Баллы</span><b>${formatPoints(titleInfo.units)}</b></div><div><span>Готовые уроки</span><b>${readyCoreLessons().length}</b></div></div>`)}${doneSummaryHtml()}${insightsProfileHtml()}${adminBlock}${consultationCardsHtml(points)}${card('', `<h2>Поддержка</h2>${externalButton('Задать вопрос',SUPPORT_FORM_URL,'secondary')}${externalButton('Предложить идею',IDEA_FORM_URL,'secondary')}`)}${myBusinessCardHtml()}`,'profile');
 }
 
 
@@ -1271,10 +1269,9 @@ function books100TimeLeftText(ms){
   return `${hours} ч ${minutes} мин`;
 }
 function books100RewardForCurrent(ch){
-  const day = Math.max(1, Number(ch?.currentDay || 1));
-  const streakBefore = Math.max(0, Number(ch?.streak || 0));
-  if (day >= 100 && streakBefore >= 99) return 250;
-  return Math.min(250, 50 + streakBefore * 2);
+  // v120: старая награда 50/+2/250 отключена.
+  // Баллы начисляются только как уникальные исследовательские события.
+  return 0;
 }
 function books100DefaultState(){
   return {
@@ -1602,7 +1599,7 @@ async function finishBooks100Quiz(){
   const passed = score >= passScore;
   let resultNotice = "";
   if (state.books100AdminPreview){
-    resultNotice = `<p>Это режим администратора. Баллы, статус и учебные единицы не изменяются.</p>`;
+    resultNotice = `<p>Это режим администратора. Баллы, статус и баллы не изменяются.</p>`;
   } else {
     try{
       const data = await books100ApiV18("quiz_completed", { book: books100BookPayloadV18(bookMeta), books: books100BooksPayloadV18(index), score, total: quiz.length, passed, answers: state.books100Answers });
@@ -1610,7 +1607,7 @@ async function finishBooks100Quiz(){
       if (passed){
         const row = (ch.statusByBookId||{})[bookMeta.id] || {};
         const pts = row.points_awarded || data.pointsAwarded || 0;
-        resultNotice = `<p>Начислено: <b>${formatPoints(pts)} баллов</b> и <b>+1 учебная единица</b>. Книга остаётся в личной библиотеке. Следующая книга откроется после окончания 24-часового окна.</p>`;
+        resultNotice = `<p>Начислено: <b>${formatPoints(pts)} баллов</b> и <b>+1 балл</b>. Книга остаётся в личной библиотеке. Следующая книга откроется после окончания 24-часового окна.</p>`;
       }
     }catch(e){
       console.error(e);
@@ -3029,7 +3026,7 @@ window.renderHome = function(){
       </div>
       <div class="architecture-metrics">
         <div><span>Баллы</span><b>${formatPoints(points)}</b></div>
-        <div><span>Уровень</span><b>${titleInfo.current.level} / 25</b></div>
+        <div><span>Уровень</span><b>${titleInfo.current.level}</b></div>
         <div><span>Достижение</span><b>${esc(titleInfo.current.title)}</b></div>
       </div>
       ${globalInstructionPanelHtml()}
@@ -3859,7 +3856,7 @@ else installArchitectureObserverV35();
         </div>
         <div class="architecture-metrics">
           <div><span>Баллы</span><b>${formatPoints(points)}</b></div>
-          <div><span>Уровень</span><b>${titleInfo.current.level} / 25</b></div>
+          <div><span>Уровень</span><b>${titleInfo.current.level}</b></div>
           <div><span>Достижение</span><b>${esc(titleInfo.current.title)}</b></div>
         </div>
         ${globalInstructionPanelHtml()}
@@ -3989,7 +3986,7 @@ else installArchitectureObserverV35();
     var supportCard = Array.from(content.querySelectorAll('.card-v2')).find(function(card){
       return card.querySelector('h2') && card.querySelector('h2').textContent.trim() === 'Поддержка';
     });
-    var html = `<section class="card-v2 progress-rules-card-v40" id="progress-rules-card-v40"><p class="eyebrow">прозрачные правила</p><h2>Прогресс и баллы</h2><p>Прогресс считается по четырём этапам опубликованных уроков. Баллы начисляются отдельно: 10 + 10 + 10 + 70.</p><button class="btn secondary" onclick="renderProgressRulesV40()">Посмотреть расчёт</button></section>`;
+    var html = `<section class="card-v2 progress-rules-card-v40" id="progress-rules-card-v40"><p class="eyebrow">прозрачные правила</p><h2>Прогресс и баллы</h2><p>Прогресс считается по четырём этапам опубликованных уроков. Баллы начисляются отдельно: 1 балл за первое открытие нового элемента.</p><button class="btn secondary" onclick="renderProgressRulesV40()">Посмотреть расчёт</button></section>`;
     if (supportCard) supportCard.insertAdjacentHTML('beforebegin', html);
     else content.insertAdjacentHTML('beforeend', html);
   }
@@ -4171,7 +4168,7 @@ else installArchitectureObserverV35();
 
   window.renderProgressRulesV40 = function(){
     var gp = globalStageProgress();
-    shell(`${card('blue-card-v2 progress-rules-hero-v40', `<p class="eyebrow">показатели системы</p><h1>Как считаются прогресс и баллы</h1><p>Общий прогресс показывает прохождение запланированной учебной программы. Баллы отражают выполненные действия внутри уроков и блока «Топ-100 книг для бизнеса».</p>`)}
+    shell(`${card('blue-card-v2 progress-rules-hero-v40', `<p class="eyebrow">показатели системы</p><h1>Как считаются прогресс и баллы</h1><p>Общий прогресс показывает прохождение запланированной учебной программы. Баллы отражают первое открытие новых элементов библиотеки.</p>`)}
       ${card('', `<h2>Общий прогресс</h2><div class="planned-progress-breakdown-v41"><div><b>60 уроков</b><span>Я предприниматель</span></div><div><b>10 уроков</b><span>Нет своего бизнеса</span></div><div><b>10 уроков</b><span>Я сотрудник</span></div></div><p>Всего в программе заложено <b>80 уроков</b>. Каждый урок состоит из четырёх этапов, поэтому полный план равен <b>320 этапам</b>.</p><div class="score-rule-grid-v40 equal"><div><span>25%</span><b>Презентация</b></div><div><span>25%</span><b>Тест</b></div><div><span>25%</span><b>Саммари</b></div><div><span>25%</span><b>Самостоятельная работа</b></div></div><p class="small">Сейчас выполнено: <b>${gp.done} из ${gp.total}</b> этапов — <b>${gp.percent}%</b>.</p>`)}
       ${card('', `<h2>Исследовательские баллы</h2><div class="score-rule-grid-v40"><div><span>+1</span><b>Новый модуль</b></div><div><span>+1</span><b>Новый урок</b></div><div><span>+1</span><b>Новый слайд</b></div><div><span>+1</span><b>Рабочий материал</b></div></div><p class="small">Баллы начисляются за исследование библиотеки бизнес-систем: за первое открытие новых модулей, блоков, уроков, слайдов, тестов, саммари и рабочих материалов.</p>`)}
       ${card('', `<h2>Топ-100 книг для бизнеса</h2><p>Блок книг имеет собственный прогресс чтения и не ограничивает прохождение основной программы.</p><p class="small">Все книги открыты сразу; прочитанные отмечаются зелёным цветом.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`,'profile');
@@ -4348,7 +4345,7 @@ else installArchitectureObserverV35();
           </div>
           <div class="architecture-metrics">
             <div><span>Баллы</span><b>${formatPoints(points)}</b></div>
-            <div><span>Уровень</span><b>${titleInfo.current.level} / 25</b></div>
+            <div><span>Уровень</span><b>${titleInfo.current.level}</b></div>
             <div><span>Достижение</span><b>${esc(titleInfo.current.title)}</b></div>
           </div>
           ${globalInstructionPanelHtml()}
@@ -4382,7 +4379,7 @@ else installArchitectureObserverV35();
    ===================================================== */
 (function installArchitectureLibrarySystemsV43(){
   window.APP_UI_VERSION_V43 = 'v43-library-systems-compact-header-points-20260624';
-  window.MODULE_SCORE_RULES_V43 = { presentation:25, quiz:25, books:25, selfStudy:25, total:100 };
+  window.MODULE_SCORE_RULES_V43 = { presentation:0, quiz:0, books:0, selfStudy:0, total:0, deprecated:true };
 
   function architectureV43Enabled(){
     return typeof architectureModeV35 === 'function' && architectureModeV35();
@@ -4398,13 +4395,13 @@ else installArchitectureObserverV35();
       [/учебный маршрут/gi, 'маршрут по бизнес-системам'],
       [/учебные материалы/gi, 'материалы библиотеки'],
       [/обучающие материалы/gi, 'материалы библиотеки'],
-      [/учебные единицы/gi, 'единицы освоения'],
-      [/учебная единица/gi, 'единица освоения'],
-      [/учебную единицу/gi, 'единицу освоения'],
-      [/учебной единицы/gi, 'единицы освоения'],
-      [/учебных единиц/gi, 'единиц освоения'],
-      [/учебными единицами/gi, 'единицами освоения'],
-      [/учебным единицам/gi, 'единицам освоения'],
+      [/баллы/gi, 'баллы'],
+      [/балл/gi, 'единица освоения'],
+      [/балл/gi, 'единицу освоения'],
+      [/учебной единицы/gi, 'баллы'],
+      [/баллов/gi, 'баллов'],
+      [/учебными единицами/gi, 'баллами'],
+      [/учебным единицам/gi, 'баллам'],
       [/учебным прогрессом/gi, 'прогрессом библиотеки'],
       [/учебного опыта/gi, 'опыта работы с системами'],
       [/учебный опыт/gi, 'опыт работы с системами'],
@@ -4424,22 +4421,14 @@ else installArchitectureObserverV35();
   }
   window.libraryPositioningTextV43 = libraryPositioningTextV43;
 
-  /* Каждый из четырёх этапов даёт одинаковые 25 баллов. */
-  window.lessonScore = function(code){
-    var score = 0;
-    if (isStageDone(code,'presentation')) score += 25;
-    if (isStageDone(code,'quiz')) score += 25;
-    if (isStageDone(code,'books')) score += 25;
-    if (isStageDone(code,'homeworkVerified')) score += 25;
-    return score;
-  };
+  /* v120: архивная логика 25/25/25/25 отключена.
+     Баллы считаются только через исследовательские события:
+     1 уникальное действие = 1 балл. */
+  window.lessonScore = function(){ return 0; };
   window.totalPoints = function(){
-    var lessonPoints = (state.catalog?.lessons || []).reduce(function(sum, lesson){
-      return sum + lessonScore(lesson.code);
-    }, 0);
-    var challenge = typeof getChallengeState === 'function' ? getChallengeState() : {};
-    var challengeValue = typeof challengePoints === 'function' ? challengePoints(challenge) : 0;
-    return lessonPoints + Number(challengeValue || 0);
+    try {
+      return typeof getResearchPointsTotalV91 === 'function' ? Number(getResearchPointsTotalV91() || 0) : 0;
+    } catch(e) { return 0; }
   };
 
   window.globalInstructionPanelHtml = function(){
@@ -4634,7 +4623,7 @@ else installArchitectureObserverV35();
   };
 
   window.renderPointsRulesV43 = function(){
-    shell(`${card('blue-card-v2 progress-rules-hero-v40', `<p class="eyebrow">баллы библиотеки</p><h1>Как начисляются баллы</h1><p>Баллы отражают завершённые действия внутри опубликованных уроков и отдельно — результаты блока «Топ-100 книг для бизнеса».</p>`)}
+    shell(`${card('blue-card-v2 progress-rules-hero-v40', `<p class="eyebrow">баллы библиотеки</p><h1>Как начисляются баллы</h1><p>Баллы отражают первое открытие новых элементов библиотеки: блоков, уроков, слайдов, тестов, саммари и рабочих материалов.</p>`)}
       ${card('', `<h2>Исследовательские баллы</h2><div class="score-rule-grid-v40"><div><span>+1</span><b>Первый вход</b></div><div><span>+1</span><b>Модуль</b></div><div><span>+1</span><b>Слайд</b></div><div><span>+1</span><b>Материал</b></div></div><p class="small">Каждое новое действие в библиотеке бизнес-систем даёт 1 балл один раз за всё время.</p>`)}
       ${card('', `<h2>Топ-100 книг для бизнеса</h2><p>Книги открыты для чтения в любом порядке; прочитанные саммари отмечаются зелёным цветом.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>`)}`,'profile');
   };
@@ -4655,7 +4644,7 @@ else installArchitectureObserverV35();
       ? card('boss-panel-card profile-admin-compact-v43', `<h2>Панель администратора</h2><div class="segmented"><button class="${state.appMode==='student'?'active':''}" onclick="setAppMode('student')">Просмотр приложения</button><button class="${state.appMode==='admin'?'active':''}" onclick="setAppMode('admin')">Администрирование</button></div><button class="btn primary" onclick="renderAdmin()">Открыть панель</button>`)
       : '';
     shell(`${card('blue-card-v2 profile-head-card profile-head-compact-v43', `<p class="eyebrow">профиль участника</p><h1>${esc(state.user?.first_name || 'Пользователь')}</h1><p>АРХИТЕКТУРА · Библиотека бизнес-систем</p>`)}
-      ${card('profile-overview-v43', `<div class="profile-overview-title-v43"><div><p class="eyebrow">текущие показатели</p><h2>Прогресс и баллы</h2></div></div><div class="profile-overview-layout-v43">${compactProgressRing(progress.percent)}<div class="profile-metrics-v43"><div class="profile-points-v43"><span>Всего баллов</span><b>${formatPoints(points)}</b><button class="points-help-v43" onclick="renderPointsRulesV43()" aria-label="Как начисляются баллы">?</button></div><div><span>Уровень</span><b>${titleInfo.current.level} / 25</b></div><div><span>Текущий материал</span><b>${materialProgress.percent}%</b></div><div class="profile-achievement-v43"><span>Достижение</span><b>${esc(achievement)}</b></div></div></div><p class="profile-progress-caption-v43">Изучено <b>${progress.done} из ${progress.total}</b> информационных этапов библиотеки.</p>`)}
+      ${card('profile-overview-v43', `<div class="profile-overview-title-v43"><div><p class="eyebrow">текущие показатели</p><h2>Прогресс и баллы</h2></div></div><div class="profile-overview-layout-v43">${compactProgressRing(progress.percent)}<div class="profile-metrics-v43"><div class="profile-points-v43"><span>Всего баллов</span><b>${formatPoints(points)}</b><button class="points-help-v43" onclick="renderPointsRulesV43()" aria-label="Как начисляются баллы">?</button></div><div><span>Уровень</span><b>${titleInfo.current.level}</b></div><div><span>Текущий материал</span><b>${materialProgress.percent}%</b></div><div class="profile-achievement-v43"><span>Достижение</span><b>${esc(achievement)}</b></div></div></div><p class="profile-progress-caption-v43">Изучено <b>${progress.done} из ${progress.total}</b> информационных этапов библиотеки.</p>`)}
       ${doneSummaryHtml()}
       ${typeof insightsProfileHtml === 'function' ? insightsProfileHtml() : ''}
       ${consultationCardsHtml()}
@@ -4740,7 +4729,7 @@ else installArchitectureObserverV35();
       var html = `
         ${card('hero-dashboard main-dashboard-card architecture-dashboard v40-dashboard v41-dashboard v43-dashboard', `
           <div class="architecture-dashboard-head"><div><div class="eyebrow-row"><p class="eyebrow">библиотека бизнес-систем</p><button class="instruction-link" onclick="toggleGlobalInstruction()">как пользоваться</button></div><h1>Общий прогресс</h1><p>Изучено <b>${progress.done} из ${progress.total}</b> информационных этапов библиотеки.</p></div>${compactProgressRing(progress.percent)}</div>
-          <div class="architecture-metrics"><div><span>Баллы</span><b>${formatPoints(points)}</b></div><div><span>Уровень</span><b>${titleInfo.current.level} / 25</b></div><div><span>Достижение</span><b>${esc(achievement)}</b></div></div>
+          <div class="architecture-metrics"><div><span>Баллы</span><b>${formatPoints(points)}</b></div><div><span>Уровень</span><b>${titleInfo.current.level}</b></div><div><span>Достижение</span><b>${esc(achievement)}</b></div></div>
           ${globalInstructionPanelHtml()}
         `)}
         ${card('architecture-blocks-card v40-blocks-card', `<div class="section-heading-v35"><div><p class="eyebrow">структура библиотеки</p><h2>Выберите блок</h2></div><p>Архитектуры, системы, разборы и материалы собраны в единой структуре.</p></div>${primaryRoutesHtmlV40()}${secondaryBlocksHtmlV40()}`)}
@@ -5035,12 +5024,24 @@ else installArchitectureObserverV35();
   ];
 
   function levelGuideRowsV44(){
-    if (typeof LEGO_LEVELS === 'undefined' || !Array.isArray(LEGO_LEVELS)) return '';
-    return LEGO_LEVELS.map(function(row, index){
-      var title = typeof libraryPositioningTextV43 === 'function' ? libraryPositioningTextV43(row.title) : row.title;
-      var range = row.level === 25 ? '1000+ единиц освоения' : `${row.min}–${row.max} единиц освоения`;
-      return `<div class="level-guide-row-v44"><span>${String(row.level).padStart(2,'0')}</span><div><b>${esc(title)}</b><p>${esc(LEVEL_MEANINGS_V44[index] || '')}</p></div><em>${esc(range)}</em></div>`;
+    var rows = [
+      { level:1, min:0, max:999, title:'Наблюдатель системы', note:'Начинает видеть бизнес как связанную систему.' },
+      { level:2, min:1000, max:1999, title:'Сборщик фактов', note:'Фиксирует факты и отделяет их от мнений.' },
+      { level:3, min:2000, max:2999, title:'Исследователь бизнеса', note:'Связывает действия, материалы и управленческие выводы.' },
+      { level:4, min:3000, max:3999, title:'Разборщик процессов', note:'Разделяет деятельность на понятные процессы.' },
+      { level:5, min:4000, max:4999, title:'Практик диагностики', note:'Применяет первичную диагностику к реальным данным.' },
+      { level:6, min:5000, max:5999, title:'Архитектор решений', note:'Проектирует решения под найденную причину.' },
+      { level:7, min:6000, max:6999, title:'Системный практик', note:'Регулярно применяет системы на практике.' },
+      { level:8, min:7000, max:7999, title:'Навигатор роста', note:'Видит последовательный маршрут роста.' },
+      { level:9, min:8000, max:8999, title:'Инженер бизнес-систем', note:'Связывает процессы в единую систему.' },
+      { level:10, min:9000, max:9999, title:'Мастер системного управления', note:'Управляет архитектурой бизнеса как системой.' }
+    ];
+    var html = rows.map(function(row){
+      var range = formatPoints(row.min) + '–' + formatPoints(row.max) + ' баллов';
+      return `<div class="level-guide-row-v44"><span>${String(row.level).padStart(2,'0')}</span><div><b>${esc(row.title)}</b><p>${esc(row.note)}</p></div><em>${esc(range)}</em></div>`;
     }).join('');
+    html += `<div class="level-guide-row-v44"><span>∞</span><div><b>Дальше без потолка</b><p>После 10 уровня система продолжает считать каждый следующий уровень по той же логике.</p></div><em>каждые 1000 баллов</em></div>`;
+    return html;
   }
   window.toggleLevelGuideV44 = function(force){
     var panel = document.getElementById('level-guide-panel-v44');
@@ -5051,7 +5052,7 @@ else installArchitectureObserverV35();
   };
   function levelDetailsCardV44(info){
     var title = typeof libraryPositioningTextV43 === 'function' ? libraryPositioningTextV43(info.current.title) : info.current.title;
-    return card('levels-card-v44', `<div class="levels-head-v44"><div><p class="eyebrow">уровни и достижения</p><h2>${esc(title)}</h2></div><button class="level-help-v44" onclick="toggleLevelGuideV44()" aria-label="Что означают уровни">?</button></div><div class="levels-summary-v44"><div><span>Текущий уровень</span><b>${info.current.level} / 25</b></div><div><span>Единицы освоения</span><b>${formatPoints(info.units)}</b></div></div>${levelBarHtml(info)}<p class="small">${info.current.level >= 25 ? 'Открыт финальный уровень системы.' : `До следующего уровня: ${formatPoints(info.left)} единиц освоения.`}</p><div id="level-guide-panel-v44" class="level-guide-panel-v44" hidden><div class="level-guide-title-v44"><b>Что означает каждый уровень</b><button onclick="toggleLevelGuideV44(false)" aria-label="Закрыть">×</button></div>${levelGuideRowsV44()}</div>`);
+    return card('levels-card-v44', `<div class="levels-head-v44"><div><p class="eyebrow">уровни и достижения</p><h2>${esc(title)}</h2></div><button class="level-help-v44" onclick="toggleLevelGuideV44()" aria-label="Что означают уровни">?</button></div><div class="levels-summary-v44"><div><span>Текущий уровень</span><b>${info.current.level}</b></div><div><span>Баллы</span><b>${formatPoints(info.points || info.units || 0)}</b></div></div>${levelBarHtml(info)}<p class="small">До следующего уровня: ${formatPoints(info.left)} баллов.</p><div id="level-guide-panel-v44" class="level-guide-panel-v44" hidden><div class="level-guide-title-v44"><b>Как работают уровни</b><button onclick="toggleLevelGuideV44(false)" aria-label="Закрыть">×</button></div>${levelGuideRowsV44()}</div>`);
   }
 
   /* ---------- Главная ---------- */
@@ -5072,7 +5073,7 @@ else installArchitectureObserverV35();
           </div>
           ${compactProgressRing(progress.percent)}
         </div>
-        <div class="architecture-metrics v47-metrics"><div><span>Баллы</span><b>${formatPoints(points)}</b></div><div><span>Уровень</span><b>${titleInfo.current.level} / 25</b></div><div><span>Достижение</span><b>${esc(achievement)}</b></div></div>
+        <div class="architecture-metrics v47-metrics"><div><span>Баллы</span><b>${formatPoints(points)}</b></div><div><span>Уровень</span><b>${titleInfo.current.level}</b></div><div><span>Достижение</span><b>${esc(achievement)}</b></div></div>
         ${globalInstructionPanelHtml()}
       `)}
       ${card('architecture-blocks-card v40-blocks-card', `<div class="section-heading-v35"><div><p class="eyebrow">структура библиотеки</p><h2>Выберите блок</h2></div><p>Архитектуры, системы, разборы и материалы собраны в единой структуре.</p></div>${primaryRoutesHtmlV40()}${secondaryBlocksHtmlV40()}`)}
@@ -5094,7 +5095,7 @@ else installArchitectureObserverV35();
     var adminBlock = isAdminMode()
       ? card('boss-panel-card profile-admin-compact-v43', `<h2>Панель администратора</h2><p>Предпросмотр опубликованных материалов и служебные инструменты.</p><button class="btn primary" onclick="renderAdmin()">Открыть панель</button>`)
       : '';
-    shell(`${card('profile-overview-v44', `<div class="profile-identity-v44"><p class="eyebrow">профиль</p><h1>${esc(name)}</h1></div><div class="profile-overview-layout-v44">${compactProgressRing(progress.percent)}<div class="profile-metrics-v44"><div class="profile-points-v44"><span>Всего баллов</span><b>${formatPoints(points)}</b><button class="points-help-v43" onclick="renderPointsRulesV43()" aria-label="Как начисляются баллы">?</button></div><div><span>Уровень</span><b>${titleInfo.current.level} / 25</b></div><div class="profile-achievement-v44"><span>Достижение</span><b>${esc(achievement)}</b></div></div></div><p class="profile-progress-caption-v44">Изучено <b>${progress.done} из ${progress.total}</b> информационных этапов библиотеки.</p>`)}
+    shell(`${card('profile-overview-v44', `<div class="profile-identity-v44"><p class="eyebrow">профиль</p><h1>${esc(name)}</h1></div><div class="profile-overview-layout-v44">${compactProgressRing(progress.percent)}<div class="profile-metrics-v44"><div class="profile-points-v44"><span>Всего баллов</span><b>${formatPoints(points)}</b><button class="points-help-v43" onclick="renderPointsRulesV43()" aria-label="Как начисляются баллы">?</button></div><div><span>Уровень</span><b>${titleInfo.current.level}</b></div><div class="profile-achievement-v44"><span>Достижение</span><b>${esc(achievement)}</b></div></div></div><p class="profile-progress-caption-v44">Изучено <b>${progress.done} из ${progress.total}</b> информационных этапов библиотеки.</p>`)}
       ${levelDetailsCardV44(titleInfo)}
       ${doneSummaryHtml()}
       ${typeof insightsProfileHtml === 'function' ? insightsProfileHtml() : ''}
@@ -5254,7 +5255,7 @@ window.APP_UI_VERSION_V47 = 'v47-compact-progress-stage-alignment-20260625';
         </div>
         <div class="v48-primary-metrics">
           <div><span>Баллы</span><b>${formatPoints(points)}</b></div>
-          <div><span>Уровень</span><b>${titleInfo.current.level} / 25</b></div>
+          <div><span>Уровень</span><b>${titleInfo.current.level}</b></div>
         </div>
         <div class="v48-achievement-metric"><span>Достижение</span><b>${esc(achievement)}</b></div>
         ${globalInstructionPanelHtml()}
@@ -7419,3 +7420,248 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
     return renderHome();
   };
 })();
+
+/* =====================================================
+   v120 — единая безопасная система баллов и уровней
+   Финальное правило:
+   - 1 уникальное действие = 1 балл.
+   - повторное открытие того же элемента = 0 баллов.
+   - уровень = floor(баллы / 1000) + 1.
+   - максимального уровня нет.
+   Важно: маршруты, уроки, тесты, практика, форум, финпомощник и доступ не меняются.
+   ===================================================== */
+(function installArchitecturePointsLevelsV120(){
+  window.APP_UI_VERSION_V120 = 'v120-points-levels-safe-20260706';
+  try { window.APP_UI_VERSION = window.APP_UI_VERSION_V120; } catch(e) {}
+  try { window.APP_CACHE_VERSION = window.APP_UI_VERSION_V120; } catch(e) {}
+  try { if (typeof LEGO_V24_CACHE_VERSION !== 'undefined') LEGO_V24_CACHE_VERSION = window.APP_UI_VERSION_V120; } catch(e) {}
+  try { contentVersionV24 = function(){ return window.APP_UI_VERSION_V120; }; window.contentVersionV24 = contentVersionV24; } catch(e) {}
+
+  var POINTS_PER_LEVEL_V120 = 1000;
+
+  function v120Int(value){
+    var n = Math.floor(Number(value || 0));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }
+
+  function v120Fmt(value){
+    try {
+      return typeof formatPoints === 'function' ? formatPoints(value) : Number(value || 0).toLocaleString('ru-RU');
+    } catch(e) {
+      return String(value || 0);
+    }
+  }
+
+  function v120Esc(value){
+    if (typeof esc === 'function') return esc(value);
+    return String(value == null ? '' : value).replace(/[&<>'"]/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]);
+    });
+  }
+
+  function v120Card(cls, html){
+    if (typeof card === 'function') return card(cls || '', html || '');
+    return '<section class="card-v2 ' + (cls || '') + '">' + (html || '') + '</section>';
+  }
+
+  function v120BindGlobal(name, fn){
+    window[name] = fn;
+    try { eval(name + ' = window["' + name + '"];'); } catch(e) {}
+  }
+
+  function v120ResearchPointsTotal(){
+    try {
+      if (typeof window.getResearchPointsTotalV91 === 'function') return v120Int(window.getResearchPointsTotalV91());
+    } catch(e) {}
+    try {
+      if (typeof getResearchPointsTotalV91 === 'function') return v120Int(getResearchPointsTotalV91());
+    } catch(e) {}
+    return 0;
+  }
+
+  function v120TitleForLevel(level){
+    var l = Math.max(1, v120Int(level));
+    var titles = {
+      1:'Наблюдатель системы',
+      2:'Сборщик фактов',
+      3:'Исследователь бизнеса',
+      4:'Разборщик процессов',
+      5:'Практик диагностики',
+      6:'Архитектор решений',
+      7:'Системный практик',
+      8:'Навигатор роста',
+      9:'Инженер бизнес-систем',
+      10:'Мастер системного управления'
+    };
+    return titles[l] || ('Архитектор системы ' + l);
+  }
+
+  function v120StudentTitleInfo(){
+    var points = v120ResearchPointsTotal();
+    var level = Math.floor(points / POINTS_PER_LEVEL_V120) + 1;
+    var levelStart = (level - 1) * POINTS_PER_LEVEL_V120;
+    var nextLevelAt = level * POINTS_PER_LEVEL_V120;
+    var inside = points - levelStart;
+    var left = nextLevelAt - points;
+    var percent = typeof safePercent === 'function'
+      ? safePercent((inside / POINTS_PER_LEVEL_V120) * 100)
+      : Math.max(0, Math.min(100, Math.round((inside / POINTS_PER_LEVEL_V120) * 100)));
+
+    return {
+      points: points,
+      units: points,
+      current: {
+        level: level,
+        min: levelStart,
+        max: nextLevelAt - 1,
+        title: v120TitleForLevel(level)
+      },
+      next: {
+        level: level + 1,
+        min: nextLevelAt,
+        max: nextLevelAt + POINTS_PER_LEVEL_V120 - 1,
+        title: v120TitleForLevel(level + 1)
+      },
+      inside: inside,
+      span: POINTS_PER_LEVEL_V120,
+      percent: percent,
+      left: left,
+      secretUnlocked: points >= POINTS_PER_LEVEL_V120
+    };
+  }
+
+  v120BindGlobal('lessonScore', function(){
+    // Больше не используется для начисления баллов за урок.
+    return 0;
+  });
+
+  v120BindGlobal('totalPoints', function(){
+    return v120ResearchPointsTotal();
+  });
+
+  v120BindGlobal('completedLearningUnits', function(){
+    return v120ResearchPointsTotal();
+  });
+
+  v120BindGlobal('studentTitleInfo', v120StudentTitleInfo);
+
+  v120BindGlobal('levelBarHtml', function(info){
+    info = info || v120StudentTitleInfo();
+    var segments = 10;
+    var active = Math.max(0, Math.min(segments, Math.round(Number(info.percent || 0) / 10)));
+    var cells = Array.from({ length:segments }, function(_, i){
+      return '<span class="' + (i < active ? 'active' : '') + '"></span>';
+    }).join('');
+
+    return '<div class="level-bar-wrap">'
+      + '<div class="level-bar-segments">' + cells + '</div>'
+      + '<div class="level-bar-caption">'
+      + '<span>' + v120Fmt(info.inside) + ' / ' + v120Fmt(info.span) + ' баллов внутри уровня</span>'
+      + '<b>Уровень ' + v120Fmt(info.current.level) + '</b>'
+      + '</div></div>';
+  });
+
+  v120BindGlobal('titleHelpHtml', function(){
+    var info = v120StudentTitleInfo();
+    return '<div id="title-help-panel" class="title-help-panel" style="display:none">'
+      + '<div class="title-help-head"><b>Как работают уровни</b><button onclick="toggleTitleHelp(false)" aria-label="Закрыть">×</button></div>'
+      + '<p>Баллы начисляются за первое открытие нового элемента библиотеки: блока, урока, слайда, саммари, теста, таблицы или рабочего материала.</p>'
+      + '<p>Повторное открытие того же элемента баллы не добавляет.</p>'
+      + '<p><b>1 уровень = 1000 баллов.</b> Максимального уровня нет: библиотека может расширяться постоянно.</p>'
+      + '<div class="level-help-list">'
+      + '<div><b>Текущий уровень</b><span>' + v120Fmt(info.current.level) + '</span></div>'
+      + '<div><b>Текущий диапазон</b><span>' + v120Fmt(info.current.min) + '–' + v120Fmt(info.current.max) + ' баллов</span></div>'
+      + '<div><b>Следующий уровень</b><span>с ' + v120Fmt(info.next.min) + ' баллов</span></div>'
+      + '<div><b>Осталось до следующего уровня</b><span>' + v120Fmt(info.left) + ' баллов</span></div>'
+      + '</div></div>';
+  });
+
+  v120BindGlobal('titleCardHtml', function(){
+    var info = v120StudentTitleInfo();
+    return v120Card('title-card-v12', '<div class="title-card-head"><div><p class="eyebrow">уровень участника</p><h2>'
+      + v120Esc(info.current.title)
+      + '</h2></div><button class="help-dot" onclick="toggleTitleHelp()" aria-label="Как работают уровни">?</button></div>'
+      + titleHelpHtml()
+      + '<div class="title-stat-row"><div><span>Уровень</span><b>' + v120Fmt(info.current.level) + '</b></div><div><span>Баллы</span><b>' + v120Fmt(info.points) + '</b></div></div>'
+      + levelBarHtml(info)
+      + '<p class="small title-note">До следующего уровня: ' + v120Fmt(info.left) + ' баллов.</p>');
+  });
+
+  v120BindGlobal('achievementInlineHtml', function(){
+    var info = v120StudentTitleInfo();
+    return '<div class="achievement-inline"><div class="achievement-head"><div><span>Достижение</span><b>'
+      + v120Esc(info.current.title)
+      + '</b></div><button class="help-dot" onclick="toggleTitleHelp()" aria-label="Как работают уровни">?</button></div>'
+      + titleHelpHtml()
+      + levelBarHtml(info)
+      + '</div>';
+  });
+
+  v120BindGlobal('renderPointsRulesV120', function(){
+    var info = v120StudentTitleInfo();
+    var progress = typeof globalStageProgress === 'function' ? globalStageProgress() : { done:0, total:0, percent:0 };
+    var points = v120ResearchPointsTotal();
+    var html = ''
+      + v120Card('blue-card-v2 progress-rules-hero-v40', '<p class="eyebrow">баллы и уровни</p><h1>Как начисляются баллы</h1><p>Баллы и прогресс — разные показатели. Прогресс показывает прохождение материалов, а баллы считаются за исследование библиотеки.</p>')
+      + v120Card('', '<h2>Правило баллов</h2><div class="score-rule-grid-v40"><div><span>+1</span><b>Новый блок</b></div><div><span>+1</span><b>Новый урок</b></div><div><span>+1</span><b>Новый слайд</b></div><div><span>+1</span><b>Рабочий материал</b></div></div><p class="small">Каждое первое открытие нового элемента даёт 1 балл. Повторное открытие того же элемента не добавляет баллы.</p>')
+      + v120Card('', '<h2>Уровни</h2><div class="planned-progress-breakdown-v41"><div><b>' + v120Fmt(points) + '</b><span>баллов сейчас</span></div><div><b>' + v120Fmt(info.current.level) + '</b><span>текущий уровень</span></div><div><b>' + v120Fmt(info.left) + '</b><span>до следующего уровня</span></div></div><p><b>1 уровень = 1000 баллов.</b> Максимального уровня нет.</p>' + levelBarHtml(info))
+      + v120Card('', '<h2>Прогресс</h2><p>Прогресс уроков остаётся отдельным показателем и не используется для начисления баллов.</p><p class="small">Сейчас выполнено: <b>' + v120Fmt(progress.done) + ' из ' + v120Fmt(progress.total) + '</b> этапов — <b>' + v120Fmt(progress.percent) + '%</b>.</p><button class="btn secondary" onclick="renderProfile()">Вернуться в профиль</button>');
+    if (typeof shell === 'function') return shell(html, 'profile');
+    var root = document.getElementById('app');
+    if (root) root.innerHTML = html;
+  });
+
+  window.renderPointsRulesV43 = window.renderPointsRulesV120;
+  window.renderPointsRulesV42 = window.renderPointsRulesV120;
+  window.renderPointsRulesV41 = window.renderPointsRulesV120;
+  window.renderProgressRulesV40 = window.renderPointsRulesV120;
+
+  // Страховка от старых видимых подписей в уже существующих карточках.
+  function v120CleanLevelText(){
+    try {
+      var root = document.getElementById('app');
+      if (!root) return;
+      root.querySelectorAll('span,b,p,em,h1,h2,h3,button,small').forEach(function(node){
+        if (node.children && node.children.length) return;
+        var t = node.textContent || '';
+        var next = t
+          .replace(/\s*\/\s*25\b/g, '')
+          .replace(/Единицы освоения/g, 'Баллы')
+          .replace(/единиц освоения/g, 'баллов')
+          .replace(/единицы освоения/g, 'баллы')
+          .replace(/учебных единиц/g, 'баллов')
+          .replace(/учебные единицы/g, 'баллы')
+          .replace(/Учебные единицы/g, 'Баллы');
+        if (next !== t) node.textContent = next;
+      });
+    } catch(e) {}
+  }
+
+  var shellBeforeV120 = window.shell;
+  if (typeof shellBeforeV120 === 'function' && !shellBeforeV120.__pointsLevelsV120) {
+    var shellWrappedV120 = function(content, activeTab){
+      var result = shellBeforeV120(content, activeTab);
+      setTimeout(v120CleanLevelText, 0);
+      setTimeout(v120CleanLevelText, 80);
+      return result;
+    };
+    shellWrappedV120.__pointsLevelsV120 = true;
+    v120BindGlobal('shell', shellWrappedV120);
+  }
+
+  try {
+    window.addEventListener('architecture:research-point-awarded', function(){
+      setTimeout(function(){
+        try {
+          var view = String(window.__architectureCurrentViewV44 || '');
+          if (view === 'home' && typeof renderHome === 'function') return renderHome();
+          if (view === 'profile' && typeof renderProfile === 'function') return renderProfile();
+          v120CleanLevelText();
+        } catch(e) {}
+      }, 80);
+    });
+  } catch(e) {}
+
+  setTimeout(v120CleanLevelText, 0);
+})();
+
