@@ -10,6 +10,7 @@
 - Источника Finance entitlement в main сейчас нет. Новая таблица пуста и поэтому блокирует все выдачи до явного sync/provisioning.
 - Finance profile и Finance entitlement должны уже существовать и совпадать с тем же Telegram ID; Finance повторно проверяет их транзакционно.
 - UI рабочей ветки уже добавлен отдельными `architecture-finance*.js/css`, но feature gate выключен, а адрес Finance-сайта пуст. Поэтому даже случайная публикация статических файлов не начинает выдавать коды.
+- Main foundation исполнен в одноразовом PostgreSQL 17 CI со строгим postflight, поведенческим smoke, rollback и ожидаемым отказом повторного запуска: [run #22](https://github.com/lego-business-system/lego-mini-app/actions/runs/29384073500). Это не Supabase staging и не разрешение на deploy.
 
 ## Подготовка staging
 

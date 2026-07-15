@@ -82,7 +82,7 @@ test("reviewed migration is exact and avoids PostgreSQL reserved aliases", () =>
   const digest = createHash("sha256").update(migration).digest("hex");
   assert.equal(
     digest,
-    "512cb289cca0f784d74edfb8ae01e372d5479739d115c9cd58c6d9598b1b75bf",
+    "78b9a8619ab3487424602ffaba6fcad02e7557a7112c2639370cb8d28fa2a9e6",
   );
   assert.doesNotMatch(migration, /\bAS\s+(?:collation|constraint)\b/i);
   assert.match(migration, /ERRCODE = '55000'/);

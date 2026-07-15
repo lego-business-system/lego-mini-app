@@ -1368,5 +1368,5 @@ $postflight$;
 
 COMMIT;
 
--- End of DRAFT. No execution evidence exists until this migration is applied
--- and behavior-tested on a disposable main staging project.
+-- End of DRAFT. Execution evidence is limited to a disposable PostgreSQL 17
+-- CI database; this migration has not been applied to Supabase staging or live.

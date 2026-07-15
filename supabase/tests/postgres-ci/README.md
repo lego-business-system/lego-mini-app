@@ -30,3 +30,5 @@ repository secrets и не может работать с удалённой б�
 совместимости с фактической схемой main Supabase. Перед production всё равно
 обязательны отдельный main staging, read-only аудит `public.users` и
 действующего `check-access`, а затем полный Telegram E2E.
+
+Кодовый кандидат `76567f6da460f64550c8d907833fb057e076ad5e` прошёл весь контур в [GitHub Actions run #22](https://github.com/lego-business-system/lego-mini-app/actions/runs/29384073500). Ни staging, ни live Supabase этим запуском не затрагивались.

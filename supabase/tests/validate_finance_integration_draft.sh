@@ -4,7 +4,7 @@ set -eu
 
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 migration="$repo_root/supabase/migrations/20260714235900_finance_integration_foundation.sql"
-expected_migration_sha256="512cb289cca0f784d74edfb8ae01e372d5479739d115c9cd58c6d9598b1b75bf"
+expected_migration_sha256="78b9a8619ab3487424602ffaba6fcad02e7557a7112c2639370cb8d28fa2a9e6"
 
 fail() {
   printf '%s\n' "finance integration draft validation failed: $1" >&2
