@@ -4,7 +4,7 @@ set -eu
 
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 migration="$repo_root/supabase/migrations/20260714235900_finance_integration_foundation.sql"
-expected_migration_sha256="9966ae43142f1cee73a429227cb970822ec4c86461e9e4591249f630c5409e37"
+expected_migration_sha256="18eac5039e013947a086cc61329dc6f3bc1e4fc6cc0fd28a7459595e9dbb0c77"
 
 fail() {
   printf '%s\n' "finance integration draft validation failed: $1" >&2
@@ -92,6 +92,9 @@ if rg -q '^CREATE (TABLE|INDEX) IF NOT EXISTS|^DROP TABLE |^TRUNCATE TABLE |ALTE
 fi
 if rg -q '\btelegram_id\b|code_hash|raw_init_data|bot_token|issuer_hmac_secret' "$migration"; then
   fail "migration appears to store a raw identity, code or secret"
+fi
+if rg -q '\bAS[[:space:]]+(collation|constraint)\b' "$migration"; then
+  fail "migration uses a PostgreSQL reserved parser keyword as an alias"
 fi
 
 printf '%s\n' "finance integration draft validation passed"

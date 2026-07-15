@@ -859,7 +859,7 @@ BEGIN
         attribute.attgenerated::text AS generated_kind,
         CASE
           WHEN attribute.attcollation = 0 THEN NULL
-          ELSE format('%I.%I', collation_namespace.nspname, collation.collname)
+          ELSE format('%I.%I', collation_namespace.nspname, collation_row.collname)
         END AS collation_name
       FROM pg_catalog.pg_class AS relation
       JOIN pg_catalog.pg_namespace AS namespace
@@ -871,10 +871,10 @@ BEGIN
       LEFT JOIN pg_catalog.pg_attrdef AS attribute_default
         ON attribute_default.adrelid = attribute.attrelid
        AND attribute_default.adnum = attribute.attnum
-      LEFT JOIN pg_catalog.pg_collation AS collation
-        ON collation.oid = attribute.attcollation
+      LEFT JOIN pg_catalog.pg_collation AS collation_row
+        ON collation_row.oid = attribute.attcollation
       LEFT JOIN pg_catalog.pg_namespace AS collation_namespace
-        ON collation_namespace.oid = collation.collnamespace
+        ON collation_namespace.oid = collation_row.collnamespace
       WHERE namespace.nspname = 'public'
         AND relation.relname IN (
           'architecture_product_entitlements',

@@ -14,7 +14,21 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17.10-bookworm@sha256:17b6c778de50f4bb9a878c36e736110fbcd9b7020377d6fdfdf20f7c0347e40a
+        env:
+          POSTGRES_DB: main_finance_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: main-finance-ci-ephemeral-only
+        ports:
+          - 5432/tcp
+        options: >-
+          --health-cmd "pg_isready -U postgres -d main_finance_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     steps:
       - name: Check out repository
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -42,7 +56,23 @@ jobs:
       - name: Run Finance integration verification
         run: ./supabase/tests/verify_local.sh
 
+      - name: Validate disposable PostgreSQL harness
+        run: node --test supabase/tests/postgres-ci/static_guard.test.mjs
+
       - name: Verify frozen Edge dependency graph
         run: |
           deno check --config supabase/functions/finance-issue-code/deno.json --frozen supabase/functions/finance-issue-code/index.ts
           (cd supabase/functions/finance-issue-code && deno audit --frozen)
+
+      - name: Execute main Finance foundation on disposable PostgreSQL 17
+        env:
+          CI: "true"
+          MAIN_FINANCE_CI_ALLOW_EPHEMERAL: "1"
+          PGHOST: 127.0.0.1
+          PGPORT: ${{ job.services.postgres.ports[5432] }}
+          PGDATABASE: main_finance_ci
+          PGUSER: postgres
+          PGPASSWORD: main-finance-ci-ephemeral-only
+          PGSSLMODE: disable
+          PGCONNECT_TIMEOUT: "5"
+        run: ./supabase/tests/postgres-ci/run.sh
