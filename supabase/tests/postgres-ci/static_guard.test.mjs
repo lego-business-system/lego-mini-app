@@ -202,6 +202,7 @@ test("external postflight and fingerprint cover semantic catalog state", () => {
   }
   assert.match(fingerprint, /body_md5=%s\|definition_md5=%s/);
   assert.match(fingerprint, /constraint=%I\.%I\.%I/);
+  assert.match(fingerprint, /WHEN attribute\.attcollation = 0 THEN ''/);
   assert.doesNotMatch(fingerprint, /trigger_row\.tgconstraint\s*[,)]/);
   const internalTriggerSection = fingerprint.slice(
     fingerprint.indexOf("-- Internal FK trigger names"),

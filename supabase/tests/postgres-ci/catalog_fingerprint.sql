@@ -49,7 +49,10 @@ WITH catalog_items(kind, item) AS (
       attribute.attnotnull,
       attribute.attidentity,
       attribute.attgenerated,
-      coalesce(format('%I.%I', collation_namespace.nspname, collation_row.collname), ''),
+      CASE
+        WHEN attribute.attcollation = 0 THEN ''
+        ELSE format('%I.%I', collation_namespace.nspname, collation_row.collname)
+      END,
       coalesce(pg_catalog.pg_get_expr(default_value.adbin, default_value.adrelid, true), ''),
       coalesce(attribute.attacl::text, ''),
       coalesce(description.description, '')
