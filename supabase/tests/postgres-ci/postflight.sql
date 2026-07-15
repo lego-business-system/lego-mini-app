@@ -118,7 +118,7 @@ BEGIN
   IF EXISTS (
     WITH expected(function_name, identity_arguments, body_md5) AS (
       VALUES
-        ('architecture_finance_set_updated_at_internal', '', '5bdc21b8fa8fb1231bdb021e09a5bc8e'),
+        ('architecture_finance_set_updated_at_internal', '', 'ba01fe3d1a916c7a8f497915431bbac5'),
         ('architecture_upsert_product_entitlement_internal', 'bytea, text, text, timestamp with time zone, timestamp with time zone', '4a4b56b2f6c340a6358dc4c826a29d31'),
         ('architecture_begin_finance_issue_internal', 'uuid, bytea, bytea, text, bytea, bytea, bigint, timestamp with time zone', '292fd9c6cc750a291db0008e34b3d0bc'),
         ('architecture_finish_finance_issue_internal', 'uuid, bytea, text, timestamp with time zone', '224981384a3ef9c101a77a9d3eb7e638')

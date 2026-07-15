@@ -4,7 +4,7 @@ set -eu
 
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 migration="$repo_root/supabase/migrations/20260714235900_finance_integration_foundation.sql"
-expected_migration_sha256="6d0332c754d9168f175221578d345a2249001914f79729040dd822c9ec4bb740"
+expected_migration_sha256="512cb289cca0f784d74edfb8ae01e372d5479739d115c9cd58c6d9598b1b75bf"
 
 fail() {
   printf '%s\n' "finance integration draft validation failed: $1" >&2
@@ -60,6 +60,8 @@ rg -Fq "v_recent_subject_requests >= 3" "$migration" ||
   fail "persistent subject rate limit is missing"
 rg -Fq "updated_at = clock_timestamp()" "$migration" ||
   fail "retry cooldown must use wall-clock time"
+rg -Fq "NEW.updated_at := clock_timestamp();" "$migration" ||
+  fail "updated-at trigger must preserve wall-clock cooldown semantics"
 rg -Fq "v_table_count <> 0" "$migration" ||
   fail "one-shot table preflight is missing"
 rg -Fq "v_function_count <> 0" "$migration" ||

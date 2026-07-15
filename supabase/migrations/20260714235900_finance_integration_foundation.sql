@@ -213,7 +213,7 @@ NOT LEAKPROOF
 SET search_path TO 'pg_catalog', 'public'
 AS $function$
 BEGIN
-  NEW.updated_at := now();
+  NEW.updated_at := clock_timestamp();
   RETURN NEW;
 END;
 $function$;
