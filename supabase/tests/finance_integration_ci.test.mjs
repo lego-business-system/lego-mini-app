@@ -14,10 +14,12 @@ test("Finance integration CI is immutable and runs the complete verifier", () =>
   assert.deepEqual(uses, [
     "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10",
     "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38",
+    "denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed",
   ]);
   assert.match(workflow, /^\s*runs-on:\s*ubuntu-24\.04\s*$/m);
   assert.match(workflow, /^\s*node-version:\s*24\.18\.0\s*$/m);
   assert.match(workflow, /^\s*check-latest:\s*false\s*$/m);
+  assert.match(workflow, /^\s*deno-version:\s*2\.9\.2\s*$/m);
   assert.match(workflow, /^\s*permissions:\s*\n\s*contents:\s*read\s*$/m);
   assert.match(
     workflow,
@@ -28,6 +30,14 @@ test("Finance integration CI is immutable and runs the complete verifier", () =>
     /test "\$\(rg --version \| head -n 1\)" = "ripgrep 14\.1\.0"/,
   );
   assert.match(workflow, /run:\s*\.\/supabase\/tests\/verify_local\.sh/);
+  assert.match(
+    workflow,
+    /deno check --config supabase\/functions\/finance-issue-code\/deno\.json --frozen/,
+  );
+  assert.match(
+    workflow,
+    /cd supabase\/functions\/finance-issue-code && deno audit --frozen/,
+  );
   assert.doesNotMatch(
     workflow,
     /apt-get install(?:\s+--[^\n]+)*\s+ripgrep(?:\s|$)(?!\s*=)/,

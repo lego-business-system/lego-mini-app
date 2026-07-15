@@ -59,19 +59,37 @@ function bytea(hex: string): string {
   return `\\x${hex}`;
 }
 
-function parseBeginResult(value: unknown): {
-  ok: boolean;
-  error: string | null;
-  state: string | null;
-  replayed: boolean;
-  financeTimestamp: string | null;
-} {
+type BeginState = "pending" | "upstream_error" | "succeeded" | "rejected";
+
+type BeginResult =
+  | {
+    ok: false;
+    error: string;
+    state: null;
+    replayed: false;
+    financeTimestamp: null;
+  }
+  | {
+    ok: true;
+    error: null;
+    state: BeginState;
+    replayed: boolean;
+    financeTimestamp: string;
+  };
+
+function parseBeginResult(value: unknown): BeginResult {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw new TypeError("database begin result is malformed");
   }
   const row = value as Record<string, unknown>;
   if (row.ok === false && typeof row.error === "string") {
-    return { ok: false, error: row.error, state: null, replayed: false, financeTimestamp: null };
+    return {
+      ok: false,
+      error: row.error,
+      state: null,
+      replayed: false,
+      financeTimestamp: null,
+    };
   }
   if (
     row.ok !== true ||
@@ -85,7 +103,7 @@ function parseBeginResult(value: unknown): {
   return {
     ok: true,
     error: null,
-    state: String(row.state),
+    state: row.state as BeginState,
     replayed: row.replayed,
     financeTimestamp: row.finance_timestamp,
   };

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { createHmac } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { createHash, createHmac } from "node:crypto";
+import { lstatSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -68,6 +68,9 @@ const denoConfig = readFileSync(
   "supabase/functions/finance-issue-code/deno.json",
   "utf8",
 );
+const denoLockPath = "supabase/functions/finance-issue-code/deno.lock";
+const denoLockSource = readFileSync(denoLockPath, "utf8");
+const denoLock = JSON.parse(denoLockSource);
 const envExample = readFileSync("supabase/functions/.env.example", "utf8");
 const edgeReadme = readFileSync("supabase/functions/README.md", "utf8");
 const app = readFileSync("app.js", "utf8");
@@ -413,6 +416,27 @@ test("migration is service-only, pseudonymous and leaves existing access untouch
 test("dependencies are exact, examples contain no secrets and frontend is fail-closed", () => {
   assert.match(denoConfig, /npm:@supabase\/supabase-js@2\.106\.2/);
   assert.doesNotMatch(denoConfig, /@latest|@\^|@~/);
+  assert.deepEqual(JSON.parse(denoConfig).lock, {
+    path: "./deno.lock",
+    frozen: true,
+  });
+  const lockStatus = lstatSync(denoLockPath);
+  assert.equal(lockStatus.isFile(), true);
+  assert.equal(lockStatus.isSymbolicLink(), false);
+  assert.equal(denoLock.version, "5");
+  assert.equal(
+    denoLock.specifiers["npm:@supabase/supabase-js@2.106.2"],
+    "2.106.2",
+  );
+  assert.equal(Object.keys(denoLock.npm).length, 9);
+  for (const [packageName, metadata] of Object.entries(denoLock.npm)) {
+    assert.match(packageName, /@\d/);
+    assert.match(metadata.integrity, /^sha512-[A-Za-z0-9+/]+={0,2}$/);
+  }
+  assert.equal(
+    createHash("sha256").update(denoLockSource).digest("hex"),
+    "5e322322c36ec504c98691cbea052a618d969d627ffcc21f89a5a440d61077eb",
+  );
   for (const source of [edge, runtime, protocol]) {
     assert.doesNotMatch(source, /console\.(?:log|info|warn|error|debug)/);
     assert.doesNotMatch(source, /error\.(?:message|details|hint|stack)/);
@@ -425,8 +449,8 @@ test("dependencies are exact, examples contain no secrets and frontend is fail-c
   ]) {
     assert.match(envExample, new RegExp(`^${secretName}=$`, "m"));
   }
-  assert.match(edgeReadme, /только локальный foundation/);
-  assert.match(edgeReadme, /локальн.*интерфейс.*feature gate/s);
+  assert.match(edgeReadme, /рабочей ветке/);
+  assert.match(edgeReadme, /[Ии]нтерфейс.*feature gate/s);
   assert.doesNotMatch(app, /finance-issue-code/);
   assert.match(html, /architecture-finance-config\.js[\s\S]*architecture-finance\.js/);
   assert.match(financeUiConfig, /enabled:\s*false/);

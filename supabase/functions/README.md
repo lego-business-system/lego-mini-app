@@ -1,6 +1,6 @@
 # Main → Finance Telegram code issuer
 
-> Статус: только локальный foundation. Edge Function, SQL-миграция и секреты не развёрнуты; live Supabase и production не изменялись. Локальный интерфейс подключён через отдельный feature gate, который по умолчанию выключен.
+> Статус: foundation опубликован в рабочей ветке и черновом PR, но не развёрнут. Edge Function, SQL-миграция и секреты не применены; live Supabase и production не изменялись. Интерфейс подключён через отдельный feature gate, который по умолчанию выключен.
 
 ## Назначение
 
@@ -109,12 +109,16 @@ POST
 - Upstream URL обязан быть HTTPS, без credentials/query/hash и с точным canonical path.
 - Redirect запрещён; DB и upstream имеют отдельные timeout внутри общего deadline не больше 25 секунд; Finance response ограничен по размеру и строгой схеме.
 - В Edge-исходниках нет `console.*`; request body, Telegram ID, code, nonce, signatures и ошибки зависимостей не логируются.
-- `@supabase/supabase-js` закреплён на `2.106.2` в function-local `deno.json`.
+- `@supabase/supabase-js` закреплён на `2.106.2`; function-local `deno.lock` фиксирует девять npm-пакетов с integrity и SHA-256 `5e322322c36ec504c98691cbea052a618d969d627ffcc21f89a5a440d61077eb`.
 
 Локальная проверка:
 
 ```bash
 ./supabase/tests/verify_local.sh
+deno check --config supabase/functions/finance-issue-code/deno.json --frozen supabase/functions/finance-issue-code/index.ts
+(cd supabase/functions/finance-issue-code && deno audit --frozen)
 ```
+
+CI закрепляет Deno `2.9.2`, frozen type-check и dependency audit через immutable action commit. Локальный audit не обнаружил известных уязвимостей. Это не заменяет сборку и E2E на фактическом Supabase Edge Runtime staging.
 
 Staging-порядок и rollback находятся в [`../INTEGRATION_RUNBOOK.md`](../INTEGRATION_RUNBOOK.md).
