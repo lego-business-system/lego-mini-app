@@ -14,14 +14,15 @@
 
 ## Подготовка staging
 
-1. Подтвердить committed function-local `deno.lock`, выполнить frozen `deno check`/audit и затем повторить сборку именно фактическим Supabase Edge Runtime; Deno CLI `2.9.2` в CI не считается доказательством hosted-совместимости.
-2. Создать отдельные main staging и Finance staging. Не использовать production для первой проверки.
-3. В Finance staging применить reviewed Finance migrations и развернуть `finance-issue-telegram-code` единым bundle.
-4. В main staging проверить read-only, что `public.users` существует и новая миграция не конфликтует с текущим `check-access`.
-5. Применить main draft `20260714235900_finance_integration_foundation.sql` только после отдельного подтверждения владельца.
-6. Создать четыре разные случайные server-only secrets минимум по 32 bytes. Integration HMAC secret установить одинаковым в двух проектах; остальные ключи не переиспользовать.
-7. Заполнить точные staging origins/URLs из `.env.example`, оставить `MAIN_FINANCE_PROTOCOL_MODE=disabled`, deploy `finance-issue-code` с `verify_jwt=false` и убедиться, что JWT отключён только у этой функции.
-8. На Supabase gateway включить network-level rate limit. Edge намеренно не доверяет client-controlled IP headers и не сохраняет сетевые идентификаторы; DB дополнительно ограничивает verified subject.
+1. Подтвердить, что оба репозитория содержат побайтно одинаковый `supabase/contracts/telegram-finance-issuer-v1.json`, а его SHA-256 совпадает с закреплённым в контрактных тестах.
+2. Подтвердить committed function-local `deno.lock`, выполнить frozen `deno check`/audit и затем повторить сборку именно фактическим Supabase Edge Runtime; Deno CLI `2.9.2` в CI не считается доказательством hosted-совместимости.
+3. Создать отдельные main staging и Finance staging. Не использовать production для первой проверки.
+4. В Finance staging применить reviewed Finance migrations и развернуть `finance-issue-telegram-code` единым bundle.
+5. В main staging проверить read-only, что `public.users` существует и новая миграция не конфликтует с текущим `check-access`.
+6. Применить main draft `20260714235900_finance_integration_foundation.sql` только после отдельного подтверждения владельца.
+7. Создать четыре разные случайные server-only secrets минимум по 32 bytes. Integration HMAC secret установить одинаковым в двух проектах; остальные ключи не переиспользовать.
+8. Заполнить точные staging origins/URLs из `.env.example`, оставить `MAIN_FINANCE_PROTOCOL_MODE=disabled`, deploy `finance-issue-code` с `verify_jwt=false` и убедиться, что JWT отключён только у этой функции.
+9. На Supabase gateway включить network-level rate limit. Edge намеренно не доверяет client-controlled IP headers и не сохраняет сетевые идентификаторы; DB дополнительно ограничивает verified subject.
 
 ## Provisioning entitlement
 

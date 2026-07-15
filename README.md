@@ -9,6 +9,7 @@
 - [`supabase/migrations/20260714235900_finance_integration_foundation.sql`](supabase/migrations/20260714235900_finance_integration_foundation.sql) — draft DB foundation.
 - [`architecture-finance.js`](architecture-finance.js) — отдельный экран выдачи одноразового кода;
 - [`architecture-finance-config.js`](architecture-finance-config.js) — публичная конфигурация и feature gate без секретов.
+- [`supabase/contracts/telegram-finance-issuer-v1.json`](supabase/contracts/telegram-finance-issuer-v1.json) — общий с Finance побайтово закреплённый golden contract v1 без реальных секретов.
 
 Интерфейс рабочей ветки подключён к контракту, но работает fail-closed: `enabled: false`, а адрес финансового сайта пуст. До прохождения staging-runbook кнопка не вызывает endpoint. Существующий учебный «Финансовый помощник» не заменён — «АРХИТЕКТУРА: ФИНАНСЫ» добавлена отдельной карточкой.
 
