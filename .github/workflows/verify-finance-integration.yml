@@ -28,5 +28,11 @@ jobs:
           check-latest: false
           package-manager-cache: false
 
+      - name: Install pinned ripgrep
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ripgrep=14.1.0-1
+          test "$(rg --version | head -n 1)" = "ripgrep 14.1.0"
+
       - name: Run Finance integration verification
         run: ./supabase/tests/verify_local.sh

@@ -19,6 +19,18 @@ test("Finance integration CI is immutable and runs the complete verifier", () =>
   assert.match(workflow, /^\s*node-version:\s*24\.18\.0\s*$/m);
   assert.match(workflow, /^\s*check-latest:\s*false\s*$/m);
   assert.match(workflow, /^\s*permissions:\s*\n\s*contents:\s*read\s*$/m);
+  assert.match(
+    workflow,
+    /sudo apt-get install --yes --no-install-recommends ripgrep=14\.1\.0-1/,
+  );
+  assert.match(
+    workflow,
+    /test "\$\(rg --version \| head -n 1\)" = "ripgrep 14\.1\.0"/,
+  );
   assert.match(workflow, /run:\s*\.\/supabase\/tests\/verify_local\.sh/);
+  assert.doesNotMatch(
+    workflow,
+    /apt-get install(?:\s+--[^\n]+)*\s+ripgrep(?:\s|$)(?!\s*=)/,
+  );
   assert.doesNotMatch(workflow, /ubuntu-latest|persist-credentials:\s*true/);
 });
