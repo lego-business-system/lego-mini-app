@@ -196,7 +196,7 @@ ON public.architecture_finance_issue_requests (subject_digest, created_at DESC);
 CREATE INDEX idx_architecture_finance_replay_guard_expiry
 ON public.architecture_finance_issue_replay_guard (expires_at);
 
-CREATE OR REPLACE FUNCTION public.architecture_finance_set_updated_at_internal()
+CREATE FUNCTION public.architecture_finance_set_updated_at_internal()
 RETURNS trigger
 LANGUAGE plpgsql
 VOLATILE
@@ -232,7 +232,7 @@ BEFORE UPDATE ON public.architecture_finance_issue_requests
 FOR EACH ROW
 EXECUTE FUNCTION public.architecture_finance_set_updated_at_internal();
 
-CREATE OR REPLACE FUNCTION public.architecture_upsert_product_entitlement_internal(
+CREATE FUNCTION public.architecture_upsert_product_entitlement_internal(
   p_subject_digest bytea,
   p_product_code text,
   p_status text,
@@ -293,7 +293,7 @@ $function$;
 ALTER FUNCTION public.architecture_upsert_product_entitlement_internal(bytea, text, text, timestamp with time zone, timestamp with time zone)
 OWNER TO postgres;
 
-CREATE OR REPLACE FUNCTION public.architecture_begin_finance_issue_internal(
+CREATE FUNCTION public.architecture_begin_finance_issue_internal(
   p_request_id uuid,
   p_subject_digest bytea,
   p_init_data_digest bytea,
@@ -493,7 +493,7 @@ $function$;
 ALTER FUNCTION public.architecture_begin_finance_issue_internal(uuid, bytea, bytea, text, bytea, bytea, bigint, timestamp with time zone)
 OWNER TO postgres;
 
-CREATE OR REPLACE FUNCTION public.architecture_finish_finance_issue_internal(
+CREATE FUNCTION public.architecture_finish_finance_issue_internal(
   p_request_id uuid,
   p_request_fingerprint bytea,
   p_outcome text,
@@ -757,6 +757,186 @@ GRANT EXECUTE ON FUNCTION public.architecture_begin_finance_issue_internal(uuid,
 TO service_role;
 GRANT EXECUTE ON FUNCTION public.architecture_finish_finance_issue_internal(uuid, bytea, text, timestamp with time zone)
 TO service_role;
+
+-- Temporary data-free catalog diagnostics for the first disposable PG17 run.
+-- Remove after every exact metadata contract below is confirmed.
+DO $catalog_diagnostics$
+DECLARE
+  v_payload text;
+BEGIN
+  SELECT coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'table', table_relation.relname,
+        'index', index_relation.relname,
+        'keys', ARRAY(
+          SELECT pg_catalog.pg_get_indexdef(index_row.indexrelid, key_number, true)
+          FROM pg_catalog.generate_series(1, index_row.indnkeyatts) AS key_number
+          ORDER BY key_number
+        ),
+        'owner', owner_role.rolname,
+        'access_method', access_method.amname,
+        'persistence', index_relation.relpersistence,
+        'options', index_relation.reloptions,
+        'unique', index_row.indisunique,
+        'primary', index_row.indisprimary,
+        'exclusion', index_row.indisexclusion,
+        'immediate', index_row.indimmediate,
+        'clustered', index_row.indisclustered,
+        'valid', index_row.indisvalid,
+        'check_xmin', index_row.indcheckxmin,
+        'ready', index_row.indisready,
+        'live', index_row.indislive,
+        'nulls_not_distinct', index_row.indnullsnotdistinct,
+        'key_count', index_row.indnkeyatts,
+        'attribute_count', index_row.indnatts,
+        'expressions', index_row.indexprs IS NOT NULL,
+        'predicate', index_row.indpred IS NOT NULL
+      )
+      ORDER BY table_relation.relname, index_relation.relname
+    ),
+    '[]'::jsonb
+  )::text
+  INTO v_payload
+  FROM pg_catalog.pg_index AS index_row
+  JOIN pg_catalog.pg_class AS table_relation
+    ON table_relation.oid = index_row.indrelid
+  JOIN pg_catalog.pg_namespace AS namespace
+    ON namespace.oid = table_relation.relnamespace
+  JOIN pg_catalog.pg_class AS index_relation
+    ON index_relation.oid = index_row.indexrelid
+  JOIN pg_catalog.pg_roles AS owner_role
+    ON owner_role.oid = index_relation.relowner
+  JOIN pg_catalog.pg_am AS access_method
+    ON access_method.oid = index_relation.relam
+  WHERE namespace.nspname = 'public'
+    AND table_relation.relname IN (
+      'architecture_product_entitlements',
+      'architecture_finance_issue_requests',
+      'architecture_finance_issue_replay_guard'
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM pg_catalog.pg_constraint AS constraint_row
+      WHERE constraint_row.conindid = index_row.indexrelid
+    );
+  RAISE NOTICE 'main_finance_index_catalog=%', v_payload;
+
+  SELECT coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'name', procedure.proname,
+        'arguments', pg_catalog.pg_get_function_identity_arguments(procedure.oid),
+        'security_definer', procedure.prosecdef,
+        'default_count', procedure.pronargdefaults,
+        'defaults', pg_catalog.pg_get_expr(procedure.proargdefaults, 0, true),
+        'result', pg_catalog.pg_get_function_result(procedure.oid),
+        'argument_names', procedure.proargnames,
+        'owner', owner_role.rolname,
+        'language', language.lanname,
+        'kind', procedure.prokind,
+        'volatility', procedure.provolatile,
+        'parallel', procedure.proparallel,
+        'strict', procedure.proisstrict,
+        'leakproof', procedure.proleakproof,
+        'returns_set', procedure.proretset,
+        'all_argument_types', procedure.proallargtypes,
+        'argument_modes', procedure.proargmodes,
+        'config', procedure.proconfig,
+        'body_md5', md5(procedure.prosrc)
+      )
+      ORDER BY procedure.proname,
+        pg_catalog.pg_get_function_identity_arguments(procedure.oid)
+    ),
+    '[]'::jsonb
+  )::text
+  INTO v_payload
+  FROM pg_catalog.pg_proc AS procedure
+  JOIN pg_catalog.pg_namespace AS namespace
+    ON namespace.oid = procedure.pronamespace
+  JOIN pg_catalog.pg_roles AS owner_role
+    ON owner_role.oid = procedure.proowner
+  JOIN pg_catalog.pg_language AS language
+    ON language.oid = procedure.prolang
+  WHERE namespace.nspname = 'public'
+    AND procedure.proname IN (
+      'architecture_finance_set_updated_at_internal',
+      'architecture_upsert_product_entitlement_internal',
+      'architecture_begin_finance_issue_internal',
+      'architecture_finish_finance_issue_internal'
+    );
+  RAISE NOTICE 'main_finance_function_catalog=%', v_payload;
+
+  SELECT coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'table', relation.relname,
+        'name', trigger_row.tgname,
+        'function', procedure.proname,
+        'type', trigger_row.tgtype,
+        'enabled', trigger_row.tgenabled,
+        'internal', trigger_row.tgisinternal,
+        'constraint', trigger_row.tgconstraint,
+        'argument_count', trigger_row.tgnargs,
+        'qualification', trigger_row.tgqual::text,
+        'definition', pg_catalog.pg_get_triggerdef(trigger_row.oid, true)
+      )
+      ORDER BY relation.relname, trigger_row.tgname
+    ),
+    '[]'::jsonb
+  )::text
+  INTO v_payload
+  FROM pg_catalog.pg_trigger AS trigger_row
+  JOIN pg_catalog.pg_class AS relation
+    ON relation.oid = trigger_row.tgrelid
+  JOIN pg_catalog.pg_namespace AS namespace
+    ON namespace.oid = relation.relnamespace
+  JOIN pg_catalog.pg_proc AS procedure
+    ON procedure.oid = trigger_row.tgfoid
+  WHERE namespace.nspname = 'public'
+    AND relation.relname IN (
+      'architecture_product_entitlements',
+      'architecture_finance_issue_requests',
+      'architecture_finance_issue_replay_guard'
+    )
+    AND NOT trigger_row.tgisinternal;
+  RAISE NOTICE 'main_finance_trigger_catalog=%', v_payload;
+
+  SELECT coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'name', procedure.proname,
+        'arguments', pg_catalog.pg_get_function_identity_arguments(procedure.oid),
+        'grantee', CASE
+          WHEN exploded.grantee = 0 THEN 'PUBLIC'
+          ELSE pg_catalog.pg_get_userbyid(exploded.grantee)
+        END,
+        'grantor', pg_catalog.pg_get_userbyid(exploded.grantor),
+        'privilege', exploded.privilege_type,
+        'grantable', exploded.is_grantable
+      )
+      ORDER BY procedure.proname,
+        pg_catalog.pg_get_function_identity_arguments(procedure.oid),
+        exploded.grantee,
+        exploded.privilege_type
+    ),
+    '[]'::jsonb
+  )::text
+  INTO v_payload
+  FROM pg_catalog.pg_proc AS procedure
+  JOIN pg_catalog.pg_namespace AS namespace
+    ON namespace.oid = procedure.pronamespace
+  CROSS JOIN LATERAL pg_catalog.aclexplode(procedure.proacl) AS exploded
+  WHERE namespace.nspname = 'public'
+    AND procedure.proname IN (
+      'architecture_finance_set_updated_at_internal',
+      'architecture_upsert_product_entitlement_internal',
+      'architecture_begin_finance_issue_internal',
+      'architecture_finish_finance_issue_internal'
+    );
+  RAISE NOTICE 'main_finance_function_acl=%', v_payload;
+END;
+$catalog_diagnostics$;
 
 DO $postflight$
 BEGIN

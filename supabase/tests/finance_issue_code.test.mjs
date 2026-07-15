@@ -397,7 +397,7 @@ test("migration is service-only, pseudonymous and leaves existing access untouch
   );
   assert.match(
     migration,
-    /CREATE OR REPLACE FUNCTION public\.architecture_finish_finance_issue_internal[\s\S]*?IF p_outcome = 'succeeded' THEN[\s\S]*?FROM public\.architecture_product_entitlements[\s\S]*?FOR UPDATE;[\s\S]*?'access_denied'/,
+    /CREATE FUNCTION public\.architecture_finish_finance_issue_internal[\s\S]*?IF p_outcome = 'succeeded' THEN[\s\S]*?FROM public\.architecture_product_entitlements[\s\S]*?FOR UPDATE;[\s\S]*?'access_denied'/,
   );
   assert.match(migration, /DO \$acl_hardening\$[\s\S]*?pg_catalog\.aclexplode\(relation\.relacl\)/);
   assert.match(migration, /pg_catalog\.aclexplode\(attribute\.attacl\)/);
@@ -410,7 +410,7 @@ test("migration is service-only, pseudonymous and leaves existing access untouch
   );
   assert.doesNotMatch(migration, /\btelegram_id\b/);
   assert.doesNotMatch(migration, /ALTER TABLE (?:ONLY )?public\.users/);
-  assert.doesNotMatch(migration, /CREATE OR REPLACE FUNCTION public\.check[-_]access/i);
+  assert.doesNotMatch(migration, /CREATE(?: OR REPLACE)? FUNCTION public\.check[-_]access/i);
 });
 
 test("dependencies are exact, examples contain no secrets and frontend is fail-closed", () => {

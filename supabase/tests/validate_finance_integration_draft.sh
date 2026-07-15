@@ -4,7 +4,7 @@ set -eu
 
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 migration="$repo_root/supabase/migrations/20260714235900_finance_integration_foundation.sql"
-expected_migration_sha256="01c8cf16ab237c8e0c746575169fdc0ce48af20a66c597d0d9e40360dce4bb09"
+expected_migration_sha256="d935fe1fd706ecef3e10a3bf440b22a1434e2677f8cb4c0d1fa7682519132a01"
 
 fail() {
   printf '%s\n' "finance integration draft validation failed: $1" >&2
@@ -23,7 +23,7 @@ fi
   fail "migration bytes differ from the independently reviewed draft"
 [ "$(rg -c '^BEGIN;$' "$migration")" = "1" ] || fail "migration must have one BEGIN"
 [ "$(rg -c '^COMMIT;$' "$migration")" = "1" ] || fail "migration must have one COMMIT"
-[ "$(rg -c '^CREATE OR REPLACE FUNCTION public\.' "$migration")" = "4" ] ||
+[ "$(rg -c '^CREATE FUNCTION public\.' "$migration")" = "4" ] ||
   fail "reviewed function count changed"
 [ "$(rg -c '^\$function\$;$' "$migration")" = "4" ] ||
   fail "function terminator count changed"
@@ -93,6 +93,9 @@ rg -q 'FROM PUBLIC, anon, authenticated, service_role;' "$migration" ||
 
 if rg -q '^CREATE (TABLE|INDEX) IF NOT EXISTS|^DROP TABLE |^TRUNCATE TABLE |ALTER TABLE (ONLY )?public\.users|DISABLE ROW LEVEL SECURITY' "$migration"; then
   fail "migration contains a forbidden destructive or existing-user mutation"
+fi
+if rg -q '^CREATE OR REPLACE FUNCTION public\.architecture_' "$migration"; then
+  fail "one-shot migration must fail on concurrent function creation instead of replacing it"
 fi
 if rg -q '\btelegram_id\b|code_hash|raw_init_data|bot_token|issuer_hmac_secret' "$migration"; then
   fail "migration appears to store a raw identity, code or secret"

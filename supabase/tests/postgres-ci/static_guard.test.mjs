@@ -82,7 +82,7 @@ test("reviewed migration is exact and avoids PostgreSQL reserved aliases", () =>
   const digest = createHash("sha256").update(migration).digest("hex");
   assert.equal(
     digest,
-    "01c8cf16ab237c8e0c746575169fdc0ce48af20a66c597d0d9e40360dce4bb09",
+    "d935fe1fd706ecef3e10a3bf440b22a1434e2677f8cb4c0d1fa7682519132a01",
   );
   assert.doesNotMatch(migration, /\bAS\s+(?:collation|constraint)\b/i);
   assert.match(migration, /ERRCODE = '55000'/);
@@ -97,6 +97,18 @@ test("reviewed migration is exact and avoids PostgreSQL reserved aliases", () =>
   );
   assert.match(migration, /^BEGIN;$/m);
   assert.match(migration, /^COMMIT;$/m);
+  assert.equal(
+    [...migration.matchAll(/^CREATE FUNCTION public\.architecture_/gm)].length,
+    4,
+  );
+  assert.doesNotMatch(
+    migration,
+    /^CREATE OR REPLACE FUNCTION public\.architecture_/m,
+  );
+  assert.match(migration, /main_finance_index_catalog/);
+  assert.match(migration, /main_finance_function_catalog/);
+  assert.match(migration, /main_finance_trigger_catalog/);
+  assert.match(migration, /main_finance_function_acl/);
 });
 
 test("harness inputs are regular files and runner fails closed", () => {

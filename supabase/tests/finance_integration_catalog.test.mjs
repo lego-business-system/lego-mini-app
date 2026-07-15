@@ -25,7 +25,7 @@ function catalogContractViolations(source) {
   requireCount(/^ALTER TABLE public\.architecture_.* OWNER TO postgres;$/gm, 3, "table owners");
   requireCount(/^  CONSTRAINT architecture_/gm, 19, "constraints");
   requireCount(/^CREATE INDEX idx_architecture_/gm, 4, "explicit indexes");
-  requireCount(/^CREATE OR REPLACE FUNCTION public\.architecture_/gm, 4, "function overloads");
+  requireCount(/^CREATE FUNCTION public\.architecture_/gm, 4, "function overloads");
   requireCount(/^VOLATILE$/gm, 4, "function volatility");
   requireCount(/^CALLED ON NULL INPUT$/gm, 4, "function strictness");
   requireCount(/^PARALLEL UNSAFE$/gm, 4, "function parallel mode");
@@ -54,6 +54,9 @@ function catalogContractViolations(source) {
 
   if (/^CREATE POLICY /m.test(source)) failures.push("unexpected policy");
   if (/WITH GRANT OPTION/.test(source)) failures.push("grant option introduced");
+  if (/^CREATE OR REPLACE FUNCTION public\.architecture_/m.test(source)) {
+    failures.push("one-shot function replacement introduced");
+  }
   return failures;
 }
 
