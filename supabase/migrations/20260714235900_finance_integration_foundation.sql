@@ -418,7 +418,7 @@ BEGIN
 
     UPDATE public.architecture_finance_issue_requests
     SET attempt_count = attempt_count + 1,
-        updated_at = now()
+        updated_at = clock_timestamp()
     WHERE request_id = p_request_id;
 
     RETURN jsonb_build_object(

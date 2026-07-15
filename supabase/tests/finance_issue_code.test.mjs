@@ -389,7 +389,7 @@ test("migration is service-only, pseudonymous and leaves existing access untouch
   assert.match(migration, /attempt_count BETWEEN 1 AND 5/);
   assert.match(
     migration,
-    /hashtextextended\(encode\(p_subject_digest, 'hex'\), 7401003\)[\s\S]*?v_request\.attempt_count >= 5[\s\S]*?interval '1 second'/,
+    /hashtextextended\(encode\(p_subject_digest, 'hex'\), 7401003\)[\s\S]*?v_request\.attempt_count >= 5[\s\S]*?interval '1 second'[\s\S]*?attempt_count = attempt_count \+ 1,[\s\S]*?updated_at = clock_timestamp\(\)/,
   );
   assert.match(
     migration,

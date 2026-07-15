@@ -82,7 +82,7 @@ test("reviewed migration is exact and avoids PostgreSQL reserved aliases", () =>
   const digest = createHash("sha256").update(migration).digest("hex");
   assert.equal(
     digest,
-    "91ec73d903ed3dee71e71766a4c9264e64ed644d4e06b6d7af1026b4d5aa6414",
+    "6d0332c754d9168f175221578d345a2249001914f79729040dd822c9ec4bb740",
   );
   assert.doesNotMatch(migration, /\bAS\s+(?:collation|constraint)\b/i);
   assert.match(migration, /ERRCODE = '55000'/);
@@ -107,6 +107,7 @@ test("reviewed migration is exact and avoids PostgreSQL reserved aliases", () =>
   );
   assert.match(migration, /ARRAY\[0,3\]::smallint\[\]/);
   assert.match(migration, /index_row\.indoption\[key_number - 1\]::smallint/);
+  assert.match(migration, /attempt_count = attempt_count \+ 1,[\s\S]*?updated_at = clock_timestamp\(\)/);
   assert.match(
     migration,
     /has_schema_privilege\('service_role', 'public', 'USAGE'\)/,

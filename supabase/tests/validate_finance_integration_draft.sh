@@ -4,7 +4,7 @@ set -eu
 
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 migration="$repo_root/supabase/migrations/20260714235900_finance_integration_foundation.sql"
-expected_migration_sha256="91ec73d903ed3dee71e71766a4c9264e64ed644d4e06b6d7af1026b4d5aa6414"
+expected_migration_sha256="6d0332c754d9168f175221578d345a2249001914f79729040dd822c9ec4bb740"
 
 fail() {
   printf '%s\n' "finance integration draft validation failed: $1" >&2
@@ -58,6 +58,8 @@ rg -Fq 'CHECK (attempt_count BETWEEN 1 AND 5)' "$migration" ||
   fail "bounded retry constraint is missing"
 rg -Fq "v_recent_subject_requests >= 3" "$migration" ||
   fail "persistent subject rate limit is missing"
+rg -Fq "updated_at = clock_timestamp()" "$migration" ||
+  fail "retry cooldown must use wall-clock time"
 rg -Fq "v_table_count <> 0" "$migration" ||
   fail "one-shot table preflight is missing"
 rg -Fq "v_function_count <> 0" "$migration" ||
