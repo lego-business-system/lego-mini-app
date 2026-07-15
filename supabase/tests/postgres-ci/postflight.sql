@@ -109,6 +109,12 @@ BEGIN
       );
   END IF;
 
+  IF NOT pg_catalog.has_schema_privilege('service_role', 'public', 'USAGE') THEN
+    RAISE EXCEPTION USING
+      ERRCODE = '42501',
+      MESSAGE = 'External postflight failed: service_role cannot use schema public.';
+  END IF;
+
   IF EXISTS (
     WITH expected(function_name, identity_arguments, body_md5) AS (
       VALUES
@@ -120,7 +126,7 @@ BEGIN
     actual AS (
       SELECT
         procedure.proname AS function_name,
-        pg_catalog.pg_get_function_identity_arguments(procedure.oid) AS identity_arguments,
+        pg_catalog.oidvectortypes(procedure.proargtypes) AS identity_arguments,
         md5(procedure.prosrc) AS body_md5
       FROM pg_catalog.pg_proc AS procedure
       JOIN pg_catalog.pg_namespace AS namespace
@@ -183,7 +189,7 @@ BEGIN
     actual AS (
       SELECT
         procedure.proname AS function_name,
-        pg_catalog.pg_get_function_identity_arguments(procedure.oid) AS identity_arguments,
+        pg_catalog.oidvectortypes(procedure.proargtypes) AS identity_arguments,
         CASE
           WHEN exploded.grantee = 0 THEN 'PUBLIC'
           ELSE pg_catalog.pg_get_userbyid(exploded.grantee)

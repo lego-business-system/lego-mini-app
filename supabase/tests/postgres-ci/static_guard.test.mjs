@@ -82,7 +82,7 @@ test("reviewed migration is exact and avoids PostgreSQL reserved aliases", () =>
   const digest = createHash("sha256").update(migration).digest("hex");
   assert.equal(
     digest,
-    "d935fe1fd706ecef3e10a3bf440b22a1434e2677f8cb4c0d1fa7682519132a01",
+    "91ec73d903ed3dee71e71766a4c9264e64ed644d4e06b6d7af1026b4d5aa6414",
   );
   assert.doesNotMatch(migration, /\bAS\s+(?:collation|constraint)\b/i);
   assert.match(migration, /ERRCODE = '55000'/);
@@ -105,10 +105,13 @@ test("reviewed migration is exact and avoids PostgreSQL reserved aliases", () =>
     migration,
     /^CREATE OR REPLACE FUNCTION public\.architecture_/m,
   );
-  assert.match(migration, /main_finance_index_catalog/);
-  assert.match(migration, /main_finance_function_catalog/);
-  assert.match(migration, /main_finance_trigger_catalog/);
-  assert.match(migration, /main_finance_function_acl/);
+  assert.match(migration, /ARRAY\[0,3\]::smallint\[\]/);
+  assert.match(migration, /index_row\.indoption\[key_number - 1\]::smallint/);
+  assert.match(
+    migration,
+    /has_schema_privilege\('service_role', 'public', 'USAGE'\)/,
+  );
+  assert.doesNotMatch(migration, /\$catalog_diagnostics\$|main_finance_index_catalog/);
 });
 
 test("harness inputs are regular files and runner fails closed", () => {
@@ -205,6 +208,12 @@ test("external postflight and fingerprint cover semantic catalog state", () => {
   assert.match(postflight, /v_constraint_count <> 19/);
   assert.match(postflight, /v_index_count <> 10/);
   assert.match(postflight, /reviewed function bodies differ/);
+  assert.match(postflight, /pg_catalog\.oidvectortypes\(procedure\.proargtypes\)/);
+  assert.doesNotMatch(postflight, /pg_get_function_identity_arguments/);
+  assert.match(
+    postflight,
+    /has_schema_privilege\('service_role', 'public', 'USAGE'\)/,
+  );
   assert.match(postflight, /direct table or column ACL remains/);
   assert.match(postflight, /exact function ACL allow-list differs/);
   assert.match(postflight, /architecture_upsert_product_entitlement_internal/);

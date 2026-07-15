@@ -4,7 +4,7 @@ set -eu
 
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 migration="$repo_root/supabase/migrations/20260714235900_finance_integration_foundation.sql"
-expected_migration_sha256="d935fe1fd706ecef3e10a3bf440b22a1434e2677f8cb4c0d1fa7682519132a01"
+expected_migration_sha256="91ec73d903ed3dee71e71766a4c9264e64ed644d4e06b6d7af1026b4d5aa6414"
 
 fail() {
   printf '%s\n' "finance integration draft validation failed: $1" >&2
@@ -80,6 +80,12 @@ rg -Fq "actual.connoinherit IS DISTINCT FROM (expected.constraint_type <> 'c')" 
   fail "constraint inheritance metadata contract is missing"
 rg -Fq 'the exact four-index contract differs' "$migration" ||
   fail "exact index postflight is missing"
+rg -Fq "ARRAY[0,3]::smallint[]" "$migration" ||
+  fail "descending index option contract is missing"
+rg -Fq "index_row.indoption[key_number - 1]::smallint" "$migration" ||
+  fail "semantic index option inspection is missing"
+[ "$(rg -Fc "has_schema_privilege('service_role', 'public', 'USAGE')" "$migration")" = "2" ] ||
+  fail "service_role schema usage preflight/postflight contract is missing"
 rg -Fq 'overloads or exact function metadata differ' "$migration" ||
   fail "exact function postflight is missing"
 rg -Fq 'the exact two-trigger contract differs' "$migration" ||
@@ -102,6 +108,9 @@ if rg -q '\btelegram_id\b|code_hash|raw_init_data|bot_token|issuer_hmac_secret' 
 fi
 if rg -q '\bAS[[:space:]]+(collation|constraint)\b' "$migration"; then
   fail "migration uses a PostgreSQL reserved parser keyword as an alias"
+fi
+if rg -q '\$catalog_diagnostics\$|main_finance_index_catalog' "$migration"; then
+  fail "temporary PostgreSQL catalog diagnostics remain in the migration"
 fi
 
 printf '%s\n' "finance integration draft validation passed"

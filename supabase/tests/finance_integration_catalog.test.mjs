@@ -46,6 +46,9 @@ function catalogContractViolations(source) {
   requireText(/Exact nineteen constraints[\s\S]*?the exact nineteen-constraint contract differs/, "exact constraint postflight");
   requireText(/actual\.connoinherit IS DISTINCT FROM \(expected\.constraint_type <> 'c'\)/, "constraint inheritance metadata");
   requireText(/Four explicit indexes[\s\S]*?the exact four-index contract differs/, "exact index postflight");
+  requireText(/ARRAY\[0,3\]::smallint\[\]/, "descending index option contract");
+  requireText(/index_row\.indoption\[key_number - 1\]::smallint/, "semantic index option inspection");
+  requireText(/has_schema_privilege\('service_role', 'public', 'USAGE'\)/, "service role schema usage contract");
   requireText(/Exact function overloads[\s\S]*?overloads or exact function metadata differ/, "exact function postflight");
   requireText(/Exactly two user triggers[\s\S]*?the exact two-trigger contract differs/, "exact trigger postflight");
   requireText(/integration tables must have zero RLS policies/, "zero-policy postflight");
