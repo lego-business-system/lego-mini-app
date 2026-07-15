@@ -182,7 +182,7 @@ test("entitlement outbox is a separate pinned additive migration", () => {
 test("subject resolver is service-only and preserves bigint identity as text", () => {
   assert.equal(
     createHash("sha256").update(resolverMigration).digest("hex"),
-    "a4cc385026f750f90b213acb46d453b0835f64661907d2314fe02cb6689ffa84",
+    "ad7337ccf067da4b6357c55e80050b573770530f27596fa26969f8a2ef21f21c",
   );
   assert.match(resolverMigration, /^-- DRAFT \/ NOT APPLIED \/ STAGING ONLY$/m);
   assert.match(resolverMigration, /^BEGIN;$/m);
@@ -198,6 +198,10 @@ test("subject resolver is service-only and preserves bigint identity as text", (
   assert.match(
     resolverMigration,
     /coalesce\(auth\.role\(\), ''\) <> 'service_role'/,
+  );
+  assert.match(
+    resolverMigration,
+    /DO \$acl_hardening\$[\s\S]*?pg_catalog\.aclexplode\(procedure\.proacl\)[\s\S]*?REVOKE ALL PRIVILEGES ON FUNCTION/,
   );
   assert.match(
     resolverMigration,

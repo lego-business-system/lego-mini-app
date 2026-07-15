@@ -155,6 +155,36 @@ $function$;
 ALTER FUNCTION public.architecture_resolve_finance_subject_internal(uuid)
 OWNER TO postgres;
 
+-- A Supabase project can define additional default function grants. Revoke
+-- every ACL entry discovered from the catalog before granting the one intended
+-- service boundary; a fixed role list would leave project-specific grantees
+-- able to execute this SECURITY DEFINER function.
+DO $acl_hardening$
+DECLARE
+  v_function regprocedure :=
+    'public.architecture_resolve_finance_subject_internal(uuid)'::regprocedure;
+  v_acl record;
+  v_grantee_sql text;
+BEGIN
+  FOR v_acl IN
+    SELECT DISTINCT exploded.grantee
+    FROM pg_catalog.pg_proc AS procedure
+    CROSS JOIN LATERAL pg_catalog.aclexplode(procedure.proacl) AS exploded
+    WHERE procedure.oid = v_function
+  LOOP
+    v_grantee_sql := CASE
+      WHEN v_acl.grantee = 0 THEN 'PUBLIC'
+      ELSE pg_catalog.quote_ident(pg_catalog.pg_get_userbyid(v_acl.grantee))
+    END;
+    EXECUTE format(
+      'REVOKE ALL PRIVILEGES ON FUNCTION %s FROM %s CASCADE',
+      v_function,
+      v_grantee_sql
+    );
+  END LOOP;
+END;
+$acl_hardening$;
+
 REVOKE ALL ON FUNCTION public.architecture_resolve_finance_subject_internal(uuid)
 FROM PUBLIC, anon, authenticated, service_role;
 
