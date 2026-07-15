@@ -3,14 +3,20 @@ set -Eeuo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 harness_dir="$repo_root/supabase/tests/postgres-ci"
-migration="$repo_root/supabase/migrations/20260714235900_finance_integration_foundation.sql"
+foundation_migration="$repo_root/supabase/migrations/20260714235900_finance_integration_foundation.sql"
+outbox_migration="$repo_root/supabase/migrations/20260715010000_finance_entitlement_outbox_v1.sql"
+resolver_migration="$repo_root/supabase/migrations/20260715020000_finance_subject_resolver_v1.sql"
 
 readonly -a required_harness_files=(
   README.md
   behavior_smoke.sql
   bootstrap.sql
   catalog_fingerprint.sql
+  outbox_behavior_smoke.sql
+  outbox_postflight.sql
   postflight.sql
+  resolver_behavior_smoke.sql
+  resolver_postflight.sql
   run.sh
   static_guard.test.mjs
 )
@@ -86,8 +92,10 @@ done
 
 [[ -d "$harness_dir" && ! -L "$harness_dir" ]] ||
   fail "harness directory must be a real non-symlink directory"
-[[ -f "$migration" && ! -L "$migration" ]] ||
-  fail "reviewed migration must be a regular non-symlink file"
+for migration_path in "$foundation_migration" "$outbox_migration" "$resolver_migration"; do
+  [[ -f "$migration_path" && ! -L "$migration_path" ]] ||
+    fail "reviewed migration must be a regular non-symlink file"
+done
 for relative_path in "${required_harness_files[@]}"; do
   path="$harness_dir/$relative_path"
   [[ -f "$path" && ! -L "$path" ]] ||
@@ -175,14 +183,27 @@ data_fingerprint() {
       'replay_guard', coalesce((
         SELECT jsonb_agg(to_jsonb(replay_row) ORDER BY replay_row.init_data_digest)
         FROM public.architecture_finance_issue_replay_guard AS replay_row
+      ), '[]'::jsonb),
+      'access_desired', coalesce((
+        SELECT jsonb_agg(to_jsonb(desired_row)
+          ORDER BY desired_row.main_user_id, desired_row.product_code)
+        FROM public.architecture_finance_access_desired AS desired_row
+      ), '[]'::jsonb),
+      'access_outbox', coalesce((
+        SELECT jsonb_agg(to_jsonb(outbox_row) ORDER BY outbox_row.event_id)
+        FROM public.architecture_finance_access_outbox AS outbox_row
       ), '[]'::jsonb)
     )::text);
   " | tr -d '[:space:]'
 }
 
 apply_file "$harness_dir/bootstrap.sql"
-apply_file "$migration"
+apply_file "$foundation_migration"
 apply_file "$harness_dir/postflight.sql"
+apply_file "$outbox_migration"
+apply_file "$harness_dir/outbox_postflight.sql"
+apply_file "$resolver_migration"
+apply_file "$harness_dir/resolver_postflight.sql"
 
 stable_catalog_fingerprint="$(catalog_fingerprint)"
 stable_data_fingerprint="$(data_fingerprint)"
@@ -192,7 +213,11 @@ stable_data_fingerprint="$(data_fingerprint)"
   fail "data fingerprint after first application is invalid"
 
 apply_file "$harness_dir/behavior_smoke.sql"
+apply_file "$harness_dir/outbox_behavior_smoke.sql"
+apply_file "$harness_dir/resolver_behavior_smoke.sql"
 apply_file "$harness_dir/postflight.sql"
+apply_file "$harness_dir/outbox_postflight.sql"
+apply_file "$harness_dir/resolver_postflight.sql"
 
 if psql_ci --command="
   SET ROLE authenticated;
@@ -207,11 +232,44 @@ if psql_ci --command="
 fi
 
 if psql_ci --command="
+  SET ROLE authenticated;
+  SET request.jwt.claim.role = 'authenticated';
+  SELECT public.architecture_set_finance_access_desired_internal(
+    '79999999-9999-4999-8999-999999999999'::uuid,
+    '00000000-0000-4000-8000-000000000001'::uuid,
+    decode(repeat('aa', 32), 'hex'),
+    'granted',
+    'system:unauthorized',
+    'This call must fail'
+  );
+" >/dev/null 2>&1; then
+  fail "authenticated unexpectedly executed the service-only outbox RPC"
+fi
+
+if psql_ci --command="
+  SET ROLE authenticated;
+  SET request.jwt.claim.role = 'authenticated';
+  SELECT public.architecture_resolve_finance_subject_internal(
+    '00000000-0000-4000-8000-000000000001'::uuid
+  );
+" >/dev/null 2>&1; then
+  fail "authenticated unexpectedly executed the service-only subject resolver"
+fi
+
+if psql_ci --command="
   SET ROLE service_role;
   SET request.jwt.claim.role = 'service_role';
   SELECT count(*) FROM public.architecture_product_entitlements;
 " >/dev/null 2>&1; then
   fail "service_role unexpectedly received direct integration-table access"
+fi
+
+if psql_ci --command="
+  SET ROLE service_role;
+  SET request.jwt.claim.role = 'service_role';
+  SELECT count(*) FROM public.architecture_finance_access_outbox;
+" >/dev/null 2>&1; then
+  fail "service_role unexpectedly received direct outbox-table access"
 fi
 
 smoke_catalog_fingerprint="$(catalog_fingerprint)"
@@ -221,15 +279,33 @@ smoke_data_fingerprint="$(data_fingerprint)"
 [[ "$smoke_data_fingerprint" == "$stable_data_fingerprint" ]] ||
   fail "data changed during rollback or access-denial smoke tests"
 
-if retry_output="$(psql_ci --set=VERBOSITY=verbose --file="$migration" 2>&1)"; then
-  fail "one-shot migration unexpectedly accepted a second application"
+if foundation_retry_output="$(psql_ci --set=VERBOSITY=verbose --file="$foundation_migration" 2>&1)"; then
+  fail "foundation one-shot migration unexpectedly accepted a second application"
 fi
-[[ "$retry_output" == *"55000"* ]] ||
-  fail "rejected retry did not report SQLSTATE 55000"
-[[ "$retry_output" == *"integration tables already exist; this one-shot migration will not accept drift or reruns."* ]] ||
-  fail "rejected retry did not report the reviewed one-shot preflight error"
+[[ "$foundation_retry_output" == *"55000"* ]] ||
+  fail "rejected foundation retry did not report SQLSTATE 55000"
+[[ "$foundation_retry_output" == *"integration tables already exist; this one-shot migration will not accept drift or reruns."* ]] ||
+  fail "rejected foundation retry did not report the reviewed one-shot preflight error"
+
+if outbox_retry_output="$(psql_ci --set=VERBOSITY=verbose --file="$outbox_migration" 2>&1)"; then
+  fail "outbox one-shot migration unexpectedly accepted a second application"
+fi
+[[ "$outbox_retry_output" == *"55000"* ]] ||
+  fail "rejected outbox retry did not report SQLSTATE 55000"
+[[ "$outbox_retry_output" == *"Finance entitlement outbox objects already exist; this one-shot staging migration rejects drift and reruns."* ]] ||
+  fail "rejected outbox retry did not report the reviewed one-shot preflight error"
+
+if resolver_retry_output="$(psql_ci --set=VERBOSITY=verbose --file="$resolver_migration" 2>&1)"; then
+  fail "resolver one-shot migration unexpectedly accepted a second application"
+fi
+[[ "$resolver_retry_output" == *"55000"* ]] ||
+  fail "rejected resolver retry did not report SQLSTATE 55000"
+[[ "$resolver_retry_output" == *"Finance subject resolver already exists; this one-shot staging migration rejects drift and reruns."* ]] ||
+  fail "rejected resolver retry did not report the reviewed one-shot preflight error"
 
 apply_file "$harness_dir/postflight.sql"
+apply_file "$harness_dir/outbox_postflight.sql"
+apply_file "$harness_dir/resolver_postflight.sql"
 final_catalog_fingerprint="$(catalog_fingerprint)"
 final_data_fingerprint="$(data_fingerprint)"
 [[ "$final_catalog_fingerprint" == "$stable_catalog_fingerprint" ]] ||

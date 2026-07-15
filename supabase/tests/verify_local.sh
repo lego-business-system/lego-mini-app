@@ -19,7 +19,8 @@ fi
 
 for edge_source in \
   supabase/functions/_shared/main-edge-runtime.ts \
-  supabase/functions/finance-issue-code/index.ts
+  supabase/functions/finance-issue-code/index.ts \
+  supabase/functions/finance-sync-entitlements/index.ts
 do
   "$node_bin" --experimental-strip-types --check "$edge_source"
 done

@@ -38,6 +38,14 @@ test("Finance integration CI is immutable and runs the complete verifier", () =>
     workflow,
     /cd supabase\/functions\/finance-issue-code && deno audit --frozen/,
   );
+  assert.match(
+    workflow,
+    /deno check --config supabase\/functions\/finance-sync-entitlements\/deno\.json --frozen/,
+  );
+  assert.match(
+    workflow,
+    /cd supabase\/functions\/finance-sync-entitlements && deno audit --frozen/,
+  );
   assert.doesNotMatch(
     workflow,
     /apt-get install(?:\s+--[^\n]+)*\s+ripgrep(?:\s|$)(?!\s*=)/,

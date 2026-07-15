@@ -11,15 +11,38 @@ const migrationUrl = new URL(
   "supabase/migrations/20260714235900_finance_integration_foundation.sql",
   root,
 );
+const outboxMigrationUrl = new URL(
+  "supabase/migrations/20260715010000_finance_entitlement_outbox_v1.sql",
+  root,
+);
+const resolverMigrationUrl = new URL(
+  "supabase/migrations/20260715020000_finance_subject_resolver_v1.sql",
+  root,
+);
 const workflow = readFileSync(
   new URL(".github/workflows/verify-finance-integration.yml", root),
   "utf8",
 );
 const migration = readFileSync(migrationUrl, "utf8");
+const outboxMigration = readFileSync(outboxMigrationUrl, "utf8");
+const resolverMigration = readFileSync(resolverMigrationUrl, "utf8");
 const runScript = readFileSync(new URL("run.sh", harness), "utf8");
 const bootstrap = readFileSync(new URL("bootstrap.sql", harness), "utf8");
 const behaviorSmoke = readFileSync(new URL("behavior_smoke.sql", harness), "utf8");
+const outboxBehaviorSmoke = readFileSync(
+  new URL("outbox_behavior_smoke.sql", harness),
+  "utf8",
+);
 const postflight = readFileSync(new URL("postflight.sql", harness), "utf8");
+const outboxPostflight = readFileSync(new URL("outbox_postflight.sql", harness), "utf8");
+const resolverBehaviorSmoke = readFileSync(
+  new URL("resolver_behavior_smoke.sql", harness),
+  "utf8",
+);
+const resolverPostflight = readFileSync(
+  new URL("resolver_postflight.sql", harness),
+  "utf8",
+);
 const fingerprint = readFileSync(new URL("catalog_fingerprint.sql", harness), "utf8");
 const runPath = fileURLToPath(new URL("run.sh", harness));
 
@@ -28,7 +51,11 @@ const expectedHarnessFiles = [
   "behavior_smoke.sql",
   "bootstrap.sql",
   "catalog_fingerprint.sql",
+  "outbox_behavior_smoke.sql",
+  "outbox_postflight.sql",
   "postflight.sql",
+  "resolver_behavior_smoke.sql",
+  "resolver_postflight.sql",
   "run.sh",
   "static_guard.test.mjs",
 ];
@@ -116,6 +143,79 @@ test("reviewed migration is exact and avoids PostgreSQL reserved aliases", () =>
   assert.doesNotMatch(migration, /\$catalog_diagnostics\$|main_finance_index_catalog/);
 });
 
+test("entitlement outbox is a separate pinned additive migration", () => {
+  assert.equal(
+    createHash("sha256").update(outboxMigration).digest("hex"),
+    "e9164c9d960c7411221c6102c927c180535cb2f509b7b65e3f6af57c675414c4",
+  );
+  assert.match(outboxMigration, /^-- DRAFT \/ NOT APPLIED \/ STAGING ONLY$/m);
+  assert.match(outboxMigration, /^BEGIN;$/m);
+  assert.match(outboxMigration, /^COMMIT;$/m);
+  assert.equal(
+    [...outboxMigration.matchAll(/^CREATE TABLE public\.architecture_/gm)].length,
+    2,
+  );
+  assert.equal(
+    [...outboxMigration.matchAll(/^CREATE FUNCTION public\.architecture_/gm)].length,
+    3,
+  );
+  assert.equal(
+    [...outboxMigration.matchAll(/^ALTER TABLE public\.architecture_.* ENABLE ROW LEVEL SECURITY;$/gm)].length,
+    2,
+  );
+  assert.match(outboxMigration, /architecture_finance_access_desired/);
+  assert.match(outboxMigration, /architecture_finance_access_outbox/);
+  assert.match(outboxMigration, /state IN \('pending', 'processing', 'retry_wait', 'applied', 'dead_letter'\)/);
+  assert.match(outboxMigration, /FOR UPDATE SKIP LOCKED/);
+  assert.match(outboxMigration, /earlier\.version < candidate\.version/);
+  assert.match(outboxMigration, /p_outcome NOT IN \('applied', 'retry', 'dead_letter'\)/);
+  assert.match(outboxMigration, /15 \* power\(2::numeric, v_event\.attempt_count - 1\)::integer/);
+  assert.match(outboxMigration, /idempotency_conflict/);
+  assert.match(outboxMigration, /claim_token_consumed/);
+  assert.match(outboxMigration, /lease_expired_max_attempts/);
+  assert.match(outboxMigration, /main_user_id uuid NOT NULL/);
+  assert.doesNotMatch(outboxMigration, /\btelegram_id\b|raw_init_data|bot_token|email|phone/i);
+  assert.doesNotMatch(outboxMigration, /^ALTER TABLE (?:ONLY )?public\.users/m);
+  assert.doesNotMatch(outboxMigration, /^CREATE OR REPLACE FUNCTION public\.architecture_/m);
+});
+
+test("subject resolver is service-only and preserves bigint identity as text", () => {
+  assert.equal(
+    createHash("sha256").update(resolverMigration).digest("hex"),
+    "a4cc385026f750f90b213acb46d453b0835f64661907d2314fe02cb6689ffa84",
+  );
+  assert.match(resolverMigration, /^-- DRAFT \/ NOT APPLIED \/ STAGING ONLY$/m);
+  assert.match(resolverMigration, /^BEGIN;$/m);
+  assert.match(resolverMigration, /^COMMIT;$/m);
+  assert.equal(
+    [...resolverMigration.matchAll(/^CREATE FUNCTION public\.architecture_/gm)].length,
+    1,
+  );
+  assert.match(
+    resolverMigration,
+    /SELECT user_row\.telegram_id::text[\s\S]*?FROM public\.users/,
+  );
+  assert.match(
+    resolverMigration,
+    /coalesce\(auth\.role\(\), ''\) <> 'service_role'/,
+  );
+  assert.match(
+    resolverMigration,
+    /REVOKE ALL ON FUNCTION public\.architecture_resolve_finance_subject_internal\(uuid\)[\s\S]*?FROM PUBLIC, anon, authenticated, service_role/,
+  );
+  assert.match(
+    resolverMigration,
+    /GRANT EXECUTE ON FUNCTION public\.architecture_resolve_finance_subject_internal\(uuid\)[\s\S]*?TO service_role/,
+  );
+  assert.doesNotMatch(
+    resolverMigration,
+    /(?:INSERT INTO|UPDATE|DELETE FROM|ALTER TABLE) public\.users/,
+  );
+  assert.match(resolverBehaviorSmoke, /9000000000000000001/);
+  assert.match(resolverBehaviorSmoke, /resolver did not preserve exact bigint text/);
+  assert.match(resolverPostflight, /exact function ACL differs/);
+});
+
 test("harness inputs are regular files and runner fails closed", () => {
   for (const name of expectedHarnessFiles) {
     const status = lstatSync(new URL(name, harness));
@@ -125,6 +225,12 @@ test("harness inputs are regular files and runner fails closed", () => {
   const migrationStatus = lstatSync(migrationUrl);
   assert.ok(migrationStatus.isFile());
   assert.ok(!migrationStatus.isSymbolicLink());
+  const outboxMigrationStatus = lstatSync(outboxMigrationUrl);
+  assert.ok(outboxMigrationStatus.isFile());
+  assert.ok(!outboxMigrationStatus.isSymbolicLink());
+  const resolverMigrationStatus = lstatSync(resolverMigrationUrl);
+  assert.ok(resolverMigrationStatus.isFile());
+  assert.ok(!resolverMigrationStatus.isSymbolicLink());
 
   assert.match(runScript, /^set -Eeuo pipefail$/m);
   assert.match(runScript, /CI:-.*== "true"/);
@@ -140,9 +246,11 @@ test("harness inputs are regular files and runner fails closed", () => {
   assert.match(runScript, /--set=ON_ERROR_STOP=1/);
   assert.match(runScript, /--set=VERBOSITY=verbose/);
   assert.match(runScript, /one-shot migration unexpectedly accepted a second application/);
-  assert.match(runScript, /rejected retry did not report SQLSTATE 55000/);
+  assert.match(runScript, /rejected foundation retry did not report SQLSTATE 55000/);
   assert.match(runScript, /catalog changed during the rejected migration retry/);
   assert.match(runScript, /data changed during the rejected migration retry/);
+  assert.match(runScript, /outbox one-shot migration unexpectedly accepted a second application/);
+  assert.match(runScript, /rejected outbox retry did not report SQLSTATE 55000/);
   assert.doesNotMatch(
     runScript,
     /supabase\s+(?:db|functions|migration)|https?:\/\/|curl|wget|\bnpx\b|\bnpm\b/i,
@@ -204,6 +312,23 @@ test("behavior smoke covers entitlement, idempotence, revocation and rollback", 
   assert.match(runScript, /service_role unexpectedly received direct integration-table access/);
 });
 
+test("outbox behavior covers ordered delivery, audit, retry and dead letter", () => {
+  assert.match(outboxBehaviorSmoke, /^BEGIN;$/m);
+  assert.match(outboxBehaviorSmoke, /unknown Main user was accepted/);
+  assert.match(outboxBehaviorSmoke, /exact desired-state retry was not idempotent/);
+  assert.match(outboxBehaviorSmoke, /changed payload reused an existing event id/);
+  assert.match(outboxBehaviorSmoke, /oldest user event was not claimed first/);
+  assert.match(outboxBehaviorSmoke, /next user version was not released after v1 applied/);
+  assert.match(outboxBehaviorSmoke, /retry did not enter deterministic backoff/);
+  assert.match(outboxBehaviorSmoke, /exact retry finish was not idempotent/);
+  assert.match(outboxBehaviorSmoke, /permanent failure did not enter dead-letter/);
+  assert.match(outboxBehaviorSmoke, /exact dead-letter finish was not idempotent/);
+  assert.match(outboxBehaviorSmoke, /^ROLLBACK;$/m);
+  assert.match(runScript, /authenticated unexpectedly executed the service-only outbox RPC/);
+  assert.match(runScript, /authenticated unexpectedly executed the service-only subject resolver/);
+  assert.match(runScript, /service_role unexpectedly received direct outbox-table access/);
+});
+
 test("external postflight and fingerprint cover semantic catalog state", () => {
   assert.match(postflight, /v_table_count <> 3/);
   assert.match(postflight, /v_column_count <> 24/);
@@ -221,6 +346,16 @@ test("external postflight and fingerprint cover semantic catalog state", () => {
   assert.match(postflight, /architecture_upsert_product_entitlement_internal/);
   assert.doesNotMatch(postflight, /proname LIKE/);
   assert.match(postflight, /SELECT count\(\*\) FROM public\.users/);
+  assert.match(outboxPostflight, /v_table_count <> 2/);
+  assert.match(outboxPostflight, /v_column_count <> 33/);
+  assert.match(outboxPostflight, /v_constraint_count <> 30/);
+  assert.match(outboxPostflight, /v_index_count <> 10/);
+  assert.match(outboxPostflight, /forbidden identity or secret column exists/);
+  assert.match(outboxPostflight, /exact function ACL allow-list differs/);
+  assert.match(fingerprint, /architecture_finance_access_desired/);
+  assert.match(fingerprint, /architecture_finance_access_outbox/);
+  assert.match(fingerprint, /architecture_claim_finance_access_outbox_internal/);
+  assert.match(fingerprint, /architecture_resolve_finance_subject_internal/);
 
   for (const kind of [
     "relation",

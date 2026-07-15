@@ -63,6 +63,8 @@ jobs:
         run: |
           deno check --config supabase/functions/finance-issue-code/deno.json --frozen supabase/functions/finance-issue-code/index.ts
           (cd supabase/functions/finance-issue-code && deno audit --frozen)
+          deno check --config supabase/functions/finance-sync-entitlements/deno.json --frozen supabase/functions/finance-sync-entitlements/index.ts
+          (cd supabase/functions/finance-sync-entitlements && deno audit --frozen)
 
       - name: Execute main Finance foundation on disposable PostgreSQL 17
         env:

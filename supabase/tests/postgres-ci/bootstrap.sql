@@ -42,16 +42,20 @@ ALTER FUNCTION auth.role() OWNER TO postgres;
 REVOKE ALL ON FUNCTION auth.role() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION auth.role() TO anon, authenticated, service_role;
 
--- The migration only checks that the current main user table exists and never
--- reads or alters it. No unconfirmed production columns are invented here.
+-- Read-only live catalog audit on 2026-07-15 confirmed this exact identity
+-- subset: uuid primary key and unique, non-null bigint Telegram identity.
 CREATE TABLE public.users (
-  id uuid PRIMARY KEY
+  id uuid PRIMARY KEY,
+  telegram_id bigint NOT NULL UNIQUE
 );
 ALTER TABLE public.users OWNER TO postgres;
 REVOKE ALL ON TABLE public.users
 FROM PUBLIC, anon, authenticated, service_role, main_finance_ci_unknown;
-INSERT INTO public.users (id)
-VALUES ('00000000-0000-4000-8000-000000000001');
+INSERT INTO public.users (id, telegram_id)
+VALUES (
+  '00000000-0000-4000-8000-000000000001',
+  9000000000000000001
+);
 
 DO $bootstrap_postflight$
 BEGIN

@@ -1,0 +1,19 @@
+{
+  "protocol": "finance-entitlement-sync-v1",
+  "public_test_vector_only": true,
+  "warning": "PUBLIC TEST VECTOR. NEVER USE THIS SECRET OR TELEGRAM ID IN ANY ENVIRONMENT.",
+  "method": "POST",
+  "path": "/functions/v1/finance-apply-entitlement-event",
+  "timestamp": "1784073600",
+  "nonce": "public-test-nonce-entitlement-v1",
+  "event_id_header": "01901234-5678-4abc-8def-0123456789ab",
+  "public_test_secret": "public-test-only-finance-entitlement-sync-v1-secret",
+  "body": "{\"event_id\":\"01901234-5678-4abc-8def-0123456789ab\",\"event_version\":\"7\",\"event_action\":\"grant\",\"telegram_id\":\"9000000000000000001\",\"product_code\":\"architecture_finance\",\"active_until\":null,\"event_occurred_at\":\"2026-07-15T00:00:00.000Z\"}",
+  "body_sha256": "bbf3c249f68edfabb720894604aef7c9b575dcae1a06a9a63f88b0df4d1d7777",
+  "canonical_request": "POST\n/functions/v1/finance-apply-entitlement-event\n1784073600\npublic-test-nonce-entitlement-v1\n01901234-5678-4abc-8def-0123456789ab\nbbf3c249f68edfabb720894604aef7c9b575dcae1a06a9a63f88b0df4d1d7777",
+  "signature": "v1=5d69ba2dedd3d6a9394b974e1883a660e6258242090a482838badb8c5571d408",
+  "success_response": "{\"ok\":true,\"event_id\":\"01901234-5678-4abc-8def-0123456789ab\",\"event_version\":\"7\",\"event_action\":\"grant\",\"replayed\":false}",
+  "replay_response": "{\"ok\":true,\"event_id\":\"01901234-5678-4abc-8def-0123456789ab\",\"event_version\":\"7\",\"event_action\":\"grant\",\"replayed\":true}",
+  "stale_response": "{\"ok\":false,\"error\":\"stale_event\",\"event_id\":\"01901234-5678-4abc-8def-0123456789ab\",\"event_version\":\"7\",\"event_action\":\"grant\",\"replayed\":false}",
+  "idempotency_conflict_response": "{\"ok\":false,\"error\":\"idempotency_conflict\",\"event_id\":\"01901234-5678-4abc-8def-0123456789ab\",\"event_version\":\"7\",\"event_action\":\"grant\",\"replayed\":true}"
+}

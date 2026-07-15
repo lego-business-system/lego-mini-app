@@ -1,7 +1,7 @@
 \set ON_ERROR_STOP on
 
 -- OID-independent semantic fingerprint for the prerequisite and every object
--- owned by the reviewed main Finance migration.
+-- owned by the reviewed main Finance migrations.
 WITH catalog_items(kind, item) AS (
   SELECT
     'relation',
@@ -31,7 +31,9 @@ WITH catalog_items(kind, item) AS (
       'users',
       'architecture_product_entitlements',
       'architecture_finance_issue_requests',
-      'architecture_finance_issue_replay_guard'
+      'architecture_finance_issue_replay_guard',
+      'architecture_finance_access_desired',
+      'architecture_finance_access_outbox'
     )
     AND relation.relkind IN ('r', 'p')
 
@@ -78,7 +80,9 @@ WITH catalog_items(kind, item) AS (
       'users',
       'architecture_product_entitlements',
       'architecture_finance_issue_requests',
-      'architecture_finance_issue_replay_guard'
+      'architecture_finance_issue_replay_guard',
+      'architecture_finance_access_desired',
+      'architecture_finance_access_outbox'
     )
     AND attribute.attnum > 0
     AND NOT attribute.attisdropped
@@ -116,7 +120,9 @@ WITH catalog_items(kind, item) AS (
       'users',
       'architecture_product_entitlements',
       'architecture_finance_issue_requests',
-      'architecture_finance_issue_replay_guard'
+      'architecture_finance_issue_replay_guard',
+      'architecture_finance_access_desired',
+      'architecture_finance_access_outbox'
     )
 
   UNION ALL
@@ -156,7 +162,9 @@ WITH catalog_items(kind, item) AS (
       'users',
       'architecture_product_entitlements',
       'architecture_finance_issue_requests',
-      'architecture_finance_issue_replay_guard'
+      'architecture_finance_issue_replay_guard',
+      'architecture_finance_access_desired',
+      'architecture_finance_access_outbox'
     )
 
   UNION ALL
@@ -201,7 +209,11 @@ WITH catalog_items(kind, item) AS (
       'architecture_finance_set_updated_at_internal',
       'architecture_upsert_product_entitlement_internal',
       'architecture_begin_finance_issue_internal',
-      'architecture_finish_finance_issue_internal'
+      'architecture_finish_finance_issue_internal',
+      'architecture_set_finance_access_desired_internal',
+      'architecture_claim_finance_access_outbox_internal',
+      'architecture_finish_finance_access_outbox_internal',
+      'architecture_resolve_finance_subject_internal'
     )
   ) OR (
     namespace.nspname = 'auth'
@@ -246,7 +258,9 @@ WITH catalog_items(kind, item) AS (
     AND relation.relname IN (
       'architecture_product_entitlements',
       'architecture_finance_issue_requests',
-      'architecture_finance_issue_replay_guard'
+      'architecture_finance_issue_replay_guard',
+      'architecture_finance_access_desired',
+      'architecture_finance_access_outbox'
     )
     AND NOT trigger_row.tgisinternal
 
@@ -291,7 +305,9 @@ WITH catalog_items(kind, item) AS (
     AND constraint_relation.relname IN (
       'architecture_product_entitlements',
       'architecture_finance_issue_requests',
-      'architecture_finance_issue_replay_guard'
+      'architecture_finance_issue_replay_guard',
+      'architecture_finance_access_desired',
+      'architecture_finance_access_outbox'
     )
 
   UNION ALL
@@ -318,7 +334,9 @@ WITH catalog_items(kind, item) AS (
     AND relation.relname IN (
       'architecture_product_entitlements',
       'architecture_finance_issue_requests',
-      'architecture_finance_issue_replay_guard'
+      'architecture_finance_issue_replay_guard',
+      'architecture_finance_access_desired',
+      'architecture_finance_access_outbox'
     )
 )
 SELECT md5(
