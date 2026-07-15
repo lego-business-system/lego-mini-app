@@ -986,7 +986,44 @@ BEGIN
   ) THEN
     RAISE EXCEPTION USING
       ERRCODE = '55000',
-      MESSAGE = 'Main Finance integration postflight failed: the exact nineteen-constraint contract differs.';
+      MESSAGE = 'Main Finance integration postflight failed: the exact nineteen-constraint contract differs.',
+      DETAIL = (
+        SELECT coalesce(
+          jsonb_agg(
+            jsonb_build_object(
+              'table', relation.relname,
+              'name', constraint_row.conname,
+              'type', constraint_row.contype,
+              'key', constraint_row.conkey,
+              'definition', pg_catalog.pg_get_constraintdef(constraint_row.oid, true),
+              'deferrable', constraint_row.condeferrable,
+              'deferred', constraint_row.condeferred,
+              'validated', constraint_row.convalidated,
+              'no_inherit', constraint_row.connoinherit,
+              'update_action', constraint_row.confupdtype,
+              'delete_action', constraint_row.confdeltype,
+              'match_type', constraint_row.confmatchtype,
+              'referenced_table', referenced_relation.relname,
+              'referenced_columns', constraint_row.confkey
+            )
+            ORDER BY relation.relname, constraint_row.conname
+          ),
+          '[]'::jsonb
+        )::text
+        FROM pg_catalog.pg_constraint AS constraint_row
+        JOIN pg_catalog.pg_class AS relation
+          ON relation.oid = constraint_row.conrelid
+        JOIN pg_catalog.pg_namespace AS namespace
+          ON namespace.oid = relation.relnamespace
+        LEFT JOIN pg_catalog.pg_class AS referenced_relation
+          ON referenced_relation.oid = constraint_row.confrelid
+        WHERE namespace.nspname = 'public'
+          AND relation.relname IN (
+            'architecture_product_entitlements',
+            'architecture_finance_issue_requests',
+            'architecture_finance_issue_replay_guard'
+          )
+      );
   END IF;
 
   -- Four explicit indexes in addition to constraint-owned indexes.

@@ -82,10 +82,11 @@ test("reviewed migration is exact and avoids PostgreSQL reserved aliases", () =>
   const digest = createHash("sha256").update(migration).digest("hex");
   assert.equal(
     digest,
-    "18eac5039e013947a086cc61329dc6f3bc1e4fc6cc0fd28a7459595e9dbb0c77",
+    "7d534a5789f16efcf1d71df4c98cb94efd0feef5f3f15c5b1d52fb844f6ac585",
   );
   assert.doesNotMatch(migration, /\bAS\s+(?:collation|constraint)\b/i);
   assert.match(migration, /ERRCODE = '55000'/);
+  assert.match(migration, /DETAIL = \([\s\S]*?pg_get_constraintdef/);
   assert.match(
     migration,
     /integration tables already exist; this one-shot migration will not accept drift or reruns\./,

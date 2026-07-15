@@ -4,7 +4,7 @@ set -eu
 
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 migration="$repo_root/supabase/migrations/20260714235900_finance_integration_foundation.sql"
-expected_migration_sha256="18eac5039e013947a086cc61329dc6f3bc1e4fc6cc0fd28a7459595e9dbb0c77"
+expected_migration_sha256="7d534a5789f16efcf1d71df4c98cb94efd0feef5f3f15c5b1d52fb844f6ac585"
 
 fail() {
   printf '%s\n' "finance integration draft validation failed: $1" >&2
@@ -74,6 +74,8 @@ rg -Fq 'pg_catalog.aclexplode(procedure.proacl)' "$migration" ||
   fail "function ACL catalog inspection is missing"
 rg -Fq 'the exact nineteen-constraint contract differs' "$migration" ||
   fail "exact constraint postflight is missing"
+rg -Fq "'definition', pg_catalog.pg_get_constraintdef(constraint_row.oid, true)" "$migration" ||
+  fail "constraint mismatch diagnostics are missing"
 rg -Fq 'the exact four-index contract differs' "$migration" ||
   fail "exact index postflight is missing"
 rg -Fq 'overloads or exact function metadata differ' "$migration" ||
