@@ -82,11 +82,15 @@ test("reviewed migration is exact and avoids PostgreSQL reserved aliases", () =>
   const digest = createHash("sha256").update(migration).digest("hex");
   assert.equal(
     digest,
-    "7d534a5789f16efcf1d71df4c98cb94efd0feef5f3f15c5b1d52fb844f6ac585",
+    "01c8cf16ab237c8e0c746575169fdc0ce48af20a66c597d0d9e40360dce4bb09",
   );
   assert.doesNotMatch(migration, /\bAS\s+(?:collation|constraint)\b/i);
   assert.match(migration, /ERRCODE = '55000'/);
   assert.match(migration, /DETAIL = \([\s\S]*?pg_get_constraintdef/);
+  assert.match(
+    migration,
+    /actual\.connoinherit IS DISTINCT FROM \(expected\.constraint_type <> 'c'\)/,
+  );
   assert.match(
     migration,
     /integration tables already exist; this one-shot migration will not accept drift or reruns\./,
@@ -172,7 +176,11 @@ test("behavior smoke covers entitlement, idempotence, revocation and rollback", 
   assert.match(behaviorSmoke, /missing entitlement must fail closed/);
   assert.match(behaviorSmoke, /fresh entitled request was not accepted/);
   assert.match(behaviorSmoke, /exact retry did not recover the accepted request/);
+  assert.match(behaviorSmoke, /sub-second exact retry was not rate-limited/);
   assert.match(behaviorSmoke, /changed payload reused the request id/);
+  assert.match(behaviorSmoke, /verified launch replay was not rejected across request ids/);
+  assert.match(behaviorSmoke, /revocation between begin and finish did not reject success/);
+  assert.match(behaviorSmoke, /fourth rolling-window request was not rate-limited/);
   assert.match(behaviorSmoke, /blocked entitlement did not stop a new request/);
   assert.match(behaviorSmoke, /^ROLLBACK;$/m);
   assert.match(runScript, /authenticated unexpectedly executed the service-only entitlement RPC/);
@@ -186,7 +194,9 @@ test("external postflight and fingerprint cover semantic catalog state", () => {
   assert.match(postflight, /v_index_count <> 10/);
   assert.match(postflight, /reviewed function bodies differ/);
   assert.match(postflight, /direct table or column ACL remains/);
-  assert.match(postflight, /unknown default function grant survived ACL hardening/);
+  assert.match(postflight, /exact function ACL allow-list differs/);
+  assert.match(postflight, /architecture_upsert_product_entitlement_internal/);
+  assert.doesNotMatch(postflight, /proname LIKE/);
   assert.match(postflight, /SELECT count\(\*\) FROM public\.users/);
 
   for (const kind of [

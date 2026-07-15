@@ -972,7 +972,7 @@ BEGIN
        OR actual.condeferrable IS DISTINCT FROM false
        OR actual.condeferred IS DISTINCT FROM false
        OR actual.convalidated IS DISTINCT FROM true
-       OR actual.connoinherit IS DISTINCT FROM false
+       OR actual.connoinherit IS DISTINCT FROM (expected.constraint_type <> 'c')
        OR (
          expected.constraint_type = 'f'
          AND (

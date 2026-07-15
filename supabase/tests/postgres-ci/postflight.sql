@@ -174,18 +174,51 @@ BEGIN
   END IF;
 
   IF EXISTS (
+    WITH expected(function_name, identity_arguments, grantee_name, grantor_name, privilege_type, is_grantable) AS (
+      VALUES
+        ('architecture_upsert_product_entitlement_internal', 'bytea, text, text, timestamp with time zone, timestamp with time zone', 'service_role', 'postgres', 'EXECUTE', false),
+        ('architecture_begin_finance_issue_internal', 'uuid, bytea, bytea, text, bytea, bytea, bigint, timestamp with time zone', 'service_role', 'postgres', 'EXECUTE', false),
+        ('architecture_finish_finance_issue_internal', 'uuid, bytea, text, timestamp with time zone', 'service_role', 'postgres', 'EXECUTE', false)
+    ),
+    actual AS (
+      SELECT
+        procedure.proname AS function_name,
+        pg_catalog.pg_get_function_identity_arguments(procedure.oid) AS identity_arguments,
+        CASE
+          WHEN exploded.grantee = 0 THEN 'PUBLIC'
+          ELSE pg_catalog.pg_get_userbyid(exploded.grantee)
+        END AS grantee_name,
+        pg_catalog.pg_get_userbyid(exploded.grantor) AS grantor_name,
+        exploded.privilege_type,
+        exploded.is_grantable
+      FROM pg_catalog.pg_proc AS procedure
+      JOIN pg_catalog.pg_namespace AS namespace
+        ON namespace.oid = procedure.pronamespace
+      CROSS JOIN LATERAL pg_catalog.aclexplode(procedure.proacl) AS exploded
+      WHERE namespace.nspname = 'public'
+        AND procedure.proname IN (
+          'architecture_finance_set_updated_at_internal',
+          'architecture_upsert_product_entitlement_internal',
+          'architecture_begin_finance_issue_internal',
+          'architecture_finish_finance_issue_internal'
+        )
+    )
     SELECT 1
-    FROM pg_catalog.pg_proc AS procedure
-    JOIN pg_catalog.pg_namespace AS namespace
-      ON namespace.oid = procedure.pronamespace
-    CROSS JOIN LATERAL pg_catalog.aclexplode(procedure.proacl) AS exploded
-    WHERE namespace.nspname = 'public'
-      AND procedure.proname LIKE 'architecture%finance%internal'
-      AND exploded.grantee = 'main_finance_ci_unknown'::regrole
+    FROM expected
+    FULL JOIN actual USING (
+      function_name,
+      identity_arguments,
+      grantee_name,
+      grantor_name,
+      privilege_type,
+      is_grantable
+    )
+    WHERE expected.function_name IS NULL
+       OR actual.function_name IS NULL
   ) THEN
     RAISE EXCEPTION USING
       ERRCODE = '42501',
-      MESSAGE = 'External postflight failed: unknown default function grant survived ACL hardening.';
+      MESSAGE = 'External postflight failed: exact function ACL allow-list differs.';
   END IF;
 
   IF (SELECT count(*) FROM public.users) <> 1

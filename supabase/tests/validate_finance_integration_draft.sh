@@ -4,7 +4,7 @@ set -eu
 
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 migration="$repo_root/supabase/migrations/20260714235900_finance_integration_foundation.sql"
-expected_migration_sha256="7d534a5789f16efcf1d71df4c98cb94efd0feef5f3f15c5b1d52fb844f6ac585"
+expected_migration_sha256="01c8cf16ab237c8e0c746575169fdc0ce48af20a66c597d0d9e40360dce4bb09"
 
 fail() {
   printf '%s\n' "finance integration draft validation failed: $1" >&2
@@ -76,6 +76,8 @@ rg -Fq 'the exact nineteen-constraint contract differs' "$migration" ||
   fail "exact constraint postflight is missing"
 rg -Fq "'definition', pg_catalog.pg_get_constraintdef(constraint_row.oid, true)" "$migration" ||
   fail "constraint mismatch diagnostics are missing"
+rg -Fq "actual.connoinherit IS DISTINCT FROM (expected.constraint_type <> 'c')" "$migration" ||
+  fail "constraint inheritance metadata contract is missing"
 rg -Fq 'the exact four-index contract differs' "$migration" ||
   fail "exact index postflight is missing"
 rg -Fq 'overloads or exact function metadata differ' "$migration" ||

@@ -44,6 +44,7 @@ function catalogContractViolations(source) {
   requireText(/DO \$acl_hardening\$(?:(?!\$acl_hardening\$;)[\s\S])*?pg_catalog\.aclexplode\(procedure\.proacl\)/, "proacl catalog inspection");
   requireText(/Exact ordered column catalog[\s\S]*?FULL JOIN actual USING \(table_name, column_number\)/, "exact column postflight");
   requireText(/Exact nineteen constraints[\s\S]*?the exact nineteen-constraint contract differs/, "exact constraint postflight");
+  requireText(/actual\.connoinherit IS DISTINCT FROM \(expected\.constraint_type <> 'c'\)/, "constraint inheritance metadata");
   requireText(/Four explicit indexes[\s\S]*?the exact four-index contract differs/, "exact index postflight");
   requireText(/Exact function overloads[\s\S]*?overloads or exact function metadata differ/, "exact function postflight");
   requireText(/Exactly two user triggers[\s\S]*?the exact two-trigger contract differs/, "exact trigger postflight");
