@@ -8882,3 +8882,234 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
   };
 })();
 
+
+/* =====================================================
+   v130 — «Что посмотреть»: точные ссылки Wikipedia
+   и открытие блока для обычных пользователей.
+
+   Изменяется только библиотека «Что посмотреть»:
+   - фильмы и сериалы получают индивидуальные прямые ссылки;
+   - смешанный поиск по английскому и русскому названию отключён;
+   - при наличии русской статьи используется русская Википедия;
+   - для материалов без устойчивой русской статьи используется
+     точная англоязычная статья Wikipedia;
+   - сам блок открыт ученикам;
+   - разделы «Видео» и «Лекции» остаются отключёнными.
+   ===================================================== */
+(function installWatchWikipediaPublicV130(){
+  window.APP_UI_VERSION_V130 = 'v130-watch-wikipedia-public-20260720';
+
+  var WATCH_WIKIPEDIA_URLS_V130 = {
+    films: {
+      'the-founder': 'https://ru.wikipedia.org/wiki/Основатель_(фильм)',
+      'the-social-network': 'https://ru.wikipedia.org/wiki/Социальная_сеть_(фильм)',
+      'steve-jobs': 'https://ru.wikipedia.org/wiki/Стив_Джобс_(фильм)',
+      'pirates-silicon-valley': 'https://ru.wikipedia.org/wiki/Пираты_Силиконовой_долины',
+      'moneyball': 'https://ru.wikipedia.org/wiki/Человек,_который_изменил_всё',
+      'the-big-short': 'https://ru.wikipedia.org/wiki/Игра_на_понижение_(фильм)',
+      'margin-call': 'https://en.wikipedia.org/wiki/Margin_Call',
+      'wall-street': 'https://ru.wikipedia.org/wiki/Уолл-стрит_(фильм,_1987)',
+      'wolf-wall-street': 'https://ru.wikipedia.org/wiki/Волк_с_Уолл-стрит',
+      'boiler-room': 'https://en.wikipedia.org/wiki/Boiler_Room_(film)',
+      'glengarry-glen-ross': 'https://en.wikipedia.org/wiki/Glengarry_Glen_Ross_(film)',
+      'air': 'https://en.wikipedia.org/wiki/Air_(2023_film)',
+      'joy': 'https://ru.wikipedia.org/wiki/Джой_(фильм,_2015)',
+      'tucker': 'https://en.wikipedia.org/wiki/Tucker:_The_Man_and_His_Dream',
+      'the-aviator': 'https://ru.wikipedia.org/wiki/Авиатор_(фильм,_2004)',
+      'ford-v-ferrari': 'https://ru.wikipedia.org/wiki/Ford_против_Ferrari',
+      'current-war': 'https://en.wikipedia.org/wiki/The_Current_War',
+      'flash-of-genius': 'https://en.wikipedia.org/wiki/Flash_of_Genius_(film)',
+      'pursuit-of-happyness': 'https://ru.wikipedia.org/wiki/В_погоне_за_счастьем',
+      'jerry-maguire': 'https://ru.wikipedia.org/wiki/Джерри_Магуайер',
+      'chef': 'https://ru.wikipedia.org/wiki/Повар_на_колёсах',
+      'jiro-dreams': 'https://en.wikipedia.org/wiki/Jiro_Dreams_of_Sushi',
+      'devil-wears-prada': 'https://ru.wikipedia.org/wiki/Дьявол_носит_Prada',
+      'thank-you-for-smoking': 'https://ru.wikipedia.org/wiki/Здесь_курят',
+      'enron': 'https://en.wikipedia.org/wiki/Enron:_The_Smartest_Guys_in_the_Room',
+      'inside-job': 'https://en.wikipedia.org/wiki/Inside_Job_(2010_film)',
+      'startup-com': 'https://en.wikipedia.org/wiki/Startup.com',
+      'the-corporation': 'https://en.wikipedia.org/wiki/The_Corporation_(2003_film)',
+      'becoming-warren-buffett': 'https://en.wikipedia.org/wiki/Becoming_Warren_Buffett',
+      'there-will-be-blood': 'https://ru.wikipedia.org/wiki/Нефть_(фильм)'
+    },
+    series: {
+      'silicon-valley': 'https://ru.wikipedia.org/wiki/Кремниевая_долина_(телесериал)',
+      'succession': 'https://ru.wikipedia.org/wiki/Наследники_(телесериал,_2018)',
+      'billions': 'https://ru.wikipedia.org/wiki/Миллиарды',
+      'mad-men': 'https://ru.wikipedia.org/wiki/Безумцы',
+      'halt-catch-fire': 'https://ru.wikipedia.org/wiki/Остановись_и_гори',
+      'the-playlist': 'https://en.wikipedia.org/wiki/The_Playlist_(TV_series)',
+      'super-pumped': 'https://en.wikipedia.org/wiki/Super_Pumped_(TV_series)',
+      'wecrashed': 'https://en.wikipedia.org/wiki/WeCrashed',
+      'the-dropout': 'https://en.wikipedia.org/wiki/The_Dropout_(miniseries)',
+      'startup': 'https://en.wikipedia.org/wiki/StartUp_(TV_series)',
+      'industry': 'https://en.wikipedia.org/wiki/Industry_(TV_series)',
+      'shark-tank': 'https://en.wikipedia.org/wiki/Shark_Tank',
+      'dragons-den': 'https://en.wikipedia.org/wiki/Dragons%27_Den',
+      'the-profit': 'https://en.wikipedia.org/wiki/The_Profit_(TV_series)',
+      'undercover-billionaire': 'https://en.wikipedia.org/wiki/Undercover_Billionaire',
+      'kitchen-nightmares': 'https://en.wikipedia.org/wiki/Kitchen_Nightmares',
+      'restaurant-impossible': 'https://en.wikipedia.org/wiki/Restaurant:_Impossible',
+      'men-built-america': 'https://en.wikipedia.org/wiki/The_Men_Who_Built_America',
+      'food-built-america': 'https://en.wikipedia.org/wiki/The_Food_That_Built_America',
+      'toys-built-america': 'https://en.wikipedia.org/wiki/The_Toys_That_Built_America',
+      'dirty-money': 'https://en.wikipedia.org/wiki/Dirty_Money_(2018_TV_series)',
+      'mcmillions': 'https://en.wikipedia.org/wiki/McMillions',
+      'inside-bills-brain': 'https://en.wikipedia.org/wiki/Inside_Bill%27s_Brain:_Decoding_Bill_Gates',
+      'abstract-design': 'https://en.wikipedia.org/wiki/Abstract:_The_Art_of_Design',
+      'the-office': 'https://ru.wikipedia.org/wiki/Офис_(телесериал,_США)',
+      'better-call-saul': 'https://ru.wikipedia.org/wiki/Лучше_звоните_Солу',
+      'suits': 'https://ru.wikipedia.org/wiki/Форс-мажоры_(телесериал)',
+      'the-bear': 'https://ru.wikipedia.org/wiki/Медведь_(телесериал)',
+      'mr-selfridge': 'https://ru.wikipedia.org/wiki/Мистер_Селфридж',
+      'self-made': 'https://en.wikipedia.org/wiki/Self_Made_(miniseries)'
+    }
+  };
+
+  function watchWikipediaUrlV130(type, id){
+    var group = WATCH_WIKIPEDIA_URLS_V130[type] || {};
+    return group[id] || 'https://ru.wikipedia.org/wiki/Заглавная_страница';
+  }
+
+  function replaceWatchCategoryLinksV130(type){
+    document.querySelectorAll('.watch-card-v127[data-watch-card]').forEach(function(card){
+      var key = String(card.getAttribute('data-watch-card') || '');
+      var parts = key.split(':');
+      var cardType = parts[0] || type;
+      var id = parts.slice(1).join(':');
+      var link = card.querySelector('.watch-info-link-v129');
+      if (!link || !id) return;
+      link.href = watchWikipediaUrlV130(cardType, id);
+      link.dataset.wikipediaItem = cardType + ':' + id;
+      link.setAttribute('aria-label', (cardType === 'series' ? 'Информация о сериале: ' : 'Информация о фильме: ') + id);
+    });
+  }
+
+  function replaceWatchDetailLinkV130(type, id){
+    var detail = document.querySelector('.watch-detail-card-v127');
+    var link = detail ? detail.querySelector('.watch-info-link-v129') : null;
+    if (!link) return;
+    link.href = watchWikipediaUrlV130(type, id);
+    link.dataset.wikipediaItem = type + ':' + id;
+  }
+
+  function removeWatchFromStudentLocksV130(){
+    try {
+      var list = window.studentLockedBlocksV41;
+      if (!Array.isArray(list)) return;
+      for (var i = list.length - 1; i >= 0; i--) {
+        if (String(list[i] || '').trim() === 'Что посмотреть') list.splice(i, 1);
+      }
+    } catch(e) {}
+  }
+
+  function unlockWatchEntriesV130(){
+    removeWatchFromStudentLocksV130();
+
+    try {
+      document.querySelectorAll('button').forEach(function(button){
+        var titleNode = button.querySelector('b');
+        var title = titleNode ? String(titleNode.textContent || '').trim() : '';
+        if (title !== 'Что посмотреть') return;
+
+        button.disabled = false;
+        button.removeAttribute('disabled');
+        button.setAttribute('aria-disabled', 'false');
+        button.classList.remove('student-locked-v41','student-block-locked-v41','disabled','soon');
+        button.classList.add('active');
+        button.setAttribute('onclick', "if(typeof closeAppDrawerV40==='function'){closeAppDrawerV40();} renderWatchLibraryV127()");
+
+        var status = button.querySelector('small, em');
+        if (status) status.textContent = 'доступно';
+        var arrow = button.querySelector('.app-drawer-arrow-v40');
+        if (arrow) arrow.textContent = '›';
+      });
+    } catch(e) {}
+  }
+
+  removeWatchFromStudentLocksV130();
+
+  // Прямой вход в блок больше не проходит через старую админскую заглушку.
+  if (typeof window.renderWatchLibraryV127 === 'function') {
+    window.renderWatchV40 = window.renderWatchLibraryV127;
+    window.openWatchBlockV130 = function(){ return window.renderWatchLibraryV127(); };
+  }
+
+  var categoryBeforeV130 = window.renderWatchCategoryV127;
+  if (typeof categoryBeforeV130 === 'function' && !categoryBeforeV130.__watchWikipediaV130) {
+    var categoryV130 = function(type){
+      var result = categoryBeforeV130.apply(this, arguments);
+      replaceWatchCategoryLinksV130(type);
+      setTimeout(function(){ replaceWatchCategoryLinksV130(type); }, 0);
+      return result;
+    };
+    categoryV130.__watchWikipediaV130 = true;
+    window.renderWatchCategoryV127 = categoryV130;
+  }
+
+  var itemBeforeV130 = window.renderWatchItemV127;
+  if (typeof itemBeforeV130 === 'function' && !itemBeforeV130.__watchWikipediaV130) {
+    var itemV130 = function(type, id){
+      var result = itemBeforeV130.apply(this, arguments);
+      replaceWatchDetailLinkV130(type, id);
+      setTimeout(function(){ replaceWatchDetailLinkV130(type, id); }, 0);
+      return result;
+    };
+    itemV130.__watchWikipediaV130 = true;
+    window.renderWatchItemV127 = itemV130;
+  }
+
+  var shellBeforeV130 = window.shell;
+  if (typeof shellBeforeV130 === 'function' && !shellBeforeV130.__watchPublicV130) {
+    var shellV130 = function(content, activeTab){
+      var result = shellBeforeV130.apply(this, arguments);
+      unlockWatchEntriesV130();
+      setTimeout(unlockWatchEntriesV130, 0);
+      setTimeout(unlockWatchEntriesV130, 120);
+      return result;
+    };
+    shellV130.__watchPublicV130 = true;
+    window.shell = shellV130;
+    try { shell = window.shell; } catch(e) {}
+  }
+
+  var renderHomeBeforeV130 = window.renderHome;
+  if (typeof renderHomeBeforeV130 === 'function' && !renderHomeBeforeV130.__watchPublicV130) {
+    var renderHomeV130 = function(){
+      removeWatchFromStudentLocksV130();
+      var result = renderHomeBeforeV130.apply(this, arguments);
+      unlockWatchEntriesV130();
+      setTimeout(unlockWatchEntriesV130, 0);
+      setTimeout(unlockWatchEntriesV130, 120);
+      return result;
+    };
+    renderHomeV130.__watchPublicV130 = true;
+    window.renderHome = renderHomeV130;
+    try { renderHome = window.renderHome; } catch(e) {}
+  }
+
+  // Повторно применяем разблокировку после работы старого механизма бокового меню.
+  var drawerLockBeforeV130 = window.lockDrawerItemsV41;
+  if (typeof drawerLockBeforeV130 === 'function' && !drawerLockBeforeV130.__watchPublicV130) {
+    var drawerLockV130 = function(){
+      var result = drawerLockBeforeV130.apply(this, arguments);
+      unlockWatchEntriesV130();
+      return result;
+    };
+    drawerLockV130.__watchPublicV130 = true;
+    window.lockDrawerItemsV41 = drawerLockV130;
+  }
+
+  unlockWatchEntriesV130();
+  setTimeout(unlockWatchEntriesV130, 0);
+
+  window.__WATCH_WIKIPEDIA_PUBLIC_V130 = {
+    version: window.APP_UI_VERSION_V130,
+    films: Object.keys(WATCH_WIKIPEDIA_URLS_V130.films).length,
+    series: Object.keys(WATCH_WIKIPEDIA_URLS_V130.series).length,
+    publicForStudents: true,
+    videosEnabled: false,
+    lecturesEnabled: false,
+    urls: WATCH_WIKIPEDIA_URLS_V130
+  };
+})();
