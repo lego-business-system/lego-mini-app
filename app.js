@@ -8422,11 +8422,7 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
     try { return typeof appStableVersionV24 === 'function' ? appStableVersionV24() : 'v127-watch-library'; } catch(e) { return 'v127-watch-library'; }
   }
   function watchImageHtmlV127(item, index, type, big){
-    var label = (type === 'series' ? 'Сериал' : 'Фильм') + ' ' + String(index + 1).padStart(2,'0');
-    var src = String(item.image || '').trim();
-    var fallback = `<div class="watch-image-fallback-v127 ${big ? 'big' : ''}"><b>${esc(label)}</b><span>АРХИТЕКТУРА</span></div>`;
-    if (!src) return fallback;
-    return `<div class="watch-image-box-v127 ${big ? 'big' : ''}"><img src="${esc(src)}?v=${watchVersionV127()}" alt="${esc(item.title)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">${fallback}</div>`;
+    return '';
   }
   function watchProgressBarV127(stats){
     return `<div class="watch-progress-v127"><div><span style="width:${safePercent(stats.percent)}%"></span></div><p>${formatPoints(stats.watched)} из ${formatPoints(stats.total)} отмечено</p></div>`;
@@ -8766,3 +8762,123 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
     financeHelpUrl: CREDIT_FILTER_FINANCE_HELP_URL_V128
   };
 })();
+
+/* =====================================================
+   v129 — Что посмотреть: текстовые карточки без изображений
+   и общедоступные информационные ссылки на фильмы/сериалы.
+   Состояние просмотра, баллы, прогресс и остальные блоки
+   приложения не изменяются.
+   ===================================================== */
+(function installWatchTextLinksV129(){
+  window.APP_UI_VERSION_V129 = 'v129-watch-text-links-20260720';
+
+  function cleanWatchTitleV129(value){
+    return String(value || '')
+      .replace(/^\s*\d{1,3}\.\s*/, '')
+      .replace(/\s*\/\s*/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function watchInfoUrlV129(title, type, year){
+    var noun = type === 'series' ? 'сериал' : 'фильм';
+    var query = [cleanWatchTitleV129(title), year || '', noun].filter(Boolean).join(' ');
+    return 'https://ru.wikipedia.org/w/index.php?search=' + encodeURIComponent(query);
+  }
+
+  function ensureWatchTextStylesV129(){
+    if (document.getElementById('watch-text-links-styles-v129')) return;
+    var style = document.createElement('style');
+    style.id = 'watch-text-links-styles-v129';
+    style.textContent = `
+      .watch-image-box-v127,
+      .watch-image-fallback-v127{display:none!important}
+      .watch-card-v127{grid-template-columns:minmax(0,1fr)!important;gap:9px!important;padding:13px!important}
+      .watch-open-v127{grid-template-columns:minmax(0,1fr)!important;grid-column:1!important;gap:0!important}
+      .watch-card-copy-v127{min-width:0}
+      .watch-check-v127{grid-column:1!important;margin-top:0!important;padding:8px 0 1px}
+      .watch-info-link-v129{grid-column:1!important;width:100%!important;min-height:42px!important;margin:0!important;padding:10px 12px!important;font-size:13px!important}
+      .watch-detail-card-v127{padding-top:15px!important}
+      .watch-detail-actions-v127 .watch-info-link-v129{order:1}
+      .watch-detail-actions-v127 .watch-check-v127{order:2}
+      .watch-detail-actions-v127 .grid-v2{order:3}
+      @media(max-width:420px){
+        .watch-card-v127,.watch-open-v127{grid-template-columns:minmax(0,1fr)!important}
+        .watch-check-v127,.watch-info-link-v129{grid-column:1!important}
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function makeInfoLinkV129(title, type, year, compact){
+    var noun = type === 'series' ? 'сериале' : 'фильме';
+    var link = document.createElement('a');
+    link.className = 'btn secondary watch-info-link-v129' + (compact ? ' compact' : '');
+    link.href = watchInfoUrlV129(title, type, year);
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = 'Информация о ' + noun;
+    link.addEventListener('click', function(event){
+      event.stopPropagation();
+    });
+    return link;
+  }
+
+  function applyWatchCategoryTextV129(type){
+    ensureWatchTextStylesV129();
+    document.querySelectorAll('.watch-card-v127').forEach(function(card){
+      card.querySelectorAll('.watch-image-box-v127,.watch-image-fallback-v127').forEach(function(node){ node.remove(); });
+      if (card.querySelector('.watch-info-link-v129')) return;
+      var titleNode = card.querySelector('.watch-card-copy-v127 b');
+      var title = titleNode ? titleNode.textContent : '';
+      var check = card.querySelector('.watch-check-v127');
+      var link = makeInfoLinkV129(title, type, '', true);
+      if (check) card.insertBefore(link, check);
+      else card.appendChild(link);
+    });
+  }
+
+  function applyWatchDetailTextV129(type){
+    ensureWatchTextStylesV129();
+    var detail = document.querySelector('.watch-detail-card-v127');
+    if (!detail) return;
+    detail.querySelectorAll('.watch-image-box-v127,.watch-image-fallback-v127').forEach(function(node){ node.remove(); });
+    if (detail.querySelector('.watch-info-link-v129')) return;
+    var hero = document.querySelector('.watch-hero-v127');
+    var titleNode = hero ? hero.querySelector('h1') : null;
+    var yearNode = hero ? hero.querySelector('p:last-child') : null;
+    var actions = detail.querySelector('.watch-detail-actions-v127');
+    var link = makeInfoLinkV129(titleNode ? titleNode.textContent : '', type, yearNode ? yearNode.textContent : '', false);
+    if (actions) actions.insertBefore(link, actions.firstChild);
+    else detail.appendChild(link);
+  }
+
+  var renderCategoryBeforeV129 = window.renderWatchCategoryV127;
+  if (typeof renderCategoryBeforeV129 === 'function' && !renderCategoryBeforeV129.__watchTextLinksV129) {
+    var renderCategoryV129 = function(type){
+      var result = renderCategoryBeforeV129.apply(this, arguments);
+      applyWatchCategoryTextV129(type);
+      return result;
+    };
+    renderCategoryV129.__watchTextLinksV129 = true;
+    window.renderWatchCategoryV127 = renderCategoryV129;
+  }
+
+  var renderItemBeforeV129 = window.renderWatchItemV127;
+  if (typeof renderItemBeforeV129 === 'function' && !renderItemBeforeV129.__watchTextLinksV129) {
+    var renderItemV129 = function(type, id){
+      var result = renderItemBeforeV129.apply(this, arguments);
+      applyWatchDetailTextV129(type);
+      return result;
+    };
+    renderItemV129.__watchTextLinksV129 = true;
+    window.renderWatchItemV127 = renderItemV129;
+  }
+
+  window.__WATCH_TEXT_LINKS_V129 = {
+    version: window.APP_UI_VERSION_V129,
+    informationSource: 'Wikipedia search',
+    imagesDisabled: true
+  };
+})();
+
