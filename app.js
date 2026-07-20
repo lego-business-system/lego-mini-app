@@ -8621,3 +8621,148 @@ window.hydrateResearchEventsFromAccessResultV100 = hydrateResearchEventsFromAcce
     try { shell = window.shell; } catch(e) {}
   }
 })();
+
+/* =====================================================
+   v128 — Кредитный фильтр в дополнительных материалах
+   Изолированное дополнение: третий материал, две Google-таблицы,
+   скачиваемая инструкция, будущий видеоразбор и помощь с финансированием.
+   Существующие уроки, прогресс, форум, роли и Supabase не изменяются.
+   ===================================================== */
+(function(){
+  "use strict";
+
+  var CREDIT_FILTER_VERSION_V128 = "v128-credit-filter-20260720";
+  var CREDIT_FILTER_TABLE_URL_V128 = "https://docs.google.com/spreadsheets/d/147crKpP0dPVokcFRKUUBlKuw75MI0s7w2vkj17Mp1GM/edit?gid=318365903#gid=318365903";
+  var CREDIT_FILTER_EXAMPLE_URL_V128 = "https://docs.google.com/spreadsheets/d/1NRnmZXsivF1sTV6txwnqFZD6_X8Xpyg5fYxwjoduHT8/edit?gid=528600782#gid=528600782";
+  var CREDIT_FILTER_INSTRUCTION_URL_V128 = "assets/additional/credit_filter/credit_filter_instruction.docx";
+  var CREDIT_FILTER_VIDEO_URL_V128 = ""; // Ссылка на закрытое видео YouTube будет добавлена позже.
+  var CREDIT_FILTER_FINANCE_HELP_URL_V128 = "https://t.me/max_grachevv";
+
+  function creditFilterAssertAccessV128(){
+    if (typeof additionalAssertAccessV110 === "function") return additionalAssertAccessV110();
+    if (typeof state !== "undefined" && state && state.access === true) return true;
+    if (typeof accessDenied === "function") accessDenied("OPEN_FROM_TELEGRAM_REQUIRED");
+    return false;
+  }
+
+  function creditFilterCardV128(cls, html){
+    if (typeof additionalCardV110 === "function") return additionalCardV110(cls, html);
+    if (typeof card === "function") return card(cls, html);
+    return `<section class="card-v2 ${cls || ""}">${html || ""}</section>`;
+  }
+
+  function creditFilterShellV128(html){
+    if (typeof additionalShellV110 === "function") return additionalShellV110(html);
+    if (typeof shell === "function") return shell(html, "home");
+    var root = document.getElementById("app");
+    if (root) root.innerHTML = html;
+  }
+
+  function creditFilterOpenUrlV128(url){
+    var target = String(url || "").trim();
+    if (!target) return;
+    try {
+      if (/^https:\/\/t\.me\//i.test(target) && typeof tg !== "undefined" && tg && typeof tg.openTelegramLink === "function") {
+        tg.openTelegramLink(target);
+        return;
+      }
+      if (typeof additionalOpenUrlV110 === "function") {
+        additionalOpenUrlV110(target);
+        return;
+      }
+      if (typeof tg !== "undefined" && tg && typeof tg.openLink === "function") tg.openLink(target);
+      else window.open(target, "_blank", "noopener,noreferrer");
+    } catch(e) {
+      window.open(target, "_blank", "noopener,noreferrer");
+    }
+  }
+
+  function creditFilterHeroV128(){
+    if (typeof additionalHeroCardV110 === "function") return additionalHeroCardV110();
+    return creditFilterCardV128("blue-card-v2", `<p class="eyebrow">библиотека бизнес-систем</p><h1>Дополнительные материалы</h1><p>Практические уроки, таблицы и инструменты, которые можно проходить отдельно от основного маршрута.</p>`);
+  }
+
+  function renderAdditionalMaterialsV128(){
+    if (!creditFilterAssertAccessV128()) return;
+    try {
+      if (typeof additionalAwardV110 === "function") {
+        additionalAwardV110("block:additional_materials", "block_open", { block:"additional_materials" });
+      }
+    } catch(e) {
+      console.warn("CREDIT_FILTER_ADDITIONAL_AWARD_V128", e);
+    }
+
+    creditFilterShellV128(
+      creditFilterHeroV128() +
+      creditFilterCardV128("additional-section-v106 additional-section-v110", `<div class="section-heading-v35"><div><p class="eyebrow">финансы и учёт</p><h2>Практические инструменты</h2></div><p>Материалы можно открывать отдельно от основного маршрута. Каждый материал содержит объяснение и рабочие инструменты.</p></div><div class="lesson-list-v2 additional-list-v106 additional-list-v110"><button class="lesson-row-v2 additional-lesson-row-v106" onclick="renderBreakEvenIntroV110()"><div><b>Расчёт точки безубыточности в моём бизнесе</b><p>18 слайдов теории · рабочая Google Таблица · инструкция для самостоятельного расчёта</p></div><span>→</span></button><button class="lesson-row-v2 additional-lesson-row-v106 business-equation-row-v107" onclick="renderBusinessEquationIntroV110()"><div><b>Единое уравнение бизнеса</b><p>20 слайдов теории · рабочая Google Таблица · свободный денежный поток и ограничения модели</p></div><span>→</span></button><button class="lesson-row-v2 additional-lesson-row-v106 credit-filter-row-v128" onclick="renderCreditFilterIntroV128()"><div><b>Кредитный фильтр</b><p>Проверка кредитной нагрузки · основная таблица · заполненный пример · подробная инструкция</p></div><span>→</span></button></div>`) +
+      creditFilterCardV128("", `<button class="btn secondary" onclick="renderHome()">На главную</button>`)
+    );
+  }
+
+  function renderCreditFilterIntroV128(){
+    if (!creditFilterAssertAccessV128()) return;
+
+    creditFilterShellV128(
+      creditFilterCardV128("blue-card-v2 additional-lesson-hero-v110 credit-filter-hero-v128", `<p class="eyebrow">финансы и кредитование</p><h1>Кредитный фильтр</h1><p>Предварительная проверка, выдержит ли бизнес новый кредит с учётом 12 месяцев факта, действующих долгов, условий банка, стресс-сценария и денежного резерва.</p>`) +
+      creditFilterCardV128("additional-lesson-intro-v110 credit-filter-intro-v128", `<h2>Что помогает проверить инструмент</h2><div class="content-preview-list-v40 additional-preview-v110"><div><span>01</span><section><b>Фактическую способность бизнеса платить</b><p>Расчёт опирается на 12 последовательных закрытых месяцев, а не только на ожидаемую прибыль.</p></section></div><div><span>02</span><section><b>Текущую и будущую долговую нагрузку</b><p>Учитываются действующие кредиты, лизинг, займы, новый график, комиссии и условия сделки.</p></section></div><div><span>03</span><section><b>Стресс-сценарий и денежный резерв</b><p>Таблица показывает, сохранится ли покрытие платежей при снижении выручки и сезонных провалах.</p></section></div><div><span>04</span><section><b>Рекомендуемый безопасный лимит</b><p>Сумма проверяется по DSCR, отношению долг / EBITDA и доступному денежному потоку.</p></section></div></div><p class="small">Кредитный фильтр даёт предварительную управленческую оценку и не заменяет проверку договора, залога, налогов, кредитной истории и условий конкретного банка.</p>`) +
+      creditFilterCardV128("additional-table-card-v110 credit-filter-materials-v128", `<h2>Материалы кредитного фильтра</h2><div class="grid-v2"><button class="btn primary" onclick="openCreditFilterTableV128()">Открыть кредитный фильтр</button><button class="btn secondary" onclick="openCreditFilterExampleV128()">Открыть заполненный пример</button><button class="btn secondary" onclick="downloadCreditFilterInstructionV128()">Скачать инструкцию</button><button class="btn secondary" disabled aria-disabled="true">Видеоразбор кредитного фильтра — скоро</button></div>`) +
+      creditFilterCardV128("credit-filter-finance-help-v128", `<p class="eyebrow">дополнительная помощь</p><h2>Помощь в привлечении финансирования в мой бизнес</h2><p>Подбор условий, подготовка заявки и помощь в привлечении финансирования для бизнеса.</p><button class="btn primary" onclick="openCreditFilterFinanceHelpV128()">Написать в Telegram</button>`) +
+      creditFilterCardV128("", `<button class="btn secondary" onclick="renderAdditionalMaterials()">К дополнительным материалам</button>`)
+    );
+  }
+
+  function openCreditFilterTableV128(){
+    creditFilterOpenUrlV128(CREDIT_FILTER_TABLE_URL_V128);
+  }
+
+  function openCreditFilterExampleV128(){
+    creditFilterOpenUrlV128(CREDIT_FILTER_EXAMPLE_URL_V128);
+  }
+
+  function downloadCreditFilterInstructionV128(){
+    var url = new URL(CREDIT_FILTER_INSTRUCTION_URL_V128, document.baseURI).href;
+    try {
+      var link = document.createElement("a");
+      link.href = url;
+      link.download = "Кредитный фильтр — инструкция.docx";
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(function(){
+        try { link.remove(); } catch(e) {}
+      }, 1000);
+    } catch(e) {
+      creditFilterOpenUrlV128(url);
+    }
+  }
+
+  function openCreditFilterVideoV128(){
+    if (!CREDIT_FILTER_VIDEO_URL_V128) return;
+    creditFilterOpenUrlV128(CREDIT_FILTER_VIDEO_URL_V128);
+  }
+
+  function openCreditFilterFinanceHelpV128(){
+    creditFilterOpenUrlV128(CREDIT_FILTER_FINANCE_HELP_URL_V128);
+  }
+
+  window.renderAdditionalMaterials = renderAdditionalMaterialsV128;
+  window.renderCreditFilterIntroV128 = renderCreditFilterIntroV128;
+  window.openCreditFilterTableV128 = openCreditFilterTableV128;
+  window.openCreditFilterExampleV128 = openCreditFilterExampleV128;
+  window.downloadCreditFilterInstructionV128 = downloadCreditFilterInstructionV128;
+  window.openCreditFilterVideoV128 = openCreditFilterVideoV128;
+  window.openCreditFilterFinanceHelpV128 = openCreditFilterFinanceHelpV128;
+
+  try { renderAdditionalMaterials = renderAdditionalMaterialsV128; } catch(e) {}
+
+  window.__CREDIT_FILTER_V128 = {
+    version: CREDIT_FILTER_VERSION_V128,
+    tableUrl: CREDIT_FILTER_TABLE_URL_V128,
+    exampleUrl: CREDIT_FILTER_EXAMPLE_URL_V128,
+    instructionUrl: CREDIT_FILTER_INSTRUCTION_URL_V128,
+    videoUrl: CREDIT_FILTER_VIDEO_URL_V128,
+    financeHelpUrl: CREDIT_FILTER_FINANCE_HELP_URL_V128
+  };
+})();
