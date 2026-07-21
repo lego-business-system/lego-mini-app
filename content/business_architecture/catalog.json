@@ -1,11 +1,11 @@
 {
   "schema_version": "1.0",
-  "release": "ba-v1-20260721",
+  "release": "ba-v2-20260721",
   "module": {
     "id": "business_architecture",
     "entry_title": "Бизнес как система",
     "title": "Архитектура бизнеса",
-    "subtitle": "Практическая система управления — от финансовой реальности до контрольной карты и дорожной карты внедрения.",
+    "subtitle": "Пошаговая система управления бизнесом: от финансовой реальности до устойчивого роста.",
     "total_parts": 4,
     "total_lessons": 20,
     "total_stages": 80,
@@ -20,7 +20,7 @@
   "examples": {
     "status": "available",
     "total": 99,
-    "page": "templates/business-architecture-practical-examples-v2.html"
+    "data": "content/business_architecture/examples.json"
   },
   "parts": [
     {
