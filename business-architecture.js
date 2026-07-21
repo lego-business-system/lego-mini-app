@@ -1,19 +1,20 @@
 /* =========================================================
-   АРХИТЕКТУРА БИЗНЕСА — изолированный модуль BA v1
-   Первый безопасный релиз: активен только урок BA-01.
-   Модуль не изменяет существующие уроки, форум, профиль,
-   Supabase и общий прогресс приложения.
+   АРХИТЕКТУРА БИЗНЕСА — отдельный учебный контур
+   Интерфейс и данные этого раздела изолированы от других
+   уроков, форума, профиля и общего прогресса приложения.
    ========================================================= */
 (function(){
   'use strict';
 
-  const RELEASE = 'ba-v1-20260721';
-  const STORAGE_KEY = 'architecture_business_progress_v1';
+  const RELEASE = 'ba-v2-20260721';
+  const STORAGE_KEY = 'architecture_business_progress_v2';
   const CATALOG_URL = 'content/business_architecture/catalog.json';
   const LESSON_BASE_URL = 'content/business_architecture/lessons/';
+  const EXAMPLES_URL = 'content/business_architecture/examples.json';
 
   const runtime = {
     catalog: null,
+    examples: null,
     lessons: {},
     loading: false,
     currentLessonId: 'BA-01',
@@ -190,7 +191,37 @@
     return runtime.lessons[lessonId];
   }
 
-  function renderWithAppShell(content, activeTab){
+
+  async function ensureExamples(){
+    if (runtime.examples) return runtime.examples;
+    runtime.examples = await fetchJson(EXAMPLES_URL);
+    return runtime.examples;
+  }
+
+  function lessonNumber(lessonId){
+    const match = String(lessonId || '').match(/(\d+)$/);
+    return match ? Number(match[1]) : 1;
+  }
+
+  function hasWorkspaceContent(lp){
+    if (!lp || !lp.workspace) return false;
+    if (lp.workspace.route) return true;
+    if (lp.workspace.final && Object.keys(lp.workspace.final).some(function(key){ return String(lp.workspace.final[key] || '').trim(); })) return true;
+    return Object.keys(lp.workspace.sections || {}).some(function(id){
+      const section = lp.workspace.sections[id] || {};
+      if (String(section.evidence || '').trim()) return true;
+      return Object.keys(section.fields || {}).some(function(key){ return String(section.fields[key] || '').trim(); });
+    });
+  }
+
+  function workspaceUnlocked(lessonId){
+    const lp = getLessonProgress(lessonId).lesson;
+    return stageDone(lessonId, 'decision_lab') || hasWorkspaceContent(lp) || stageDone(lessonId, 'architecture_assembly');
+  }
+
+  function renderWithAppShell(content, activeTab, options){
+    const opts = options || {};
+    const savedY = window.scrollY || 0;
     const wrapped = '<div class="ba-root"><div class="ba-shell">' + content + '</div></div>';
     if (typeof window.shell === 'function') {
       window.shell(wrapped, activeTab || 'home');
@@ -198,13 +229,21 @@
       const app = document.getElementById('app');
       if (app) app.innerHTML = wrapped;
     }
-    scrollTop();
+    if (opts.preserveScroll) {
+      requestAnimationFrame(function(){ window.scrollTo(0, savedY); });
+    } else if (opts.target) {
+      setTimeout(function(){
+        const node = document.querySelector(opts.target);
+        if (node && typeof node.scrollIntoView === 'function') node.scrollIntoView({block:'start', behavior:opts.smooth ? 'smooth' : 'auto'});
+      }, 0);
+    } else {
+      scrollTop();
+    }
     setTimeout(patchVisibleEntryCards, 0);
   }
-
   function loadingView(title){
     renderWithAppShell(
-      '<div class="ba-card ba-empty"><p class="ba-eyebrow">АРХИТЕКТУРА БИЗНЕСА</p><h2>' + escapeHtml(title || 'Загрузка') + '</h2><p>Подготавливаем структуру и сохранённый прогресс.</p></div>',
+      '<div class="ba-card ba-empty"><p class="ba-eyebrow">АРХИТЕКТУРА БИЗНЕСА</p><h2>' + escapeHtml(title || 'Загрузка') + '</h2><p>Открываем материалы и сохранённое место.</p></div>',
       'home'
     );
   }
@@ -212,7 +251,7 @@
   function errorView(error){
     console.error('BA_MODULE_ERROR', error);
     renderWithAppShell(
-      '<div class="ba-card"><p class="ba-eyebrow">ОШИБКА ЗАГРУЗКИ</p><h2>Модуль временно не открылся</h2>' +
+      '<div class="ba-card"><p class="ba-eyebrow">ОШИБКА ЗАГРУЗКИ</p><h2>Раздел временно не открылся</h2>' +
       '<p>' + escapeHtml(error && error.message ? error.message : error) + '</p>' +
       '<div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.renderHome()">Повторить</button>' +
       '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.openAppHome()">На главную</button></div></div>',
@@ -228,97 +267,61 @@
 
   function renderPart(part, index){
     const progress = loadProgress();
-    const completedInPart = part.lessons.filter(function(lesson){
+    const visibleLessons = part.lessons.filter(function(lesson){
       const lp = progress.lessons && progress.lessons[lesson.id];
-      return Boolean(lp && lp.completedAt);
-    }).length;
-    const openClass = index === 0 ? ' is-open' : '';
-    const lessons = part.lessons.map(function(lesson){
+      return lesson.status === 'available' || Boolean(lp && (lp.completedAt || (lp.completedStages || []).length));
+    });
+    if (!visibleLessons.length) return '';
+    const lessons = visibleLessons.map(function(lesson){
       const lp = progress.lessons && progress.lessons[lesson.id];
       const done = Boolean(lp && lp.completedAt);
-      const available = lesson.status === 'available';
-      const status = done ? 'done' : (available ? 'available' : 'preparing');
-      const onclick = available ? ' onclick="BusinessArchitecture.openLesson(\'' + escapeHtml(lesson.id) + '\')"' : ' disabled';
-      return '<button class="ba-lesson-row ' + (available ? '' : 'is-locked') + ' ' + (done ? 'is-done' : '') + '"' + onclick + '>' +
+      return '<button class="ba-lesson-row ' + (done ? 'is-done' : '') + '" onclick="BusinessArchitecture.openLesson(\'' + escapeHtml(lesson.id) + '\')">' +
         '<span class="ba-lesson-index">' + String(lesson.number).padStart(2,'0') + '</span>' +
-        '<span><b>' + escapeHtml(lesson.title) + '</b><small>Глава ' + escapeHtml(lesson.chapter) + ' · 4 этапа</small></span>' +
-        '<span class="ba-status ' + (status === 'available' ? 'is-active' : status === 'done' ? 'is-done' : '') + '">' + statusLabel(status) + '</span>' +
+        '<span><b>' + escapeHtml(lesson.title) + '</b><small>Урок ' + escapeHtml(lesson.number) + ' · четыре раздела</small></span>' +
+        '<span class="ba-row-arrow">›</span>' +
       '</button>';
     }).join('');
-
-    return '<section class="ba-part' + openClass + '" data-ba-part="' + escapeHtml(part.id) + '">' +
-      '<button class="ba-part-head" onclick="BusinessArchitecture.togglePart(\'' + escapeHtml(part.id) + '\')">' +
-        '<span class="ba-part-head-row"><span class="ba-number-chip">' + escapeHtml(part.number) + '</span>' +
-        '<span><b>' + escapeHtml(part.title) + '</b><small>' + escapeHtml(part.description) + '<br>' + completedInPart + ' из ' + part.lessons.length + ' уроков завершено</small></span>' +
-        '<span class="ba-part-arrow">›</span></span>' +
-      '</button>' +
-      '<div class="ba-part-body"><div class="ba-lesson-list">' + lessons + '</div>' +
-        '<div class="ba-note ba-note-teal" style="margin-top:11px"><b>Результат части:</b> ' + escapeHtml(part.result) + '</div>' +
-        '<div class="ba-lesson-row is-locked" style="margin-top:9px"><span class="ba-lesson-index">К</span><span><b>' + escapeHtml(part.integration_case.title) + '</b><small>Связывает решения всех уроков части</small></span><span class="ba-status">в подготовке</span></div>' +
-      '</div>' +
+    return '<section class="ba-part is-open" data-ba-part="' + escapeHtml(part.id) + '">' +
+      '<div class="ba-part-head ba-part-head-static"><span class="ba-part-head-row"><span class="ba-number-chip">' + escapeHtml(part.number) + '</span>' +
+        '<span><b>' + escapeHtml(part.title) + '</b><small>' + escapeHtml(part.description) + '</small></span></span></div>' +
+      '<div class="ba-part-body"><div class="ba-lesson-list">' + lessons + '</div></div>' +
     '</section>';
   }
-
   async function renderHome(){
     try {
-      loadingView('Открываем модуль');
+      loadingView('Открываем курс');
       const catalog = await ensureCatalog();
-      const info = courseProgressInfo();
       const progress = loadProgress();
-      const ba01 = progress.lessons && progress.lessons['BA-01'];
-      const ba01Stages = ba01 && Array.isArray(ba01.completedStages) ? ba01.completedStages.length : 0;
-      const continueLabel = ba01Stages ? 'Продолжить BA-01' : 'Начать маршрут';
-
+      const lp = getLessonProgress('BA-01').lesson;
+      const completed = Array.isArray(lp.completedStages) ? lp.completedStages.length : 0;
+      const currentStage = ['system_analysis','business_examples','decision_lab','architecture_assembly'].find(function(id){ return !lp.completedStages.includes(id); }) || 'architecture_assembly';
+      const stageLabels = {
+        system_analysis:'Финансовая система',
+        business_examples:'Практические материалы',
+        decision_lab:'Управленческие задачи',
+        architecture_assembly:'Мой финансовый контур'
+      };
+      const materialsButton = workspaceUnlocked('BA-01')
+        ? '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.renderMyArchitecture()">Мои материалы</button>'
+        : '';
+      const visibleParts = catalog.parts.map(renderPart).filter(Boolean).join('');
       const html =
-        '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openAppHome()">← Главная приложения</button><span class="ba-status is-active">отдельный модуль</span></div>' +
-        '<section class="ba-hero">' +
+        '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openAppHome()">← Главная</button></div>' +
+        '<section class="ba-hero ba-hero-compact">' +
           '<p class="ba-eyebrow">БИЗНЕС КАК СИСТЕМА</p>' +
           '<h1>' + escapeHtml(catalog.module.title) + '</h1>' +
-          '<p>' + escapeHtml(catalog.module.subtitle) + '</p>' +
-          '<div class="ba-metric-grid">' +
-            '<div class="ba-metric"><span>Части</span><b>' + catalog.module.total_parts + '</b></div>' +
-            '<div class="ba-metric"><span>Уроки</span><b>' + catalog.module.total_lessons + '</b></div>' +
-            '<div class="ba-metric"><span>Этапы</span><b>' + catalog.module.total_stages + '</b></div>' +
-            '<div class="ba-metric"><span>Примеры</span><b>' + catalog.module.practical_examples + '</b></div>' +
-          '</div>' +
-          '<div class="ba-actions">' +
-            '<button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.continueRoute()">' + continueLabel + '</button>' +
-            '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.openExamplesLibrary()">Практические примеры</button>' +
-            '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.renderMyArchitecture()">Моя архитектура</button>' +
-            '<button class="ba-btn ba-btn-light" disabled>Книга — готовится</button>' +
-          '</div>' +
+          '<p>Пошаговый курс о том, как связать деньги, стратегию, процессы, людей, риски и рост в единую управляемую систему.</p>' +
+          '<div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.continueRoute()">' + (completed ? 'Продолжить обучение' : 'Начать обучение') + '</button>' +
+          '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.openExamplesLibrary()">Практические материалы</button>' + materialsButton + '</div>' +
         '</section>' +
-
-        '<section class="ba-card ba-progress-card">' +
-          '<div><p class="ba-eyebrow">ПРОГРЕСС МОДУЛЯ</p><h2>' + info.completedStages + ' из ' + info.totalStages + ' этапов</h2>' +
-          '<p>Прогресс хранится отдельно и не изменяет проценты, баллы и завершённые уроки других разделов приложения.</p>' +
-          '<div class="ba-progress-bar"><i style="width:' + clamp(info.percent,0,100) + '%"></i></div></div>' +
-          '<div class="ba-progress-number">' + info.percent + '%</div>' +
-        '</section>' +
-
-        '<section class="ba-card"><p class="ba-eyebrow">ПЕРВЫЙ БЕЗОПАСНЫЙ РЕЛИЗ</p><h2>Сейчас открыт BA-01</h2>' +
-          '<p>Остальные 19 уроков показаны в структуре, но остаются в подготовке. Это позволяет проверить новый модуль, не вмешиваясь в остальные части приложения.</p>' +
-          '<div class="ba-actions"><button class="ba-btn ba-btn-secondary" onclick="BusinessArchitecture.openLesson(\'BA-01\')">Открыть финансовую реальность и безубыточность</button></div>' +
-        '</section>' +
-
-        '<section class="ba-card"><p class="ba-eyebrow">ЛЕСТНИЦА ИЗУЧЕНИЯ</p><h2>4 части · 20 глав книги · 20 уроков</h2>' +
-          '<p>Одна глава книги становится одним полноценным уроком. Подразделы главы раскрываются внутри системного разбора, а профессиональные формы становятся практическими примерами.</p>' +
-          '<div class="ba-part-list">' + catalog.parts.map(renderPart).join('') + '</div>' +
-        '</section>' +
-
-        '<section class="ba-card"><p class="ba-eyebrow">ДВА РЕЖИМА РАБОТЫ</p><h2>Маршрут и справочник</h2>' +
-          '<div class="ba-example-list">' +
-            '<div class="ba-example-card"><h3>Проходить маршрут</h3><p>Последовательно изучать материал, разбирать примеры, решать сложные кейсы и собирать собственную архитектуру.</p></div>' +
-            '<div class="ba-example-card"><h3>Использовать как справочник</h3><p>Открывать библиотеку из 99 специализированных материалов без ожидания открытия будущих уроков.</p></div>' +
-          '</div>' +
-        '</section><div class="ba-footer-space"></div>';
-
+        (completed ? '<section class="ba-card ba-course-progress"><div><p class="ba-eyebrow">ВАШ ПРОГРЕСС</p><h2>' + escapeHtml(stageLabels[currentStage]) + '</h2><p>Пройдено ' + completed + ' из 4 разделов первого урока.</p><div class="ba-progress-bar"><i style="width:' + Math.round((completed/4)*100) + '%"></i></div></div></section>' : '') +
+        '<section class="ba-card"><p class="ba-eyebrow">НАЧАЛО КУРСА</p><h2>Финансовая и стратегическая основа</h2><p>Начните с финансовой реальности бизнеса: прибыли, денег, обязательств, безубыточности и доступной мощности.</p><div class="ba-part-list">' + visibleParts + '</div></section>' +
+        '<section class="ba-card"><p class="ba-eyebrow">КАК ПРОХОДИТ ОБУЧЕНИЕ</p><div class="ba-step-strip">' +
+          '<div><b>1</b><span>Разобрать систему</span></div><div><b>2</b><span>Посмотреть рабочие материалы</span></div><div><b>3</b><span>Принять решения по кейсам</span></div><div><b>4</b><span>Собрать свой финансовый контур</span></div>' +
+        '</div></section><div class="ba-footer-space"></div>';
       renderWithAppShell(html, 'home');
-    } catch(error){
-      errorView(error);
-    }
+    } catch(error){ errorView(error); }
   }
-
   function togglePart(partId){
     const node = document.querySelector('[data-ba-part="' + CSS.escape(partId) + '"]');
     if (node) node.classList.toggle('is-open');
@@ -357,52 +360,35 @@
         return Boolean(meta);
       });
       if (!meta || meta.status !== 'available') {
-        safeAlert('Этот урок находится в подготовке. В первом релизе доступен только BA-01.');
+        safeAlert('Этот урок появится позднее.');
         return;
       }
-      loadingView('Открываем урок ' + lessonId);
+      loadingView('Открываем урок');
       const data = await ensureLesson(lessonId);
       runtime.currentLessonId = lessonId;
       const lp = getLessonProgress(lessonId).lesson;
       const completed = lp.completedStages.length;
       const percent = Math.round((completed / data.stages.length) * 100);
-
       const stageCards = data.stages.map(function(stage, index){
         const state = lessonStageState(lessonId, index, data.stages);
         const cls = state.done ? 'is-done' : (!state.unlocked ? 'is-locked' : '');
         const click = state.unlocked ? ' onclick="BusinessArchitecture.openStage(\'' + lessonId + '\',\'' + stage.id + '\')"' : ' disabled';
-        const small = state.done ? 'Завершено' : (state.unlocked ? stage.description : 'Откроется после предыдущего этапа');
-        return '<button class="ba-stage-card ' + cls + '"' + click + '><span class="ba-stage-no">ЭТАП ' + (index + 1) + '</span><b>' + escapeHtml(stage.title) + '</b><small>' + escapeHtml(small) + '</small></button>';
+        const small = state.done ? 'Завершено' : (state.unlocked ? stage.description : 'Откроется после предыдущего раздела');
+        return '<button class="ba-stage-card ' + cls + '"' + click + '><span class="ba-stage-no">РАЗДЕЛ ' + (index + 1) + '</span><b>' + escapeHtml(stage.title) + '</b><small>' + escapeHtml(small) + '</small></button>';
       }).join('');
-
+      const materialsButton = workspaceUnlocked(lessonId)
+        ? '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.renderMyArchitecture()">Мои материалы</button>'
+        : '';
       const html =
-        '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.renderHome()">← К модулю</button><span class="ba-status ' + (lp.completedAt ? 'is-done' : 'is-active') + '">' + (lp.completedAt ? 'урок завершён' : 'урок 1 из 20') + '</span></div>' +
-        '<section class="ba-hero">' +
-          '<p class="ba-eyebrow">ЧАСТЬ ' + escapeHtml(data.part.number) + ' · ГЛАВА ' + escapeHtml(data.lesson.chapter_number) + '</p>' +
-          '<h2>' + escapeHtml(data.lesson.title) + '</h2>' +
-          '<p>' + escapeHtml(data.lesson.subtitle) + '</p>' +
-          '<div class="ba-metric-grid">' +
-            '<div class="ba-metric"><span>Системных экранов</span><b>' + data.stages[0].screen_count + '</b></div>' +
-            '<div class="ba-metric"><span>Примеров</span><b>' + data.stages[1].examples.length + '</b></div>' +
-            '<div class="ba-metric"><span>Кейсов теста</span><b>' + data.stages[2].question_count + '</b></div>' +
-            '<div class="ba-metric"><span>Практических разделов</span><b>' + data.stages[3].sections.length + '</b></div>' +
-          '</div>' +
-          '<div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.continueLesson(\'' + lessonId + '\')">' + (completed ? 'Продолжить урок' : 'Начать системный разбор') + '</button><button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.renderMyArchitecture()">Моя архитектура</button></div>' +
-        '</section>' +
-
-        '<section class="ba-card ba-progress-card"><div><p class="ba-eyebrow">ПРОГРЕСС УРОКА</p><h2>' + completed + ' из ' + data.stages.length + ' этапов</h2><p>' + escapeHtml(data.lesson.completion_result) + '</p><div class="ba-progress-bar"><i style="width:' + percent + '%"></i></div></div><div class="ba-progress-number">' + percent + '%</div></section>' +
-
-        '<section class="ba-card"><p class="ba-eyebrow">ЦЕЛЬ УРОКА</p><h2>Не просто рассчитать одну формулу</h2><p>' + escapeHtml(data.lesson.purpose) + '</p></section>' +
-
-        '<section class="ba-card"><p class="ba-eyebrow">4 ЭТАПА</p><h2>Изучить → увидеть → взвесить → собрать</h2><div class="ba-stage-grid">' + stageCards + '</div></section>' +
-
-        '<section class="ba-card"><p class="ba-eyebrow">РЕЗУЛЬТАТЫ ОБУЧЕНИЯ</p><h2>После BA-01 пользователь способен</h2><ol class="ba-list">' + data.lesson.learning_outcomes.map(function(item){ return '<li>' + escapeHtml(item) + '</li>'; }).join('') + '</ol></section>' +
-        '<div class="ba-footer-space"></div>';
-
+        '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.renderHome()">← К курсу</button><span class="ba-status ' + (lp.completedAt ? 'is-done' : 'is-active') + '">' + (lp.completedAt ? 'Урок завершён' : 'Урок ' + lessonNumber(lessonId)) + '</span></div>' +
+        '<section class="ba-hero ba-hero-compact"><p class="ba-eyebrow">ЧАСТЬ ' + escapeHtml(data.part.number) + ' · ГЛАВА ' + escapeHtml(data.lesson.chapter_number) + '</p><h2>' + escapeHtml(data.lesson.title) + '</h2><p>' + escapeHtml(data.lesson.subtitle) + '</p><div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.continueLesson(\'' + lessonId + '\')">' + (completed ? 'Продолжить' : 'Начать урок') + '</button>' + materialsButton + '</div></section>' +
+        '<section class="ba-card ba-progress-card"><div><p class="ba-eyebrow">ПРОГРЕСС УРОКА</p><h2>' + completed + ' из ' + data.stages.length + ' разделов</h2><div class="ba-progress-bar"><i style="width:' + percent + '%"></i></div></div><div class="ba-progress-number">' + percent + '%</div></section>' +
+        '<section class="ba-card"><p class="ba-eyebrow">ЧТО ДАСТ ЭТОТ УРОК</p><p>' + escapeHtml(data.lesson.purpose) + '</p></section>' +
+        '<section class="ba-card"><p class="ba-eyebrow">СОДЕРЖАНИЕ</p><div class="ba-stage-grid">' + stageCards + '</div></section>' +
+        '<section class="ba-card"><p class="ba-eyebrow">ПОСЛЕ УРОКА ВЫ СМОЖЕТЕ</p><ol class="ba-list">' + data.lesson.learning_outcomes.map(function(item){ return '<li>' + escapeHtml(item) + '</li>'; }).join('') + '</ol></section><div class="ba-footer-space"></div>';
       renderWithAppShell(html, 'home');
     } catch(error){ errorView(error); }
   }
-
   async function continueLesson(lessonId){
     const data = await ensureLesson(lessonId);
     const lp = getLessonProgress(lessonId).lesson;
@@ -463,15 +449,15 @@
 
     const prevDisabled = runtime.screenIndex === 0 ? ' disabled' : '';
     const last = runtime.screenIndex === stage.screens.length - 1;
-    const nextLabel = last ? (stageDone(lessonId,'system_analysis') ? 'Этап завершён' : 'Завершить системный разбор') : 'Следующий экран →';
+    const nextLabel = last ? (stageDone(lessonId,'system_analysis') ? 'Раздел завершён' : 'Завершить раздел') : 'Следующий экран →';
     const nextAction = last ? 'BusinessArchitecture.completeSystemAnalysis(\'' + lessonId + '\')' : 'BusinessArchitecture.moveSystemScreen(1)';
 
     const html =
-      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status is-active">этап 1 из 4</span></div>' +
+      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status is-active">Раздел 1 из 4</span></div>' +
       '<div class="ba-screen-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveSystemScreen(-1)"' + prevDisabled + '>← Назад</button><div class="ba-screen-counter">' + (runtime.screenIndex + 1) + ' из ' + stage.screens.length + '</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + nextAction + '">' + nextLabel + '</button></div>' +
-      '<article class="ba-reading-card"><p class="ba-eyebrow">СИСТЕМНЫЙ РАЗБОР · ' + escapeHtml(screen.type || '') + '</p><h2>' + escapeHtml(screen.title) + '</h2>' +
+      '<article class="ba-reading-card"><p class="ba-eyebrow">ФИНАНСОВАЯ СИСТЕМА</p><h2>' + escapeHtml(screen.title) + '</h2>' +
         (screen.content || []).map(function(p){ return '<p>' + escapeHtml(p) + '</p>'; }).join('') + screenExtraHtml(screen) + '</article>' +
-      '<div class="ba-screen-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveSystemScreen(-1)"' + prevDisabled + '>← Назад</button><div class="ba-screen-counter">Материал сохраняет позицию автоматически</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + nextAction + '">' + nextLabel + '</button></div>' +
+      '<div class="ba-screen-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveSystemScreen(-1)"' + prevDisabled + '>← Назад</button><div class="ba-screen-counter">Позиция сохраняется автоматически</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + nextAction + '">' + nextLabel + '</button></div>' +
       '<div class="ba-footer-space"></div>';
     renderWithAppShell(html, 'home');
   }
@@ -487,7 +473,7 @@
 
   function completeSystemAnalysis(lessonId){
     markStageDone(lessonId, 'system_analysis');
-    safeAlert('Системный разбор завершён. Открыт этап с практическими примерами.');
+    safeAlert('Первый раздел завершён. Теперь можно перейти к практическим материалам.');
     openLesson(lessonId);
   }
 
@@ -497,62 +483,91 @@
     const lp = getLessonProgress(lessonId).lesson;
     const opened = Array.isArray(lp.examplesOpened) ? lp.examplesOpened : [];
     const allOpened = stage.examples.every(function(item){ return opened.includes(item.id); });
-
     const cards = stage.examples.map(function(item){
-      const isOpened = opened.includes(item.id);
-      return '<article class="ba-example-card ' + (isOpened ? 'is-opened' : '') + '">' +
-        '<div class="ba-example-code">' + escapeHtml(item.id) + (isOpened ? ' · ОТКРЫТ' : '') + '</div><h3>' + escapeHtml(item.title) + '</h3><p>' + escapeHtml(item.purpose) + '</p>' +
-        '<div class="ba-example-meta"><div><b>Входные данные</b>' + escapeHtml(item.key_inputs.join(', ')) + '</div><div><b>Результат</b>' + escapeHtml(item.outputs.join(', ')) + '</div><div><b>Владелец и ритм</b>' + escapeHtml(item.owner + ' · ' + item.cadence) + '</div><div><b>Решение</b>' + escapeHtml(item.decision) + '</div></div>' +
-        '<div class="ba-actions"><button class="ba-btn ba-btn-secondary ba-btn-small" onclick="BusinessArchitecture.openExample(\'' + lessonId + '\',\'' + item.id + '\')">Открыть полный пример</button></div>' +
+      const viewed = opened.includes(item.id);
+      return '<article class="ba-example-card ' + (viewed ? 'is-opened' : '') + '">' +
+        '<div class="ba-example-title-row"><h3>' + escapeHtml(item.title) + '</h3>' + (viewed ? '<span class="ba-viewed">Просмотрено</span>' : '') + '</div>' +
+        '<p>' + escapeHtml(item.purpose) + '</p>' +
+        '<div class="ba-actions"><button class="ba-btn ba-btn-secondary ba-btn-small" onclick="BusinessArchitecture.openExample(\'' + lessonId + '\',\'' + item.id + '\')">Посмотреть пример</button></div>' +
       '</article>';
     }).join('');
-
+    const viewedCount = stage.examples.filter(function(item){ return opened.includes(item.id); }).length;
     const html =
-      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status is-active">этап 2 из 4</span></div>' +
-      '<section class="ba-hero"><p class="ba-eyebrow">КАК ЭТО ВЫГЛЯДИТ В БИЗНЕСЕ</p><h2>Четыре разные финансовые модели</h2><p>Этап не повторяет теорию. Он показывает состав данных, расчёты, владельца, ритм использования и решение для каждого рабочего материала.</p><div class="ba-metric-grid"><div class="ba-metric"><span>Открыто</span><b>' + opened.filter(function(id){ return stage.examples.some(function(e){ return e.id === id; }); }).length + '/4</b></div><div class="ba-metric"><span>Всего в библиотеке</span><b>99</b></div><div class="ba-metric"><span>Формат</span><b>HTML</b></div><div class="ba-metric"><span>Статус</span><b>' + (allOpened ? 'готово' : 'изучение') + '</b></div></div></section>' +
-      '<section class="ba-card"><div class="ba-example-list">' + cards + '</div><div class="ba-actions"><button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.openExamplesLibrary()">Открыть всю библиотеку 99 примеров</button>' +
-        '<button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.completeExamples(\'' + lessonId + '\')" ' + (allOpened ? '' : 'disabled') + '>Завершить этап</button></div>' +
-        (!allOpened ? '<div class="ba-note" style="margin-top:12px">Для завершения откройте все четыре примера BA-01. Возвращение в приложение не стирает отметки.</div>' : '') +
+      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status is-active">Раздел 2 из 4</span></div>' +
+      '<section class="ba-hero ba-hero-compact"><p class="ba-eyebrow">ПРАКТИЧЕСКИЕ МАТЕРИАЛЫ</p><h2>Как финансовая система выглядит в работе</h2><p>Посмотрите четыре документа, на которых строятся решения о прибыли, деньгах, безубыточности и росте.</p></section>' +
+      '<section class="ba-card"><div class="ba-section-progress"><span>Просмотрено ' + viewedCount + ' из ' + stage.examples.length + '</span><div class="ba-progress-bar"><i style="width:' + Math.round((viewedCount/stage.examples.length)*100) + '%"></i></div></div><div class="ba-example-list">' + cards + '</div>' +
+        '<div class="ba-actions"><button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.openExamplesLibrary()">Библиотека практических материалов</button><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.completeExamples(\'' + lessonId + '\')" ' + (allOpened ? '' : 'disabled') + '>Продолжить</button></div>' +
+        (!allOpened ? '<div class="ba-note" style="margin-top:12px">Чтобы перейти дальше, посмотрите все четыре материала.</div>' : '') +
       '</section><div class="ba-footer-space"></div>';
     renderWithAppShell(html, 'home');
   }
 
-  function examplesPageUrl(anchor){
-    const page = runtime.catalog && runtime.catalog.examples ? runtime.catalog.examples.page : 'templates/business-architecture-practical-examples-v2.html';
-    const current = String(window.location && window.location.href ? window.location.href : '');
-    const base = /^(https?:|file:)/i.test(current) ? current : 'https://lego-business-system.github.io/lego-mini-app/';
-    const url = new URL(page, base);
-    if (anchor) url.hash = anchor;
-    return url.href;
+  function exampleById(examples, exampleId){
+    return (examples.items || []).find(function(item){ return item.id === exampleId; }) || null;
   }
 
-  function openExternal(url){
+  function exampleTableHtml(example){
+    const head = (example.table.headers || []).map(function(cell){ return '<th>' + escapeHtml(cell) + '</th>'; }).join('');
+    const rows = (example.table.rows || []).map(function(row){ return '<tr>' + row.map(function(cell){ return '<td>' + escapeHtml(cell) + '</td>'; }).join('') + '</tr>'; }).join('');
+    return '<div class="ba-example-table-wrap"><table class="ba-example-table"><thead><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }
+
+  async function renderExample(lessonId, exampleId, fromLibrary){
     try {
-      const tg = window.Telegram && window.Telegram.WebApp;
-      if (tg && typeof tg.openLink === 'function' && /^https?:/i.test(url)) {
-        tg.openLink(url);
-        return;
-      }
-    } catch(e) {}
-    window.open(url, '_blank', 'noopener,noreferrer');
+      const examples = await ensureExamples();
+      const example = exampleById(examples, exampleId);
+      if (!example) throw new Error('Практический материал не найден.');
+      if (lessonId) updateLessonProgress(lessonId, function(lp){ if (!lp.examplesOpened.includes(exampleId)) lp.examplesOpened.push(exampleId); });
+      const kpis = (example.kpis || []).map(function(item){ return '<div class="ba-example-kpi"><span>' + escapeHtml(item.label) + '</span><b>' + escapeHtml(item.value) + '</b></div>'; }).join('');
+      const checks = (example.checks || []).map(function(item){ return '<li>' + escapeHtml(item) + '</li>'; }).join('');
+      const back = fromLibrary ? 'BusinessArchitecture.openExamplesLibrary()' : 'BusinessArchitecture.renderBusinessExamples(\'' + (lessonId || 'BA-01') + '\')';
+      const html =
+        '<div class="ba-topline"><button class="ba-back" onclick="' + back + '">← Назад</button></div>' +
+        '<section class="ba-hero ba-hero-compact"><p class="ba-eyebrow">' + escapeHtml(example.category) + '</p><h2>' + escapeHtml(example.title) + '</h2><p>' + escapeHtml(example.purpose) + '</p></section>' +
+        '<section class="ba-card"><div class="ba-example-kpi-grid">' + kpis + '</div>' + exampleTableHtml(example) + '</section>' +
+        '<section class="ba-two-column"><div class="ba-card"><p class="ba-eyebrow">КАК ИСПОЛЬЗУЕТСЯ</p><p>' + escapeHtml(example.proof) + '</p><div class="ba-example-facts"><div><span>Ответственный</span><b>' + escapeHtml(example.owner) + '</b></div><div><span>Периодичность</span><b>' + escapeHtml(example.cadence) + '</b></div></div></div><div class="ba-card"><p class="ba-eyebrow">КАКОЕ РЕШЕНИЕ ПОМОГАЕТ ПРИНЯТЬ</p><p>' + escapeHtml(example.decision) + '</p></div></section>' +
+        '<section class="ba-card"><p class="ba-eyebrow">ПРИЗНАКИ РАБОЧЕЙ МОДЕЛИ</p><ul class="ba-list">' + checks + '</ul><div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="' + back + '">Вернуться</button></div></section><div class="ba-footer-space"></div>';
+      renderWithAppShell(html, 'home');
+    } catch(error){ errorView(error); }
   }
 
-  function openExample(lessonId, exampleId){
-    updateLessonProgress(lessonId, function(lp){
-      if (!lp.examplesOpened.includes(exampleId)) lp.examplesOpened.push(exampleId);
-    });
-    openExternal(examplesPageUrl(exampleId));
-    setTimeout(function(){
-      if (runtime.currentStageId === 'business_examples') renderBusinessExamples(lessonId);
-    }, 120);
+  async function openExample(lessonId, exampleId){
+    return renderExample(lessonId, exampleId, false);
   }
 
   async function openExamplesLibrary(){
-    try { await ensureCatalog(); }
-    catch(e) {}
-    openExternal(examplesPageUrl('top'));
+    try {
+      const examples = await ensureExamples();
+      const categories = ['Все'].concat(examples.categories || []);
+      const options = categories.map(function(cat){ return '<option value="' + escapeHtml(cat) + '">' + escapeHtml(cat) + '</option>'; }).join('');
+      const cards = (examples.items || []).map(function(item){
+        const search = (item.title + ' ' + item.category + ' ' + item.purpose).toLowerCase();
+        return '<article class="ba-library-card" data-category="' + escapeHtml(item.category) + '" data-search="' + escapeHtml(search) + '"><p class="ba-eyebrow">' + escapeHtml(item.category) + '</p><h3>' + escapeHtml(item.title) + '</h3><p>' + escapeHtml(item.purpose) + '</p><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.renderExample(null,\'' + item.id + '\',true)">Открыть</button></article>';
+      }).join('');
+      const html =
+        '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.renderHome()">← К курсу</button></div>' +
+        '<section class="ba-hero ba-hero-compact"><p class="ba-eyebrow">ПРАКТИЧЕСКИЕ МАТЕРИАЛЫ</p><h2>Библиотека управленческих документов</h2><p>Финансовые модели, карты процессов, реестры, дашборды и другие материалы в заполненном рабочем виде.</p></section>' +
+        '<section class="ba-card"><div class="ba-library-controls"><input id="ba-library-search" type="search" placeholder="Найти материал" oninput="BusinessArchitecture.filterExampleLibrary()"><select id="ba-library-category" onchange="BusinessArchitecture.filterExampleLibrary()">' + options + '</select></div><div class="ba-library-list">' + cards + '</div><div id="ba-library-empty" class="ba-note" style="display:none">По вашему запросу ничего не найдено.</div></section><div class="ba-footer-space"></div>';
+      renderWithAppShell(html, 'home');
+    } catch(error){ errorView(error); }
   }
 
+  function filterExampleLibrary(){
+    const input = document.getElementById('ba-library-search');
+    const select = document.getElementById('ba-library-category');
+    const query = String(input && input.value || '').trim().toLowerCase();
+    const category = String(select && select.value || 'Все');
+    let visible = 0;
+    document.querySelectorAll('.ba-library-card').forEach(function(card){
+      const okQuery = !query || String(card.dataset.search || '').includes(query);
+      const okCategory = category === 'Все' || card.dataset.category === category;
+      const show = okQuery && okCategory;
+      card.style.display = show ? '' : 'none';
+      if (show) visible += 1;
+    });
+    const empty = document.getElementById('ba-library-empty');
+    if (empty) empty.style.display = visible ? 'none' : '';
+  }
   function completeExamples(lessonId){
     const lesson = runtime.lessons[lessonId];
     const stage = lesson && lesson.stages.find(function(item){ return item.id === 'business_examples'; });
@@ -563,7 +578,7 @@
       return;
     }
     markStageDone(lessonId, 'business_examples');
-    safeAlert('Практические примеры изучены. Открыта лаборатория решений.');
+    safeAlert('Практические материалы просмотрены. Теперь можно перейти к задачам.');
     openLesson(lessonId);
   }
 
@@ -579,9 +594,8 @@
 
   function answerSingle(questionId, value){
     updateLessonProgress(runtime.currentLessonId, function(lp){ lp.quiz.draft[questionId] = Number(value); });
-    renderQuiz(runtime.currentLessonId, runtime.quizIndex);
+    refreshQuizAnsweredCount();
   }
-
   function answerMultiple(questionId, value, checked){
     updateLessonProgress(runtime.currentLessonId, function(lp){
       const current = Array.isArray(lp.quiz.draft[questionId]) ? lp.quiz.draft[questionId].slice() : [];
@@ -591,10 +605,12 @@
       if (!checked && pos >= 0) current.splice(pos, 1);
       lp.quiz.draft[questionId] = current.sort(function(a,b){ return a-b; });
     });
+    refreshQuizAnsweredCount();
   }
 
   function answerNumeric(questionId, value){
     updateLessonProgress(runtime.currentLessonId, function(lp){ lp.quiz.draft[questionId] = String(value); });
+    refreshQuizAnsweredCount();
   }
 
   function moveOrder(questionId, itemPosition, delta){
@@ -608,13 +624,36 @@
       lp.quiz.order[questionId] = order;
       lp.quiz.draft[questionId] = order;
     });
-    renderQuiz(runtime.currentLessonId, runtime.quizIndex);
+    renderQuiz(runtime.currentLessonId, runtime.quizIndex, true);
+  }
+
+  function confirmOrder(questionId){
+    updateLessonProgress(runtime.currentLessonId, function(lp){
+      const current = Array.isArray(lp.quiz.order[questionId]) ? lp.quiz.order[questionId].slice() : [];
+      lp.quiz.draft[questionId] = current;
+    });
+    refreshQuizAnsweredCount();
+    const button = document.querySelector('[data-ba-confirm-order="' + CSS.escape(questionId) + '"]');
+    if (button) { button.textContent = 'Порядок сохранён'; button.disabled = true; }
+  }
+
+  function refreshQuizAnsweredCount(){
+    const lessonId = runtime.currentLessonId || 'BA-01';
+    const lesson = runtime.lessons[lessonId];
+    if (!lesson) return;
+    const stage = lesson.stages.find(function(item){ return item.id === 'decision_lab'; });
+    const lp = getLessonProgress(lessonId).lesson;
+    const count = stage.questions.filter(function(item){ return questionAnswered(item, lp); }).length;
+    document.querySelectorAll('[data-ba-answered]').forEach(function(node){ node.textContent = count; });
   }
 
   function questionAnswered(q, lp){
     const answer = q.type === 'ordering' ? lp.quiz.order[q.id] : lp.quiz.draft[q.id];
     if (q.type === 'multiple') return Array.isArray(answer) && answer.length > 0;
-    if (q.type === 'ordering') return Array.isArray(answer) && answer.length === q.items.length;
+    if (q.type === 'ordering') {
+      const confirmed = lp.quiz.draft[q.id];
+      return Array.isArray(confirmed) && confirmed.length === q.items.length;
+    }
     if (q.type === 'numeric') return String(answer === undefined ? '' : answer).trim() !== '';
     return answer !== undefined && answer !== null && answer !== '';
   }
@@ -637,14 +676,15 @@
     }
     if (q.type === 'ordering') {
       const order = Array.isArray(answer) ? answer : q.items.map(function(_,i){ return i; });
+      const confirmed = Array.isArray(lp.quiz.draft[q.id]);
       return '<div class="ba-order-list">' + order.map(function(originalIndex, position){
         return '<div class="ba-order-row"><span class="ba-order-index">' + (position + 1) + '</span><span>' + escapeHtml(q.items[originalIndex]) + '</span><span class="ba-order-actions"><button onclick="BusinessArchitecture.moveOrder(\'' + q.id + '\',' + position + ',-1)" ' + (position === 0 ? 'disabled' : '') + '>↑</button><button onclick="BusinessArchitecture.moveOrder(\'' + q.id + '\',' + position + ',1)" ' + (position === order.length - 1 ? 'disabled' : '') + '>↓</button></span></div>';
-      }).join('') + '</div>';
+      }).join('') + '</div><div class="ba-actions"><button data-ba-confirm-order="' + escapeHtml(q.id) + '" class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.confirmOrder(\'' + q.id + '\')" ' + (confirmed ? 'disabled' : '') + '>' + (confirmed ? 'Порядок сохранён' : 'Подтвердить порядок') + '</button></div>';
     }
     return '';
   }
 
-  async function renderQuiz(lessonId, requestedIndex){
+  async function renderQuiz(lessonId, requestedIndex, focusQuestion){
     const data = await ensureLesson(lessonId);
     const stage = data.stages.find(function(item){ return item.id === 'decision_lab'; });
     ensureQuizDraft(lessonId, stage.questions);
@@ -654,26 +694,22 @@
     const q = stage.questions[runtime.quizIndex];
     const answeredCount = stage.questions.filter(function(item){ return questionAnswered(item, lp); }).length;
     const last = runtime.quizIndex === stage.questions.length - 1;
-
     const html =
-      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status is-warning">этап 3 из 4</span></div>' +
-      '<section class="ba-hero"><p class="ba-eyebrow">ЛАБОРАТОРИЯ РЕШЕНИЙ</p><h2>Не на память, а на управленческое мышление</h2><p>Материал урока и практические примеры можно держать открытыми. Неправильные варианты намеренно правдоподобны.</p><div class="ba-metric-grid"><div class="ba-metric"><span>Заданий</span><b>' + stage.question_count + '</b></div><div class="ba-metric"><span>Отвечено</span><b>' + answeredCount + '</b></div><div class="ba-metric"><span>Проходной</span><b>' + stage.pass_score + '%</b></div><div class="ba-metric"><span>Критические</span><b>обяз.</b></div></div></section>' +
-      '<div class="ba-screen-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveQuiz(-1)" ' + (runtime.quizIndex === 0 ? 'disabled' : '') + '>← Назад</button><div class="ba-screen-counter">Вопрос ' + (runtime.quizIndex + 1) + ' из ' + stage.questions.length + '</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + (last ? 'BusinessArchitecture.submitQuiz(\'' + lessonId + '\')' : 'BusinessArchitecture.moveQuiz(1)') + '">' + (last ? 'Проверить решение' : 'Следующий →') + '</button></div>' +
-      '<article class="ba-question-card"><div class="ba-question-top"><span class="ba-question-skill">' + escapeHtml(q.skill) + '</span>' + (q.critical ? '<span class="ba-critical">КРИТИЧЕСКИЙ</span>' : '') + '</div>' +
-        (q.case ? '<div class="ba-case">' + escapeHtml(q.case) + '</div>' : '') +
-        '<h2>' + escapeHtml(q.question) + '</h2>' + questionInputHtml(q, lp) + '</article>' +
-      '<div class="ba-screen-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveQuiz(-1)" ' + (runtime.quizIndex === 0 ? 'disabled' : '') + '>← Назад</button><div class="ba-screen-counter">Ответы сохраняются локально</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + (last ? 'BusinessArchitecture.submitQuiz(\'' + lessonId + '\')' : 'BusinessArchitecture.moveQuiz(1)') + '">' + (last ? 'Проверить решение' : 'Следующий →') + '</button></div><div class="ba-footer-space"></div>';
-    renderWithAppShell(html, 'home');
+      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status is-warning">Раздел 3 из 4</span></div>' +
+      '<section class="ba-card ba-quiz-intro"><p class="ba-eyebrow">УПРАВЛЕНЧЕСКИЕ ЗАДАЧИ</p><h2>Разбор финансовых решений</h2><p>В каждом задании нужно сопоставить факты, ограничения и последствия. К материалам урока можно возвращаться в любой момент.</p><div class="ba-quiz-line"><span>Отвечено <b data-ba-answered>' + answeredCount + '</b> из ' + stage.questions.length + '</span><span>Для прохождения — ' + stage.pass_score + '% и без ошибок в ключевых вопросах</span></div></section>' +
+      '<div class="ba-screen-nav ba-quiz-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveQuiz(-1)" ' + (runtime.quizIndex === 0 ? 'disabled' : '') + '>← Назад</button><div class="ba-screen-counter">Вопрос ' + (runtime.quizIndex + 1) + ' из ' + stage.questions.length + '</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + (last ? 'BusinessArchitecture.submitQuiz(\'' + lessonId + '\')' : 'BusinessArchitecture.moveQuiz(1)') + '">' + (last ? 'Проверить ответы' : 'Следующий →') + '</button></div>' +
+      '<article class="ba-question-card"><div class="ba-question-top"><span class="ba-question-skill">' + escapeHtml(q.skill) + '</span>' + (q.critical ? '<span class="ba-critical">КЛЮЧЕВОЙ ВОПРОС</span>' : '') + '</div>' +
+        (q.case ? '<div class="ba-case">' + escapeHtml(q.case) + '</div>' : '') + '<h2>' + escapeHtml(q.question) + '</h2>' + questionInputHtml(q, lp) + '</article>' +
+      '<div class="ba-screen-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveQuiz(-1)" ' + (runtime.quizIndex === 0 ? 'disabled' : '') + '>← Назад</button><div class="ba-screen-counter">Ответы сохраняются автоматически</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + (last ? 'BusinessArchitecture.submitQuiz(\'' + lessonId + '\')' : 'BusinessArchitecture.moveQuiz(1)') + '">' + (last ? 'Проверить ответы' : 'Следующий →') + '</button></div><div class="ba-footer-space"></div>';
+    renderWithAppShell(html, 'home', focusQuestion ? {target:'.ba-question-card'} : {});
   }
-
   function moveQuiz(delta){
     const lessonId = runtime.currentLessonId || 'BA-01';
     const lesson = runtime.lessons[lessonId];
     const stage = lesson.stages.find(function(item){ return item.id === 'decision_lab'; });
     runtime.quizIndex = clamp(runtime.quizIndex + Number(delta || 0), 0, stage.questions.length - 1);
-    renderQuiz(lessonId, runtime.quizIndex);
+    renderQuiz(lessonId, runtime.quizIndex, true);
   }
-
   function arraysEqual(a,b){
     if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
     for (let i=0;i<a.length;i++) if (Number(a[i]) !== Number(b[i])) return false;
@@ -695,9 +731,9 @@
     const lp = getLessonProgress(lessonId).lesson;
     const missing = stage.questions.filter(function(q){ return !questionAnswered(q, lp); });
     if (missing.length) {
-      safeAlert('Не отвечено вопросов: ' + missing.length + '. Заполните все задания перед проверкой.');
+      safeAlert('Осталось без ответа: ' + missing.length + '. Заполните все задания перед проверкой.');
       runtime.quizIndex = stage.questions.findIndex(function(q){ return missing[0].id === q.id; });
-      return renderQuiz(lessonId, runtime.quizIndex);
+      return renderQuiz(lessonId, runtime.quizIndex, true);
     }
 
     const results = stage.questions.map(function(q){ return {id:q.id, correct:evaluateQuestion(q,lp), critical:Boolean(q.critical)}; });
@@ -730,26 +766,22 @@
     const lp = getLessonProgress(lessonId).lesson;
     const result = lp.quiz.lastResult;
     if (!result) return renderQuiz(lessonId,0);
-
-    const reviews = stage.questions.map(function(q){
+    const reviews = stage.questions.map(function(q, index){
       const r = result.results.find(function(item){ return item.id === q.id; });
-      return '<details class="ba-review-item ' + (r && r.correct ? 'is-correct' : 'is-wrong') + '"><summary>' + (r && r.correct ? 'Верно' : 'Нужно пересмотреть') + ' · ' + escapeHtml(q.id) + ' · ' + escapeHtml(q.skill) + '</summary><div class="ba-review-body"><b>Вопрос:</b> ' + escapeHtml(q.question) + '<br><br><b>Ваш ответ:</b> ' + escapeHtml(answerDisplay(q,lp)) + '<br><br><b>Разбор:</b> ' + escapeHtml(q.explanation || '') + '</div></details>';
+      return '<details class="ba-review-item ' + (r && r.correct ? 'is-correct' : 'is-wrong') + '"><summary>' + (r && r.correct ? 'Ответ обоснован' : 'Нужно пересмотреть') + ' · Вопрос ' + (index + 1) + ' · ' + escapeHtml(q.skill) + '</summary><div class="ba-review-body"><b>Задание:</b> ' + escapeHtml(q.question) + '<br><br><b>Ваш ответ:</b> ' + escapeHtml(answerDisplay(q,lp)) + '<br><br><b>Разбор:</b> ' + escapeHtml(q.explanation || '') + '</div></details>';
     }).join('');
-
     const html =
-      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status ' + (result.passed ? 'is-done' : 'is-warning') + '">' + (result.passed ? 'этап пройден' : 'нужна повторная попытка') + '</span></div>' +
-      '<section class="ba-card"><p class="ba-eyebrow">РЕЗУЛЬТАТ ЛАБОРАТОРИИ</p><h2>' + (result.passed ? 'Управленческая логика подтверждена' : 'Результат пока не проходит ворота') + '</h2><div class="ba-result-summary" style="margin-top:14px"><div class="ba-result-box"><span>Результат</span><b>' + result.score + '%</b></div><div class="ba-result-box"><span>Верно</span><b>' + result.correctCount + '/' + result.total + '</b></div><div class="ba-result-box"><span>Критические</span><b>' + (result.criticalPassed ? 'пройдены' : 'ошибка') + '</b></div></div>' +
-        '<div class="ba-note ' + (result.passed ? 'ba-note-teal' : 'ba-note-danger') + '" style="margin-top:13px">' + (result.passed ? 'Открыта практическая сборка архитектуры.' : 'Для прохождения нужно не менее ' + stage.pass_score + '% и правильное решение всех критических вопросов.') + '</div>' +
-        '<div class="ba-actions">' + (result.passed ? '<button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.openStage(\'' + lessonId + '\',\'architecture_assembly\')">Перейти к сборке</button>' : '<button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.restartQuiz(\'' + lessonId + '\')">Новая попытка</button>') + '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">К уроку</button></div>' +
-      '</section>' +
-      '<section class="ba-card"><p class="ba-eyebrow">ПОДРОБНЫЙ РАЗБОР</p><h2>Почему варианты выглядят правдоподобно</h2><p>Раскройте задания. Объяснение показывает не только правильный ответ, но и ошибку порядка, данных, мощности, денег или риска.</p>' + reviews + '</section><div class="ba-footer-space"></div>';
+      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status ' + (result.passed ? 'is-done' : 'is-warning') + '">' + (result.passed ? 'Тест пройден' : 'Нужна новая попытка') + '</span></div>' +
+      '<section class="ba-card"><p class="ba-eyebrow">РЕЗУЛЬТАТ</p><h2>' + (result.passed ? 'Вы готовы перейти к практической работе' : 'Часть решений нужно пересмотреть') + '</h2><div class="ba-result-summary" style="margin-top:14px"><div class="ba-result-box"><span>Итог</span><b>' + result.score + '%</b></div><div class="ba-result-box"><span>Правильных ответов</span><b>' + result.correctCount + '/' + result.total + '</b></div><div class="ba-result-box"><span>Ключевые вопросы</span><b>' + (result.criticalPassed ? 'без ошибок' : 'есть ошибки') + '</b></div></div>' +
+        '<div class="ba-note ' + (result.passed ? 'ba-note-teal' : 'ba-note-danger') + '" style="margin-top:13px">' + (result.passed ? 'Теперь можно собрать финансовый контур своего или учебного бизнеса.' : 'Для прохождения нужно набрать не менее ' + stage.pass_score + '% и без ошибок решить ключевые вопросы.') + '</div>' +
+        '<div class="ba-actions">' + (result.passed ? '<button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.openStage(\'' + lessonId + '\',\'architecture_assembly\')">Перейти к практике</button>' : '<button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.restartQuiz(\'' + lessonId + '\')">Пройти ещё раз</button>') + '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">К уроку</button></div></section>' +
+      '<section class="ba-card"><p class="ba-eyebrow">РАЗБОР ОТВЕТОВ</p><h2>Логика каждого решения</h2><p>Откройте задания, чтобы увидеть, какие данные и последствия нужно было учесть.</p>' + reviews + '</section><div class="ba-footer-space"></div>';
     renderWithAppShell(html, 'home');
   }
-
   function restartQuiz(lessonId){
     updateLessonProgress(lessonId, function(lp){ lp.quiz.draft = {}; lp.quiz.order = {}; lp.quiz.lastResult = null; });
     runtime.quizIndex = 0;
-    renderQuiz(lessonId,0);
+    renderQuiz(lessonId,0,false);
   }
 
   function routeInfo(routeId){
@@ -815,6 +847,7 @@
   }
 
   async function renderWorkspace(lessonId, requestedIndex){
+    if (!workspaceUnlocked(lessonId)) { safeAlert('Мои материалы откроются после прохождения управленческих задач.'); return openLesson(lessonId); }
     const lesson = await ensureLesson(lessonId);
     const stage = lesson.stages.find(function(item){ return item.id === 'architecture_assembly'; });
     const lp = getLessonProgress(lessonId).lesson;
@@ -825,8 +858,8 @@
       const routes = stage.routes.map(function(route){
         return '<button class="ba-route-card" onclick="BusinessArchitecture.chooseWorkspaceRoute(\'' + lessonId + '\',\'' + route.id + '\')"><b>' + escapeHtml(route.title) + '</b><p>' + escapeHtml(route.rule) + '</p></button>';
       }).join('');
-      const html = '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status is-active">этап 4 из 4</span></div>' +
-        '<section class="ba-hero"><p class="ba-eyebrow">СБОРКА АРХИТЕКТУРЫ</p><h2>Выберите контекст применения</h2><p>Требования к глубине одинаковы. Меняется только источник данных: факт, проектные допущения или учебный кейс.</p></section>' +
+      const html = '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status is-active">Раздел 4 из 4</span></div>' +
+        '<section class="ba-hero"><p class="ba-eyebrow">МОЙ ФИНАНСОВЫЙ КОНТУР</p><h2>К какой ситуации применяем материал?</h2><p>Выберите действующий бизнес, проектируемую модель или учебный кейс. Требования к обоснованию решений остаются одинаковыми.</p></section>' +
         '<section class="ba-card"><div class="ba-route-list">' + routes + '</div></section><div class="ba-footer-space"></div>';
       return renderWithAppShell(html,'home');
     }
@@ -844,9 +877,9 @@
     }).join('');
 
     const html =
-      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status is-active">этап 4 из 4</span></div>' +
-      '<section class="ba-card"><div class="ba-workspace-head"><div><p class="ba-eyebrow">МОЯ АРХИТЕКТУРА · ' + escapeHtml(route.title) + '</p><h2>' + escapeHtml(section.title) + '</h2><p>' + escapeHtml(route.rule) + '</p></div><b class="ba-progress-number">' + complete.percent + '%</b></div><div class="ba-progress-bar"><i style="width:' + complete.percent + '%"></i></div></section>' +
-      '<section class="ba-card"><div class="ba-workspace-fields">' + fields + '<div class="ba-field-block"><label>Доказательство завершения</label><textarea class="ba-textarea" oninput="BusinessArchitecture.updateWorkspaceEvidence(\'' + lessonId + '\',\'' + section.id + '\',this.value)">' + escapeHtml(data.evidence || '') + '</textarea><span class="ba-field-hint">Критерий: ' + escapeHtml(section.completion_evidence) + '</span></div></div><div class="ba-completeness"><span data-ba-saved class="ba-saved">Сохраняется локально</span><b>' + overall.filled + '/' + overall.total + '</b></div></section>' +
+      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status is-active">Раздел 4 из 4</span></div>' +
+      '<section class="ba-card"><div class="ba-workspace-head"><div><p class="ba-eyebrow">МОИ МАТЕРИАЛЫ · ' + escapeHtml(route.title) + '</p><h2>' + escapeHtml(section.title) + '</h2><p>' + escapeHtml(route.rule) + '</p></div><b class="ba-progress-number">' + complete.percent + '%</b></div><div class="ba-progress-bar"><i style="width:' + complete.percent + '%"></i></div></section>' +
+      '<section class="ba-card"><div class="ba-workspace-fields">' + fields + '<div class="ba-field-block"><label>Доказательство завершения</label><textarea class="ba-textarea" oninput="BusinessArchitecture.updateWorkspaceEvidence(\'' + lessonId + '\',\'' + section.id + '\',this.value)">' + escapeHtml(data.evidence || '') + '</textarea><span class="ba-field-hint">Критерий: ' + escapeHtml(section.completion_evidence) + '</span></div></div><div class="ba-completeness"><span data-ba-saved class="ba-saved">Черновик сохраняется автоматически</span><b>Заполнено ' + complete.filled + ' из ' + complete.total + '</b></div></section>' +
       '<div class="ba-screen-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveWorkspace(-1)" ' + (runtime.workspaceSectionIndex === 0 ? 'disabled' : '') + '>← Предыдущий раздел</button><div class="ba-screen-counter">Раздел ' + (runtime.workspaceSectionIndex + 1) + ' из ' + stage.sections.length + '</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="BusinessArchitecture.moveWorkspace(1)">' + (runtime.workspaceSectionIndex === stage.sections.length - 1 ? 'К итоговому решению →' : 'Следующий раздел →') + '</button></div><div class="ba-footer-space"></div>';
     renderWithAppShell(html,'home');
   }
@@ -872,18 +905,16 @@
       ['decision_later','Решение, которое откладывается'],
       ['metric','Контрольная метрика'],
       ['review_date','Дата повторной проверки'],
-      ['material_note','Рабочий материал: название, ссылка или описание файла']
+      ['material_note','Какой рабочий материал подтверждает решение']
     ];
     const form = fields.map(function(row){ return '<div class="ba-field-block"><label>' + escapeHtml(row[1]) + '</label><textarea class="ba-textarea" oninput="BusinessArchitecture.updateWorkspaceFinal(\'' + lessonId + '\',\'' + row[0] + '\',this.value)">' + escapeHtml(final[row[0]] || '') + '</textarea></div>'; }).join('');
-
     const html =
-      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.renderWorkspace(\'' + lessonId + '\',' + (stage.sections.length - 1) + ')">← К разделам</button><span class="ba-status ' + (info.complete ? 'is-done' : 'is-warning') + '">' + info.percent + '% заполнено</span></div>' +
-      '<section class="ba-hero"><p class="ba-eyebrow">ИТОГ BA-01</p><h2>Финансово-стратегический паспорт</h2><p>Практика завершается не загрузкой файла, а зафиксированным фактом, выводом, решением, метрикой и датой повторной проверки.</p><div class="ba-metric-grid"><div class="ba-metric"><span>Заполнено</span><b>' + info.filled + '/' + info.total + '</b></div><div class="ba-metric"><span>Разделов</span><b>' + stage.sections.length + '</b></div><div class="ba-metric"><span>Режим</span><b>' + escapeHtml(routeInfo(lp.workspace.route).title) + '</b></div><div class="ba-metric"><span>Готовность</span><b>' + info.percent + '%</b></div></div></section>' +
-      '<section class="ba-card"><div class="ba-workspace-fields">' + form + '</div><div class="ba-completeness"><span data-ba-saved class="ba-saved">Сохраняется локально</span><b>' + info.percent + '%</b></div><div class="ba-actions"><button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.exportWorkspace(\'' + lessonId + '\')">Скачать результат JSON</button><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.completeWorkspace(\'' + lessonId + '\')" ' + (info.complete ? '' : 'disabled') + '>Завершить BA-01</button></div>' +
-      (!info.complete ? '<div class="ba-note" style="margin-top:13px">Для завершения заполните все поля девяти разделов, доказательства и итоговое решение.</div>' : '') + '</section><div class="ba-footer-space"></div>';
+      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.renderWorkspace(\'' + lessonId + '\',' + (stage.sections.length - 1) + ')">← К разделам</button><span class="ba-status ' + (info.complete ? 'is-done' : 'is-warning') + '">' + (info.complete ? 'Готово к завершению' : 'Заполните оставшиеся поля') + '</span></div>' +
+      '<section class="ba-hero ba-hero-compact"><p class="ba-eyebrow">ИТОГОВОЕ РЕШЕНИЕ</p><h2>Финансовый контур бизнеса</h2><p>Зафиксируйте вывод, решение, контрольную метрику и дату повторной проверки.</p></section>' +
+      '<section class="ba-card"><div class="ba-workspace-fields">' + form + '</div><div class="ba-completeness"><span data-ba-saved class="ba-saved">Черновик сохраняется автоматически</span><b>' + info.percent + '%</b></div><div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.completeWorkspace(\'' + lessonId + '\')" ' + (info.complete ? '' : 'disabled') + '>Завершить работу</button></div>' +
+      (!info.complete ? '<div class="ba-note" style="margin-top:13px">Для завершения заполните все разделы и итоговое решение.</div>' : '') + '</section><div class="ba-footer-space"></div>';
     renderWithAppShell(html,'home');
   }
-
   function completeWorkspace(lessonId){
     const lesson = runtime.lessons[lessonId];
     const stage = lesson.stages.find(function(item){ return item.id === 'architecture_assembly'; });
@@ -898,7 +929,7 @@
       if (!lp.completedStages.includes('architecture_assembly')) lp.completedStages.push('architecture_assembly');
       lp.completedAt = lp.completedAt || nowIso();
     });
-    safeAlert('BA-01 завершён. Финансово-стратегический паспорт сохранён в разделе «Моя архитектура».');
+    safeAlert('Работа завершена. Финансовый контур сохранён в разделе «Мои материалы».');
     renderMyArchitecture();
   }
 
@@ -928,23 +959,27 @@
       await ensureCatalog();
       const lesson = await ensureLesson('BA-01');
       const lp = getLessonProgress('BA-01').lesson;
+      if (!workspaceUnlocked('BA-01')) {
+        const html = '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.renderHome()">← К курсу</button></div>' +
+          '<section class="ba-card ba-empty"><p class="ba-eyebrow">МОИ МАТЕРИАЛЫ</p><h2>Здесь появится ваш финансовый контур</h2><p>Сначала пройдите финансовую систему, посмотрите практические материалы и решите управленческие задачи. После этого откроется рабочая форма.</p><div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.continueRoute()">Продолжить урок</button></div></section>';
+        return renderWithAppShell(html,'home');
+      }
       const stage4 = lesson.stages.find(function(item){ return item.id === 'architecture_assembly'; });
       const info = workspaceCompleteness(lp, stage4);
       const route = lp.workspace.route ? routeInfo(lp.workspace.route) : null;
       const sections = stage4.sections.map(function(section, index){
         const c = sectionCompleteness(lp, section);
-        return '<button class="ba-lesson-row ' + (c.percent === 100 ? 'is-done' : '') + '" onclick="BusinessArchitecture.renderWorkspace(\'BA-01\',' + index + ')"><span class="ba-lesson-index">' + (index+1) + '</span><span><b>' + escapeHtml(section.title) + '</b><small>' + c.filled + ' из ' + c.total + ' полей</small></span><span class="ba-status ' + (c.percent === 100 ? 'is-done' : '') + '">' + c.percent + '%</span></button>';
+        const label = c.percent === 100 ? 'готово' : (c.filled ? 'в работе' : 'не начато');
+        return '<button class="ba-lesson-row ' + (c.percent === 100 ? 'is-done' : '') + '" onclick="BusinessArchitecture.renderWorkspace(\'BA-01\',' + index + ')"><span class="ba-lesson-index">' + (index+1) + '</span><span><b>' + escapeHtml(section.title.replace(/^\d+\.\s*/,'')) + '</b><small>' + escapeHtml(section.completion_evidence) + '</small></span><span class="ba-status ' + (c.percent === 100 ? 'is-done' : '') + '">' + label + '</span></button>';
       }).join('');
-
       const html =
-        '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.renderHome()">← К модулю</button><span class="ba-status ' + (lp.completedAt ? 'is-done' : 'is-active') + '">' + (lp.completedAt ? 'BA-01 завершён' : 'в работе') + '</span></div>' +
-        '<section class="ba-hero"><p class="ba-eyebrow">МОЯ АРХИТЕКТУРА</p><h2>Финансово-стратегический паспорт</h2><p>Здесь накапливается не отметка о просмотре, а рабочая версия вашей бизнес-системы.</p><div class="ba-metric-grid"><div class="ba-metric"><span>Этапы BA-01</span><b>' + lp.completedStages.length + '/4</b></div><div class="ba-metric"><span>Практика</span><b>' + info.percent + '%</b></div><div class="ba-metric"><span>Режим</span><b>' + escapeHtml(route ? route.title : 'не выбран') + '</b></div><div class="ba-metric"><span>Статус</span><b>' + (lp.completedAt ? 'готово' : 'сборка') + '</b></div></div><div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.renderWorkspace(\'BA-01\')">Продолжить сборку</button><button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.exportWorkspace(\'BA-01\')">Скачать JSON</button></div></section>' +
-        '<section class="ba-card"><p class="ba-eyebrow">9 РАЗДЕЛОВ</p><h2>Степень готовности</h2><div class="ba-lesson-list">' + sections + '</div></section>' +
-        '<section class="ba-card"><p class="ba-eyebrow">СЛЕДУЮЩИЙ УРОВЕНЬ</p><h2>Остальные элементы будут добавляться по урокам</h2><p>Стратегия, поток ценности, процессы, люди, данные, риски, капитал, рост и контрольная карта появятся после подготовки соответствующих уроков BA-02 — BA-20.</p></section><div class="ba-footer-space"></div>';
+        '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.renderHome()">← К курсу</button><span class="ba-status ' + (lp.completedAt ? 'is-done' : 'is-active') + '">' + (lp.completedAt ? 'Работа завершена' : 'Черновик') + '</span></div>' +
+        '<section class="ba-hero ba-hero-compact"><p class="ba-eyebrow">МОИ МАТЕРИАЛЫ</p><h2>Финансовый контур бизнеса</h2><p>Здесь собираются ваши расчёты, правила учёта и решения по итогам первого урока.</p><div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.renderWorkspace(\'BA-01\')">Продолжить заполнение</button></div></section>' +
+        '<section class="ba-card"><div class="ba-material-summary"><div><span>Готовность</span><b>' + info.percent + '%</b></div><div><span>Контекст</span><b>' + escapeHtml(route ? route.title : 'не выбран') + '</b></div></div><div class="ba-progress-bar"><i style="width:' + info.percent + '%"></i></div></section>' +
+        '<section class="ba-card"><p class="ba-eyebrow">РАЗДЕЛЫ</p><div class="ba-lesson-list">' + sections + '</div></section><div class="ba-footer-space"></div>';
       renderWithAppShell(html,'home');
     } catch(error){ errorView(error); }
   }
-
   function patchPrimaryRoutes(){
     const original = window.primaryRoutesHtmlV40;
     if (typeof original !== 'function' || original.__businessArchitectureV1) return;
@@ -958,8 +993,8 @@
       } catch(e){
         return String(raw || '')
           .replace(/Нет своего бизнеса/g,'Бизнес как система')
-          .replace(/Системы подготовки к запуску:[^<]*/g,'Универсальный маршрут по книге «Архитектура бизнеса»: 4 части, 20 уроков и итоговая карта бизнес-системы.')
-          .replace(/Подготовка к запуску и базовое предпринимательское мышление\./g,'Универсальный маршрут по книге «Архитектура бизнеса»: 4 части, 20 уроков и итоговая карта бизнес-системы.');
+          .replace(/Системы подготовки к запуску:[^<]*/g,'Пошаговая система управления бизнесом: деньги, стратегия, процессы, люди, риски и рост.')
+          .replace(/Подготовка к запуску и базовое предпринимательское мышление\./g,'Пошаговая система управления бизнесом: деньги, стратегия, процессы, люди, риски и рост.');
       }
     };
     wrapped.__businessArchitectureV1 = true;
@@ -973,7 +1008,7 @@
     const title = titleNode ? String(titleNode.textContent || '').trim() : '';
     if (title !== 'Нет своего бизнеса' && title !== 'Бизнес как система') return;
 
-    const desiredDescription = 'Универсальный маршрут по книге «Архитектура бизнеса»: 4 части, 20 уроков, практические модели и итоговая карта бизнес-системы.';
+    const desiredDescription = 'Пошаговая система управления бизнесом: деньги, стратегия, процессы, люди, риски и рост.';
     const desiredOnclick = "if(typeof closeAppDrawerV40==='function'){closeAppDrawerV40();} BusinessArchitecture.renderHome()";
     const description = button.querySelector('p');
     const status = button.querySelector('em, small');
@@ -1109,7 +1144,9 @@
     completeSystemAnalysis,
     renderBusinessExamples,
     openExample,
+    renderExample,
     openExamplesLibrary,
+    filterExampleLibrary,
     completeExamples,
     renderQuiz,
     moveQuiz,
@@ -1117,6 +1154,7 @@
     answerMultiple,
     answerNumeric,
     moveOrder,
+    confirmOrder,
     submitQuiz,
     restartQuiz,
     chooseWorkspaceRoute,
@@ -1126,7 +1164,6 @@
     updateWorkspaceEvidence,
     updateWorkspaceFinal,
     completeWorkspace,
-    exportWorkspace,
     renderMyArchitecture,
     installIntegration,
     getProgress: loadProgress

@@ -1,5 +1,5 @@
 /* =========================================================
-   АРХИТЕКТУРА БИЗНЕСА — изолированный модуль BA v1
+   АРХИТЕКТУРА БИЗНЕСА — учебный раздел BA v2
    Все селекторы ограничены .ba-root, чтобы не влиять
    на остальные экраны приложения.
    ========================================================= */
@@ -612,4 +612,51 @@
   .ba-root .ba-number-chip { width: 38px; height: 38px; }
   .ba-root .ba-lesson-row { grid-template-columns: 30px minmax(0,1fr); }
   .ba-root .ba-lesson-row .ba-status { grid-column: 2; justify-self: start; }
+}
+
+
+/* BA v2 — упрощённый пользовательский интерфейс */
+.ba-root .ba-hero-compact { padding: 22px; }
+.ba-root .ba-hero-compact .ba-actions { margin-top: 15px; }
+.ba-root .ba-part-head-static { cursor: default; }
+.ba-root .ba-part-head-static .ba-part-head-row { grid-template-columns: 42px 1fr; }
+.ba-root .ba-row-arrow { color: var(--ba-blue); font-size: 24px; font-weight: 800; }
+.ba-root .ba-step-strip { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; }
+.ba-root .ba-step-strip>div { display:flex; gap:9px; align-items:center; padding:12px; border:1px solid var(--ba-line); border-radius:14px; background:#fafbfd; }
+.ba-root .ba-step-strip b { display:grid; place-items:center; width:28px; height:28px; border-radius:9px; background:var(--ba-navy); color:#fff; flex:0 0 auto; }
+.ba-root .ba-step-strip span { color:#45566a; font-size:12px; line-height:1.35; }
+.ba-root .ba-course-progress { margin-top:14px; }
+.ba-root .ba-section-progress { margin-bottom:14px; color:var(--ba-muted); font-weight:750; }
+.ba-root .ba-example-title-row { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
+.ba-root .ba-viewed { padding:5px 8px; border-radius:999px; background:var(--ba-success-soft); color:var(--ba-success); font-size:10px; font-weight:850; white-space:nowrap; }
+.ba-root .ba-example-kpi-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-bottom:12px; }
+.ba-root .ba-example-kpi { padding:12px; border:1px solid var(--ba-line); border-radius:13px; background:#f7f9fb; }
+.ba-root .ba-example-kpi span { display:block; color:var(--ba-muted); font-size:9px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; }
+.ba-root .ba-example-kpi b { display:block; margin-top:5px; font-size:17px; color:var(--ba-navy); }
+.ba-root .ba-example-table-wrap { overflow:auto; border:1px solid var(--ba-line); border-radius:14px; }
+.ba-root .ba-example-table { width:100%; min-width:650px; border-collapse:collapse; }
+.ba-root .ba-example-table th,.ba-root .ba-example-table td { padding:10px; border-right:1px solid var(--ba-line); border-bottom:1px solid var(--ba-line); text-align:left; vertical-align:top; font-size:11px; }
+.ba-root .ba-example-table th { background:var(--ba-soft); color:var(--ba-blue); }
+.ba-root .ba-example-facts { display:grid; gap:8px; margin-top:12px; }
+.ba-root .ba-example-facts>div { padding:10px; border:1px solid var(--ba-line); border-radius:12px; background:#fff; }
+.ba-root .ba-example-facts span { display:block; font-size:9px; color:var(--ba-muted); text-transform:uppercase; font-weight:900; }
+.ba-root .ba-example-facts b { display:block; margin-top:4px; font-size:12px; }
+.ba-root .ba-two-column { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.ba-root .ba-library-controls { display:grid; grid-template-columns:1fr 230px; gap:9px; margin-bottom:14px; }
+.ba-root .ba-library-controls input,.ba-root .ba-library-controls select { width:100%; min-height:44px; padding:10px 12px; border:1px solid var(--ba-line); border-radius:12px; background:#fff; color:var(--ba-navy); }
+.ba-root .ba-library-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:11px; }
+.ba-root .ba-library-card { padding:15px; border:1px solid var(--ba-line); border-radius:16px; background:#fff; }
+.ba-root .ba-library-card h3 { margin:0; font-size:17px; }
+.ba-root .ba-library-card p:not(.ba-eyebrow) { min-height:54px; }
+.ba-root .ba-quiz-intro { margin-top:0; }
+.ba-root .ba-quiz-line { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-top:12px; color:var(--ba-muted); font-size:12px; }
+.ba-root .ba-question-card { scroll-margin-top:14px; }
+.ba-root .ba-material-summary { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.ba-root .ba-material-summary>div { padding:12px; border:1px solid var(--ba-line); border-radius:13px; background:#f7f9fb; }
+.ba-root .ba-material-summary span { display:block; color:var(--ba-muted); font-size:9px; text-transform:uppercase; font-weight:900; }
+.ba-root .ba-material-summary b { display:block; margin-top:5px; color:var(--ba-navy); }
+@media(max-width:760px){
+  .ba-root .ba-step-strip,.ba-root .ba-example-kpi-grid { grid-template-columns:1fr 1fr; }
+  .ba-root .ba-two-column,.ba-root .ba-library-list,.ba-root .ba-library-controls { grid-template-columns:1fr; }
+  .ba-root .ba-library-card p:not(.ba-eyebrow) { min-height:0; }
 }
