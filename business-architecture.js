@@ -6,11 +6,14 @@
 (function(){
   'use strict';
 
-  const RELEASE = 'ba-v2-20260721';
+  const RELEASE = 'ba-v3-sync-20260721';
   const STORAGE_KEY = 'architecture_business_progress_v2';
   const CATALOG_URL = 'content/business_architecture/catalog.json';
   const LESSON_BASE_URL = 'content/business_architecture/lessons/';
   const EXAMPLES_URL = 'content/business_architecture/examples.json';
+  const SYNC_ENDPOINT = 'https://soxtekhspohkddpdidvp.supabase.co/functions/v1/business-architecture-progress';
+  const SYNC_DEBOUNCE_MS = 850;
+  const SYNC_RETRY_DELAYS = [2000, 5000, 15000, 60000];
 
   const runtime = {
     catalog: null,
@@ -23,7 +26,22 @@
     quizIndex: 0,
     workspaceSectionIndex: 0,
     integrationInstalled: false,
-    mutationObserver: null
+    mutationObserver: null,
+    sync: {
+      initialized: false,
+      initializing: null,
+      enabled: false,
+      initData: '',
+      serverVersion: 0,
+      serverUpdatedAt: null,
+      saving: false,
+      pending: false,
+      timer: null,
+      retryTimer: null,
+      retryIndex: 0,
+      lastError: null,
+      indicatorText: 'Сохранено'
+    }
   };
 
   function escapeHtml(value){
@@ -108,13 +126,378 @@
     }
   }
 
-  function saveProgress(progress){
+  function saveProgress(progress, options){
+    const opts = options || {};
     const next = progress || loadProgress();
     next.release = RELEASE;
-    next.updatedAt = nowIso();
+    next.updatedAt = opts.keepUpdatedAt && next.updatedAt ? next.updatedAt : nowIso();
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); }
     catch(e){ console.warn('BA_PROGRESS_SAVE_ERROR', e); }
+    if (opts.sync !== false) {
+      setSaveIndicator(telegramInitData() ? 'Сохраняем…' : 'Сохранено на устройстве');
+      scheduleRemoteSave();
+    }
     return next;
+  }
+
+
+  function isPlainObject(value){
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  function cloneJson(value){
+    try { return JSON.parse(JSON.stringify(value)); }
+    catch(e){ return value; }
+  }
+
+  function telegramInitData(){
+    try {
+      const tg = window.Telegram && window.Telegram.WebApp;
+      return String(tg && tg.initData ? tg.initData : '').trim();
+    } catch(e){
+      return '';
+    }
+  }
+
+  function hasStoredLocalProgress(){
+    try { return Boolean(localStorage.getItem(STORAGE_KEY)); }
+    catch(e){ return false; }
+  }
+
+  function setSaveIndicator(text){
+    runtime.sync.indicatorText = String(text || 'Сохранено');
+    try {
+      document.querySelectorAll('[data-ba-saved]').forEach(function(node){
+        node.textContent = runtime.sync.indicatorText;
+      });
+    } catch(e) {}
+  }
+
+  function refreshSaveIndicator(){
+    setSaveIndicator(runtime.sync.indicatorText || (runtime.sync.enabled ? 'Сохранено' : 'Сохранено на устройстве'));
+  }
+
+  function timestampValue(value){
+    const parsed = Date.parse(String(value || ''));
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function laterIso(left, right){
+    const leftTime = timestampValue(left);
+    const rightTime = timestampValue(right);
+    if (!leftTime && !rightTime) return '';
+    return leftTime >= rightTime ? String(left || '') : String(right || '');
+  }
+
+  function uniqueValues(values){
+    const result = [];
+    (values || []).forEach(function(value){
+      if (!result.some(function(existing){ return JSON.stringify(existing) === JSON.stringify(value); })) result.push(cloneJson(value));
+    });
+    return result;
+  }
+
+  function mergeObjectFields(localObject, remoteObject, preferLocal){
+    const local = isPlainObject(localObject) ? localObject : {};
+    const remote = isPlainObject(remoteObject) ? remoteObject : {};
+    const preferred = preferLocal ? local : remote;
+    const fallback = preferLocal ? remote : local;
+    const result = {};
+    Array.from(new Set(Object.keys(fallback).concat(Object.keys(preferred)))).forEach(function(key){
+      if (Object.prototype.hasOwnProperty.call(preferred, key)) result[key] = cloneJson(preferred[key]);
+      else result[key] = cloneJson(fallback[key]);
+    });
+    return result;
+  }
+
+  function mergeWorkspaceSections(localSections, remoteSections, preferLocal){
+    const local = isPlainObject(localSections) ? localSections : {};
+    const remote = isPlainObject(remoteSections) ? remoteSections : {};
+    const result = {};
+    Array.from(new Set(Object.keys(local).concat(Object.keys(remote)))).forEach(function(sectionId){
+      const localSection = isPlainObject(local[sectionId]) ? local[sectionId] : {};
+      const remoteSection = isPlainObject(remote[sectionId]) ? remote[sectionId] : {};
+      const preferred = preferLocal ? localSection : remoteSection;
+      const fallback = preferLocal ? remoteSection : localSection;
+      result[sectionId] = Object.assign({}, cloneJson(fallback), cloneJson(preferred), {
+        fields: mergeObjectFields(localSection.fields, remoteSection.fields, preferLocal),
+        evidence: Object.prototype.hasOwnProperty.call(preferred, 'evidence') ? String(preferred.evidence || '') : String(fallback.evidence || '')
+      });
+    });
+    return result;
+  }
+
+  function normalizeLessonState(value){
+    const source = isPlainObject(value) ? cloneJson(value) : {};
+    const base = defaultLessonProgress();
+    const result = Object.assign(base, source);
+    result.completedStages = Array.isArray(source.completedStages) ? source.completedStages.slice() : [];
+    result.systemAnalysis = Object.assign({}, base.systemAnalysis, isPlainObject(source.systemAnalysis) ? source.systemAnalysis : {});
+    result.examplesOpened = Array.isArray(source.examplesOpened) ? source.examplesOpened.slice() : [];
+    result.quiz = Object.assign({}, base.quiz, isPlainObject(source.quiz) ? source.quiz : {});
+    result.quiz.draft = isPlainObject(result.quiz.draft) ? result.quiz.draft : {};
+    result.quiz.order = isPlainObject(result.quiz.order) ? result.quiz.order : {};
+    result.quiz.attempts = Array.isArray(result.quiz.attempts) ? result.quiz.attempts : [];
+    result.workspace = Object.assign({}, base.workspace, isPlainObject(source.workspace) ? source.workspace : {});
+    result.workspace.sections = isPlainObject(result.workspace.sections) ? result.workspace.sections : {};
+    result.workspace.final = isPlainObject(result.workspace.final) ? result.workspace.final : {};
+    return result;
+  }
+
+  function mergeLessonStates(localValue, remoteValue, preferLocal){
+    const hasLocal = isPlainObject(localValue);
+    const hasRemote = isPlainObject(remoteValue);
+    if (hasLocal && !hasRemote) return normalizeLessonState(localValue);
+    if (hasRemote && !hasLocal) return normalizeLessonState(remoteValue);
+    const local = normalizeLessonState(localValue);
+    const remote = normalizeLessonState(remoteValue);
+    const preferred = preferLocal ? local : remote;
+    const fallback = preferLocal ? remote : local;
+    const attempts = uniqueValues((local.quiz.attempts || []).concat(remote.quiz.attempts || []))
+      .sort(function(a,b){ return timestampValue(a && a.at) - timestampValue(b && b.at); });
+    return Object.assign({}, cloneJson(fallback), cloneJson(preferred), {
+      completedStages: uniqueValues((local.completedStages || []).concat(remote.completedStages || [])),
+      completedAt: laterIso(local.completedAt, remote.completedAt) || null,
+      lastStageId: String(preferred.lastStageId || fallback.lastStageId || 'system_analysis'),
+      systemAnalysis: {
+        screenIndex: Math.max(Number(local.systemAnalysis.screenIndex || 0), Number(remote.systemAnalysis.screenIndex || 0))
+      },
+      examplesOpened: uniqueValues((local.examplesOpened || []).concat(remote.examplesOpened || [])),
+      quiz: Object.assign({}, cloneJson(fallback.quiz), cloneJson(preferred.quiz), {
+        draft: cloneJson(preferred.quiz.draft || {}),
+        order: cloneJson(preferred.quiz.order || {}),
+        attempts: attempts,
+        lastResult: cloneJson(preferred.quiz.lastResult || null)
+      }),
+      workspace: Object.assign({}, cloneJson(fallback.workspace), cloneJson(preferred.workspace), {
+        route: String(preferred.workspace.route || fallback.workspace.route || ''),
+        sectionIndex: Math.max(Number(local.workspace.sectionIndex || 0), Number(remote.workspace.sectionIndex || 0)),
+        sections: mergeWorkspaceSections(local.workspace.sections, remote.workspace.sections, preferLocal),
+        final: mergeObjectFields(local.workspace.final, remote.workspace.final, preferLocal),
+        completedAt: laterIso(local.workspace.completedAt, remote.workspace.completedAt) || null
+      })
+    });
+  }
+
+  function normalizeProgressState(value){
+    const source = isPlainObject(value) ? cloneJson(value) : {};
+    return {
+      version: Number(source.version || 1),
+      release: String(source.release || RELEASE),
+      selectedRoute: String(source.selectedRoute || ''),
+      currentLessonId: String(source.currentLessonId || 'BA-01'),
+      updatedAt: String(source.updatedAt || ''),
+      lessons: isPlainObject(source.lessons) ? source.lessons : {}
+    };
+  }
+
+  function mergeProgressStates(localValue, remoteValue){
+    const local = normalizeProgressState(localValue);
+    const remote = normalizeProgressState(remoteValue);
+    const preferLocal = timestampValue(local.updatedAt) >= timestampValue(remote.updatedAt);
+    const preferred = preferLocal ? local : remote;
+    const fallback = preferLocal ? remote : local;
+    const result = Object.assign({}, cloneJson(fallback), cloneJson(preferred));
+    result.version = Math.max(Number(local.version || 1), Number(remote.version || 1));
+    result.release = RELEASE;
+    result.selectedRoute = String(preferred.selectedRoute || fallback.selectedRoute || '');
+    result.currentLessonId = String(preferred.currentLessonId || fallback.currentLessonId || 'BA-01');
+    result.updatedAt = laterIso(local.updatedAt, remote.updatedAt) || nowIso();
+    result.lessons = {};
+    Array.from(new Set(Object.keys(local.lessons).concat(Object.keys(remote.lessons)))).forEach(function(lessonId){
+      result.lessons[lessonId] = mergeLessonStates(local.lessons[lessonId], remote.lessons[lessonId], preferLocal);
+    });
+    return result;
+  }
+
+  function stableStringify(value){
+    function normalize(input){
+      if (Array.isArray(input)) return input.map(normalize);
+      if (isPlainObject(input)) {
+        const output = {};
+        Object.keys(input).sort().forEach(function(key){ output[key] = normalize(input[key]); });
+        return output;
+      }
+      return input;
+    }
+    try { return JSON.stringify(normalize(value)); }
+    catch(e){ return ''; }
+  }
+
+  function hasMeaningfulProgress(value){
+    const progress = normalizeProgressState(value);
+    if (progress.selectedRoute) return true;
+    return Object.keys(progress.lessons).some(function(lessonId){
+      const lesson = normalizeLessonState(progress.lessons[lessonId]);
+      return lesson.completedStages.length > 0 || lesson.examplesOpened.length > 0 || lesson.quiz.attempts.length > 0 || Object.keys(lesson.quiz.draft).length > 0 || hasWorkspaceContent(lesson) || Boolean(lesson.completedAt);
+    });
+  }
+
+  async function syncRequest(payload){
+    const initData = runtime.sync.initData || telegramInitData();
+    if (!initData) throw new Error('TELEGRAM_INIT_DATA_REQUIRED');
+    const response = await fetch(SYNC_ENDPOINT, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(Object.assign({}, payload, {initData:initData})),
+      cache: 'no-store'
+    });
+    let data = {};
+    try { data = await response.json(); } catch(e) {}
+    if (!response.ok || data.ok === false) {
+      const error = new Error(data.message || data.error || ('SYNC_HTTP_' + response.status));
+      error.status = response.status;
+      error.payload = data;
+      throw error;
+    }
+    return data;
+  }
+
+  function applyServerMeta(result){
+    runtime.sync.serverVersion = Number(result && result.version || 0);
+    runtime.sync.serverUpdatedAt = result && result.serverUpdatedAt ? String(result.serverUpdatedAt) : null;
+    runtime.sync.retryIndex = 0;
+    runtime.sync.lastError = null;
+  }
+
+  async function saveSnapshotToServer(state, baseVersion, conflictDepth){
+    try {
+      const result = await syncRequest({
+        action: 'save',
+        state: state,
+        baseVersion: Number(baseVersion || 0),
+        clientUpdatedAt: state && state.updatedAt ? state.updatedAt : nowIso()
+      });
+      applyServerMeta(result);
+      return result;
+    } catch(error){
+      const current = error && error.payload && error.payload.current;
+      if (error && error.status === 409 && current && conflictDepth < 2) {
+        runtime.sync.serverVersion = Number(current.version || 0);
+        runtime.sync.serverUpdatedAt = current.serverUpdatedAt || null;
+        const merged = mergeProgressStates(loadProgress(), current.state || {});
+        saveProgress(merged, {sync:false, keepUpdatedAt:true});
+        return saveSnapshotToServer(merged, runtime.sync.serverVersion, conflictDepth + 1);
+      }
+      throw error;
+    }
+  }
+
+  function scheduleRetry(){
+    if (!runtime.sync.initData || runtime.sync.retryTimer) return;
+    const index = Math.min(runtime.sync.retryIndex, SYNC_RETRY_DELAYS.length - 1);
+    const delay = SYNC_RETRY_DELAYS[index];
+    runtime.sync.retryIndex += 1;
+    runtime.sync.retryTimer = setTimeout(function(){
+      runtime.sync.retryTimer = null;
+      ensureRemoteSync(true).then(function(){
+        if (runtime.sync.pending) performRemoteSave();
+      });
+    }, delay);
+  }
+
+  async function ensureRemoteSync(force){
+    if (runtime.sync.initialized && !force) return runtime.sync.enabled;
+    if (runtime.sync.initializing) return runtime.sync.initializing;
+    runtime.sync.initializing = (async function(){
+      runtime.sync.initData = telegramInitData();
+      if (!runtime.sync.initData) {
+        runtime.sync.enabled = false;
+        runtime.sync.initialized = true;
+        setSaveIndicator('Сохранено на устройстве');
+        return false;
+      }
+      runtime.sync.enabled = true;
+      try {
+        const remote = await syncRequest({action:'load'});
+        applyServerMeta(remote);
+        const localExists = hasStoredLocalProgress();
+        const localState = loadProgress();
+        const remoteState = isPlainObject(remote.state) ? remote.state : {};
+        const merged = Number(remote.version || 0) > 0
+          ? (localExists ? mergeProgressStates(localState, remoteState) : cloneJson(remoteState))
+          : localState;
+        if (Number(remote.version || 0) > 0) saveProgress(merged, {sync:false, keepUpdatedAt:true});
+        if (Number(remote.version || 0) === 0 && hasMeaningfulProgress(localState)) {
+          await saveSnapshotToServer(localState, 0, 0);
+        } else if (Number(remote.version || 0) > 0 && localExists && stableStringify(merged) !== stableStringify(remoteState)) {
+          await saveSnapshotToServer(merged, runtime.sync.serverVersion, 0);
+        }
+        runtime.sync.initialized = true;
+        runtime.sync.pending = false;
+        setSaveIndicator('Сохранено');
+        return true;
+      } catch(error){
+        runtime.sync.initialized = true;
+        runtime.sync.lastError = error;
+        console.warn('BA_REMOTE_SYNC_INIT_ERROR', error);
+        setSaveIndicator('Сохранено на устройстве');
+        if (!(error && error.status === 401)) scheduleRetry();
+        return false;
+      }
+    })().finally(function(){ runtime.sync.initializing = null; });
+    return runtime.sync.initializing;
+  }
+
+  function scheduleRemoteSave(delay){
+    runtime.sync.pending = true;
+    if (!telegramInitData()) {
+      runtime.sync.enabled = false;
+      setSaveIndicator('Сохранено на устройстве');
+      return;
+    }
+    if (runtime.sync.timer) clearTimeout(runtime.sync.timer);
+    runtime.sync.timer = setTimeout(function(){
+      runtime.sync.timer = null;
+      performRemoteSave();
+    }, delay === undefined ? SYNC_DEBOUNCE_MS : Math.max(0, Number(delay) || 0));
+  }
+
+  async function performRemoteSave(){
+    if (runtime.sync.saving) {
+      runtime.sync.pending = true;
+      return false;
+    }
+    const connected = await ensureRemoteSync(false);
+    if (!connected) return false;
+    if (!runtime.sync.pending) return true;
+    runtime.sync.saving = true;
+    runtime.sync.pending = false;
+    setSaveIndicator('Сохраняем…');
+    const snapshot = loadProgress();
+    const snapshotSignature = stableStringify(snapshot);
+    try {
+      await saveSnapshotToServer(snapshot, runtime.sync.serverVersion, 0);
+      if (stableStringify(loadProgress()) !== snapshotSignature) runtime.sync.pending = true;
+      if (!runtime.sync.pending) setSaveIndicator('Сохранено');
+      return true;
+    } catch(error){
+      runtime.sync.lastError = error;
+      runtime.sync.pending = true;
+      console.warn('BA_REMOTE_SYNC_SAVE_ERROR', error);
+      setSaveIndicator('Сохранено на устройстве');
+      if (!(error && error.status === 401)) scheduleRetry();
+      return false;
+    } finally {
+      runtime.sync.saving = false;
+      if (runtime.sync.pending && !runtime.sync.retryTimer) scheduleRemoteSave(500);
+    }
+  }
+
+  async function syncNow(){
+    runtime.sync.pending = true;
+    const connected = await ensureRemoteSync(true);
+    if (!connected) return false;
+    return performRemoteSave();
+  }
+
+  function installSyncListeners(){
+    window.addEventListener('online', function(){
+      if (telegramInitData()) syncNow();
+    });
+    document.addEventListener('visibilitychange', function(){
+      if (document.visibilityState === 'hidden' && runtime.sync.pending) scheduleRemoteSave(0);
+    });
   }
 
   function getLessonProgress(lessonId){
@@ -240,6 +623,7 @@
       scrollTop();
     }
     setTimeout(patchVisibleEntryCards, 0);
+    setTimeout(refreshSaveIndicator, 0);
   }
   function loadingView(title){
     renderWithAppShell(
@@ -290,6 +674,7 @@
   async function renderHome(){
     try {
       loadingView('Открываем курс');
+      await ensureRemoteSync(false);
       const catalog = await ensureCatalog();
       const progress = loadProgress();
       const lp = getLessonProgress('BA-01').lesson;
@@ -353,6 +738,7 @@
 
   async function openLesson(lessonId){
     try {
+      await ensureRemoteSync(false);
       const catalog = await ensureCatalog();
       let meta = null;
       catalog.parts.some(function(part){
@@ -810,20 +1196,17 @@
     const section = stage.sections.find(function(item){ return item.id === sectionId; });
     const field = section.required_fields[Number(fieldIndex)];
     updateLessonProgress(lessonId, function(lp){ workspaceSectionData(lp, sectionId).fields[field] = String(value); });
-    const saved = document.querySelector('[data-ba-saved]');
-    if (saved) saved.textContent = 'Сохранено';
+    setSaveIndicator(telegramInitData() ? 'Сохраняем…' : 'Сохранено на устройстве');
   }
 
   function updateWorkspaceEvidence(lessonId, sectionId, value){
     updateLessonProgress(lessonId, function(lp){ workspaceSectionData(lp, sectionId).evidence = String(value); });
-    const saved = document.querySelector('[data-ba-saved]');
-    if (saved) saved.textContent = 'Сохранено';
+    setSaveIndicator(telegramInitData() ? 'Сохраняем…' : 'Сохранено на устройстве');
   }
 
   function updateWorkspaceFinal(lessonId, key, value){
     updateLessonProgress(lessonId, function(lp){ lp.workspace.final[key] = String(value); });
-    const saved = document.querySelector('[data-ba-saved]');
-    if (saved) saved.textContent = 'Сохранено';
+    setSaveIndicator(telegramInitData() ? 'Сохраняем…' : 'Сохранено на устройстве');
   }
 
   function sectionCompleteness(lp, section){
@@ -879,7 +1262,7 @@
     const html =
       '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status is-active">Раздел 4 из 4</span></div>' +
       '<section class="ba-card"><div class="ba-workspace-head"><div><p class="ba-eyebrow">МОИ МАТЕРИАЛЫ · ' + escapeHtml(route.title) + '</p><h2>' + escapeHtml(section.title) + '</h2><p>' + escapeHtml(route.rule) + '</p></div><b class="ba-progress-number">' + complete.percent + '%</b></div><div class="ba-progress-bar"><i style="width:' + complete.percent + '%"></i></div></section>' +
-      '<section class="ba-card"><div class="ba-workspace-fields">' + fields + '<div class="ba-field-block"><label>Доказательство завершения</label><textarea class="ba-textarea" oninput="BusinessArchitecture.updateWorkspaceEvidence(\'' + lessonId + '\',\'' + section.id + '\',this.value)">' + escapeHtml(data.evidence || '') + '</textarea><span class="ba-field-hint">Критерий: ' + escapeHtml(section.completion_evidence) + '</span></div></div><div class="ba-completeness"><span data-ba-saved class="ba-saved">Черновик сохраняется автоматически</span><b>Заполнено ' + complete.filled + ' из ' + complete.total + '</b></div></section>' +
+      '<section class="ba-card"><div class="ba-workspace-fields">' + fields + '<div class="ba-field-block"><label>Доказательство завершения</label><textarea class="ba-textarea" oninput="BusinessArchitecture.updateWorkspaceEvidence(\'' + lessonId + '\',\'' + section.id + '\',this.value)">' + escapeHtml(data.evidence || '') + '</textarea><span class="ba-field-hint">Критерий: ' + escapeHtml(section.completion_evidence) + '</span></div></div><div class="ba-completeness"><span data-ba-saved class="ba-saved">Сохранено</span><b>Заполнено ' + complete.filled + ' из ' + complete.total + '</b></div></section>' +
       '<div class="ba-screen-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveWorkspace(-1)" ' + (runtime.workspaceSectionIndex === 0 ? 'disabled' : '') + '>← Предыдущий раздел</button><div class="ba-screen-counter">Раздел ' + (runtime.workspaceSectionIndex + 1) + ' из ' + stage.sections.length + '</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="BusinessArchitecture.moveWorkspace(1)">' + (runtime.workspaceSectionIndex === stage.sections.length - 1 ? 'К итоговому решению →' : 'Следующий раздел →') + '</button></div><div class="ba-footer-space"></div>';
     renderWithAppShell(html,'home');
   }
@@ -911,7 +1294,7 @@
     const html =
       '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.renderWorkspace(\'' + lessonId + '\',' + (stage.sections.length - 1) + ')">← К разделам</button><span class="ba-status ' + (info.complete ? 'is-done' : 'is-warning') + '">' + (info.complete ? 'Готово к завершению' : 'Заполните оставшиеся поля') + '</span></div>' +
       '<section class="ba-hero ba-hero-compact"><p class="ba-eyebrow">ИТОГОВОЕ РЕШЕНИЕ</p><h2>Финансовый контур бизнеса</h2><p>Зафиксируйте вывод, решение, контрольную метрику и дату повторной проверки.</p></section>' +
-      '<section class="ba-card"><div class="ba-workspace-fields">' + form + '</div><div class="ba-completeness"><span data-ba-saved class="ba-saved">Черновик сохраняется автоматически</span><b>' + info.percent + '%</b></div><div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.completeWorkspace(\'' + lessonId + '\')" ' + (info.complete ? '' : 'disabled') + '>Завершить работу</button></div>' +
+      '<section class="ba-card"><div class="ba-workspace-fields">' + form + '</div><div class="ba-completeness"><span data-ba-saved class="ba-saved">Сохранено</span><b>' + info.percent + '%</b></div><div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.completeWorkspace(\'' + lessonId + '\')" ' + (info.complete ? '' : 'disabled') + '>Завершить работу</button></div>' +
       (!info.complete ? '<div class="ba-note" style="margin-top:13px">Для завершения заполните все разделы и итоговое решение.</div>' : '') + '</section><div class="ba-footer-space"></div>';
     renderWithAppShell(html,'home');
   }
@@ -956,6 +1339,7 @@
 
   async function renderMyArchitecture(){
     try {
+      await ensureRemoteSync(false);
       await ensureCatalog();
       const lesson = await ensureLesson('BA-01');
       const lp = getLessonProgress('BA-01').lesson;
@@ -1125,6 +1509,7 @@
     window.renderNoBusinessV40 = renderHome;
     try { renderNoBusinessV40 = renderHome; } catch(e) {}
     installMutationObserver();
+    installSyncListeners();
     patchVisibleEntryCards();
     setTimeout(patchVisibleEntryCards,0);
     setTimeout(patchVisibleEntryCards,250);
@@ -1165,6 +1550,17 @@
     updateWorkspaceFinal,
     completeWorkspace,
     renderMyArchitecture,
+    syncNow,
+    getSyncStatus: function(){
+      return {
+        initialized: runtime.sync.initialized,
+        enabled: runtime.sync.enabled,
+        version: runtime.sync.serverVersion,
+        saving: runtime.sync.saving,
+        pending: runtime.sync.pending,
+        lastError: runtime.sync.lastError ? String(runtime.sync.lastError.message || runtime.sync.lastError) : null
+      };
+    },
     installIntegration,
     getProgress: loadProgress
   };
