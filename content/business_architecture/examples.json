@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "release": "ba-v1-20260721",
+  "total": 99,
+  "page": "templates/business-architecture-practical-examples-v2.html",
+  "available_in_ba01": [
+    "F-01",
+    "F-02",
+    "F-03",
+    "F-04"
+  ]
+}
