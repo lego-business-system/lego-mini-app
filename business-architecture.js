@@ -6,7 +6,7 @@
 (function(){
   'use strict';
 
-  const RELEASE = 'ba-v3-sync-20260721';
+  const RELEASE = 'ba-v4-quiz-review-20260721';
   const STORAGE_KEY = 'architecture_business_progress_v2';
   const CATALOG_URL = 'content/business_architecture/catalog.json';
   const LESSON_BASE_URL = 'content/business_architecture/lessons/';
@@ -100,7 +100,9 @@
         draft: {},
         order: {},
         attempts: [],
-        lastResult: null
+        lastResult: null,
+        reviewQuestionIds: [],
+        reviewMode: ''
       },
       workspace: {
         route: '',
@@ -238,6 +240,8 @@
     result.quiz.draft = isPlainObject(result.quiz.draft) ? result.quiz.draft : {};
     result.quiz.order = isPlainObject(result.quiz.order) ? result.quiz.order : {};
     result.quiz.attempts = Array.isArray(result.quiz.attempts) ? result.quiz.attempts : [];
+    result.quiz.reviewQuestionIds = Array.isArray(result.quiz.reviewQuestionIds) ? result.quiz.reviewQuestionIds.slice() : [];
+    result.quiz.reviewMode = String(result.quiz.reviewMode || '');
     result.workspace = Object.assign({}, base.workspace, isPlainObject(source.workspace) ? source.workspace : {});
     result.workspace.sections = isPlainObject(result.workspace.sections) ? result.workspace.sections : {};
     result.workspace.final = isPlainObject(result.workspace.final) ? result.workspace.final : {};
@@ -267,7 +271,9 @@
         draft: cloneJson(preferred.quiz.draft || {}),
         order: cloneJson(preferred.quiz.order || {}),
         attempts: attempts,
-        lastResult: cloneJson(preferred.quiz.lastResult || null)
+        lastResult: cloneJson(preferred.quiz.lastResult || null),
+        reviewQuestionIds: Array.isArray(preferred.quiz.reviewQuestionIds) ? preferred.quiz.reviewQuestionIds.slice() : [],
+        reviewMode: String(preferred.quiz.reviewMode || '')
       }),
       workspace: Object.assign({}, cloneJson(fallback.workspace), cloneJson(preferred.workspace), {
         route: String(preferred.workspace.route || fallback.workspace.route || ''),
@@ -1070,32 +1076,60 @@
     return '';
   }
 
+  function quizReviewQuestionIds(lp, stage){
+    const raw = lp && lp.quiz && Array.isArray(lp.quiz.reviewQuestionIds) ? lp.quiz.reviewQuestionIds : [];
+    const allowed = new Set((stage.questions || []).map(function(q){ return q.id; }));
+    return raw.filter(function(id, index){ return allowed.has(id) && raw.indexOf(id) === index; });
+  }
+
+  function activeQuizQuestions(stage, lp){
+    const reviewIds = quizReviewQuestionIds(lp, stage);
+    if (!reviewIds.length) return stage.questions;
+    const byId = {};
+    stage.questions.forEach(function(q){ byId[q.id] = q; });
+    const selected = reviewIds.map(function(id){ return byId[id]; }).filter(Boolean);
+    return selected.length ? selected : stage.questions;
+  }
+
   async function renderQuiz(lessonId, requestedIndex, focusQuestion){
     const data = await ensureLesson(lessonId);
     const stage = data.stages.find(function(item){ return item.id === 'decision_lab'; });
     ensureQuizDraft(lessonId, stage.questions);
     const lp = getLessonProgress(lessonId).lesson;
     if (lp.quiz.lastResult) return renderQuizResult(lessonId);
-    runtime.quizIndex = clamp(requestedIndex === undefined ? runtime.quizIndex : requestedIndex, 0, stage.questions.length - 1);
-    const q = stage.questions[runtime.quizIndex];
+
+    const reviewIds = quizReviewQuestionIds(lp, stage);
+    const reviewMode = reviewIds.length ? String(lp.quiz.reviewMode || 'all') : '';
+    const questions = activeQuizQuestions(stage, lp);
+    runtime.quizIndex = clamp(requestedIndex === undefined ? runtime.quizIndex : requestedIndex, 0, questions.length - 1);
+    const q = questions[runtime.quizIndex];
     const answeredCount = stage.questions.filter(function(item){ return questionAnswered(item, lp); }).length;
-    const last = runtime.quizIndex === stage.questions.length - 1;
+    const last = runtime.quizIndex === questions.length - 1;
+
+    const introHtml = reviewIds.length
+      ? '<section class="ba-card ba-quiz-intro"><p class="ba-eyebrow">ПЕРЕСМОТР РЕШЕНИЙ</p><h2>' + (reviewMode === 'critical' ? 'Ключевые решения' : 'Решения, которые требуют уточнения') + '</h2><p>Остальные ответы сохранены. Измените только решения, которые повлияли на итог, и отправьте их на повторную проверку.</p><div class="ba-quiz-line"><span>На пересмотре <b>' + questions.length + '</b></span><span>После последнего вопроса результат будет пересчитан</span></div></section>'
+      : '<section class="ba-card ba-quiz-intro"><p class="ba-eyebrow">УПРАВЛЕНЧЕСКИЕ ЗАДАЧИ</p><h2>Разбор финансовых решений</h2><p>В каждом задании нужно сопоставить факты, ограничения и последствия. К материалам урока можно возвращаться в любой момент.</p><div class="ba-quiz-line"><span>Отвечено <b data-ba-answered>' + answeredCount + '</b> из ' + stage.questions.length + '</span><span>Для прохождения — ' + stage.pass_score + '% и без ошибок в ключевых вопросах</span></div></section>';
+
     const html =
       '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status is-warning">Раздел 3 из 4</span></div>' +
-      '<section class="ba-card ba-quiz-intro"><p class="ba-eyebrow">УПРАВЛЕНЧЕСКИЕ ЗАДАЧИ</p><h2>Разбор финансовых решений</h2><p>В каждом задании нужно сопоставить факты, ограничения и последствия. К материалам урока можно возвращаться в любой момент.</p><div class="ba-quiz-line"><span>Отвечено <b data-ba-answered>' + answeredCount + '</b> из ' + stage.questions.length + '</span><span>Для прохождения — ' + stage.pass_score + '% и без ошибок в ключевых вопросах</span></div></section>' +
-      '<div class="ba-screen-nav ba-quiz-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveQuiz(-1)" ' + (runtime.quizIndex === 0 ? 'disabled' : '') + '>← Назад</button><div class="ba-screen-counter">Вопрос ' + (runtime.quizIndex + 1) + ' из ' + stage.questions.length + '</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + (last ? 'BusinessArchitecture.submitQuiz(\'' + lessonId + '\')' : 'BusinessArchitecture.moveQuiz(1)') + '">' + (last ? 'Проверить ответы' : 'Следующий →') + '</button></div>' +
+      introHtml +
+      '<div class="ba-screen-nav ba-quiz-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveQuiz(-1)" ' + (runtime.quizIndex === 0 ? 'disabled' : '') + '>← Назад</button><div class="ba-screen-counter">Вопрос ' + (runtime.quizIndex + 1) + ' из ' + questions.length + '</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + (last ? 'BusinessArchitecture.submitQuiz(\'' + lessonId + '\')' : 'BusinessArchitecture.moveQuiz(1)') + '">' + (last ? 'Проверить ответы' : 'Следующий →') + '</button></div>' +
       '<article class="ba-question-card"><div class="ba-question-top"><span class="ba-question-skill">' + escapeHtml(q.skill) + '</span>' + (q.critical ? '<span class="ba-critical">КЛЮЧЕВОЙ ВОПРОС</span>' : '') + '</div>' +
         (q.case ? '<div class="ba-case">' + escapeHtml(q.case) + '</div>' : '') + '<h2>' + escapeHtml(q.question) + '</h2>' + questionInputHtml(q, lp) + '</article>' +
-      '<div class="ba-screen-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveQuiz(-1)" ' + (runtime.quizIndex === 0 ? 'disabled' : '') + '>← Назад</button><div class="ba-screen-counter">Ответы сохраняются автоматически</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + (last ? 'BusinessArchitecture.submitQuiz(\'' + lessonId + '\')' : 'BusinessArchitecture.moveQuiz(1)') + '">' + (last ? 'Проверить ответы' : 'Следующий →') + '</button></div><div class="ba-footer-space"></div>';
+      '<div class="ba-screen-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveQuiz(-1)" ' + (runtime.quizIndex === 0 ? 'disabled' : '') + '>← Назад</button><div class="ba-screen-counter">Изменения сохраняются автоматически</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + (last ? 'BusinessArchitecture.submitQuiz(\'' + lessonId + '\')' : 'BusinessArchitecture.moveQuiz(1)') + '">' + (last ? 'Проверить ответы' : 'Следующий →') + '</button></div><div class="ba-footer-space"></div>';
     renderWithAppShell(html, 'home', focusQuestion ? {target:'.ba-question-card'} : {});
   }
+
   function moveQuiz(delta){
     const lessonId = runtime.currentLessonId || 'BA-01';
     const lesson = runtime.lessons[lessonId];
     const stage = lesson.stages.find(function(item){ return item.id === 'decision_lab'; });
-    runtime.quizIndex = clamp(runtime.quizIndex + Number(delta || 0), 0, stage.questions.length - 1);
+    const lp = getLessonProgress(lessonId).lesson;
+    const questions = activeQuizQuestions(stage, lp);
+    runtime.quizIndex = clamp(runtime.quizIndex + Number(delta || 0), 0, questions.length - 1);
     renderQuiz(lessonId, runtime.quizIndex, true);
   }
+
   function arraysEqual(a,b){
     if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
     for (let i=0;i<a.length;i++) if (Number(a[i]) !== Number(b[i])) return false;
@@ -1132,6 +1166,8 @@
     updateLessonProgress(lessonId, function(item){
       item.quiz.attempts.push(attempt);
       item.quiz.lastResult = attempt;
+      item.quiz.reviewQuestionIds = [];
+      item.quiz.reviewMode = '';
       if (passed && !item.completedStages.includes('decision_lab')) item.completedStages.push('decision_lab');
     });
     renderQuizResult(lessonId);
@@ -1146,26 +1182,102 @@
     return '—';
   }
 
+  function pluralRu(number, one, few, many){
+    const value = Math.abs(Number(number) || 0) % 100;
+    const last = value % 10;
+    if (value > 10 && value < 20) return many;
+    if (last > 1 && last < 5) return few;
+    if (last === 1) return one;
+    return many;
+  }
+
+  function reviewQuizMistakes(lessonId, mode){
+    const lesson = runtime.lessons[lessonId];
+    const stage = lesson && lesson.stages.find(function(item){ return item.id === 'decision_lab'; });
+    const lp = getLessonProgress(lessonId).lesson;
+    const result = lp.quiz.lastResult;
+    if (!stage || !result || !Array.isArray(result.results)) return renderQuiz(lessonId, 0, true);
+
+    const ids = result.results
+      .filter(function(item){ return !item.correct && (mode !== 'critical' || item.critical); })
+      .map(function(item){ return item.id; });
+
+    if (!ids.length) {
+      safeAlert('Все выбранные решения уже исправлены.');
+      return renderQuizResult(lessonId);
+    }
+
+    updateLessonProgress(lessonId, function(item){
+      item.quiz.lastResult = null;
+      item.quiz.reviewQuestionIds = ids;
+      item.quiz.reviewMode = mode === 'critical' ? 'critical' : 'all';
+    });
+    runtime.quizIndex = 0;
+    renderQuiz(lessonId, 0, true);
+  }
+
   function renderQuizResult(lessonId){
     const lesson = runtime.lessons[lessonId];
     const stage = lesson.stages.find(function(item){ return item.id === 'decision_lab'; });
     const lp = getLessonProgress(lessonId).lesson;
     const result = lp.quiz.lastResult;
     if (!result) return renderQuiz(lessonId,0);
-    const reviews = stage.questions.map(function(q, index){
+
+    const wrongResults = (result.results || []).filter(function(item){ return !item.correct; });
+    const wrongCritical = wrongResults.filter(function(item){ return item.critical; });
+    const scorePassed = Number(result.score) >= Number(stage.pass_score);
+    const keyOnly = scorePassed && !result.criticalPassed;
+
+    const orderedQuestions = stage.questions.slice().sort(function(left, right){
+      const leftResult = result.results.find(function(item){ return item.id === left.id; });
+      const rightResult = result.results.find(function(item){ return item.id === right.id; });
+      return Number(Boolean(leftResult && leftResult.correct)) - Number(Boolean(rightResult && rightResult.correct));
+    });
+
+    const reviews = orderedQuestions.map(function(q){
+      const originalIndex = stage.questions.findIndex(function(item){ return item.id === q.id; });
       const r = result.results.find(function(item){ return item.id === q.id; });
-      return '<details class="ba-review-item ' + (r && r.correct ? 'is-correct' : 'is-wrong') + '"><summary>' + (r && r.correct ? 'Ответ обоснован' : 'Нужно пересмотреть') + ' · Вопрос ' + (index + 1) + ' · ' + escapeHtml(q.skill) + '</summary><div class="ba-review-body"><b>Задание:</b> ' + escapeHtml(q.question) + '<br><br><b>Ваш ответ:</b> ' + escapeHtml(answerDisplay(q,lp)) + '<br><br><b>Разбор:</b> ' + escapeHtml(q.explanation || '') + '</div></details>';
+      return '<details class="ba-review-item ' + (r && r.correct ? 'is-correct' : 'is-wrong') + '"><summary>' + (r && r.correct ? 'Ответ обоснован' : 'Нужно пересмотреть') + ' · Вопрос ' + (originalIndex + 1) + ' · ' + escapeHtml(q.skill) + '</summary><div class="ba-review-body"><b>Задание:</b> ' + escapeHtml(q.question) + '<br><br><b>Ваш ответ:</b> ' + escapeHtml(answerDisplay(q,lp)) + '<br><br><b>Разбор:</b> ' + escapeHtml(q.explanation || '') + '</div></details>';
     }).join('');
+
+    let statusText = 'Нужно пересмотреть решения';
+    let heading = 'Часть решений требует пересмотра';
+    let noteClass = 'ba-note-danger';
+    let noteText = 'Правильно решено ' + result.correctCount + ' из ' + result.total + ' заданий. Для перехода к практике нужно пересмотреть ' + wrongResults.length + ' ' + pluralRu(wrongResults.length, 'решение', 'решения', 'решений') + '.';
+    let primaryAction = '<button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.reviewQuizMistakes(\'' + lessonId + '\',\'all\')">Пересмотреть неверные решения</button>';
+
+    if (result.passed) {
+      statusText = 'Тест пройден';
+      heading = 'Вы готовы перейти к практической работе';
+      noteClass = 'ba-note-teal';
+      noteText = 'Все условия выполнены. Теперь можно собрать финансовый контур своего или учебного бизнеса.';
+      primaryAction = '<button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.openStage(\'' + lessonId + '\',\'architecture_assembly\')">Перейти к практике</button>';
+    } else if (keyOnly) {
+      statusText = 'Нужно уточнить ключевые решения';
+      heading = 'Проходной уровень достигнут';
+      noteText = 'Общий результат — ' + result.score + '%. Проходной уровень достигнут, но ' + wrongCritical.length + ' ' + pluralRu(wrongCritical.length, 'ключевое решение требует', 'ключевых решения требуют', 'ключевых решений требуют') + ' пересмотра.';
+      primaryAction = '<button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.reviewQuizMistakes(\'' + lessonId + '\',\'critical\')">Исправить ключевые решения</button>';
+    } else if (wrongCritical.length) {
+      noteText += ' Среди них ' + wrongCritical.length + ' ' + pluralRu(wrongCritical.length, 'ключевой вопрос', 'ключевых вопроса', 'ключевых вопросов') + '.';
+    }
+
     const html =
-      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status ' + (result.passed ? 'is-done' : 'is-warning') + '">' + (result.passed ? 'Тест пройден' : 'Нужна новая попытка') + '</span></div>' +
-      '<section class="ba-card"><p class="ba-eyebrow">РЕЗУЛЬТАТ</p><h2>' + (result.passed ? 'Вы готовы перейти к практической работе' : 'Часть решений нужно пересмотреть') + '</h2><div class="ba-result-summary" style="margin-top:14px"><div class="ba-result-box"><span>Итог</span><b>' + result.score + '%</b></div><div class="ba-result-box"><span>Правильных ответов</span><b>' + result.correctCount + '/' + result.total + '</b></div><div class="ba-result-box"><span>Ключевые вопросы</span><b>' + (result.criticalPassed ? 'без ошибок' : 'есть ошибки') + '</b></div></div>' +
-        '<div class="ba-note ' + (result.passed ? 'ba-note-teal' : 'ba-note-danger') + '" style="margin-top:13px">' + (result.passed ? 'Теперь можно собрать финансовый контур своего или учебного бизнеса.' : 'Для прохождения нужно набрать не менее ' + stage.pass_score + '% и без ошибок решить ключевые вопросы.') + '</div>' +
-        '<div class="ba-actions">' + (result.passed ? '<button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.openStage(\'' + lessonId + '\',\'architecture_assembly\')">Перейти к практике</button>' : '<button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.restartQuiz(\'' + lessonId + '\')">Пройти ещё раз</button>') + '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">К уроку</button></div></section>' +
-      '<section class="ba-card"><p class="ba-eyebrow">РАЗБОР ОТВЕТОВ</p><h2>Логика каждого решения</h2><p>Откройте задания, чтобы увидеть, какие данные и последствия нужно было учесть.</p>' + reviews + '</section><div class="ba-footer-space"></div>';
+      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status ' + (result.passed ? 'is-done' : 'is-warning') + '">' + statusText + '</span></div>' +
+      '<section class="ba-card"><p class="ba-eyebrow">РЕЗУЛЬТАТ</p><h2>' + heading + '</h2><div class="ba-result-summary" style="margin-top:14px"><div class="ba-result-box"><span>Итог</span><b>' + result.score + '%</b></div><div class="ba-result-box"><span>Правильных ответов</span><b>' + result.correctCount + '/' + result.total + '</b></div><div class="ba-result-box"><span>Ключевые вопросы</span><b>' + (result.criticalPassed ? 'без ошибок' : wrongCritical.length + ' ' + pluralRu(wrongCritical.length, 'ошибка', 'ошибки', 'ошибок')) + '</b></div></div>' +
+        '<div class="ba-note ' + noteClass + '" style="margin-top:13px">' + noteText + '</div>' +
+        '<div class="ba-actions">' + primaryAction + (!result.passed ? '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.restartQuiz(\'' + lessonId + '\')">Начать тест заново</button>' : '') + '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">К уроку</button></div></section>' +
+      '<section class="ba-card"><p class="ba-eyebrow">РАЗБОР ОТВЕТОВ</p><h2>Логика каждого решения</h2><p>Сначала показаны решения, которые требуют пересмотра. Раскройте задание, чтобы увидеть недостающие данные и последствия.</p>' + reviews + '</section><div class="ba-footer-space"></div>';
     renderWithAppShell(html, 'home');
   }
+
   function restartQuiz(lessonId){
-    updateLessonProgress(lessonId, function(lp){ lp.quiz.draft = {}; lp.quiz.order = {}; lp.quiz.lastResult = null; });
+    updateLessonProgress(lessonId, function(lp){
+      lp.quiz.draft = {};
+      lp.quiz.order = {};
+      lp.quiz.lastResult = null;
+      lp.quiz.reviewQuestionIds = [];
+      lp.quiz.reviewMode = '';
+    });
     runtime.quizIndex = 0;
     renderQuiz(lessonId,0,false);
   }
@@ -1541,6 +1653,7 @@
     moveOrder,
     confirmOrder,
     submitQuiz,
+    reviewQuizMistakes,
     restartQuiz,
     chooseWorkspaceRoute,
     renderWorkspace,
