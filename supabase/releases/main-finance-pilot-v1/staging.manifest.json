@@ -11,7 +11,7 @@
     "soxtekhspohkddpdidvp.supabase.co"
   ],
   "supabaseCliVersion": "2.109.1",
-  "migrationSetSha256": "9f6bce72e687558f47fcc207b17dc2d0873a823b5430135632ce12ff0499041b",
+  "migrationSetSha256": "fa249161e5032bef09945b3baf6db3e4ecf054cc44cb6cbafd39d4ba8d98e79a",
   "migrations": [
     {
       "path": "supabase/migrations/20260714235900_finance_integration_foundation.sql",
@@ -19,7 +19,7 @@
     },
     {
       "path": "supabase/migrations/20260715010000_finance_entitlement_outbox_v1.sql",
-      "sha256": "1b530a9a1512d14db80f36505540a65e8631cc988add33c626b028b4ef79c58a"
+      "sha256": "a51af239a284c732f329cf315bbb1b21ca8c9f5493aba1d603995b515fbadb11"
     },
     {
       "path": "supabase/migrations/20260715020000_finance_subject_resolver_v1.sql",
@@ -46,6 +46,7 @@
   ],
   "functionConfigPath": "supabase/config.toml",
   "environmentContractPath": "supabase/functions/.env.example",
+  "environmentContractSha256": "8f799eedd3d9802236b02d60a6ce00ef41da42c0e94d36e97100b3f647c9ba83",
   "requiredServerSecrets": [
     "TELEGRAM_BOT_TOKEN",
     "MAIN_FINANCE_PRIVACY_HMAC_KEY",
@@ -54,6 +55,87 @@
     "MAIN_FINANCE_SYNC_TRIGGER_SECRET",
     "MAIN_FINANCE_ENTITLEMENT_HMAC_SECRET"
   ],
+  "postflight": {
+    "path": "supabase/releases/main-finance-pilot-v1/postflight.sql",
+    "sha256": "9772ec633a2e8b8dd86e1e994020885db7147f3e39b910dbc43ab25f922d972b",
+    "transactionMode": "read only",
+    "expectedMigrationCount": 4,
+    "expectedPublicDataRows": 0,
+    "expectedAuthUsers": 0
+  },
+  "edgeDeploymentSetSha256": "bfce967fc0cfc39c5399b52d8c804287db98f8c510e43e9e040ea4b3a0d35263",
+  "edgeDeploymentFiles": [
+    {
+      "path": "supabase/config.toml",
+      "sha256": "3f54838bbbe242a2c462b9978518ba37155243afa7f287eb14ad0b752f0edd83"
+    },
+    {
+      "path": "supabase/functions/_shared/main-edge-runtime.ts",
+      "sha256": "6a773e3dfbd49c862da6a5aee43d42293dfc6fd7903cc17d8832b7ee803b6f88"
+    },
+    {
+      "path": "supabase/functions/_shared/main-entitlement-protocol.mjs",
+      "sha256": "f06857efe7e745922aabc819689366c34a9c8d1993d305d381c473d0acca4e99"
+    },
+    {
+      "path": "supabase/functions/_shared/main-finance-protocol.mjs",
+      "sha256": "d418aa9568a543b4f06cea77fb37db2af71fb164d06561929c2e5d4f736ea192"
+    },
+    {
+      "path": "supabase/functions/finance-sync-entitlements/deno.json",
+      "sha256": "095f401d35d83336a1e96bdad40e777b0ebf4dc5e713f8dc587418dfa01d55f8"
+    },
+    {
+      "path": "supabase/functions/finance-sync-entitlements/deno.lock",
+      "sha256": "5e322322c36ec504c98691cbea052a618d969d627ffcc21f89a5a440d61077eb"
+    },
+    {
+      "path": "supabase/functions/finance-sync-entitlements/index.ts",
+      "sha256": "073c6a8d4e276e802e0bcb3bf5141149d1d05f005dcbb3e50233cf4b9d8c6cae"
+    },
+    {
+      "path": "supabase/functions/finance-issue-code/deno.json",
+      "sha256": "095f401d35d83336a1e96bdad40e777b0ebf4dc5e713f8dc587418dfa01d55f8"
+    },
+    {
+      "path": "supabase/functions/finance-issue-code/deno.lock",
+      "sha256": "5e322322c36ec504c98691cbea052a618d969d627ffcc21f89a5a440d61077eb"
+    },
+    {
+      "path": "supabase/functions/finance-issue-code/index.ts",
+      "sha256": "339b4a09bef586cd43c0490273c69a5afa51cc23c0e194c6c88a66e182b17774"
+    }
+  ],
+  "edgeDeploymentPlan": {
+    "implemented": false,
+    "workdirPlaceholder": "<ATTESTED_DEPLOY_WORKDIR>",
+    "environmentFilePlaceholder": "<EXTERNAL_REVIEWED_ENV_FILE>",
+    "commands": [
+      [
+        "supabase", "config", "push",
+        "--project-ref", "bljeoovhydhjhdzwplxh",
+        "--workdir", "<ATTESTED_DEPLOY_WORKDIR>", "--yes"
+      ],
+      [
+        "supabase", "secrets", "set",
+        "--project-ref", "bljeoovhydhjhdzwplxh",
+        "--env-file", "<EXTERNAL_REVIEWED_ENV_FILE>",
+        "--workdir", "<ATTESTED_DEPLOY_WORKDIR>", "--yes"
+      ],
+      [
+        "supabase", "functions", "deploy", "finance-sync-entitlements",
+        "--project-ref", "bljeoovhydhjhdzwplxh",
+        "--no-verify-jwt", "--use-api",
+        "--workdir", "<ATTESTED_DEPLOY_WORKDIR>", "--yes"
+      ],
+      [
+        "supabase", "functions", "deploy", "finance-issue-code",
+        "--project-ref", "bljeoovhydhjhdzwplxh",
+        "--no-verify-jwt", "--use-api",
+        "--workdir", "<ATTESTED_DEPLOY_WORKDIR>", "--yes"
+      ]
+    ]
+  },
   "apply": {
     "implemented": false,
     "ownerConfirmationPhrase": "APPLY MAIN FINANCE PILOT TO DATALESS STAGING ONLY",

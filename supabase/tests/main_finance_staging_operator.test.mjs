@@ -184,6 +184,21 @@ test("read-only preparation fetches remote_schema only in disposable workdirs an
   assert.deepEqual(attestation.exactDryRunOrder, MIGRATIONS);
   assert.equal(attestation.hostedWritePerformed, false);
   assert.equal(attestation.applySupported, false);
+  const manifest = JSON.parse(readFileSync(
+    "supabase/releases/main-finance-pilot-v1/staging.manifest.json",
+    "utf8",
+  ));
+  for (const item of manifest.edgeDeploymentFiles) {
+    assert.equal(existsSync(path.join(result.workspace, "deploy", item.path)), true);
+  }
+  assert.equal(existsSync(path.join(
+    result.workspace,
+    "deploy/supabase/functions/.env.example",
+  )), false);
+  assert.equal(existsSync(path.join(
+    result.workspace,
+    "deploy/supabase/releases/main-finance-pilot-v1/postflight.sql",
+  )), true);
 
   const invoked = calls(fixture);
   assert.deepEqual(invoked.map(args => args.slice(0, 2)), [

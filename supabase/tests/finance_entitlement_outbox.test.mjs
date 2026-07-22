@@ -31,7 +31,7 @@ test("locked issuer foundation remains byte-identical", () => {
 test("outbox v1 stores desired state and trusted Main user references only", () => {
   assert.equal(
     createHash("sha256").update(migration).digest("hex"),
-    "1b530a9a1512d14db80f36505540a65e8631cc988add33c626b028b4ef79c58a",
+    "a51af239a284c732f329cf315bbb1b21ca8c9f5493aba1d603995b515fbadb11",
   );
   assert.match(migration, /^-- DRAFT \/ NOT APPLIED \/ STAGING ONLY$/m);
   assert.match(migration, /CREATE TABLE public\.architecture_finance_access_desired/);
@@ -67,6 +67,31 @@ test("service-only commands are atomic, idempotent and ordered", () => {
   assert.match(migration, /DEFERRABLE INITIALLY DEFERRED/);
   assert.match(migration, /REVOKE ALL ON FUNCTION public\.architecture_upsert_product_entitlement_internal\([\s\S]*?FROM service_role/);
   assert.doesNotMatch(migration, /https?:\/\/|Deno\.serve|fetch\(/);
+});
+
+test("outbox trigger creation temporarily restores only the postgres owner ACL", () => {
+  const grant = migration.indexOf(
+    "GRANT EXECUTE ON FUNCTION public.architecture_finance_set_updated_at_internal()\nTO postgres;",
+  );
+  const firstTrigger = migration.indexOf(
+    "CREATE TRIGGER trg_architecture_finance_access_desired_updated_at",
+  );
+  const secondTrigger = migration.indexOf(
+    "CREATE TRIGGER trg_architecture_finance_access_outbox_updated_at",
+  );
+  const revoke = migration.indexOf(
+    "REVOKE ALL ON FUNCTION public.architecture_finance_set_updated_at_internal()\nFROM postgres;",
+  );
+  assert.ok(grant >= 0 && grant < firstTrigger);
+  assert.ok(firstTrigger < secondTrigger && secondTrigger < revoke);
+  assert.equal(
+    migration.match(/GRANT EXECUTE ON FUNCTION public\.architecture_finance_set_updated_at_internal\(\)/g)?.length,
+    1,
+  );
+  assert.equal(
+    migration.match(/REVOKE ALL ON FUNCTION public\.architecture_finance_set_updated_at_internal\(\)\nFROM postgres;/g)?.length,
+    1,
+  );
 });
 
 test("disposable PostgreSQL harness executes and rolls back outbox behavior", () => {

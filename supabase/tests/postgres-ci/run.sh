@@ -6,6 +6,7 @@ harness_dir="$repo_root/supabase/tests/postgres-ci"
 foundation_migration="$repo_root/supabase/migrations/20260714235900_finance_integration_foundation.sql"
 outbox_migration="$repo_root/supabase/migrations/20260715010000_finance_entitlement_outbox_v1.sql"
 resolver_migration="$repo_root/supabase/migrations/20260715020000_finance_subject_resolver_v1.sql"
+release_postflight="$repo_root/supabase/releases/main-finance-pilot-v1/postflight.sql"
 
 readonly -a required_harness_files=(
   README.md
@@ -96,6 +97,8 @@ for migration_path in "$foundation_migration" "$outbox_migration" "$resolver_mig
   [[ -f "$migration_path" && ! -L "$migration_path" ]] ||
     fail "reviewed migration must be a regular non-symlink file"
 done
+[[ -f "$release_postflight" && ! -L "$release_postflight" ]] ||
+  fail "hosted staging postflight must be a regular non-symlink file"
 for relative_path in "${required_harness_files[@]}"; do
   path="$harness_dir/$relative_path"
   [[ -f "$path" && ! -L "$path" ]] ||
@@ -206,6 +209,31 @@ apply_file "$outbox_migration"
 apply_file "$harness_dir/outbox_postflight.sql"
 apply_file "$resolver_migration"
 apply_file "$harness_dir/resolver_postflight.sql"
+
+psql_ci --command="
+  CREATE SCHEMA supabase_migrations AUTHORIZATION postgres;
+  CREATE TABLE supabase_migrations.schema_migrations (
+    version text PRIMARY KEY,
+    statements text[],
+    name text
+  );
+  INSERT INTO supabase_migrations.schema_migrations (version, statements, name)
+  VALUES
+    ('20260714235900', ARRAY[]::text[], 'finance_integration_foundation'),
+    ('20260715010000', ARRAY[]::text[], 'finance_entitlement_outbox_v1'),
+    ('20260715020000', ARRAY[]::text[], 'finance_subject_resolver_v1'),
+    ('20260722120000', ARRAY[]::text[], 'remote_schema');
+  DELETE FROM public.users;
+" >/dev/null
+apply_file "$release_postflight"
+psql_ci --command="
+  DROP SCHEMA supabase_migrations CASCADE;
+  INSERT INTO public.users (id, telegram_id)
+  VALUES (
+    '00000000-0000-4000-8000-000000000001'::uuid,
+    9000000000000000001
+  );
+" >/dev/null
 
 stable_catalog_fingerprint="$(catalog_fingerprint)"
 stable_data_fingerprint="$(data_fingerprint)"

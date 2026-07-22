@@ -117,12 +117,85 @@ function readManifest() {
     }
   }
   if (
+    manifest.postflight?.path !== "supabase/releases/main-finance-pilot-v1/postflight.sql"
+    || manifest.postflight.sha256 !== "9772ec633a2e8b8dd86e1e994020885db7147f3e39b910dbc43ab25f922d972b"
+    || manifest.postflight.transactionMode !== "read only"
+    || manifest.postflight.expectedMigrationCount !== 4
+    || manifest.postflight.expectedPublicDataRows !== 0
+    || manifest.postflight.expectedAuthUsers !== 0
+  ) fail("hosted staging postflight contract differs");
+  const postflightPath = path.join(repositoryRoot, manifest.postflight.path);
+  if (sha256(readFileSync(postflightPath)) !== manifest.postflight.sha256) {
+    fail("hosted staging postflight bytes differ");
+  }
+  const expectedDeploymentPaths = [
+    "supabase/config.toml",
+    "supabase/functions/_shared/main-edge-runtime.ts",
+    "supabase/functions/_shared/main-entitlement-protocol.mjs",
+    "supabase/functions/_shared/main-finance-protocol.mjs",
+    "supabase/functions/finance-sync-entitlements/deno.json",
+    "supabase/functions/finance-sync-entitlements/deno.lock",
+    "supabase/functions/finance-sync-entitlements/index.ts",
+    "supabase/functions/finance-issue-code/deno.json",
+    "supabase/functions/finance-issue-code/deno.lock",
+    "supabase/functions/finance-issue-code/index.ts",
+  ];
+  if (
+    !Array.isArray(manifest.edgeDeploymentFiles)
+    || JSON.stringify(manifest.edgeDeploymentFiles.map(item => item.path))
+      !== JSON.stringify(expectedDeploymentPaths)
+  ) fail("Edge deployment file allow-list differs");
+  const deploymentSet = manifest.edgeDeploymentFiles
+    .map(item => `${item.path}\0${item.sha256}\n`)
+    .join("");
+  if (
+    manifest.edgeDeploymentSetSha256
+      !== "bfce967fc0cfc39c5399b52d8c804287db98f8c510e43e9e040ea4b3a0d35263"
+    || sha256(deploymentSet) !== manifest.edgeDeploymentSetSha256
+  ) fail("Edge deployment set fingerprint differs");
+  for (const item of manifest.edgeDeploymentFiles) {
+    const absolute = path.resolve(repositoryRoot, item.path);
+    if (!absolute.startsWith(`${repositoryRoot}${path.sep}`) || !statSync(absolute).isFile()) {
+      fail(`Edge deployment path is unsafe: ${item.path}`);
+    }
+    if (sha256(readFileSync(absolute)) !== item.sha256) {
+      fail(`Edge deployment bytes differ: ${item.path}`);
+    }
+  }
+  if (
     !Array.isArray(manifest.edgeFunctions)
     || JSON.stringify(manifest.edgeFunctions.map(item => item.name))
       !== JSON.stringify(["finance-sync-entitlements", "finance-issue-code"])
     || manifest.edgeFunctions.some(item => item.verifyJwt !== false)
   ) fail("Edge Function allow-list differs");
+  const expectedSecrets = [
+    "TELEGRAM_BOT_TOKEN",
+    "MAIN_FINANCE_PRIVACY_HMAC_KEY",
+    "MAIN_FINANCE_NONCE_DERIVATION_KEY",
+    "MAIN_FINANCE_ISSUER_HMAC_SECRET",
+    "MAIN_FINANCE_SYNC_TRIGGER_SECRET",
+    "MAIN_FINANCE_ENTITLEMENT_HMAC_SECRET",
+  ];
+  if (
+    manifest.functionConfigPath !== "supabase/config.toml"
+    || manifest.environmentContractPath !== "supabase/functions/.env.example"
+    || manifest.environmentContractSha256
+      !== "8f799eedd3d9802236b02d60a6ce00ef41da42c0e94d36e97100b3f647c9ba83"
+    || sha256(readFileSync(path.join(repositoryRoot, manifest.environmentContractPath)))
+      !== manifest.environmentContractSha256
+    || JSON.stringify(manifest.requiredServerSecrets) !== JSON.stringify(expectedSecrets)
+  ) fail("Edge environment and secret-name contract differs");
   if (manifest.apply?.implemented !== false) fail("manifest must keep apply unimplemented");
+  const expectedCommands = [
+    ["supabase", "config", "push", "--project-ref", "bljeoovhydhjhdzwplxh", "--workdir", "<ATTESTED_DEPLOY_WORKDIR>", "--yes"],
+    ["supabase", "secrets", "set", "--project-ref", "bljeoovhydhjhdzwplxh", "--env-file", "<EXTERNAL_REVIEWED_ENV_FILE>", "--workdir", "<ATTESTED_DEPLOY_WORKDIR>", "--yes"],
+    ["supabase", "functions", "deploy", "finance-sync-entitlements", "--project-ref", "bljeoovhydhjhdzwplxh", "--no-verify-jwt", "--use-api", "--workdir", "<ATTESTED_DEPLOY_WORKDIR>", "--yes"],
+    ["supabase", "functions", "deploy", "finance-issue-code", "--project-ref", "bljeoovhydhjhdzwplxh", "--no-verify-jwt", "--use-api", "--workdir", "<ATTESTED_DEPLOY_WORKDIR>", "--yes"],
+  ];
+  if (
+    manifest.edgeDeploymentPlan?.implemented !== false
+    || JSON.stringify(manifest.edgeDeploymentPlan.commands) !== JSON.stringify(expectedCommands)
+  ) fail("plan-only Edge command allow-list differs");
   return { manifest, source, sha256: sha256(source), expectedNames };
 }
 
@@ -280,21 +353,14 @@ function copyReleaseSources(deployDirectory, manifest) {
     mkdirSync(path.dirname(destination), { recursive: true, mode: 0o700 });
     copyFileSync(path.join(repositoryRoot, item.path), destination);
   }
-  const sourceDirectories = [
-    "supabase/functions/_shared",
-    "supabase/functions/finance-sync-entitlements",
-    "supabase/functions/finance-issue-code",
-  ];
-  for (const relativeDirectory of sourceDirectories) {
-    const source = path.join(repositoryRoot, relativeDirectory);
-    const destination = path.join(deployDirectory, relativeDirectory);
-    mkdirSync(destination, { recursive: true, mode: 0o700 });
-    for (const name of readdirSync(source)) {
-      const item = path.join(source, name);
-      if (!statSync(item).isFile()) fail(`unexpected nested function source: ${relativeDirectory}/${name}`);
-      copyFileSync(item, path.join(destination, name));
-    }
+  for (const item of manifest.edgeDeploymentFiles) {
+    const destination = path.join(deployDirectory, item.path);
+    mkdirSync(path.dirname(destination), { recursive: true, mode: 0o700 });
+    copyFileSync(path.join(repositoryRoot, item.path), destination);
   }
+  const postflightDestination = path.join(deployDirectory, manifest.postflight.path);
+  mkdirSync(path.dirname(postflightDestination), { recursive: true, mode: 0o700 });
+  copyFileSync(path.join(repositoryRoot, manifest.postflight.path), postflightDestination);
 }
 
 function exactRemoteBaseline(fetchDirectory, manifest) {
@@ -360,6 +426,15 @@ export function planMainFinanceStaging(argv, { environment = process.env } = {})
       verify_jwt: item.verifyJwt,
       initial_gate: item.initialGate,
     })),
+    postflight: {
+      path: reviewed.manifest.postflight.path,
+      sha256: reviewed.manifest.postflight.sha256,
+      transaction_mode: reviewed.manifest.postflight.transactionMode,
+    },
+    edge_deployment_set_sha256: reviewed.manifest.edgeDeploymentSetSha256,
+    environment_contract_sha256: reviewed.manifest.environmentContractSha256,
+    required_server_secrets: reviewed.manifest.requiredServerSecrets,
+    future_hosted_commands: reviewed.manifest.edgeDeploymentPlan.commands,
     apply_supported: false,
     hosted_write_performed: false,
   };
@@ -411,6 +486,8 @@ export function planMainFinanceStaging(argv, { environment = process.env } = {})
     productionRefDenied: reviewed.manifest.productionDenyProjectRefs[0],
     manifestSha256: reviewed.sha256,
     migrationSetSha256: reviewed.manifest.migrationSetSha256,
+    postflightSha256: reviewed.manifest.postflight.sha256,
+    edgeDeploymentSetSha256: reviewed.manifest.edgeDeploymentSetSha256,
     remoteBaseline: { name: baseline.name, sha256: baseline.sha256, execute: false },
     migrationListSha256: sha256(migrationList),
     dryRunSha256: sha256(dryRun),

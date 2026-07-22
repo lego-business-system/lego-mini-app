@@ -19,6 +19,10 @@ const resolverMigrationUrl = new URL(
   "supabase/migrations/20260715020000_finance_subject_resolver_v1.sql",
   root,
 );
+const releasePostflightUrl = new URL(
+  "supabase/releases/main-finance-pilot-v1/postflight.sql",
+  root,
+);
 const workflow = readFileSync(
   new URL(".github/workflows/verify-finance-integration.yml", root),
   "utf8",
@@ -26,6 +30,7 @@ const workflow = readFileSync(
 const migration = readFileSync(migrationUrl, "utf8");
 const outboxMigration = readFileSync(outboxMigrationUrl, "utf8");
 const resolverMigration = readFileSync(resolverMigrationUrl, "utf8");
+const releasePostflight = readFileSync(releasePostflightUrl, "utf8");
 const runScript = readFileSync(new URL("run.sh", harness), "utf8");
 const bootstrap = readFileSync(new URL("bootstrap.sql", harness), "utf8");
 const behaviorSmoke = readFileSync(new URL("behavior_smoke.sql", harness), "utf8");
@@ -146,7 +151,7 @@ test("reviewed migration is exact and avoids PostgreSQL reserved aliases", () =>
 test("entitlement outbox is a separate pinned additive migration", () => {
   assert.equal(
     createHash("sha256").update(outboxMigration).digest("hex"),
-    "1b530a9a1512d14db80f36505540a65e8631cc988add33c626b028b4ef79c58a",
+    "a51af239a284c732f329cf315bbb1b21ca8c9f5493aba1d603995b515fbadb11",
   );
   assert.match(outboxMigration, /^-- DRAFT \/ NOT APPLIED \/ STAGING ONLY$/m);
   assert.match(outboxMigration, /^BEGIN;$/m);
@@ -229,6 +234,32 @@ test("subject resolver is service-only and preserves bigint identity as text", (
   assert.match(resolverPostflight, /exact function ACL differs/);
 });
 
+test("hosted Main staging postflight is pinned, read-only and exercised locally", () => {
+  assert.equal(
+    createHash("sha256").update(releasePostflight).digest("hex"),
+    "9772ec633a2e8b8dd86e1e994020885db7147f3e39b910dbc43ab25f922d972b",
+  );
+  assert.match(releasePostflight, /^SET TRANSACTION READ ONLY;$/m);
+  assert.match(releasePostflight, /bljeoovhydhjhdzwplxh/);
+  assert.match(releasePostflight, /soxtekhspohkddpdidvp/);
+  assert.match(releasePostflight, /migration history is not one remote_schema plus the exact three v1 migrations/);
+  assert.match(releasePostflight, /exact five-table\/RLS\/owner contract differs/);
+  assert.match(releasePostflight, /exact nine-function contract differs/);
+  assert.match(releasePostflight, /data-less public table %I\.%I is not empty/);
+  assert.match(releasePostflight, /auth\.users is not empty/);
+  assert.doesNotMatch(
+    releasePostflight,
+    /^\s*(?:INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE|GRANT|REVOKE)\b/im,
+  );
+  assert.match(runScript, /release_postflight=.*postflight\.sql/);
+  assert.match(runScript, /apply_file "\$release_postflight"/);
+  assert.ok(
+    runScript.indexOf('apply_file "$release_postflight"') <
+      runScript.indexOf('stable_catalog_fingerprint="$(catalog_fingerprint)"'),
+    "release postflight must run before stable fingerprints",
+  );
+});
+
 test("harness inputs are regular files and runner fails closed", () => {
   for (const name of expectedHarnessFiles) {
     const status = lstatSync(new URL(name, harness));
@@ -244,6 +275,9 @@ test("harness inputs are regular files and runner fails closed", () => {
   const resolverMigrationStatus = lstatSync(resolverMigrationUrl);
   assert.ok(resolverMigrationStatus.isFile());
   assert.ok(!resolverMigrationStatus.isSymbolicLink());
+  const releasePostflightStatus = lstatSync(releasePostflightUrl);
+  assert.ok(releasePostflightStatus.isFile());
+  assert.ok(!releasePostflightStatus.isSymbolicLink());
 
   assert.match(runScript, /^set -Eeuo pipefail$/m);
   assert.match(runScript, /CI:-.*== "true"/);

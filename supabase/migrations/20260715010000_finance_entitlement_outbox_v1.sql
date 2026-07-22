@@ -330,6 +330,13 @@ ON public.architecture_finance_access_outbox (state, next_attempt_at, created_at
 CREATE INDEX idx_architecture_finance_access_outbox_user_version
 ON public.architecture_finance_access_outbox (main_user_id, product_code, version, state);
 
+-- The foundation intentionally removes every direct EXECUTE ACL from the
+-- postgres-owned trigger helper. PostgreSQL checks EXECUTE again when a later
+-- migration creates another trigger, so restore the owner's privilege only
+-- for the two CREATE TRIGGER statements below and remove it immediately after.
+GRANT EXECUTE ON FUNCTION public.architecture_finance_set_updated_at_internal()
+TO postgres;
+
 DROP TRIGGER IF EXISTS trg_architecture_finance_access_desired_updated_at
 ON public.architecture_finance_access_desired;
 CREATE TRIGGER trg_architecture_finance_access_desired_updated_at
@@ -343,6 +350,9 @@ CREATE TRIGGER trg_architecture_finance_access_outbox_updated_at
 BEFORE UPDATE ON public.architecture_finance_access_outbox
 FOR EACH ROW
 EXECUTE FUNCTION public.architecture_finance_set_updated_at_internal();
+
+REVOKE ALL ON FUNCTION public.architecture_finance_set_updated_at_internal()
+FROM postgres;
 
 CREATE FUNCTION public.architecture_set_finance_access_desired_internal(
   p_event_id uuid,
