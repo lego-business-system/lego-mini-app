@@ -37,6 +37,7 @@ jobs:
       - name: Remove temporary deployment files
         run: |
           rm -f tools/deploy-business-system-v136.py
+          rm -f tools/deploy-business-system-v136.part*
           rm -f .github/workflows/deploy-business-system-v136.yml
 
       - name: Commit generated module
