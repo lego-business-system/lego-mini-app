@@ -1,16 +1,19 @@
 {
-  "schema_version": "1.0",
-  "release": "ba-v2-20260721",
+  "schema_version": "1.1",
+  "release": "ba-v5-part1-20260722",
   "module": {
     "id": "business_architecture",
     "entry_title": "Бизнес как система",
     "title": "Архитектура бизнеса",
-    "subtitle": "Пошаговая система управления бизнесом: от финансовой реальности до устойчивого роста.",
+    "subtitle": "Практическая система управления — от финансовой реальности до контрольной карты и дорожной карты внедрения.",
     "total_parts": 4,
     "total_lessons": 20,
     "total_stages": 80,
     "integration_cases": 4,
-    "practical_examples": 99
+    "practical_examples": 99,
+    "available_parts": 1,
+    "available_lessons": 4,
+    "available_cases": 1
   },
   "book": {
     "title": "Архитектура бизнеса. Практическая система управления",
@@ -43,7 +46,7 @@
           "number": 2,
           "chapter": 2,
           "title": "Стратегия, рынок и бизнес-модель",
-          "status": "preparing",
+          "status": "available",
           "stages": 4
         },
         {
@@ -51,7 +54,7 @@
           "number": 3,
           "chapter": 3,
           "title": "Поток создания ценности",
-          "status": "preparing",
+          "status": "available",
           "stages": 4
         },
         {
@@ -59,14 +62,17 @@
           "number": 4,
           "chapter": 4,
           "title": "Архитектура управления",
-          "status": "preparing",
+          "status": "available",
           "stages": 4
         }
       ],
       "integration_case": {
         "id": "PART-01-CASE",
-        "title": "Интеграционный кейс I",
-        "status": "preparing"
+        "title": "Комплексный разбор: готов ли бизнес к росту?",
+        "status": "available",
+        "number": 5,
+        "stages": 4,
+        "result": "Финансово-стратегическая карта бизнеса"
       }
     },
     {
