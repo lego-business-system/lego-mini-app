@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "environment": "staging",
+  "allowedStagingProjectRefs": [
+    "bljeoovhydhjhdzwplxh"
+  ],
+  "productionDenyProjectRefs": [
+    "soxtekhspohkddpdidvp"
+  ],
+  "productionDenyHostnames": [
+    "soxtekhspohkddpdidvp.supabase.co"
+  ],
+  "supabaseCliVersion": "2.109.1",
+  "migrationSetSha256": "9f6bce72e687558f47fcc207b17dc2d0873a823b5430135632ce12ff0499041b",
+  "migrations": [
+    {
+      "path": "supabase/migrations/20260714235900_finance_integration_foundation.sql",
+      "sha256": "78b9a8619ab3487424602ffaba6fcad02e7557a7112c2639370cb8d28fa2a9e6"
+    },
+    {
+      "path": "supabase/migrations/20260715010000_finance_entitlement_outbox_v1.sql",
+      "sha256": "1b530a9a1512d14db80f36505540a65e8631cc988add33c626b028b4ef79c58a"
+    },
+    {
+      "path": "supabase/migrations/20260715020000_finance_subject_resolver_v1.sql",
+      "sha256": "1896a473adb43411c94da47226e2ed4b070043b152ebf92df903dee1073f338c"
+    }
+  ],
+  "remoteBaseline": {
+    "source": "supabase migration fetch",
+    "exactFileCount": 1,
+    "filenamePattern": "^[0-9]{14}_remote_schema\\.sql$",
+    "execute": false
+  },
+  "edgeFunctions": [
+    {
+      "name": "finance-sync-entitlements",
+      "verifyJwt": false,
+      "initialGate": "MAIN_FINANCE_SYNC_MODE=disabled"
+    },
+    {
+      "name": "finance-issue-code",
+      "verifyJwt": false,
+      "initialGate": "MAIN_FINANCE_PROTOCOL_MODE=disabled"
+    }
+  ],
+  "functionConfigPath": "supabase/config.toml",
+  "environmentContractPath": "supabase/functions/.env.example",
+  "requiredServerSecrets": [
+    "TELEGRAM_BOT_TOKEN",
+    "MAIN_FINANCE_PRIVACY_HMAC_KEY",
+    "MAIN_FINANCE_NONCE_DERIVATION_KEY",
+    "MAIN_FINANCE_ISSUER_HMAC_SECRET",
+    "MAIN_FINANCE_SYNC_TRIGGER_SECRET",
+    "MAIN_FINANCE_ENTITLEMENT_HMAC_SECRET"
+  ],
+  "apply": {
+    "implemented": false,
+    "ownerConfirmationPhrase": "APPLY MAIN FINANCE PILOT TO DATALESS STAGING ONLY",
+    "requiredConfirmations": [
+      "exact staging project ref",
+      "exact production deny ref",
+      "exact migrationSetSha256",
+      "exact dry-run attestation SHA-256",
+      "exact external environment file SHA-256",
+      "separate current owner approval"
+    ]
+  }
+}

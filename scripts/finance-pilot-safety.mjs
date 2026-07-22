@@ -304,6 +304,20 @@ export function financePilotContentSecurityPolicy(config) {
   ].join("; ");
 }
 
+export function financePilotCloudflarePagesHeaders(config) {
+  const contentSecurityPolicy = financePilotContentSecurityPolicy(config);
+  return [
+    "/*",
+    `  Content-Security-Policy: ${contentSecurityPolicy}`,
+    "  X-Content-Type-Options: nosniff",
+    "  Referrer-Policy: no-referrer",
+    "  Permissions-Policy: camera=(), display-capture=(), geolocation=(), microphone=(), payment=(), publickey-credentials-get=(), usb=()",
+    "  Cross-Origin-Opener-Policy: same-origin",
+    "  Cross-Origin-Resource-Policy: same-origin",
+    "",
+  ].join("\n");
+}
+
 export function assertSafeExternalOutputDirectory(repositoryRoot, outputDirectory) {
   const root = path.resolve(repositoryRoot);
   const output = path.resolve(outputDirectory);

@@ -12,6 +12,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
   assertSafeExternalOutputDirectory,
+  financePilotCloudflarePagesHeaders,
   financePilotConfigScript,
   financePilotContentSecurityPolicy,
   readReviewedExternalJson,
@@ -82,6 +83,7 @@ export function buildFinancePilot({ configFile, productionBoundaryFile, outputDi
   }
 
   const files = new Map([
+    ["_headers", financePilotCloudflarePagesHeaders(config)],
     ["architecture-finance.css", readFileSync(path.join(REPOSITORY_ROOT, "finance-pilot", "architecture-finance.css"), "utf8")],
     ["architecture-finance.js", readFileSync(path.join(REPOSITORY_ROOT, "finance-pilot", "architecture-finance.js"), "utf8")],
     ["finance-pilot-config.js", financePilotConfigScript(config)],

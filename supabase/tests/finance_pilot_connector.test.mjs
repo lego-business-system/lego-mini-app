@@ -14,6 +14,7 @@ import vm from "node:vm";
 
 import { buildFinancePilot } from "../../scripts/build-finance-pilot.mjs";
 import {
+  financePilotCloudflarePagesHeaders,
   financePilotConfigScript,
   financePilotContentSecurityPolicy,
   validateFinancePilotStagingConfig,
@@ -95,10 +96,11 @@ function runShell({ initData = "query_id=pilot", locationOrigin = PUBLIC_ORIGIN 
   return { context, app, rendered };
 }
 
-test("staging build contains only the six connector assets and no production URL", t => {
+test("staging build contains only the seven connector assets and no production URL", t => {
   const { output, result } = builtArtifact(t);
   assert.equal(result.ok, true);
   assert.deepEqual(readdirSync(output).sort(), [
+    "_headers",
     "architecture-finance.css",
     "architecture-finance.js",
     "finance-pilot-config.js",
@@ -131,6 +133,40 @@ test("artifact CSP pins one Main origin without unsafe inline scripts", t => {
   assert.match(csp, /script-src-attr 'unsafe-hashes'/);
   assert.equal((index.match(/<script\b/g) || []).length, 4);
   assert.doesNotMatch(index, /<script\b[^>]*>\s*[^<]/);
+});
+
+test("Cloudflare Pages headers enforce the exact HTTP CSP and isolation policies", t => {
+  const { output } = builtArtifact(t);
+  const config = validateFinancePilotStagingConfig(CONFIG, PRODUCTION_BOUNDARY);
+  const csp = financePilotContentSecurityPolicy(config);
+  const headers = readFileSync(path.join(output, "_headers"), "utf8");
+  assert.equal(headers, financePilotCloudflarePagesHeaders(config));
+  assert.match(headers, /^\/\*\n/u);
+  assert.match(headers, new RegExp(`^  Content-Security-Policy: ${csp.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "mu"));
+  assert.match(csp, new RegExp(`(?:^|; )connect-src ${MAIN_ORIGIN}(?:;|$)`));
+  assert.doesNotMatch(csp, /connect-src[^;]*(?:\*|https:\s|http:)/u);
+  assert.match(csp, /(?:^|; )frame-ancestors 'none'(?:;|$)/u);
+  assert.match(headers, /^  X-Content-Type-Options: nosniff$/mu);
+  assert.match(headers, /^  Referrer-Policy: no-referrer$/mu);
+  assert.match(headers, /^  Permissions-Policy: camera=\(\), display-capture=\(\), geolocation=\(\), microphone=\(\), payment=\(\), publickey-credentials-get=\(\), usb=\(\)$/mu);
+  assert.match(headers, /^  Cross-Origin-Opener-Policy: same-origin$/mu);
+  assert.match(headers, /^  Cross-Origin-Resource-Policy: same-origin$/mu);
+});
+
+test("artifact verifier fails closed when HTTP security headers drift", t => {
+  const { output } = builtArtifact(t);
+  const headersFile = path.join(output, "_headers");
+  const headers = readFileSync(headersFile, "utf8");
+  writeFileSync(
+    headersFile,
+    headers.replace(`connect-src ${MAIN_ORIGIN}`, `connect-src ${MAIN_ORIGIN} https://attacker.example`),
+    { mode: 0o644 },
+  );
+  assert.throws(() => verifyFinancePilotArtifact({
+    artifactDirectory: output,
+    config: validateFinancePilotStagingConfig(CONFIG, PRODUCTION_BOUNDARY),
+    productionBoundary: PRODUCTION_BOUNDARY,
+  }), /artifact member drifted: _headers/);
 });
 
 test("verifier rejects any full Main asset added to the connector", t => {

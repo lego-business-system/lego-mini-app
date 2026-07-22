@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
   assertSafeExternalOutputDirectory,
+  financePilotCloudflarePagesHeaders,
   financePilotConfigScript,
   financePilotContentSecurityPolicy,
   readReviewedExternalJson,
@@ -16,6 +17,7 @@ import {
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = path.resolve(SCRIPT_DIRECTORY, "..");
 const EXPECTED_FILES = Object.freeze([
+  "_headers",
   "architecture-finance.css",
   "architecture-finance.js",
   "finance-pilot-config.js",
@@ -86,6 +88,7 @@ export function verifyFinancePilotArtifact({
   }
 
   const expectedSources = new Map([
+    ["_headers", financePilotCloudflarePagesHeaders(config)],
     ["architecture-finance.css", readFileSync(path.join(REPOSITORY_ROOT, "finance-pilot", "architecture-finance.css"), "utf8")],
     ["architecture-finance.js", readFileSync(path.join(REPOSITORY_ROOT, "finance-pilot", "architecture-finance.js"), "utf8")],
     ["finance-pilot-config.js", financePilotConfigScript(config)],
@@ -94,9 +97,11 @@ export function verifyFinancePilotArtifact({
     ["pilot-shell.js", readFileSync(path.join(REPOSITORY_ROOT, "finance-pilot", "pilot-shell.js"), "utf8")],
   ]);
   const sources = [];
+  const actualSources = new Map();
   for (const name of EXPECTED_FILES) {
     const actual = readFileSync(assertRegularArtifactFile(realArtifact, name), "utf8");
     if (actual !== expectedSources.get(name)) throw new Error(`artifact member drifted: ${name}`);
+    actualSources.set(name, actual);
     sources.push(actual);
   }
   const combined = sources.join("\n");
@@ -113,8 +118,35 @@ export function verifyFinancePilotArtifact({
     }
   }
   const index = expectedSources.get("index.html");
-  if (!index.includes(`connect-src ${config.mainEdgeOrigin}`)) {
+  const contentSecurityPolicy = financePilotContentSecurityPolicy(config);
+  const directives = new Map(contentSecurityPolicy.split("; ").map((directive) => {
+    const separator = directive.indexOf(" ");
+    return separator === -1
+      ? [directive, ""]
+      : [directive.slice(0, separator), directive.slice(separator + 1)];
+  }));
+  if (directives.get("connect-src") !== config.mainEdgeOrigin) {
     throw new Error("artifact CSP does not pin the exact Main staging origin");
+  }
+  if (directives.get("frame-ancestors") !== "'none'") {
+    throw new Error("artifact CSP must deny every frame ancestor");
+  }
+  const expectedHttpHeaders = [
+    ["Content-Security-Policy", contentSecurityPolicy],
+    ["X-Content-Type-Options", "nosniff"],
+    ["Referrer-Policy", "no-referrer"],
+    ["Permissions-Policy", "camera=(), display-capture=(), geolocation=(), microphone=(), payment=(), publickey-credentials-get=(), usb=()"],
+    ["Cross-Origin-Opener-Policy", "same-origin"],
+    ["Cross-Origin-Resource-Policy", "same-origin"],
+  ];
+  const headerLines = actualSources.get("_headers").split("\n");
+  if (headerLines.at(-1) === "") headerLines.pop();
+  const expectedHeaderLines = [
+    "/*",
+    ...expectedHttpHeaders.map(([name, value]) => `  ${name}: ${value}`),
+  ];
+  if (JSON.stringify(headerLines) !== JSON.stringify(expectedHeaderLines)) {
+    throw new Error("artifact HTTP security headers differ from the exact allow-list");
   }
   if ((index.match(/<script\b/gu) || []).length !== 4 || /<script\b[^>]*>\s*[^<]/u.test(index)) {
     throw new Error("artifact scripts must be the exact external/local allow-list without inline code");

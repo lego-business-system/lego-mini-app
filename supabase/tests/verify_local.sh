@@ -23,6 +23,7 @@ for node_source in \
   scripts/build-finance-pilot.mjs \
   scripts/finance-pilot-safety.mjs \
   scripts/manage-finance-access.mjs \
+  scripts/prepare-main-finance-staging.mjs \
   scripts/verify-finance-pilot-artifact.mjs
 do
   "$node_bin" --check "$node_source"

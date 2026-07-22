@@ -73,6 +73,62 @@ connector deploy запрещён.
 Каждый hosted/database шаг выполняется отдельно и только после явного
 подтверждения владельца.
 
+### Безопасная подготовка Main staging
+
+Точный release-контракт находится в
+[`releases/main-finance-pilot-v1/staging.manifest.json`](releases/main-finance-pilot-v1/staging.manifest.json).
+Он принимает только созданный data-less Main staging ref
+`bljeoovhydhjhdzwplxh`, навсегда запрещает Main production ref
+`soxtekhspohkddpdidvp`, закрепляет Supabase CLI `2.109.1`, ровно три миграции
+v1 и ровно две Edge Functions. Любой иной ref отклоняется.
+
+Обычный запуск ничего не скачивает, не читает секреты и не обращается к hosted
+Supabase:
+
+```bash
+node scripts/prepare-main-finance-staging.mjs \
+  --project-ref bljeoovhydhjhdzwplxh
+```
+
+После создания новой data-less ветки допускается только read-only подготовка в
+новой внешней директории, которой ещё не существует:
+
+```bash
+node scripts/prepare-main-finance-staging.mjs \
+  --project-ref bljeoovhydhjhdzwplxh \
+  --prepare \
+  --workspace /absolute/new/disposable/main-staging-preflight \
+  --supabase-cli /absolute/pinned/supabase
+```
+
+Оператор выполняет `migration fetch` только в каталоге `fetch`, принимает ровно
+один файл `<timestamp>_remote_schema.sql`, затем создаёт отдельный каталог
+`deploy`. Fetched baseline нужен только для локального сопоставления истории и
+не должен исполняться повторно. `migration list` обязан показать baseline как
+local+remote, а три pilot-версии — только local. `db push --dry-run` обязан
+предложить ровно эти файлы и в таком порядке:
+
+1. `20260714235900_finance_integration_foundation.sql`;
+2. `20260715010000_finance_entitlement_outbox_v1.sql`;
+3. `20260715020000_finance_subject_resolver_v1.sql`.
+
+Перед CLI оператор удаляет из дочернего окружения все `PG*`, `POSTGRES*`,
+`DATABASE*`, `DB_*` и `SUPABASE_*` target overrides; сохраняется только
+`SUPABASE_ACCESS_TOKEN`. После каждого `link`, `migration fetch`,
+`migration list` и dry-run заново проверяется соответствующая одноразовая
+`supabase/.temp`: `project-ref`/`linked-project.json` обязан указывать только на
+`bljeoovhydhjhdzwplxh`, а ни один metadata-файл не может содержать production
+ref или `soxtekhspohkddpdidvp.supabase.co`. При ошибке CLI stdout/stderr целиком
+скрываются, чтобы URL, connection string или credential не попали в терминал.
+
+Любой другой файл, порядок, версия CLI или project ref означает `NO-GO`.
+Оператор не поддерживает `--apply` и не выполняет secrets/functions deploy.
+Перед будущим применением требуются отдельное текущее подтверждение владельца,
+точные staging/production refs, hash release-набора, hash dry-run attestation и
+hash внешнего environment-файла. В environment-файле оба gate сначала обязаны
+оставаться `disabled`; шесть server-only secrets перечислены в manifest и
+[`functions/.env.example`](functions/.env.example), но не входят в attestation.
+
 1. Локально пройти `verify_local.sh`, static guard, frozen Deno check/audit и
    clean diff/secret scan.
 2. В Finance staging сначала применить reviewed Finance entitlement/issuer
@@ -88,11 +144,16 @@ connector deploy запрещён.
    `MAIN_FINANCE_PROTOCOL_MODE=disabled`. Обе функции имеют собственную
    внутреннюю аутентификацию; browser context для worker запрещён.
 6. Настроить точные staging origins/paths, server secrets и gateway rate limit.
-7. Собрать и проверить отдельный connector artifact. Опубликовать его с gate
-   выключенным на сервере и привязать только к staging Telegram bot. Hosting
-   обязан вернуть тот же CSP как HTTP header; `frame-ancestors` из meta-тега
-   сам по себе не является достаточной защитой. Проверить фактические response
-   headers до включения issuer.
+7. Собрать и проверить отдельный connector artifact из ровно семи файлов.
+   Седьмой файл `_headers` предназначен для Cloudflare Pages: он возвращает
+   побайтово тот же CSP как HTTP header, оставляет в `connect-src` только один
+   точный Main staging origin, устанавливает `frame-ancestors 'none'`,
+   `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, закрытую
+   Permissions Policy, `Cross-Origin-Opener-Policy: same-origin` и
+   `Cross-Origin-Resource-Policy: same-origin`. Опубликовать только эту output-
+   директорию с gate выключенным и привязать только к staging Telegram bot.
+   `frame-ancestors` из meta-тега сам по себе не является защитой; до включения
+   issuer фактический HTTP-ответ обязан побайтово совпасть с `_headers`.
 8. Включить sync worker, выполнить один адресный grant, проверить read-only
    status и Finance entitlement. Затем включить issuer. Connector — последний.
 
@@ -136,7 +197,7 @@ read-only `status`: outcome считается неизвестным.
 Go возможен только если одновременно:
 
 - CI и disposable PostgreSQL 17 зелёные;
-- artifact verifier подтверждает ровно шесть файлов и отсутствие production
+- artifact verifier подтверждает ровно семь файлов, точный HTTP CSP и отсутствие production
   URL/full Main assets;
 - hosted Edge smoke выполнен при выключенном UI;
 - grant/login/revoke/regrant завершены без ручного изменения таблиц;
