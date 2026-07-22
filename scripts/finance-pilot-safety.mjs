@@ -207,6 +207,22 @@ export function exactTelegramMiniAppUrl(value, label) {
   return `https://t.me/${match[1].toLowerCase()}?startapp`;
 }
 
+function assertDeployableStagingTelegramBot(value) {
+  const username = new URL(value).pathname.slice(1, -3).toLowerCase();
+  const nonDeployableMarkers = [
+    "dummy",
+    "example",
+    "fake",
+    "pending",
+    "placeholder",
+    "replace",
+    "test",
+  ];
+  if (nonDeployableMarkers.some(marker => username.includes(marker))) {
+    throw new Error("staging telegramMiniAppUrl must name the reviewed real pilot bot");
+  }
+}
+
 export function validateProductionBoundary(boundary) {
   assertExactKeys(boundary, [
     "schemaVersion",
@@ -251,6 +267,7 @@ export function validateFinancePilotStagingConfig(source, productionBoundary) {
     source.telegramMiniAppUrl,
     "telegramMiniAppUrl",
   );
+  assertDeployableStagingTelegramBot(telegramMiniAppUrl);
   const mainHost = new URL(mainEdgeOrigin).hostname;
   if (!mainHost.endsWith(".supabase.co") || new URL(mainEdgeOrigin).port) {
     throw new Error("mainEdgeOrigin must be one exact Supabase project origin");

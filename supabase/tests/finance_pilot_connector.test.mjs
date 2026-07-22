@@ -201,6 +201,28 @@ test("staging builder rejects production values and unsafe reviewed inputs befor
   }), /must not be group- or world-writable/);
 });
 
+test("staging validator rejects placeholder, pending and test bot usernames", () => {
+  for (const telegramMiniAppUrl of [
+    "https://t.me/REPLACE_WITH_REAL_PILOT_BOT?startapp",
+    "https://t.me/ArchitecturePilotPendingBot?startapp",
+    "https://t.me/ArchitecturePlaceholderBot?startapp",
+    "https://t.me/ArchitecturePilotTestBot?startapp",
+  ]) {
+    assert.throws(
+      () => validateFinancePilotStagingConfig({ ...CONFIG, telegramMiniAppUrl }, PRODUCTION_BOUNDARY),
+      /must name the reviewed real pilot bot/,
+    );
+  }
+
+  assert.equal(
+    validateFinancePilotStagingConfig({
+      ...CONFIG,
+      telegramMiniAppUrl: "https://t.me/ArchitectureFinancePilotBot?startapp",
+    }, PRODUCTION_BOUNDARY).telegramMiniAppUrl,
+    "https://t.me/architecturefinancepilotbot?startapp",
+  );
+});
+
 test("pilot shell opens only for exact staging origin and Telegram initData", () => {
   const valid = runShell();
   assert.equal(valid.rendered, 1);
