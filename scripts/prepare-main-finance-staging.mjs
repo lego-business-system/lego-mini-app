@@ -118,7 +118,7 @@ function readManifest() {
   }
   if (
     manifest.postflight?.path !== "supabase/releases/main-finance-pilot-v1/postflight.sql"
-    || manifest.postflight.sha256 !== "9772ec633a2e8b8dd86e1e994020885db7147f3e39b910dbc43ab25f922d972b"
+    || manifest.postflight.sha256 !== "fcf2e403abc496b397db3427029feb9d64fc730821543731384739d743de6090"
     || manifest.postflight.transactionMode !== "read only"
     || manifest.postflight.expectedMigrationCount !== 4
     || manifest.postflight.expectedPublicDataRows !== 0

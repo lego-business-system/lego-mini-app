@@ -32,7 +32,7 @@ node scripts/prepare-main-finance-staging.mjs \
 SHA-256:
 
 ```text
-9772ec633a2e8b8dd86e1e994020885db7147f3e39b910dbc43ab25f922d972b
+fcf2e403abc496b397db3427029feb9d64fc730821543731384739d743de6090
 ```
 
 Postflight открывает `READ ONLY` транзакцию и требует одновременно:

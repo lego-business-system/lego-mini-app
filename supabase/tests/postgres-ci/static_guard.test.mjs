@@ -237,7 +237,7 @@ test("subject resolver is service-only and preserves bigint identity as text", (
 test("hosted Main staging postflight is pinned, read-only and exercised locally", () => {
   assert.equal(
     createHash("sha256").update(releasePostflight).digest("hex"),
-    "9772ec633a2e8b8dd86e1e994020885db7147f3e39b910dbc43ab25f922d972b",
+    "fcf2e403abc496b397db3427029feb9d64fc730821543731384739d743de6090",
   );
   assert.match(releasePostflight, /^SET TRANSACTION READ ONLY;$/m);
   assert.match(releasePostflight, /bljeoovhydhjhdzwplxh/);

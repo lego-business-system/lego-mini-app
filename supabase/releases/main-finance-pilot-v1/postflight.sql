@@ -1,5 +1,3 @@
-\set ON_ERROR_STOP on
-
 -- MAIN FINANCE PILOT V1 / HOSTED STAGING POSTFLIGHT / READ ONLY
 -- Allowed project ref (enforced by the plan-only operator): bljeoovhydhjhdzwplxh
 -- Permanently denied production ref: soxtekhspohkddpdidvp

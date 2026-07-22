@@ -7,7 +7,7 @@ import { planMainFinanceStaging } from "../../scripts/prepare-main-finance-stagi
 
 const STAGING_REF = "bljeoovhydhjhdzwplxh";
 const PRODUCTION_REF = "soxtekhspohkddpdidvp";
-const POSTFLIGHT_SHA256 = "9772ec633a2e8b8dd86e1e994020885db7147f3e39b910dbc43ab25f922d972b";
+const POSTFLIGHT_SHA256 = "fcf2e403abc496b397db3427029feb9d64fc730821543731384739d743de6090";
 const DEPLOYMENT_SET_SHA256 = "bfce967fc0cfc39c5399b52d8c804287db98f8c510e43e9e040ea4b3a0d35263";
 
 const manifest = JSON.parse(readFileSync(
