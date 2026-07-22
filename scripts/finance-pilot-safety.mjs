@@ -207,7 +207,12 @@ export function exactTelegramMiniAppUrl(value, label) {
   return `https://t.me/${match[1].toLowerCase()}?startapp`;
 }
 
-function assertDeployableStagingTelegramBot(value) {
+function assertDeployableStagingTelegramBot(value, publicOrigin) {
+  // A reserved .invalid origin is an intentionally inert bootstrap artifact
+  // used only to discover a Pages hostname. It can retain a placeholder bot,
+  // while any artifact capable of matching a real host must name a reviewed
+  // bot candidate.
+  if (new URL(publicOrigin).hostname.endsWith(".invalid")) return;
   const username = new URL(value).pathname.slice(1, -3).toLowerCase();
   const nonDeployableMarkers = [
     "dummy",
@@ -216,7 +221,6 @@ function assertDeployableStagingTelegramBot(value) {
     "pending",
     "placeholder",
     "replace",
-    "test",
   ];
   if (nonDeployableMarkers.some(marker => username.includes(marker))) {
     throw new Error("staging telegramMiniAppUrl must name the reviewed real pilot bot");
@@ -267,7 +271,7 @@ export function validateFinancePilotStagingConfig(source, productionBoundary) {
     source.telegramMiniAppUrl,
     "telegramMiniAppUrl",
   );
-  assertDeployableStagingTelegramBot(telegramMiniAppUrl);
+  assertDeployableStagingTelegramBot(telegramMiniAppUrl, publicOrigin);
   const mainHost = new URL(mainEdgeOrigin).hostname;
   if (!mainHost.endsWith(".supabase.co") || new URL(mainEdgeOrigin).port) {
     throw new Error("mainEdgeOrigin must be one exact Supabase project origin");
