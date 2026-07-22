@@ -10,6 +10,11 @@
   staging-only сборщик отдельного статического artifact;
 - [`scripts/verify-finance-pilot-artifact.mjs`](scripts/verify-finance-pilot-artifact.mjs) —
   строгая проверка состава, CSP, staging origins и отсутствия production URL;
+- [`scripts/verify-finance-pilot-hosted.mjs`](scripts/verify-finance-pilot-hosted.mjs) —
+  read-only сверка будущей Cloudflare Pages-публикации с локальным artifact:
+  шесть credential-free GET для реально публикуемых routes, без redirect, с
+  точными байтами, MIME и HTTP-заголовками безопасности; `_headers` проверяется
+  локально как седьмой artifact-файл и через каждый HTTP-ответ;
 - [`scripts/configure-finance-pilot-bot.mjs`](scripts/configure-finance-pilot-bot.mjs) —
   dry-run по умолчанию и точная staging-настройка Telegram menu button без
   передачи bot token через аргументы или вывод;
@@ -38,7 +43,7 @@ COOP и CORP. Сборка не копирует `app.js`, форум или м�
 
 - artifact строится только из внешнего reviewed staging config;
 - отдельный внешний production boundary запрещает подменить staging origin на
-  production;
+  production, включая отдельный production public origin connector/Main;
 - meta CSP и HTTP CSP побайтово совпадают и разрешают сеть только к одному
   точному Main staging Supabase origin;
 - без точного public origin, Telegram `initData` и feature gate оболочка
@@ -72,6 +77,27 @@ CI-совместимость кандидата, но не доказывает
 Staging-оператор намеренно не имеет режима применения: `--apply` всегда
 отклоняется. Его результат — локальный план либо read-only attestation для
 последующего отдельного решения владельца; hosted write он не выполняет.
+
+После отдельного разрешённого staging deploy тот же reviewed config, production
+boundary и точная опубликованная output-директория проверяются без cookies,
+авторизации и каких-либо изменений hosted-системы:
+
+```bash
+node scripts/verify-finance-pilot-hosted.mjs \
+  --artifact /absolute/path/exact-artifact \
+  --config /absolute/path/pilot-staging.json \
+  --production-boundary /absolute/path/production-boundary.json
+```
+
+Проверка требует production boundary v2 с точным production `publicOrigin` и
+отклоняет production/placeholder origin, redirect, смену origin,
+не-`200`, неверный MIME, лишний байт и расхождение любого заголовка из
+`_headers`. Сетевой target дополнительно жёстко закреплён за единственным
+reviewed staging-host `https://architecture-main-pilot.pages.dev`; произвольный
+HTTPS host, IP, порт или похожий suffix отклоняется до запроса. JSON-результат не
+содержит URL, содержимое файлов или локальные пути:
+только SHA-256, размеры и публичные route/file names. Это подтверждает
+точность статической публикации, но не заменяет Telegram или межпроектный E2E.
 
 Порядок сборки, staging deploy, grant/revoke drill и rollback описан в
 [`supabase/INTEGRATION_RUNBOOK.md`](supabase/INTEGRATION_RUNBOOK.md). Никакая

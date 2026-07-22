@@ -21,7 +21,8 @@ const CONFIG = Object.freeze({
   features: Object.freeze({ issueCode: true }),
 });
 const PRODUCTION_BOUNDARY = Object.freeze({
-  schemaVersion: 1,
+  schemaVersion: 2,
+  publicOrigin: "https://production-pilot.example",
   mainEdgeOrigin: "https://production-main.supabase.co",
   financeWebOrigin: "https://production-finance.example",
   telegramMiniAppUrl: "https://t.me/ArchitectureProductionBot?startapp",

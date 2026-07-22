@@ -57,6 +57,7 @@ jobs:
         run: |
           test -f finance-pilot/index.template.html
           test -f scripts/build-finance-pilot.mjs
+          test -f scripts/verify-finance-pilot-hosted.mjs
           test ! -e supabase/migrations/20260715030000_finance_subject_rotation_v2.sql
           test ! -e supabase/functions/finance-sync-entitlements-v2
           test ! -e supabase/functions/_shared/main-entitlement-protocol-v2.mjs

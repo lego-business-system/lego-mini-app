@@ -26,7 +26,8 @@ const MAIN_ORIGIN = "https://pilot-main.supabase.co";
 const FINANCE_ORIGIN = "https://pilot-finance.example";
 const TELEGRAM_URL = "https://t.me/architecturepilotbot?startapp";
 const PRODUCTION_BOUNDARY = Object.freeze({
-  schemaVersion: 1,
+  schemaVersion: 2,
+  publicOrigin: "https://production-pilot.example",
   mainEdgeOrigin: "https://production-main.supabase.co",
   financeWebOrigin: "https://production-finance.example",
   telegramMiniAppUrl: "https://t.me/architectureproductionbot?startapp",
@@ -182,6 +183,10 @@ test("verifier rejects any full Main asset added to the connector", t => {
 test("staging builder rejects production values and unsafe reviewed inputs before output", t => {
   assert.throws(() => validateFinancePilotStagingConfig({
     ...CONFIG,
+    publicOrigin: PRODUCTION_BOUNDARY.publicOrigin,
+  }, PRODUCTION_BOUNDARY), /resolves to production/);
+  assert.throws(() => validateFinancePilotStagingConfig({
+    ...CONFIG,
     mainEdgeOrigin: PRODUCTION_BOUNDARY.mainEdgeOrigin,
   }, PRODUCTION_BOUNDARY), /resolves to production/);
   assert.throws(() => validateFinancePilotStagingConfig({
@@ -202,6 +207,16 @@ test("staging builder rejects production values and unsafe reviewed inputs befor
 });
 
 test("deployable staging validator rejects placeholder and pending bot usernames", () => {
+  const legacyBoundary = {
+    schemaVersion: 1,
+    mainEdgeOrigin: PRODUCTION_BOUNDARY.mainEdgeOrigin,
+    financeWebOrigin: PRODUCTION_BOUNDARY.financeWebOrigin,
+    telegramMiniAppUrl: PRODUCTION_BOUNDARY.telegramMiniAppUrl,
+  };
+  assert.throws(
+    () => validateFinancePilotStagingConfig(CONFIG, legacyBoundary),
+    /deployable Finance pilot production boundary must include the exact production publicOrigin/,
+  );
   for (const telegramMiniAppUrl of [
     "https://t.me/REPLACE_WITH_REAL_PILOT_BOT?startapp",
     "https://t.me/ArchitecturePilotPendingBot?startapp",
@@ -226,7 +241,7 @@ test("deployable staging validator rejects placeholder and pending bot usernames
       ...CONFIG,
       publicOrigin: "https://finance-pilot-bootstrap.invalid",
       telegramMiniAppUrl: "https://t.me/ArchitecturePilotPendingBot?startapp",
-    }, PRODUCTION_BOUNDARY).telegramMiniAppUrl,
+    }, legacyBoundary).telegramMiniAppUrl,
     "https://t.me/architecturepilotpendingbot?startapp",
   );
 });

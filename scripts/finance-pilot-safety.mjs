@@ -229,23 +229,47 @@ function assertDeployableStagingTelegramBot(value, publicOrigin) {
 }
 
 export function validateProductionBoundary(boundary) {
-  assertExactKeys(boundary, [
-    "schemaVersion",
-    "mainEdgeOrigin",
-    "financeWebOrigin",
-    "telegramMiniAppUrl",
-  ], "production boundary");
-  if (boundary.schemaVersion !== 1) {
+  if (boundary === null || typeof boundary !== "object" || Array.isArray(boundary)) {
+    throw new Error("production boundary must be an object");
+  }
+  if (boundary.schemaVersion === 1) {
+    assertExactKeys(boundary, [
+      "schemaVersion",
+      "mainEdgeOrigin",
+      "financeWebOrigin",
+      "telegramMiniAppUrl",
+    ], "production boundary");
+  } else if (boundary.schemaVersion === 2) {
+    assertExactKeys(boundary, [
+      "schemaVersion",
+      "publicOrigin",
+      "mainEdgeOrigin",
+      "financeWebOrigin",
+      "telegramMiniAppUrl",
+    ], "production boundary");
+  } else {
     throw new Error("unsupported production boundary schemaVersion");
   }
-  return Object.freeze({
+  const normalized = {
     mainEdgeOrigin: exactHttpsOrigin(boundary.mainEdgeOrigin, "production mainEdgeOrigin"),
     financeWebOrigin: exactHttpsOrigin(boundary.financeWebOrigin, "production financeWebOrigin"),
     telegramMiniAppUrl: exactTelegramMiniAppUrl(
       boundary.telegramMiniAppUrl,
       "production telegramMiniAppUrl",
     ),
-  });
+  };
+  if (boundary.schemaVersion === 2) {
+    normalized.publicOrigin = exactHttpsOrigin(boundary.publicOrigin, "production publicOrigin");
+    if (new URL(normalized.publicOrigin).hostname.endsWith(".invalid")) {
+      throw new Error("production publicOrigin must not be a placeholder");
+    }
+    if (new Set([
+      normalized.publicOrigin,
+      normalized.mainEdgeOrigin,
+      normalized.financeWebOrigin,
+    ]).size !== 3) throw new Error("production origins must be different");
+  }
+  return Object.freeze(normalized);
 }
 
 export function validateFinancePilotStagingConfig(source, productionBoundary) {
@@ -264,8 +288,13 @@ export function validateFinancePilotStagingConfig(source, productionBoundary) {
   if (source.features.issueCode !== true) {
     throw new Error("Finance pilot issueCode gate must be exactly true");
   }
-
   const publicOrigin = exactHttpsOrigin(source.publicOrigin, "publicOrigin");
+  if (
+    (!productionBoundary || productionBoundary.schemaVersion !== 2)
+    && !new URL(publicOrigin).hostname.endsWith(".invalid")
+  ) {
+    throw new Error("deployable Finance pilot production boundary must include the exact production publicOrigin");
+  }
   const mainEdgeOrigin = exactHttpsOrigin(source.mainEdgeOrigin, "mainEdgeOrigin");
   const financeWebOrigin = exactHttpsOrigin(source.financeWebOrigin, "financeWebOrigin");
   const telegramMiniAppUrl = exactTelegramMiniAppUrl(

@@ -46,8 +46,22 @@ batch и production не входят.
 }
 ```
 
-Production boundary имеет ровно четыре поля:
-`schemaVersion`, `mainEdgeOrigin`, `financeWebOrigin`, `telegramMiniAppUrl`.
+Новый production boundary v2 имеет ровно пять полей и явно фиксирует production
+public origin, который hosted verifier обязан запрещать:
+
+```json
+{
+  "schemaVersion": 2,
+  "publicOrigin": "https://<production-main-or-connector-host>",
+  "mainEdgeOrigin": "https://<production-main-ref>.supabase.co",
+  "financeWebOrigin": "https://<production-finance-host>",
+  "telegramMiniAppUrl": "https://t.me/<production_bot>?startapp"
+}
+```
+
+Старый boundary v1 остаётся допустимым только для совместимости локальных
+операторов и полностью инертной bootstrap-сборки на `.invalid`. Любая сборка для
+реального host и hosted verifier принимают только v2.
 Сборщик прекращает работу, если staging совпадает хотя бы с одним production
 значением. Production boundary не попадает в artifact.
 
@@ -67,6 +81,37 @@ node scripts/verify-finance-pilot-artifact.mjs \
 
 Разворачивать можно только эту output-директорию. Корень репозитория для
 connector deploy запрещён.
+
+После отдельного подтверждённого staging deploy публикация проверяется теми же
+external reviewed config и production boundary, а также неизменённой локальной
+output-директорией:
+
+```bash
+node scripts/verify-finance-pilot-hosted.mjs \
+  --artifact /absolute/path/exact-artifact \
+  --config /absolute/path/pilot-staging.json \
+  --production-boundary /absolute/path/production-boundary.json
+```
+
+Оператор выполняет ровно шесть `GET`: `/` и пять именованных asset paths.
+Все шесть запросов жёстко привязаны к точному origin
+`https://architecture-main-pilot.pages.dev`; значение из config не может
+перенаправить verifier на другой Cloudflare host, IP, localhost или порт.
+Cloudflare применяет `_headers` как конфигурацию и не публикует его как обычный
+asset, а `/index.html` канонизирует в `/`; оба пути поэтому запрещено использовать
+как искусственную седьмую проверку. Седьмой локальный файл проверяется до сети, а
+его точный контракт доказывается на HTTP-заголовках каждого из шести ответов.
+Запросы имеют
+пятисекундный timeout, размер каждого
+ответа ограничен размером точного локального файла и общим пределом 512 KiB;
+cookies, Authorization, referrer и переходы по redirect отсутствуют. Каждый
+ответ обязан вернуть `200`, неизменённый exact URL и origin, ожидаемый MIME,
+побайтово совпасть с artifact и вернуть все заголовки из локального `_headers`.
+Bootstrap `.invalid`, pending/placeholder bot config и безопасная временная
+заглушка Pages означают `NO-GO`. Результат редактирован: URL, содержимое и
+локальные пути не выводятся; CLI также скрывает детали локальных ошибок.
+Проверка read-only и не является разрешением на
+deploy или доказательством Telegram E2E.
 
 ## Отдельный Telegram pilot bot
 

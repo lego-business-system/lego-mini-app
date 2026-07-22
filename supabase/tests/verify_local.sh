@@ -25,7 +25,8 @@ for node_source in \
   scripts/finance-pilot-safety.mjs \
   scripts/manage-finance-access.mjs \
   scripts/prepare-main-finance-staging.mjs \
-  scripts/verify-finance-pilot-artifact.mjs
+  scripts/verify-finance-pilot-artifact.mjs \
+  scripts/verify-finance-pilot-hosted.mjs
 do
   "$node_bin" --check "$node_source"
 done
