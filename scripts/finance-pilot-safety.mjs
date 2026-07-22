@@ -157,6 +157,7 @@ export function readReviewedExternalJson(file, repositoryRoot, label) {
       value: JSON.parse(source),
       source,
       sha256: createHash("sha256").update(source, "utf8").digest("hex"),
+      mode: opened.mode,
     });
   } finally {
     if (descriptor !== undefined) closeSync(descriptor);

@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import { lstatSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -88,8 +87,7 @@ function readReviewedSecrets(secretsFile) {
     REPOSITORY_ROOT,
     "Telegram pilot bot secrets",
   );
-  const status = lstatSync(secretsFile);
-  if ((status.mode & 0o077) !== 0) {
+  if ((reviewed.mode & 0o077) !== 0) {
     throw new Error("Telegram pilot bot secrets must have mode 0600 or stricter");
   }
   if (!exactObject(reviewed.value, ["schemaVersion", "environment", "telegramBotToken"])) {
