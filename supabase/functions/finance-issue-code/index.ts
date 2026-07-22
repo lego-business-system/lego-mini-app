@@ -4,6 +4,7 @@ import {
   deriveFinanceNonce,
   derivePrivateDigest,
   parseCanonicalIssueRequestBytes,
+  matchesSupabaseFunctionRoute,
   sha256Hex,
   signFinanceCanonicalRequest,
   validateFinanceEndpoint,
@@ -133,6 +134,13 @@ Deno.serve(async (request) => {
   let origin: string | null = null;
   try {
     origin = allowedOrigin(request);
+    const incomingPath = env("MAIN_FINANCE_ISSUER_PATH");
+    if (
+      incomingPath !== "/functions/v1/finance-issue-code" ||
+      !matchesSupabaseFunctionRoute(request.url, "finance-issue-code")
+    ) {
+      throw new RequestRejected("request path is malformed");
+    }
     if (request.method === "OPTIONS") return preflightResponse(request, origin);
     if (request.method !== "POST") {
       return jsonResponse(
@@ -143,15 +151,6 @@ Deno.serve(async (request) => {
       );
     }
 
-    const incomingPath = env("MAIN_FINANCE_ISSUER_PATH");
-    const incomingUrl = new URL(request.url);
-    if (
-      incomingPath !== "/functions/v1/finance-issue-code" ||
-      incomingUrl.pathname !== incomingPath ||
-      incomingUrl.search !== ""
-    ) {
-      throw new RequestRejected("request path is malformed");
-    }
     if (env("MAIN_FINANCE_PROTOCOL_MODE") !== "enabled") {
       return unavailable(origin);
     }

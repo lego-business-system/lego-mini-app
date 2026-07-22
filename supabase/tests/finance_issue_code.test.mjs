@@ -11,6 +11,7 @@ import {
   deriveFinanceNonce,
   derivePrivateDigest,
   hmacSha256Hex,
+  matchesSupabaseFunctionRoute,
   parseAllowedOrigins,
   parseCanonicalIssueRequestBytes,
   sha256Hex,
@@ -77,6 +78,45 @@ const app = readFileSync("app.js", "utf8");
 const pilotTemplate = readFileSync("finance-pilot/index.template.html", "utf8");
 const financeUi = readFileSync("finance-pilot/architecture-finance.js", "utf8");
 const financePilotShell = readFileSync("finance-pilot/pilot-shell.js", "utf8");
+
+test("Supabase incoming route accepts only the public canonical and hosted runtime paths", () => {
+  for (const functionName of ["finance-issue-code", "finance-sync-entitlements"]) {
+    assert.equal(
+      matchesSupabaseFunctionRoute(`https://staging.example/${functionName}`, functionName),
+      true,
+    );
+    assert.equal(
+      matchesSupabaseFunctionRoute(
+        `https://staging.example/functions/v1/${functionName}`,
+        functionName,
+      ),
+      true,
+    );
+    for (const rejected of [
+      `https://staging.example/${functionName}/`,
+      `https://staging.example/${functionName}/extra`,
+      `https://staging.example/functions/v1/${functionName}?mode=1`,
+      `https://staging.example/functions/v1/${functionName}#fragment`,
+      `https://staging.example/functions/v1/${functionName}%2fextra`,
+      "https://staging.example/",
+    ]) {
+      assert.equal(matchesSupabaseFunctionRoute(rejected, functionName), false);
+    }
+  }
+  assert.equal(matchesSupabaseFunctionRoute("not a URL", "finance-issue-code"), false);
+  assert.equal(matchesSupabaseFunctionRoute("https://staging.example/finance-issue-code", "Bad_Name"), false);
+});
+
+test("Main issuer validates its exact function route before OPTIONS and the disabled gate", () => {
+  const routeCheck = edge.indexOf(
+    '!matchesSupabaseFunctionRoute(request.url, "finance-issue-code")',
+  );
+  const options = edge.indexOf('if (request.method === "OPTIONS")');
+  const gate = edge.indexOf('env("MAIN_FINANCE_PROTOCOL_MODE") !== "enabled"');
+  assert.equal(routeCheck >= 0, true);
+  assert.equal(options > routeCheck, true);
+  assert.equal(gate > options, true);
+});
 
 test("official Telegram HMAC validation returns string identity and verified replay key", async () => {
   const initData = signedInitData();

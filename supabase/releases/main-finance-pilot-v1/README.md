@@ -62,7 +62,7 @@ Postflight открывает `READ ONLY` транзакцию и требует
 Deployment set SHA-256:
 
 ```text
-bfce967fc0cfc39c5399b52d8c804287db98f8c510e43e9e040ea4b3a0d35263
+bf81111ecd4d7adbe2d2e603cb52007c39650d3cad88f4e45bfb3c5cae023cba
 ```
 
 `--prune`, deploy всех функций без имени, корень полного Main-приложения и любой

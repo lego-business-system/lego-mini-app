@@ -339,6 +339,25 @@ export function validateFinanceEndpoint(value, canonicalPath) {
   return url.toString();
 }
 
+export function matchesSupabaseFunctionRoute(requestUrl, functionName) {
+  if (
+    typeof requestUrl !== "string" ||
+    typeof functionName !== "string" ||
+    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(functionName)
+  ) {
+    return false;
+  }
+  let url;
+  try {
+    url = new URL(requestUrl);
+  } catch {
+    return false;
+  }
+  if (url.search !== "" || url.hash !== "") return false;
+  return url.pathname === `/${functionName}` ||
+    url.pathname === `/functions/v1/${functionName}`;
+}
+
 export function buildFinanceCanonicalRequest({
   method,
   path,

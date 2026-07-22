@@ -63,7 +63,7 @@
     "expectedPublicDataRows": 0,
     "expectedAuthUsers": 0
   },
-  "edgeDeploymentSetSha256": "bfce967fc0cfc39c5399b52d8c804287db98f8c510e43e9e040ea4b3a0d35263",
+  "edgeDeploymentSetSha256": "bf81111ecd4d7adbe2d2e603cb52007c39650d3cad88f4e45bfb3c5cae023cba",
   "edgeDeploymentFiles": [
     {
       "path": "supabase/config.toml",
@@ -79,7 +79,7 @@
     },
     {
       "path": "supabase/functions/_shared/main-finance-protocol.mjs",
-      "sha256": "d418aa9568a543b4f06cea77fb37db2af71fb164d06561929c2e5d4f736ea192"
+      "sha256": "c900c5a46592f383523a82ba11d6100674eff2bb19faf5c2880f5078ba50dccc"
     },
     {
       "path": "supabase/functions/finance-sync-entitlements/deno.json",
@@ -91,7 +91,7 @@
     },
     {
       "path": "supabase/functions/finance-sync-entitlements/index.ts",
-      "sha256": "073c6a8d4e276e802e0bcb3bf5141149d1d05f005dcbb3e50233cf4b9d8c6cae"
+      "sha256": "b3397d7b7d95e720113c7d7026bbaedbea846b88de533f82240bbf69de346b3a"
     },
     {
       "path": "supabase/functions/finance-issue-code/deno.json",
@@ -103,7 +103,7 @@
     },
     {
       "path": "supabase/functions/finance-issue-code/index.ts",
-      "sha256": "339b4a09bef586cd43c0490273c69a5afa51cc23c0e194c6c88a66e182b17774"
+      "sha256": "39f3b491238decfbde28889c3ba0c9cb54c4c3508a23b59b714da6189c94cec3"
     }
   ],
   "edgeDeploymentPlan": {

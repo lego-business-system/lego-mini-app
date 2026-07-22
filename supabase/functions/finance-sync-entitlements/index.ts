@@ -8,6 +8,7 @@ import {
 import {
   constantTimeHexEqual,
   derivePrivateDigest,
+  matchesSupabaseFunctionRoute,
   sha256Hex,
 } from "../_shared/main-finance-protocol.mjs";
 import {
@@ -489,8 +490,7 @@ async function processEvent(
 
 export async function handleFinanceSyncRequest(request: Request): Promise<Response> {
   try {
-    const incomingUrl = new URL(request.url);
-    if (incomingUrl.pathname !== INCOMING_PATH || incomingUrl.search !== "") {
+    if (!matchesSupabaseFunctionRoute(request.url, "finance-sync-entitlements")) {
       throw new RequestRejected("request path is malformed");
     }
     if (request.method !== "POST") {

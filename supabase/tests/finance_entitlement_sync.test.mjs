@@ -76,6 +76,15 @@ test("Main keeps the exact reviewed cross-repository entitlement fixture", () =>
   assert.equal(body.active_until, null);
 });
 
+test("Main entitlement worker accepts the hosted route before evaluating its disabled gate", () => {
+  const routeCheck = worker.indexOf(
+    '!matchesSupabaseFunctionRoute(request.url, "finance-sync-entitlements")',
+  );
+  const gate = worker.indexOf('Deno.env.get("MAIN_FINANCE_SYNC_MODE") !== "enabled"');
+  assert.equal(routeCheck >= 0, true);
+  assert.equal(gate > routeCheck, true);
+});
+
 test("producer bytes, SHA-256, canonical string and HMAC match independently", async () => {
   const producedBody = buildEntitlementEventBody(event);
   assert.equal(new TextDecoder().decode(producedBody), fixture.body);
