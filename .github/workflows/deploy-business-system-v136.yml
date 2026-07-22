@@ -1,0 +1,52 @@
+name: Deploy business system v136
+
+on:
+  push:
+    branches:
+      - feature/business-system-complete-v136
+    paths:
+      - tools/deploy-business-system-v136.py
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/business-system-complete-v136
+          fetch-depth: 0
+
+      - name: Generate full business-system module
+        run: python tools/deploy-business-system-v136.py
+
+      - name: Validate generated files
+        run: |
+          node --check business-architecture.js
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for path in Path('content/business_architecture').rglob('*.json'):
+              json.loads(path.read_text(encoding='utf-8'))
+              print('JSON OK:', path)
+          PY
+
+      - name: Remove temporary deployment files
+        run: |
+          rm -f tools/deploy-business-system-v136.py
+          rm -f .github/workflows/deploy-business-system-v136.yml
+
+      - name: Commit generated module
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No generated changes"
+            exit 0
+          fi
+          git commit -m "Complete Business as a System course"
+          git push origin HEAD:feature/business-system-complete-v136
