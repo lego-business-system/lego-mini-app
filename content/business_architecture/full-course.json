@@ -1,0 +1,74 @@
+{
+  "schema_version": "2.0",
+  "release": "ba-v6-full-20260723",
+  "module": {
+    "id": "business_architecture",
+    "entry_title": "Бизнес как система",
+    "title": "Архитектура бизнеса",
+    "subtitle": "Практическая система управления — от финансовой реальности до итогового паспорта бизнеса.",
+    "total_parts": 4,
+    "total_lessons": 20,
+    "total_cases": 4,
+    "total_items": 24,
+    "total_stages": 96,
+    "practical_examples": 99
+  },
+  "examples": {
+    "data": "content/business_architecture/examples.json"
+  },
+  "parts": [
+    {
+      "id": "PART-01",
+      "number": 1,
+      "title": "Финансовая и стратегическая основа",
+      "description": "Финансовая реальность, стратегический выбор, поток ценности и архитектура управления.",
+      "result": "Финансово-стратегическая карта бизнеса",
+      "lessons": [
+        {"id":"BA-01","number":1,"chapter":1,"title":"Финансовая реальность и безубыточность","status":"available","source":"content/business_architecture/lessons/BA-01.json","stages":4},
+        {"id":"BA-02","number":2,"chapter":2,"title":"Стратегия, рынок и бизнес-модель","status":"available","source":"content/business_architecture/lessons/BA-02.json","stages":4},
+        {"id":"BA-03","number":3,"chapter":3,"title":"Поток создания ценности","status":"available","source":"content/business_architecture/lessons/BA-03.json","stages":4},
+        {"id":"BA-04","number":4,"chapter":4,"title":"Архитектура управления","status":"available","source":"content/business_architecture/lessons/BA-04.json","stages":4}
+      ],
+      "integration_case":{"id":"PART-01-CASE","number":5,"title":"Комплексный разбор: готов ли бизнес к росту?","status":"available","source":"content/business_architecture/cases/PART-01-CASE.json","stages":4,"result":"Финансово-стратегическая карта бизнеса"}
+    },
+    {
+      "id":"PART-02","number":2,"title":"Системы устойчивой работы","description":"Люди, данные, поставщики, риски, проекты, собственники и капитал.","result":"Карта устойчивости, ответственности и капитала",
+      "lessons":[
+        {"id":"BA-05","number":5,"chapter":5,"title":"Люди, лидерство и знания","status":"available","stages":4,"content_part":"PART-02"},
+        {"id":"BA-06","number":6,"chapter":6,"title":"Данные, IT, автоматизация и AI","status":"available","stages":4,"content_part":"PART-02"},
+        {"id":"BA-07","number":7,"chapter":7,"title":"Поставщики, запасы и активы","status":"available","stages":4,"content_part":"PART-02"},
+        {"id":"BA-08","number":8,"chapter":8,"title":"Риски, контроль и непрерывность","status":"available","stages":4,"content_part":"PART-02"},
+        {"id":"BA-09","number":9,"chapter":9,"title":"Проекты, изменения и совершенствование","status":"available","stages":4,"content_part":"PART-02"},
+        {"id":"BA-10","number":10,"chapter":10,"title":"Собственники, капитал и стоимость бизнеса","status":"available","stages":4,"content_part":"PART-02"}
+      ],
+      "integration_case":{"id":"PART-02-CASE","number":11,"title":"Комплексный разбор: выдержит ли бизнес рост без ключевых людей?","status":"available","stages":4,"result":"Карта устойчивости, ответственности и капитала","content_part":"PART-02"}
+    },
+    {
+      "id":"PART-03","number":3,"title":"Рост и трансформация","description":"Продукт, цена, коммерческий контур, S&OP, масштабирование и антикризис.","result":"Архитектура управляемого роста",
+      "lessons":[
+        {"id":"BA-11","number":11,"chapter":11,"title":"Продукт, инновации и бренд","status":"available","stages":4,"content_part":"PART-03"},
+        {"id":"BA-12","number":12,"chapter":12,"title":"Цена, выручка и коммерческий контур","status":"available","stages":4,"content_part":"PART-03"},
+        {"id":"BA-13","number":13,"chapter":13,"title":"Прогноз, S&OP и управление потоком","status":"available","stages":4,"content_part":"PART-03"},
+        {"id":"BA-14","number":14,"chapter":14,"title":"Повторяемая ячейка, сеть и партнёрства","status":"available","stages":4,"content_part":"PART-03"},
+        {"id":"BA-15","number":15,"chapter":15,"title":"Антикризисное управление и управляемый выход","status":"available","stages":4,"content_part":"PART-03"}
+      ],
+      "integration_case":{"id":"PART-03-CASE","number":16,"title":"Комплексный разбор: как расти, не разрушая ядро?","status":"available","stages":4,"result":"Архитектура управляемого роста","content_part":"PART-03"}
+    },
+    {
+      "id":"PART-04","number":4,"title":"Диагностика и внедрение","description":"Доказательства, дорожная карта, рабочая система, формы и итоговая контрольная карта.","result":"Паспорт архитектуры бизнеса и дорожная карта на 90 дней",
+      "lessons":[
+        {"id":"BA-16","number":16,"chapter":16,"title":"Диагностика и доказательства","status":"available","stages":4,"content_part":"PART-04"},
+        {"id":"BA-17","number":17,"chapter":17,"title":"Дорожная карта внедрения","status":"available","stages":4,"content_part":"PART-04"},
+        {"id":"BA-18","number":18,"chapter":18,"title":"Рабочая система бизнеса","status":"available","stages":4,"content_part":"PART-04"},
+        {"id":"BA-19","number":19,"chapter":19,"title":"Рабочие формы","status":"available","stages":4,"content_part":"PART-04"},
+        {"id":"BA-20","number":20,"chapter":20,"title":"Контрольная карта системы","status":"available","stages":4,"content_part":"PART-04"}
+      ],
+      "integration_case":{"id":"PART-04-CASE","number":21,"title":"Итоговый разбор: соберите архитектуру бизнеса","status":"available","stages":4,"result":"Паспорт архитектуры бизнеса и дорожная карта на 90 дней","content_part":"PART-04"}
+    }
+  ],
+  "content_scripts": {
+    "PART-02": "business-architecture-content-part2-v136.js",
+    "PART-03": "business-architecture-content-part3-v136.js",
+    "PART-04": "business-architecture-content-part4-v136.js"
+  }
+}
