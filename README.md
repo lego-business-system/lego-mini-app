@@ -10,6 +10,9 @@
   staging-only сборщик отдельного статического artifact;
 - [`scripts/verify-finance-pilot-artifact.mjs`](scripts/verify-finance-pilot-artifact.mjs) —
   строгая проверка состава, CSP, staging origins и отсутствия production URL;
+- [`scripts/configure-finance-pilot-bot.mjs`](scripts/configure-finance-pilot-bot.mjs) —
+  dry-run по умолчанию и точная staging-настройка Telegram menu button без
+  передачи bot token через аргументы или вывод;
 - [`scripts/manage-finance-access.mjs`](scripts/manage-finance-access.mjs) —
   операторский `grant`, `revoke` и read-only `status` с dry-run по умолчанию;
 - [`scripts/prepare-main-finance-staging.mjs`](scripts/prepare-main-finance-staging.mjs) —

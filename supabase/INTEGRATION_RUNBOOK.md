@@ -68,6 +68,56 @@ node scripts/verify-finance-pilot-artifact.mjs \
 Разворачивать можно только эту output-директорию. Корень репозитория для
 connector deploy запрещён.
 
+## Отдельный Telegram pilot bot
+
+Пилот использует отдельного бота, созданного через официальный `@BotFather`.
+Production-бот для пилота запрещён. Username нового бота фиксируется в
+`telegramMiniAppUrl` внешнего connector config; URL обязан иметь вид
+`https://t.me/<staging_bot>?startapp`.
+
+После создания бота токен помещается только во внешний JSON-файл с правами
+`0600`:
+
+```json
+{
+  "schemaVersion": 1,
+  "environment": "staging",
+  "telegramBotToken": "<secret>"
+}
+```
+
+Проверить план без токена и без сети:
+
+```bash
+node scripts/configure-finance-pilot-bot.mjs \
+  --config /absolute/path/pilot-staging.json \
+  --production-boundary /absolute/path/production-boundary.json
+```
+
+Применить настройку только к боту, чей username регистронезависимо точно
+соответствует reviewed staging config:
+
+```bash
+node scripts/configure-finance-pilot-bot.mjs \
+  --config /absolute/path/pilot-staging.json \
+  --production-boundary /absolute/path/production-boundary.json \
+  --secrets /absolute/path/telegram-pilot-secrets.json \
+  --apply
+```
+
+Оператор сначала проверяет `getMe`, затем требует отсутствие уже настроенного
+webhook, устанавливает один `web_app` menu button на точный `publicOrigin` и
+сразу читает кнопку обратно. Токен не принимается через argv, не возвращается в
+результате и не записывается в artifact. Любой production URL отклоняется до
+чтения token-файла и до сети.
+
+Этот Bot API шаг не включает Main Mini App. Для прямой ссылки `?startapp`
+в `@BotFather` отдельно выполняется: `/mybots` → pilot bot → `Bot Settings` →
+`Configure Mini App` → `Enable Mini App`, URL — точный `publicOrigin`. До этого
+пилот можно открыть через настроенную menu button в личном чате с ботом. Ни
+BotFather, ни token нельзя считать заменой серверной проверке Telegram
+`initData`: её выполняет только Main Edge.
+
 ## Порядок staging deploy
 
 Каждый hosted/database шаг выполняется отдельно и только после явного

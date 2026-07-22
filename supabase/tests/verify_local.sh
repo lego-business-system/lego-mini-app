@@ -21,6 +21,7 @@ for node_source in \
   finance-pilot/architecture-finance.js \
   finance-pilot/pilot-shell.js \
   scripts/build-finance-pilot.mjs \
+  scripts/configure-finance-pilot-bot.mjs \
   scripts/finance-pilot-safety.mjs \
   scripts/manage-finance-access.mjs \
   scripts/prepare-main-finance-staging.mjs \
