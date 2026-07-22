@@ -1,0 +1,18 @@
+/* Полный маршрут «Бизнес как система». Все правила ограничены .ba-root. */
+.ba-root .ba-fc-part { margin-top: 12px; }
+.ba-root .ba-fc-part .ba-part-head { cursor: pointer; }
+.ba-root .ba-fc-part-progress { padding: 0 2px 12px; }
+.ba-root .ba-fc-part-progress > div:first-child { display:flex; justify-content:space-between; align-items:center; gap:12px; color:var(--ba-muted); font-size:12px; }
+.ba-root .ba-fc-part-progress b { color:var(--ba-navy); font-size:15px; }
+.ba-root .ba-case-row { border-color:rgba(242,140,40,.42); background:linear-gradient(145deg,#fff,#fff6ea); }
+.ba-root .ba-case-row.is-locked { background:#f4f6f8; border-color:var(--ba-line); }
+.ba-root .ba-case-index { color:#95561e; font-size:10px; letter-spacing:.04em; }
+.ba-root .ba-fc-done-note { margin-top:10px; padding:9px 12px; border-radius:12px; background:var(--ba-success-soft); color:var(--ba-success); font-weight:850; text-align:center; }
+.ba-root .ba-fc-material-part { margin-top:14px; }
+.ba-root .ba-fc-material-part > p { max-width:760px; }
+.ba-root .ba-fc-material-part .ba-material-grid { margin-top:12px; }
+@media(max-width:720px){
+  .ba-root .ba-part-head-row { grid-template-columns:40px minmax(0,1fr) auto; }
+  .ba-root .ba-lesson-row { grid-template-columns:34px minmax(0,1fr); }
+  .ba-root .ba-lesson-row > .ba-status { grid-column:2; justify-self:start; }
+}
