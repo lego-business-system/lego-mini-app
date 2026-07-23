@@ -151,10 +151,10 @@ node scripts/configure-finance-pilot-bot.mjs \
 ```
 
 Оператор сначала проверяет `getMe`, затем требует отсутствие уже настроенного
-webhook, устанавливает один `web_app` menu button на точный `publicOrigin` и
-сразу читает кнопку обратно. Токен не принимается через argv, не возвращается в
-результате и не записывается в artifact. Любой production URL отклоняется до
-чтения token-файла и до сети.
+webhook, устанавливает один `web_app` menu button на точный `publicOrigin`,
+сразу читает кнопку обратно и повторно подтверждает, что webhook остался пустым.
+Токен не принимается через argv, не возвращается в результате и не записывается
+в artifact. Любой production URL отклоняется до чтения token-файла и до сети.
 
 Этот Bot API шаг не включает Main Mini App. Для прямой ссылки `?startapp`
 в `@BotFather` отдельно выполняется: `/mybots` → pilot bot → `Bot Settings` →

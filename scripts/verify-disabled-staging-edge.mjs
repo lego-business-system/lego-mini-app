@@ -45,6 +45,9 @@ const COOKIE_NAME_TOKEN =
 const COOKIE_VALUE_OCTETS =
   /^[\x21\x23-\x2B\x2D-\x3A\x3C-\x5B\x5D-\x7E]*$/u;
 const COOKIE_ATTRIBUTE_VALUE_OCTETS = /^[\x20-\x3A\x3C-\x7E]*$/u;
+const ALLOWED_STAGING_GATEWAY_COOKIE_NAMES = Object.freeze(
+  new Set(["__cf_bm"]),
+);
 const RESPONSE_FORBIDDEN_HEADERS = Object.freeze([
   "authentication-info",
   "location",
@@ -489,11 +492,14 @@ function responseHeaders(response, item) {
     }
   }
   const cookieNames = setCookieNames(response.headers, item);
-  if (cookieNames.length > 0) {
+  const forbiddenCookieNames = cookieNames.filter(
+    name => !ALLOWED_STAGING_GATEWAY_COOKIE_NAMES.has(name),
+  );
+  if (forbiddenCookieNames.length > 0) {
     cancelUnreadBody(response);
     refuse(
       `${item.name} response contains forbidden Set-Cookie names: ${
-        cookieNames.join(", ")
+        forbiddenCookieNames.join(", ")
       }`,
     );
   }

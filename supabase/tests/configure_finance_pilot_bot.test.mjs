@@ -71,7 +71,9 @@ function telegramMock(overrides = {}) {
     assert.match(url, /^https:\/\/api\.telegram\.org\/bot[^/]+\/[A-Za-z]+$/u);
     const method = url.slice(url.lastIndexOf("/") + 1);
     calls.push({ method, body: JSON.parse(options.body) });
-    return response(results[method]);
+    const configured = results[method];
+    const methodCallIndex = calls.filter(call => call.method === method).length - 1;
+    return response(Array.isArray(configured) ? configured[methodCallIndex] : configured);
   };
   return { calls, fetchImpl };
 }
@@ -97,6 +99,7 @@ test("Telegram pilot bot dry-run is zero-secret and zero-network", async t => {
     "getWebhookInfo",
     "setChatMenuButton",
     "getChatMenuButton",
+    "getWebhookInfo",
   ]);
   assert.equal(networkCalls, 0);
 });
@@ -122,6 +125,7 @@ test("apply verifies exact bot and empty webhook before setting one staging menu
     "getWebhookInfo",
     "setChatMenuButton",
     "getChatMenuButton",
+    "getWebhookInfo",
   ]);
   assert.deepEqual(mock.calls[2].body, {
     menu_button: {
@@ -175,6 +179,37 @@ test("apply preserves a bot that already has a webhook", async t => {
     /already has a webhook/,
   );
   assert.deepEqual(mock.calls.map(call => call.method), ["getMe", "getWebhookInfo"]);
+});
+
+test("apply verifies that the webhook remains empty after the menu mutation", async t => {
+  const files = inputs(t);
+  const secretsFile = fixture(t, {
+    schemaVersion: 1,
+    environment: "staging",
+    telegramBotToken: TOKEN,
+  }, "telegram-secrets.json");
+  const mock = telegramMock({
+    getWebhookInfo: [
+      { url: "" },
+      { url: "https://unexpected-handler.example/webhook" },
+    ],
+  });
+  await assert.rejects(
+    configureFinancePilotBot({
+      ...files,
+      secretsFile,
+      apply: true,
+      fetchImpl: mock.fetchImpl,
+    }),
+    /webhook changed during menu button configuration/,
+  );
+  assert.deepEqual(mock.calls.map(call => call.method), [
+    "getMe",
+    "getWebhookInfo",
+    "setChatMenuButton",
+    "getChatMenuButton",
+    "getWebhookInfo",
+  ]);
 });
 
 test("apply rejects readable secret files and production targets before Telegram", async t => {

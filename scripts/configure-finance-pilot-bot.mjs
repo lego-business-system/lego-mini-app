@@ -175,7 +175,13 @@ export async function configureFinancePilotBot({
     publicOrigin: plan.config.publicOrigin,
     configSha256: plan.configSha256,
     productionBoundarySha256: plan.productionBoundarySha256,
-    methods: ["getMe", "getWebhookInfo", "setChatMenuButton", "getChatMenuButton"],
+    methods: [
+      "getMe",
+      "getWebhookInfo",
+      "setChatMenuButton",
+      "getChatMenuButton",
+      "getWebhookInfo",
+    ],
     mainMiniAppBotFatherStepRequired: true,
   };
   if (!apply) return Object.freeze(summary);
@@ -215,6 +221,11 @@ export async function configureFinancePilotBot({
     || menu.web_app.url !== plan.config.publicOrigin
   ) {
     throw new Error("Telegram staging menu button verification failed");
+  }
+
+  const postflightWebhook = await callTelegram(fetchImpl, token, "getWebhookInfo");
+  if (!postflightWebhook || postflightWebhook.url !== "") {
+    throw new Error("Telegram staging webhook changed during menu button configuration");
   }
   return Object.freeze(summary);
 }

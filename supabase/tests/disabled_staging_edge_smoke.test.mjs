@@ -514,7 +514,35 @@ test("auth challenge and redirect metadata fail closed with header-name-only dia
   }
 });
 
-test("multiple Set-Cookie fields expose only bounded RFC-token names and remain forbidden", async t => {
+test("one bounded Cloudflare bot-management cookie is tolerated without credential carry-over", async t => {
+  const files = fixture(t);
+  const secretValue = "SECRET_CF_BM_VALUE_must_never_escape";
+  const calls = [];
+  const result = await verifyDisabledStagingEdge({
+    publicApiFile: files.publicApiFile,
+    publicApiReceiptFile: files.publicApiReceiptFile,
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return response(url, {
+        headers: {
+          "set-cookie":
+            `__cf_bm=${secretValue}; Path=/; Expires=Wed, 21 Oct 2030 07:28:00 GMT; HttpOnly; Secure; SameSite=None`,
+        },
+      });
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.cases.length, 5);
+  assert.equal(calls.length, 5);
+  for (const call of calls) {
+    assert.equal(call.options.credentials, "omit");
+    assert.equal(call.options.headers.has("cookie"), false);
+  }
+  assert.equal(JSON.stringify(result).includes(secretValue), false);
+});
+
+test("additional Set-Cookie fields expose only bounded RFC-token names and remain forbidden", async t => {
   const files = fixture(t);
   const secretOne = "SECRET_CF_BM_VALUE_must_never_escape";
   const secretTwo = "SECRET_CFUVID_VALUE_must_never_escape";
@@ -549,7 +577,7 @@ test("multiple Set-Cookie fields expose only bounded RFC-token names and remain 
     error.message,
     "Disabled staging Edge verification refused: "
       + "finance-issue-telegram-code response contains forbidden "
-      + "Set-Cookie names: __cf_bm, _cfuvid",
+      + "Set-Cookie names: _cfuvid",
   );
   const safeDiagnostic = JSON.stringify({
     name: error.name,
