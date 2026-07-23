@@ -32,13 +32,24 @@ const MAX_DISABLED_RESPONSE_BYTES = 128;
 const EXACT_DISABLED_BODY =
   Buffer.from('{"ok":false,"error":"temporarily_unavailable"}', "utf8");
 const EXACT_CONTENT_TYPE = "application/json; charset=utf-8";
+const ALLOWED_CONTENT_ENCODINGS = Object.freeze(
+  new Set(["br", "deflate", "gzip"]),
+);
+const MAX_SET_COOKIE_COUNT = 8;
+const MAX_SET_COOKIE_BYTES = 4 * 1_024;
+const MAX_SET_COOKIE_TOTAL_BYTES = 16 * 1_024;
+const MAX_COOKIE_NAME_BYTES = 128;
+const MAX_COOKIE_ATTRIBUTES = 32;
+const COOKIE_NAME_TOKEN =
+  /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/u;
+const COOKIE_VALUE_OCTETS =
+  /^[\x21\x23-\x2B\x2D-\x3A\x3C-\x5B\x5D-\x7E]*$/u;
+const COOKIE_ATTRIBUTE_VALUE_OCTETS = /^[\x20-\x3A\x3C-\x7E]*$/u;
 const RESPONSE_FORBIDDEN_HEADERS = Object.freeze([
   "authentication-info",
-  "content-encoding",
   "location",
   "proxy-authenticate",
   "proxy-authentication-info",
-  "set-cookie",
   "www-authenticate",
 ]);
 
@@ -360,6 +371,108 @@ function cancelUnreadBody(response) {
   } catch {}
 }
 
+function malformedSetCookie(item) {
+  refuse(`${item.name} response Set-Cookie metadata is malformed`);
+}
+
+function parsedSetCookieName(raw, item) {
+  if (
+    typeof raw !== "string"
+    || raw.length < 1
+    || Buffer.byteLength(raw, "utf8") > MAX_SET_COOKIE_BYTES
+    || !/^[\x20-\x7E]+$/u.test(raw)
+  ) {
+    malformedSetCookie(item);
+  }
+  const parts = raw.split(";");
+  if (parts.length > MAX_COOKIE_ATTRIBUTES + 1) {
+    malformedSetCookie(item);
+  }
+  const cookiePair = parts[0];
+  const separator = cookiePair.indexOf("=");
+  if (separator < 1) malformedSetCookie(item);
+  const name = cookiePair.slice(0, separator);
+  const value = cookiePair.slice(separator + 1);
+  if (
+    Buffer.byteLength(name, "utf8") > MAX_COOKIE_NAME_BYTES
+    || !COOKIE_NAME_TOKEN.test(name)
+  ) {
+    malformedSetCookie(item);
+  }
+  const normalizedValue = value.startsWith('"') && value.endsWith('"')
+    ? value.slice(1, -1)
+    : value;
+  if (
+    (value.startsWith('"') || value.endsWith('"'))
+      && !(value.startsWith('"') && value.endsWith('"'))
+    || !COOKIE_VALUE_OCTETS.test(normalizedValue)
+  ) {
+    malformedSetCookie(item);
+  }
+  for (const rawAttribute of parts.slice(1)) {
+    const attribute = rawAttribute.trim();
+    if (!attribute) malformedSetCookie(item);
+    const attributeSeparator = attribute.indexOf("=");
+    const attributeName = attributeSeparator === -1
+      ? attribute
+      : attribute.slice(0, attributeSeparator);
+    const attributeValue = attributeSeparator === -1
+      ? null
+      : attribute.slice(attributeSeparator + 1);
+    if (
+      !COOKIE_NAME_TOKEN.test(attributeName)
+      || (
+        attributeValue !== null
+        && !COOKIE_ATTRIBUTE_VALUE_OCTETS.test(attributeValue)
+      )
+    ) {
+      malformedSetCookie(item);
+    }
+  }
+  return name;
+}
+
+function setCookieNames(headers, item) {
+  let combined;
+  try {
+    combined = headers.get("set-cookie");
+  } catch {
+    malformedSetCookie(item);
+  }
+  if (combined === null) return Object.freeze([]);
+  if (typeof headers.getSetCookie !== "function") {
+    malformedSetCookie(item);
+  }
+  let rawCookies;
+  try {
+    rawCookies = headers.getSetCookie();
+  } catch {
+    malformedSetCookie(item);
+  }
+  if (
+    !Array.isArray(rawCookies)
+    || rawCookies.length < 1
+    || rawCookies.length > MAX_SET_COOKIE_COUNT
+  ) {
+    malformedSetCookie(item);
+  }
+  let totalBytes = 0;
+  const names = [];
+  const seen = new Set();
+  for (const raw of rawCookies) {
+    if (typeof raw !== "string") malformedSetCookie(item);
+    totalBytes += Buffer.byteLength(raw, "utf8");
+    if (totalBytes > MAX_SET_COOKIE_TOTAL_BYTES) {
+      malformedSetCookie(item);
+    }
+    const name = parsedSetCookieName(raw, item);
+    if (seen.has(name)) malformedSetCookie(item);
+    seen.add(name);
+    names.push(name);
+  }
+  return Object.freeze(names);
+}
+
 function responseHeaders(response, item) {
   if (!response?.headers || typeof response.headers.get !== "function") {
     cancelUnreadBody(response);
@@ -372,15 +485,42 @@ function responseHeaders(response, item) {
   for (const name of RESPONSE_FORBIDDEN_HEADERS) {
     if (response.headers.get(name) !== null) {
       cancelUnreadBody(response);
-      refuse(`${item.name} response contains forbidden ambient metadata`);
+      refuse(`${item.name} response contains forbidden header ${name}`);
     }
+  }
+  const cookieNames = setCookieNames(response.headers, item);
+  if (cookieNames.length > 0) {
+    cancelUnreadBody(response);
+    refuse(
+      `${item.name} response contains forbidden Set-Cookie names: ${
+        cookieNames.join(", ")
+      }`,
+    );
+  }
+  const contentEncoding = response.headers.get("content-encoding");
+  const normalizedContentEncoding = contentEncoding?.toLowerCase() ?? null;
+  if (
+    contentEncoding !== null
+    && (
+      contentEncoding !== contentEncoding.trim()
+      || !ALLOWED_CONTENT_ENCODINGS.has(normalizedContentEncoding)
+    )
+  ) {
+    cancelUnreadBody(response);
+    refuse(`${item.name} response Content-Encoding differs`);
   }
   const contentLength = response.headers.get("content-length");
   if (contentLength !== null) {
+    const parsedContentLength = Number(contentLength);
     if (
       !/^(?:0|[1-9][0-9]*)$/u.test(contentLength)
-      || Number(contentLength) !== EXACT_DISABLED_BODY.byteLength
-      || Number(contentLength) > MAX_DISABLED_RESPONSE_BYTES
+      || !Number.isSafeInteger(parsedContentLength)
+      || parsedContentLength > MAX_DISABLED_RESPONSE_BYTES
+      || (
+        normalizedContentEncoding === null
+          ? parsedContentLength !== EXACT_DISABLED_BODY.byteLength
+          : parsedContentLength < 1
+      )
     ) {
       cancelUnreadBody(response);
       refuse(`${item.name} response Content-Length differs`);

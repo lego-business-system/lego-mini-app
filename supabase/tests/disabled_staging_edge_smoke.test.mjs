@@ -117,13 +117,23 @@ function fixture(t, {
 }
 
 function headerBag(values) {
-  const map = new Map(
-    Object.entries(values)
-      .map(([name, value]) => [name.toLowerCase(), String(value)]),
-  );
+  const map = new Map();
+  let setCookies = [];
+  for (const [rawName, rawValue] of Object.entries(values)) {
+    if (rawValue === null || rawValue === undefined) continue;
+    const name = rawName.toLowerCase();
+    const items = Array.isArray(rawValue)
+      ? rawValue.map(value => String(value))
+      : [String(rawValue)];
+    if (name === "set-cookie") setCookies = items;
+    map.set(name, items.join(", "));
+  }
   return Object.freeze({
     get(name) {
       return map.get(String(name).toLowerCase()) ?? null;
+    },
+    getSetCookie() {
+      return [...setCookies];
     },
   });
 }
@@ -350,7 +360,62 @@ test("status, direct URL, exact raw body and JSON Content-Type must all match", 
   }
 });
 
-test("size, compression, cookie, auth challenge and redirect metadata fail closed", async t => {
+test("standard gateway compression is accepted only for an exact decompressed disabled body", async t => {
+  const files = fixture(t);
+  const encodings = ["gzip", "br", "deflate", "GZip"];
+  for (const encoding of encodings) {
+    let calls = 0;
+    const result = await verifyDisabledStagingEdge({
+      publicApiFile: files.publicApiFile,
+      publicApiReceiptFile: files.publicApiReceiptFile,
+      fetchImpl: async url => {
+        calls += 1;
+        return response(url, {
+          headers: {
+            "content-encoding": encoding,
+            "content-length": "64",
+          },
+        });
+      },
+    });
+    assert.equal(result.ok, true);
+    assert.equal(calls, 5);
+  }
+
+  let absentLengthCalls = 0;
+  const absentLengthResult = await verifyDisabledStagingEdge({
+    publicApiFile: files.publicApiFile,
+    publicApiReceiptFile: files.publicApiReceiptFile,
+    fetchImpl: async url => {
+      absentLengthCalls += 1;
+      return response(url, {
+        headers: {
+          "content-encoding": "br",
+          "content-length": null,
+        },
+      });
+    },
+  });
+  assert.equal(absentLengthResult.ok, true);
+  assert.equal(absentLengthCalls, 5);
+
+  await assert.rejects(
+    verifyDisabledStagingEdge({
+      publicApiFile: files.publicApiFile,
+      publicApiReceiptFile: files.publicApiReceiptFile,
+      fetchImpl: async url => response(url, {
+        headers: {
+          "content-encoding": "gzip",
+          "content-length": "64",
+        },
+        chunks: [Buffer.from('{"ok":true,"error":"temporarily_unavailable"}')],
+      }),
+    }),
+    /response body differs from the exact disabled payload/,
+  );
+});
+
+test("content encoding and encoded Content-Length remain narrowly bounded", async t => {
   const files = fixture(t);
   const scenarios = [
     url => response(url, {
@@ -358,16 +423,273 @@ test("size, compression, cookie, auth challenge and redirect metadata fail close
       chunks: [Buffer.alloc(129, 0x61)],
     }),
     url => response(url, {
-      headers: { "content-encoding": "gzip" },
+      headers: { "content-encoding": "identity" },
     }),
     url => response(url, {
-      headers: { "set-cookie": "session=forbidden" },
+      headers: { "content-encoding": "compress" },
     }),
     url => response(url, {
-      headers: { "www-authenticate": "Bearer" },
+      headers: { "content-encoding": "x-gzip" },
     }),
     url => response(url, {
-      headers: { location: "https://example.test" },
+      headers: { "content-encoding": "gzip, br" },
+    }),
+    url => response(url, {
+      headers: { "content-encoding": " gzip" },
+    }),
+    url => response(url, {
+      headers: {
+        "content-encoding": "gzip",
+        "content-length": "0",
+      },
+    }),
+    url => response(url, {
+      headers: {
+        "content-encoding": "gzip",
+        "content-length": "129",
+      },
+    }),
+    url => response(url, {
+      headers: {
+        "content-encoding": "gzip",
+        "content-length": "not-a-number",
+      },
+    }),
+  ];
+  for (const buildResponse of scenarios) {
+    await assert.rejects(
+      verifyDisabledStagingEdge({
+        publicApiFile: files.publicApiFile,
+        publicApiReceiptFile: files.publicApiReceiptFile,
+        fetchImpl: async url => buildResponse(url),
+      }),
+      /Disabled staging Edge verification refused/,
+    );
+  }
+});
+
+test("auth challenge and redirect metadata fail closed with header-name-only diagnostics", async t => {
+  const files = fixture(t);
+  const scenarios = [
+    {
+      name: "www-authenticate",
+      value: "Bearer secret-scope",
+    },
+    {
+      name: "location",
+      value: "https://example.test/private",
+    },
+    {
+      name: "authentication-info",
+      value: "nextnonce=forbidden",
+    },
+    {
+      name: "proxy-authenticate",
+      value: "Basic realm=forbidden",
+    },
+    {
+      name: "proxy-authentication-info",
+      value: "nextnonce=forbidden",
+    },
+  ];
+  for (const scenario of scenarios) {
+    let error;
+    try {
+      await verifyDisabledStagingEdge({
+        publicApiFile: files.publicApiFile,
+        publicApiReceiptFile: files.publicApiReceiptFile,
+        fetchImpl: async url => response(url, {
+          headers: { [scenario.name]: scenario.value },
+        }),
+      });
+    } catch (caught) {
+      error = caught;
+    }
+    assert.equal(error instanceof Error, true);
+    assert.match(
+      error.message,
+      new RegExp(`response contains forbidden header ${scenario.name}$`, "u"),
+    );
+    assert.equal(error.message.includes(scenario.value), false);
+  }
+});
+
+test("multiple Set-Cookie fields expose only bounded RFC-token names and remain forbidden", async t => {
+  const files = fixture(t);
+  const secretOne = "SECRET_CF_BM_VALUE_must_never_escape";
+  const secretTwo = "SECRET_CFUVID_VALUE_must_never_escape";
+  const setCookies = [
+    `__cf_bm=${secretOne}; Path=/; Expires=Wed, 21 Oct 2030 07:28:00 GMT; HttpOnly; Secure; SameSite=None`,
+    `_cfuvid=${secretTwo}; Path=/; Domain=.supabase.co; HttpOnly; Secure; SameSite=None`,
+  ];
+  let calls = 0;
+  let error;
+  try {
+    await verifyDisabledStagingEdge({
+      publicApiFile: files.publicApiFile,
+      publicApiReceiptFile: files.publicApiReceiptFile,
+      fetchImpl: async url => {
+        calls += 1;
+        const base = response(url);
+        const headers = new Headers({
+          "content-type": "application/json; charset=utf-8",
+          "content-length": String(EXACT_BODY.byteLength),
+        });
+        for (const cookie of setCookies) headers.append("set-cookie", cookie);
+        return { ...base, headers };
+      },
+    });
+  } catch (caught) {
+    error = caught;
+  }
+
+  assert.equal(calls, 1);
+  assert.equal(error instanceof Error, true);
+  assert.equal(
+    error.message,
+    "Disabled staging Edge verification refused: "
+      + "finance-issue-telegram-code response contains forbidden "
+      + "Set-Cookie names: __cf_bm, _cfuvid",
+  );
+  const safeDiagnostic = JSON.stringify({
+    name: error.name,
+    message: error.message,
+  });
+  assert.equal(safeDiagnostic.includes(secretOne), false);
+  assert.equal(safeDiagnostic.includes(secretTwo), false);
+  assert.equal(safeDiagnostic.includes("Expires=Wed"), false);
+  assert.equal(safeDiagnostic.includes("Domain=.supabase.co"), false);
+});
+
+test("arbitrary application cookies remain forbidden and values never enter diagnostics", async t => {
+  const files = fixture(t);
+  const secretValue = "Bearer_like_secret_value_123456789";
+  let error;
+  try {
+    await verifyDisabledStagingEdge({
+      publicApiFile: files.publicApiFile,
+      publicApiReceiptFile: files.publicApiReceiptFile,
+      fetchImpl: async url => response(url, {
+        headers: {
+          "set-cookie":
+            `finance_session=${secretValue}; Path=/; HttpOnly; Secure`,
+        },
+      }),
+    });
+  } catch (caught) {
+    error = caught;
+  }
+  assert.equal(error instanceof Error, true);
+  assert.match(
+    error.message,
+    /forbidden Set-Cookie names: finance_session$/u,
+  );
+  assert.equal(error.message.includes(secretValue), false);
+  assert.equal(JSON.stringify(error).includes(secretValue), false);
+});
+
+test("malformed, ambiguous and excessive Set-Cookie metadata fails closed without value disclosure", async t => {
+  const files = fixture(t);
+  const secretMarker = "ULTRA_SECRET_COOKIE_VALUE";
+  const malformedValues = [
+    [`=${secretMarker}; Path=/`],
+    [`bad name=${secretMarker}; Path=/`],
+    [`naïve=${secretMarker}; Path=/`],
+    [`name=${secretMarker},other=second-secret; Path=/`],
+    [`name=${secretMarker};`],
+    [`name=${secretMarker}; Bad Attribute=value`],
+    [`name=${secretMarker}; Path=/\r\nX-Leak: yes`],
+    [`${"n".repeat(129)}=${secretMarker}; Path=/`],
+    Array.from(
+      { length: 9 },
+      (_, index) => `cookie_${index}=${secretMarker}; Path=/`,
+    ),
+    Array.from(
+      { length: 5 },
+      (_, index) => `cookie_${index}=${"a".repeat(3_400)}; Path=/`,
+    ),
+    [
+      `duplicate=${secretMarker}; Path=/`,
+      "duplicate=second-secret; Path=/",
+    ],
+  ];
+  for (const setCookies of malformedValues) {
+    let error;
+    try {
+      await verifyDisabledStagingEdge({
+        publicApiFile: files.publicApiFile,
+        publicApiReceiptFile: files.publicApiReceiptFile,
+        fetchImpl: async url => response(url, {
+          headers: { "set-cookie": setCookies },
+        }),
+      });
+    } catch (caught) {
+      error = caught;
+    }
+    assert.equal(error instanceof Error, true);
+    assert.match(error.message, /Set-Cookie metadata is malformed$/u);
+    assert.equal(error.message.includes(secretMarker), false);
+    assert.equal(JSON.stringify(error).includes(secretMarker), false);
+  }
+});
+
+test("Set-Cookie enumeration failures are sanitized and fail closed", async t => {
+  const files = fixture(t);
+  const secretMarker = "ENUMERATOR_SECRET_MUST_NOT_ESCAPE";
+  const getHeader = name => {
+    const normalized = String(name).toLowerCase();
+    if (normalized === "content-type") {
+      return "application/json; charset=utf-8";
+    }
+    if (normalized === "set-cookie") return `name=${secretMarker}`;
+    return null;
+  };
+  const badHeaders = [
+    {
+      get: getHeader,
+    },
+    {
+      get: getHeader,
+      getSetCookie() {
+        throw new Error(secretMarker);
+      },
+    },
+    {
+      get: getHeader,
+      getSetCookie() {
+        return [];
+      },
+    },
+    {
+      get: getHeader,
+      getSetCookie() {
+        return `name=${secretMarker}`;
+      },
+    },
+  ];
+  for (const headers of badHeaders) {
+    let error;
+    try {
+      await verifyDisabledStagingEdge({
+        publicApiFile: files.publicApiFile,
+        publicApiReceiptFile: files.publicApiReceiptFile,
+        fetchImpl: async url => ({ ...response(url), headers }),
+      });
+    } catch (caught) {
+      error = caught;
+    }
+    assert.equal(error instanceof Error, true);
+    assert.match(error.message, /Set-Cookie metadata is malformed$/u);
+    assert.equal(error.message.includes(secretMarker), false);
+  }
+});
+
+test("oversize, malformed length and extra response bytes fail closed", async t => {
+  const files = fixture(t);
+  const scenarios = [
+    url => response(url, {
+      headers: { "content-length": "129" },
+      chunks: [Buffer.alloc(129, 0x61)],
     }),
     url => response(url, {
       headers: { "content-length": "not-a-number" },
