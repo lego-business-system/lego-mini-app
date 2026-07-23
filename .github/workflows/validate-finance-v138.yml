@@ -12,11 +12,24 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: finance-v138-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          show-progress: false
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            finance-thinking-v138.js
+            content/finance_thinking_v138
       - name: Decode and validate bundle
         run: |
           python - <<'PY'
