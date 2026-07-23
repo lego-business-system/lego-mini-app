@@ -21,8 +21,9 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import base64, gzip, json, hashlib
+          import base64, gzip, json, hashlib, traceback
 
+          report = {}
           files = [
               "content/finance_thinking_v138/bundle/part-00.txt",
               "content/finance_thinking_v138/bundle/part-01.txt",
@@ -43,37 +44,60 @@ jobs:
               "content/finance_thinking_v138/bundle/part-12b.txt",
               "content/finance_thinking_v138/bundle/part-13.txt",
           ]
-          missing = [p for p in files if not Path(p).is_file()]
-          assert not missing, f"Missing bundle parts: {missing}"
-          encoded = "".join(Path(p).read_text(encoding="utf-8").strip() for p in files)
-          compressed = base64.b64decode(encoded, validate=True)
-          decoded = gzip.decompress(compressed)
-          payload = json.loads(decoded)
-          assert isinstance(payload.get("runtime"), str) and len(payload["runtime"]) > 1000
-          assert isinstance(payload.get("css"), str) and len(payload["css"]) > 1000
-          data = payload.get("data")
-          assert isinstance(data, dict), "payload.data must be an object"
-          sections = data.get("sections")
-          section_values = list(sections.values()) if isinstance(sections, dict) else list(sections or [])
-          assert len(section_values) == 10, f"Expected 10 sections, got {len(section_values)}"
-          lessons = []
-          for section in section_values:
-              lessons.extend(section.get("lessons") or [])
-          ids = sorted(int(item.get("id")) for item in lessons)
-          assert ids == list(range(5, 63)), f"Lesson IDs are not contiguous: {ids[:5]}...{ids[-5:]}"
-          screen_count = sum(len(item.get("screens") or item.get("slides") or []) for item in lessons)
-          assert screen_count >= 1000, f"Expected at least 1000 screens, got {screen_count}"
-          Path("/tmp/finance-v138-runtime.js").write_text(payload["runtime"], encoding="utf-8")
-          print(json.dumps({
-              "sections": len(section_values),
-              "lessons": len(lessons),
-              "screens": screen_count,
-              "runtime_bytes": len(payload["runtime"].encode()),
-              "css_bytes": len(payload["css"].encode()),
-              "decoded_sha256": hashlib.sha256(decoded).hexdigest(),
-          }, ensure_ascii=False, indent=2))
+          try:
+              report["parts"] = {p: Path(p).stat().st_size if Path(p).is_file() else None for p in files}
+              missing = [p for p in files if not Path(p).is_file()]
+              assert not missing, f"Missing bundle parts: {missing}"
+              encoded = "".join(Path(p).read_text(encoding="utf-8").strip() for p in files)
+              report["encoded_chars"] = len(encoded)
+              compressed = base64.b64decode(encoded, validate=True)
+              report["compressed_bytes"] = len(compressed)
+              report["compressed_sha256"] = hashlib.sha256(compressed).hexdigest()
+              decoded = gzip.decompress(compressed)
+              report["decoded_bytes"] = len(decoded)
+              report["decoded_sha256"] = hashlib.sha256(decoded).hexdigest()
+              payload = json.loads(decoded)
+              report["payload_keys"] = sorted(payload.keys())
+              assert isinstance(payload.get("runtime"), str) and len(payload["runtime"]) > 1000
+              assert isinstance(payload.get("css"), str) and len(payload["css"]) > 1000
+              data = payload.get("data")
+              assert isinstance(data, dict), "payload.data must be an object"
+              sections = data.get("sections")
+              section_values = list(sections.values()) if isinstance(sections, dict) else list(sections or [])
+              assert len(section_values) == 10, f"Expected 10 sections, got {len(section_values)}"
+              lessons = []
+              for section in section_values:
+                  lessons.extend(section.get("lessons") or [])
+              ids = sorted(int(item.get("id")) for item in lessons)
+              assert ids == list(range(5, 63)), f"Lesson IDs are not contiguous: {ids[:5]}...{ids[-5:]}"
+              screen_count = sum(len(item.get("screens") or item.get("slides") or []) for item in lessons)
+              assert screen_count >= 1000, f"Expected at least 1000 screens, got {screen_count}"
+              Path("/tmp/finance-v138-runtime.js").write_text(payload["runtime"], encoding="utf-8")
+              report.update({
+                  "status": "bundle_valid",
+                  "sections": len(section_values),
+                  "lessons": len(lessons),
+                  "screens": screen_count,
+                  "runtime_bytes": len(payload["runtime"].encode()),
+                  "css_bytes": len(payload["css"].encode()),
+              })
+          except Exception as error:
+              report["status"] = "bundle_invalid"
+              report["error"] = repr(error)
+              report["traceback"] = traceback.format_exc()
+              raise
+          finally:
+              Path("/tmp/finance-v138-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+              print(json.dumps(report, ensure_ascii=False, indent=2))
           PY
       - name: Check JavaScript syntax
         run: node --check /tmp/finance-v138-runtime.js
       - name: Check loader syntax
         run: node --check finance-thinking-v138.js
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: finance-v138-validation-report
+          path: /tmp/finance-v138-report.json
+          if-no-files-found: error
