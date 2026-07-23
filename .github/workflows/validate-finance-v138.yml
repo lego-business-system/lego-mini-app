@@ -1,0 +1,79 @@
+name: Validate finance v138 bundle
+
+on:
+  push:
+    branches:
+      - feature/finance-thinking-sections-2-11-v138
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decode and validate bundle
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import base64, gzip, json, hashlib
+
+          files = [
+              "content/finance_thinking_v138/bundle/part-00.txt",
+              "content/finance_thinking_v138/bundle/part-01.txt",
+              "content/finance_thinking_v138/bundle/part-02.txt",
+              "content/finance_thinking_v138/bundle/part-03.txt",
+              "content/finance_thinking_v138/bundle/part-04.txt",
+              "content/finance_thinking_v138/bundle/part-05a.txt",
+              "content/finance_thinking_v138/bundle/part-05b.txt",
+              "content/finance_thinking_v138/bundle/part-06.txt",
+              "content/finance_thinking_v138/bundle/part-07.txt",
+              "content/finance_thinking_v138/bundle/part-08a.txt",
+              "content/finance_thinking_v138/bundle/part-08b.txt",
+              "content/finance_thinking_v138/bundle/part-09a.txt",
+              "content/finance_thinking_v138/bundle/part-09b.txt",
+              "content/finance_thinking_v138/bundle/part-10.txt",
+              "content/finance_thinking_v138/bundle/part-11.txt",
+              "content/finance_thinking_v138/bundle/part-12a.txt",
+              "content/finance_thinking_v138/bundle/part-12b.txt",
+              "content/finance_thinking_v138/bundle/part-13.txt",
+          ]
+          missing = [p for p in files if not Path(p).is_file()]
+          assert not missing, f"Missing bundle parts: {missing}"
+          encoded = "".join(Path(p).read_text(encoding="utf-8").strip() for p in files)
+          compressed = base64.b64decode(encoded, validate=True)
+          decoded = gzip.decompress(compressed)
+          payload = json.loads(decoded)
+          assert isinstance(payload.get("runtime"), str) and len(payload["runtime"]) > 1000
+          assert isinstance(payload.get("css"), str) and len(payload["css"]) > 1000
+          data = payload.get("data")
+          assert isinstance(data, dict), "payload.data must be an object"
+          sections = data.get("sections")
+          if isinstance(sections, dict):
+              section_values = list(sections.values())
+          else:
+              section_values = list(sections or [])
+          assert len(section_values) == 10, f"Expected 10 sections, got {len(section_values)}"
+          lessons = []
+          for section in section_values:
+              lessons.extend(section.get("lessons") or [])
+          ids = sorted(int(item.get("id")) for item in lessons)
+          assert ids == list(range(5, 63)), f"Lesson IDs are not contiguous: {ids[:5]}...{ids[-5:]}"
+          screen_count = sum(len(item.get("screens") or item.get("slides") or []) for item in lessons)
+          assert screen_count >= 1000, f"Expected at least 1000 screens, got {screen_count}"
+          Path("/tmp/finance-v138-runtime.js").write_text(payload["runtime"], encoding="utf-8")
+          print(json.dumps({
+              "sections": len(section_values),
+              "lessons": len(lessons),
+              "screens": screen_count,
+              "runtime_bytes": len(payload["runtime"].encode()),
+              "css_bytes": len(payload["css"].encode()),
+              "decoded_sha256": hashlib.sha256(decoded).hexdigest(),
+          }, ensure_ascii=False, indent=2))
+          PY
+      - name: Check JavaScript syntax
+        run: node --check /tmp/finance-v138-runtime.js
+      - name: Check loader syntax
+        run: node --check finance-thinking-v138.js
