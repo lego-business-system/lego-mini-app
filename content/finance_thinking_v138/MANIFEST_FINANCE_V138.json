@@ -1,0 +1,10 @@
+{
+  "release": "finance-thinking-v138-20260724",
+  "sections": 10,
+  "lessons": 58,
+  "screens_after_hydration": 1106,
+  "questions": 116,
+  "bundle_parts": 15,
+  "first_section_unchanged": true,
+  "supabase_changed": false
+}
