@@ -25,6 +25,7 @@ for node_source in \
   scripts/finance-pilot-safety.mjs \
   scripts/manage-finance-access.mjs \
   scripts/prepare-main-finance-staging.mjs \
+  scripts/verify-disabled-staging-edge.mjs \
   scripts/verify-finance-pilot-artifact.mjs \
   scripts/verify-finance-pilot-hosted.mjs
 do
