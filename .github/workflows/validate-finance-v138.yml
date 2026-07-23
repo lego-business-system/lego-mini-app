@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - feature/finance-thinking-sections-2-11-v138
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -51,10 +54,7 @@ jobs:
           data = payload.get("data")
           assert isinstance(data, dict), "payload.data must be an object"
           sections = data.get("sections")
-          if isinstance(sections, dict):
-              section_values = list(sections.values())
-          else:
-              section_values = list(sections or [])
+          section_values = list(sections.values()) if isinstance(sections, dict) else list(sections or [])
           assert len(section_values) == 10, f"Expected 10 sections, got {len(section_values)}"
           lessons = []
           for section in section_values:
