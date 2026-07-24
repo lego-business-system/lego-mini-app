@@ -1,0 +1,30 @@
+{
+  "release": "finance-thinking-v138-20260724",
+  "status": "release",
+  "section_1": "unchanged",
+  "sections_added": 10,
+  "section_ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11
+  ],
+  "lessons": 58,
+  "lesson_ids": "5-62",
+  "screens": 1048,
+  "diagnostic_questions": 116,
+  "pass_percent": 80,
+  "critical_errors_allowed": 0,
+  "progress": "localStorage",
+  "supabase_changed": false,
+  "bundle_parts": 24,
+  "encoded_bundle_sha256": "58d22c1dc2a2019648fbee982c87637e7ae4ecfcdd18a5eae17b598be6f8311b",
+  "gzip_bundle_sha256": "9b4342becd67601b86d8098471ea4fe89682e207864358761cbe2387f9215ac1",
+  "payload_sha256": "e1f88c803c0a60916d283085540ea303bfea4f62200769487437dae3d98a1c3d"
+}
