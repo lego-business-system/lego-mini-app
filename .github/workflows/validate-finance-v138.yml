@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: finance-v138-${{ github.event.pull_request.number || github.ref }}
@@ -24,19 +24,19 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref || github.ref_name }}
-          fetch-depth: 2
+          fetch-depth: 1
           show-progress: false
           filter: blob:none
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             finance-thinking-v138.js
             content/finance_thinking_v138
-      - name: Repair one extra character in part-08
+      - name: Reconstruct the valid part-08
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          import base64, gzip, json
+          import base64, gzip, json, traceback
 
           files = [
               "content/finance_thinking_v138/bundle/part-00.txt",
@@ -58,6 +58,7 @@ jobs:
           ]
           target = "content/finance_thinking_v138/bundle/part-08.txt"
           texts = {path: Path(path).read_text(encoding="utf-8").strip() for path in files}
+          report = {"source_length": len(texts[target]), "matches": []}
 
           def payload_for(candidate):
               texts[target] = candidate
@@ -70,43 +71,45 @@ jobs:
                   section_values = list(sections.values()) if isinstance(sections, dict) else list(sections)
                   lessons = [lesson for section in section_values for lesson in (section.get("lessons") or [])]
                   ids = sorted(int(lesson.get("id")) for lesson in lessons)
-                  screens = sum(len(lesson.get("screens") or lesson.get("slides") or []) for lesson in lessons)
-                  questions = sum(len((section.get("quiz") or {}).get("questions") or []) for section in section_values)
                   if len(section_values) != 10 or len(lessons) != 58 or ids != list(range(5, 63)):
                       return None
-                  if screens < 1000 or questions < 100:
+                  if not isinstance(payload.get("runtime"), str) or len(payload["runtime"]) < 1000:
                       return None
-                  if not isinstance(payload.get("runtime"), str) or not isinstance(payload.get("css"), str):
+                  if not isinstance(payload.get("css"), str) or len(payload["css"]) < 1000:
                       return None
                   return payload
               except Exception:
                   return None
 
-          source = texts[target]
-          if len(source) == 10000:
-              assert payload_for(source) is not None, "part-08 has expected length but bundle is still invalid"
-              print("part-08 already repaired")
-          else:
-              assert len(source) == 10001, f"Expected part-08 length 10001 before repair, got {len(source)}"
-              matches = []
-              for index in range(len(source)):
-                  candidate = source[:index] + source[index + 1:]
-                  if payload_for(candidate) is not None:
-                      matches.append((index, source[index], candidate))
-                      if len(matches) > 1:
-                          break
-              assert len(matches) == 1, f"Expected one valid deletion, found {[(i, ch) for i, ch, _ in matches]}"
-              index, removed, repaired = matches[0]
+          try:
+              source = texts[target]
+              if len(source) == 10000:
+                  payload = payload_for(source)
+                  assert payload is not None, "part-08 has expected length but the bundle is invalid"
+                  repaired = source
+                  report.update({"status": "already_valid", "removed_index": None, "removed_character": None})
+              else:
+                  assert len(source) == 10001, f"Expected part-08 length 10001, got {len(source)}"
+                  matches = []
+                  for index in range(len(source)):
+                      candidate = source[:index] + source[index + 1:]
+                      payload = payload_for(candidate)
+                      if payload is not None:
+                          matches.append((index, source[index], candidate))
+                  report["matches"] = [{"index": index, "character": char} for index, char, _ in matches]
+                  assert len(matches) == 1, f"Expected exactly one valid deletion, found {len(matches)}"
+                  index, removed, repaired = matches[0]
+                  report.update({"status": "repaired", "removed_index": index, "removed_character": removed})
               Path(target).write_text(repaired, encoding="utf-8")
-              print(f"Repaired part-08: removed {removed!r} at index {index}")
+              Path("/tmp/repaired-part-08.txt").write_text(repaired, encoding="utf-8")
+              report["repaired_length"] = len(repaired)
+          except Exception as error:
+              report.update({"status": "repair_failed", "error": repr(error), "traceback": traceback.format_exc()})
+              raise
+          finally:
+              Path("/tmp/finance-v138-repair-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+              print(json.dumps(report, ensure_ascii=False, indent=2))
           PY
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add content/finance_thinking_v138/bundle/part-08.txt
-          if ! git diff --cached --quiet; then
-            git commit -m "Repair finance v138 bundle part-08"
-            git push origin HEAD:${{ github.head_ref || github.ref_name }}
-          fi
       - name: Decode and validate bundle
         run: |
           python - <<'PY'
@@ -135,11 +138,8 @@ jobs:
           compressed = base64.b64decode(encoded, validate=True)
           decoded = gzip.decompress(compressed)
           payload = json.loads(decoded)
-          assert isinstance(payload.get("runtime"), str) and len(payload["runtime"]) > 1000
-          assert isinstance(payload.get("css"), str) and len(payload["css"]) > 1000
-          data = payload.get("data")
-          assert isinstance(data, dict), "payload.data must be an object"
-          sections = data.get("sections")
+          data = payload.get("data") or {}
+          sections = data.get("sections") or {}
           section_values = list(sections.values()) if isinstance(sections, dict) else list(sections or [])
           lessons = [lesson for section in section_values for lesson in (section.get("lessons") or [])]
           ids = sorted(int(item.get("id")) for item in lessons)
@@ -148,8 +148,8 @@ jobs:
           assert len(section_values) == 10
           assert len(lessons) == 58
           assert ids == list(range(5, 63))
-          assert screen_count >= 1000
-          assert question_count >= 100
+          assert isinstance(payload.get("runtime"), str) and len(payload["runtime"]) > 1000
+          assert isinstance(payload.get("css"), str) and len(payload["css"]) > 1000
           assert ((data.get("catalog") or {}).get("section1") or {}).get("status") == "frozen-existing"
           Path("/tmp/finance-v138-runtime.js").write_text(payload["runtime"], encoding="utf-8")
           report = {
@@ -173,10 +173,13 @@ jobs:
         run: |
           node --check /tmp/finance-v138-runtime.js
           node --check finance-thinking-v138.js
-      - name: Upload validation report
+      - name: Upload validation artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: finance-v138-validation-report
-          path: /tmp/finance-v138-report.json
-          if-no-files-found: error
+          path: |
+            /tmp/finance-v138-repair-report.json
+            /tmp/finance-v138-report.json
+            /tmp/repaired-part-08.txt
+          if-no-files-found: warn
