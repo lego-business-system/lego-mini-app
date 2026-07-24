@@ -56,11 +56,21 @@ jobs:
               "content/finance_thinking_v138/bundle/part-13.txt",
           ]
           try:
-              report["parts"] = {p: Path(p).stat().st_size if Path(p).is_file() else None for p in files}
+              texts = {p: Path(p).read_text(encoding="utf-8").strip() for p in files}
+              report["parts"] = {p: len(texts[p]) for p in files}
+              report["boundaries"] = {
+                  p: {
+                      "first": texts[p][:24],
+                      "last": texts[p][-24:],
+                      "equals": [i for i, ch in enumerate(texts[p]) if ch == "="],
+                  }
+                  for p in files
+              }
               missing = [p for p in files if not Path(p).is_file()]
               assert not missing, f"Missing bundle parts: {missing}"
-              encoded = "".join(Path(p).read_text(encoding="utf-8").strip() for p in files)
+              encoded = "".join(texts[p] for p in files)
               report["encoded_chars"] = len(encoded)
+              report["all_equals"] = [i for i, ch in enumerate(encoded) if ch == "="]
               compressed = base64.b64decode(encoded, validate=True)
               report["compressed_bytes"] = len(compressed)
               report["compressed_sha256"] = hashlib.sha256(compressed).hexdigest()
