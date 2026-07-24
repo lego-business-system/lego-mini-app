@@ -23,6 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 2
           show-progress: false
           filter: blob:none
@@ -31,7 +32,6 @@ jobs:
             finance-thinking-v138.js
             content/finance_thinking_v138
       - name: Repair one extra character in part-08
-        if: github.event_name == 'push'
         shell: bash
         run: |
           python - <<'PY'
@@ -105,7 +105,7 @@ jobs:
           git add content/finance_thinking_v138/bundle/part-08.txt
           if ! git diff --cached --quiet; then
             git commit -m "Repair finance v138 bundle part-08"
-            git push origin HEAD:${GITHUB_REF_NAME}
+            git push origin HEAD:${{ github.head_ref || github.ref_name }}
           fi
       - name: Decode and validate bundle
         run: |
