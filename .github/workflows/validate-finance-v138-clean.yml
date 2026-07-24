@@ -1,0 +1,134 @@
+name: Validate finance v138 clean release
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - finance-thinking-v138.js
+      - content/finance_thinking_v138/**
+      - index.html
+      - .github/workflows/validate-finance-v138-clean.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout proposed release
+        uses: actions/checkout@v4
+
+      - name: Validate exact bundle and course structure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import base64, gzip, hashlib, json, re
+
+          root = Path('content/finance_thinking_v138/bundle')
+          expected_names = [f'part-{index:02d}.txt' for index in range(24)]
+          actual_names = sorted(path.name for path in root.glob('part-*.txt'))
+          if actual_names != expected_names:
+              raise SystemExit(f'Expected exactly 24 ordered parts, got: {actual_names}')
+
+          encoded = ''.join(re.sub(r'\s+', '', (root / name).read_text(encoding='utf-8')) for name in expected_names)
+          expected_encoded = '58d22c1dc2a2019648fbee982c87637e7ae4ecfcdd18a5eae17b598be6f8311b'
+          expected_gzip = '9b4342becd67601b86d8098471ea4fe89682e207864358761cbe2387f9215ac1'
+          expected_payload = 'e1f88c803c0a60916d283085540ea303bfea4f62200769487437dae3d98a1c3d'
+
+          if hashlib.sha256(encoded.encode('ascii')).hexdigest() != expected_encoded:
+              raise SystemExit('Encoded bundle SHA mismatch')
+          compressed = base64.b64decode(encoded, validate=True)
+          if hashlib.sha256(compressed).hexdigest() != expected_gzip:
+              raise SystemExit('Gzip bundle SHA mismatch')
+          payload_bytes = gzip.decompress(compressed)
+          if hashlib.sha256(payload_bytes).hexdigest() != expected_payload:
+              raise SystemExit('Payload SHA mismatch')
+
+          payload = json.loads(payload_bytes.decode('utf-8'))
+          for key in ('runtime', 'css', 'data'):
+              if not payload.get(key):
+                  raise SystemExit(f'Missing payload key: {key}')
+
+          data = payload['data']
+          sections = []
+          lessons = []
+          diagnostics = []
+
+          def as_int(value):
+              try:
+                  if isinstance(value, bool):
+                      return None
+                  return int(value)
+              except (TypeError, ValueError):
+                  return None
+
+          def walk(value):
+              if isinstance(value, dict):
+                  ident = as_int(value.get('id'))
+                  lesson_list = value.get('lessons')
+                  if ident in range(2, 12) and isinstance(lesson_list, list):
+                      sections.append(value)
+                  screen_list = value.get('screens')
+                  if ident in range(5, 63) and isinstance(screen_list, list) and not isinstance(lesson_list, list):
+                      lessons.append(value)
+                  diagnostic = value.get('diagnostic')
+                  if isinstance(diagnostic, dict) and isinstance(diagnostic.get('questions'), list):
+                      diagnostics.append(diagnostic)
+                  for child in value.values():
+                      walk(child)
+              elif isinstance(value, list):
+                  for child in value:
+                      walk(child)
+
+          walk(data)
+          unique_sections = {int(item['id']): item for item in sections}
+          unique_lessons = {int(item['id']): item for item in lessons}
+
+          if sorted(unique_sections) != list(range(2, 12)):
+              raise SystemExit(f'Section IDs mismatch: {sorted(unique_sections)}')
+          if sorted(unique_lessons) != list(range(5, 63)):
+              raise SystemExit(f'Lesson IDs mismatch: {sorted(unique_lessons)}')
+
+          screen_count = sum(len(item['screens']) for item in unique_lessons.values())
+          if screen_count != 1048:
+              raise SystemExit(f'Expected 1048 screens, got {screen_count}')
+
+          question_count = sum(len(item['questions']) for item in diagnostics)
+          if question_count != 116:
+              raise SystemExit(f'Expected 116 diagnostic questions, got {question_count}')
+
+          Path('/tmp/finance-v138-runtime.js').write_text(payload['runtime'], encoding='utf-8')
+          print(json.dumps({
+              'sections': len(unique_sections),
+              'lessons': len(unique_lessons),
+              'screens': screen_count,
+              'questions': question_count,
+          }, ensure_ascii=False))
+          PY
+
+      - name: Validate JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check finance-thinking-v138.js
+          node --check /tmp/finance-v138-runtime.js
+
+      - name: Protect release boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          changed="$(git diff --name-only origin/main...HEAD)"
+          printf '%s\n' "$changed"
+          forbidden='^(app\.js|styles\.css|forum\.js|forum\.css|business-architecture\.js|entrepreneur-curriculum\.js|entrepreneur-lesson-factory-v137\.js|unit-economics\.js|cash-gap-radar\.js|supabase/|functions/)'
+          if printf '%s\n' "$changed" | grep -E "$forbidden"; then
+            echo 'Release changes a forbidden existing application file.'
+            exit 1
+          fi
+          grep -F '<script src="finance-thinking-v138.js?v=finance-thinking-v138-20260724"></script>' index.html
