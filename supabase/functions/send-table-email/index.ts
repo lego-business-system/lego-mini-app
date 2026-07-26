@@ -1,4 +1,6 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+// Supabase Edge Runtime types.
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { withSupabase } from "jsr:@supabase/server@1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,7 +13,7 @@ const TELEGRAM_MAX_AGE_SECONDS = 24 * 60 * 60;
 const MINUTE_LIMIT = 1;
 const DAILY_LIMIT = 20;
 
-function jsonResponse(body, status = 200) {
+function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
@@ -22,18 +24,18 @@ function jsonResponse(body, status = 200) {
   });
 }
 
-function normalizeEmail(value) {
+function normalizeEmail(value: unknown) {
   return String(value || "").trim().toLowerCase();
 }
 
-function isValidEmail(value) {
+function isValidEmail(value: unknown) {
   const email = normalizeEmail(value);
   return email.length >= 5 &&
     email.length <= 254 &&
     /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
 }
 
-function maskEmail(value) {
+function maskEmail(value: unknown) {
   const email = normalizeEmail(value);
   const at = email.indexOf("@");
   if (at <= 0) return "";
@@ -43,7 +45,7 @@ function maskEmail(value) {
   return `${visible}${"*".repeat(Math.max(3, Math.min(8, local.length - visible.length)))}@${domain}`;
 }
 
-function normalizeTitle(value) {
+function normalizeTitle(value: unknown) {
   const title = String(value || "")
     .replace(/[\u0000-\u001f\u007f]/g, " ")
     .replace(/\s+/g, " ")
@@ -52,12 +54,12 @@ function normalizeTitle(value) {
   return title || "Практическая таблица";
 }
 
-function normalizeKind(value) {
+function normalizeKind(value: unknown) {
   const kind = String(value || "table").trim().toLowerCase();
   return ["table", "example", "instruction"].includes(kind) ? kind : "table";
 }
 
-function normalizeGoogleSheetUrl(value) {
+function normalizeGoogleSheetUrl(value: unknown) {
   try {
     const url = new URL(String(value || ""));
     if (url.protocol !== "https:") return null;
@@ -71,23 +73,23 @@ function normalizeGoogleSheetUrl(value) {
   }
 }
 
-function escapeHtml(value) {
+function escapeHtml(value: unknown) {
   return String(value == null ? "" : value).replace(/[&<>'"]/g, (char) => ({
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",
     "'": "&#39;",
     '"': "&quot;",
-  })[char]);
+  })[char] || char);
 }
 
-function bytesToHex(buffer) {
+function bytesToHex(buffer: ArrayBuffer) {
   return Array.from(new Uint8Array(buffer))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
 }
 
-function constantTimeEqual(left, right) {
+function constantTimeEqual(left: unknown, right: unknown) {
   const a = String(left || "").toLowerCase();
   const b = String(right || "").toLowerCase();
   if (a.length !== b.length) return false;
@@ -98,7 +100,7 @@ function constantTimeEqual(left, right) {
   return result === 0;
 }
 
-async function hmacSha256(keyBytes, message) {
+async function hmacSha256(keyBytes: Uint8Array, message: string) {
   const key = await crypto.subtle.importKey(
     "raw",
     keyBytes,
@@ -109,21 +111,21 @@ async function hmacSha256(keyBytes, message) {
   return crypto.subtle.sign("HMAC", key, encoder.encode(message));
 }
 
-export async function validateTelegramInitData(initData, botToken) {
+export async function validateTelegramInitData(initData: string, botToken: string) {
   if (!initData || !botToken) {
-    return { ok: false, error: "OPEN_FROM_TELEGRAM_REQUIRED" };
+    return { ok: false as const, error: "OPEN_FROM_TELEGRAM_REQUIRED" };
   }
 
-  let params;
+  let params: URLSearchParams;
   try {
     params = new URLSearchParams(initData);
   } catch (_error) {
-    return { ok: false, error: "TELEGRAM_DATA_INVALID" };
+    return { ok: false as const, error: "TELEGRAM_DATA_INVALID" };
   }
 
   const receivedHash = params.get("hash") || "";
   if (!/^[a-f0-9]{64}$/i.test(receivedHash)) {
-    return { ok: false, error: "TELEGRAM_DATA_INVALID" };
+    return { ok: false as const, error: "TELEGRAM_DATA_INVALID" };
   }
 
   const dataCheckString = Array.from(params.entries())
@@ -133,34 +135,37 @@ export async function validateTelegramInitData(initData, botToken) {
     .join("\n");
 
   const secretKey = await hmacSha256(encoder.encode("WebAppData"), botToken);
-  const calculatedHash = bytesToHex(await hmacSha256(new Uint8Array(secretKey), dataCheckString));
+  const calculatedHash = bytesToHex(
+    await hmacSha256(new Uint8Array(secretKey), dataCheckString),
+  );
+
   if (!constantTimeEqual(calculatedHash, receivedHash)) {
-    return { ok: false, error: "TELEGRAM_DATA_INVALID" };
+    return { ok: false as const, error: "TELEGRAM_DATA_INVALID" };
   }
 
   const authDate = Number(params.get("auth_date") || 0);
   const nowSeconds = Math.floor(Date.now() / 1000);
   if (!Number.isFinite(authDate) || authDate <= 0 || authDate > nowSeconds + 300) {
-    return { ok: false, error: "TELEGRAM_DATA_INVALID" };
+    return { ok: false as const, error: "TELEGRAM_DATA_INVALID" };
   }
   if (nowSeconds - authDate > TELEGRAM_MAX_AGE_SECONDS) {
-    return { ok: false, error: "TELEGRAM_DATA_EXPIRED" };
+    return { ok: false as const, error: "TELEGRAM_DATA_EXPIRED" };
   }
 
-  let user;
+  let user: Record<string, unknown>;
   try {
-    user = JSON.parse(params.get("user") || "{}");
+    user = JSON.parse(params.get("user") || "{}") as Record<string, unknown>;
   } catch (_error) {
-    return { ok: false, error: "TELEGRAM_DATA_INVALID" };
+    return { ok: false as const, error: "TELEGRAM_DATA_INVALID" };
   }
 
-  const telegramId = String(user && user.id != null ? user.id : "");
+  const telegramId = String(user.id != null ? user.id : "");
   if (!/^\d{1,20}$/.test(telegramId)) {
-    return { ok: false, error: "TELEGRAM_DATA_INVALID" };
+    return { ok: false as const, error: "TELEGRAM_DATA_INVALID" };
   }
 
   return {
-    ok: true,
+    ok: true as const,
     telegramId,
     user: {
       id: telegramId,
@@ -171,23 +176,29 @@ export async function validateTelegramInitData(initData, botToken) {
   };
 }
 
-function databaseNotReady(error) {
-  const code = String(error && error.code || "");
-  const message = String(error && error.message || "").toLowerCase();
+function databaseNotReady(error: unknown) {
+  const candidate = error as { code?: string; message?: string } | null;
+  const code = String(candidate?.code || "");
+  const message = String(candidate?.message || "").toLowerCase();
   return code === "42P01" || code === "PGRST205" || message.includes("app_table_email_");
 }
 
-async function countRecentSends(supabase, telegramId, fromIso) {
-  const { count, error } = await supabase
+async function countRecentSends(
+  supabaseAdmin: any,
+  telegramId: string,
+  fromIso: string,
+) {
+  const { count, error } = await supabaseAdmin
     .from("app_table_email_sends")
     .select("id", { count: "exact", head: true })
     .eq("telegram_id", telegramId)
     .gte("created_at", fromIso);
+
   if (error) throw error;
   return Number(count || 0);
 }
 
-function emailHtml({ title, url }) {
+function emailHtml({ title, url }: { title: string; url: string }) {
   const safeTitle = escapeHtml(title);
   const safeUrl = escapeHtml(url);
   return `<!doctype html>
@@ -226,228 +237,258 @@ function emailHtml({ title, url }) {
 </html>`;
 }
 
-function emailText({ title, url }) {
+function emailText({ title, url }: { title: string; url: string }) {
   return `АРХИТЕКТУРА\n\n${title}\n\nОткройте таблицу на компьютере или ноутбуке:\n${url}\n\nПосле открытия выберите «Файл → Создать копию».`;
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return jsonResponse({ ok: false, error: "METHOD_NOT_ALLOWED" }, 405);
+export default {
+  fetch: withSupabase({ auth: "none" }, async (req, ctx) => {
+    if (req.method === "OPTIONS") {
+      return new Response("ok", { headers: corsHeaders });
+    }
+    if (req.method !== "POST") {
+      return jsonResponse({ ok: false, error: "METHOD_NOT_ALLOWED" }, 405);
+    }
 
-  let body;
-  try {
-    body = await req.json();
-  } catch (_error) {
-    return jsonResponse({ ok: false, error: "INVALID_JSON" }, 400);
-  }
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json() as Record<string, unknown>;
+    } catch (_error) {
+      return jsonResponse({ ok: false, error: "INVALID_JSON" }, 400);
+    }
 
-  const action = String(body && body.action || "send").trim().toLowerCase();
-  if (!["profile", "send"].includes(action)) {
-    return jsonResponse({ ok: false, error: "INVALID_ACTION" }, 400);
-  }
+    const action = String(body.action || "send").trim().toLowerCase();
+    if (!["profile", "send"].includes(action)) {
+      return jsonResponse({ ok: false, error: "INVALID_ACTION" }, 400);
+    }
 
-  const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN") || "";
-  const telegram = await validateTelegramInitData(String(body && body.initData || ""), botToken);
-  if (!telegram.ok) {
-    return jsonResponse({ ok: false, error: telegram.error }, 401);
-  }
+    const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN") || "";
+    const telegram = await validateTelegramInitData(
+      String(body.initData || ""),
+      botToken,
+    );
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  if (!supabaseUrl || !serviceRoleKey) {
-    return jsonResponse({ ok: false, error: "DATABASE_NOT_READY" }, 503);
-  }
+    if (!telegram.ok) {
+      return jsonResponse({ ok: false, error: telegram.error }, 401);
+    }
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+    const supabaseAdmin = ctx.supabaseAdmin;
+    if (!supabaseAdmin) {
+      return jsonResponse({ ok: false, error: "DATABASE_NOT_READY" }, 503);
+    }
 
-  if (action === "profile") {
-    const { data, error } = await supabase
+    if (action === "profile") {
+      const { data, error } = await supabaseAdmin
+        .from("app_table_email_profiles")
+        .select("email")
+        .eq("telegram_id", telegram.telegramId)
+        .maybeSingle();
+
+      if (error) {
+        console.error("TABLE_EMAIL_PROFILE_READ", error);
+        return jsonResponse({
+          ok: false,
+          error: databaseNotReady(error) ? "DATABASE_NOT_READY" : "DATABASE_ERROR",
+        }, 503);
+      }
+
+      return jsonResponse({
+        ok: true,
+        hasEmail: Boolean(data?.email),
+        maskedEmail: data?.email ? maskEmail(data.email) : "",
+      });
+    }
+
+    const materialUrl = normalizeGoogleSheetUrl(body.materialUrl);
+    if (!materialUrl) {
+      return jsonResponse({ ok: false, error: "INVALID_TABLE_URL" }, 400);
+    }
+
+    const materialTitle = normalizeTitle(body.materialTitle);
+    const materialKind = normalizeKind(body.materialKind);
+
+    let email = normalizeEmail(body.email);
+    if (email && !isValidEmail(email)) {
+      return jsonResponse({ ok: false, error: "INVALID_EMAIL" }, 400);
+    }
+
+    if (!email) {
+      const { data, error } = await supabaseAdmin
+        .from("app_table_email_profiles")
+        .select("email")
+        .eq("telegram_id", telegram.telegramId)
+        .maybeSingle();
+
+      if (error) {
+        console.error("TABLE_EMAIL_PROFILE_LOOKUP", error);
+        return jsonResponse({
+          ok: false,
+          error: databaseNotReady(error) ? "DATABASE_NOT_READY" : "DATABASE_ERROR",
+        }, 503);
+      }
+      email = normalizeEmail(data?.email);
+    }
+
+    if (!isValidEmail(email)) {
+      return jsonResponse({ ok: false, error: "EMAIL_REQUIRED" }, 400);
+    }
+
+    const now = Date.now();
+    try {
+      const lastMinute = await countRecentSends(
+        supabaseAdmin,
+        telegram.telegramId,
+        new Date(now - 60 * 1000).toISOString(),
+      );
+      if (lastMinute >= MINUTE_LIMIT) {
+        return jsonResponse({ ok: false, error: "RATE_LIMIT_MINUTE" }, 429);
+      }
+
+      const lastDay = await countRecentSends(
+        supabaseAdmin,
+        telegram.telegramId,
+        new Date(now - 24 * 60 * 60 * 1000).toISOString(),
+      );
+      if (lastDay >= DAILY_LIMIT) {
+        return jsonResponse({ ok: false, error: "RATE_LIMIT_DAY" }, 429);
+      }
+    } catch (error) {
+      console.error("TABLE_EMAIL_RATE_LIMIT", error);
+      return jsonResponse({
+        ok: false,
+        error: databaseNotReady(error) ? "DATABASE_NOT_READY" : "DATABASE_ERROR",
+      }, 503);
+    }
+
+    const { error: profileError } = await supabaseAdmin
       .from("app_table_email_profiles")
-      .select("email")
-      .eq("telegram_id", telegram.telegramId)
-      .maybeSingle();
+      .upsert({
+        telegram_id: telegram.telegramId,
+        email,
+        first_name: telegram.user.firstName,
+        last_name: telegram.user.lastName,
+        username: telegram.user.username,
+        email_updated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "telegram_id" });
 
-    if (error) {
-      console.error("TABLE_EMAIL_PROFILE_READ", error);
-      return jsonResponse({ ok: false, error: databaseNotReady(error) ? "DATABASE_NOT_READY" : "DATABASE_ERROR" }, 503);
+    if (profileError) {
+      console.error("TABLE_EMAIL_PROFILE_UPSERT", profileError);
+      return jsonResponse({
+        ok: false,
+        error: databaseNotReady(profileError) ? "DATABASE_NOT_READY" : "DATABASE_ERROR",
+      }, 503);
+    }
+
+    const { data: sendRow, error: sendInsertError } = await supabaseAdmin
+      .from("app_table_email_sends")
+      .insert({
+        telegram_id: telegram.telegramId,
+        email,
+        material_title: materialTitle,
+        material_kind: materialKind,
+        material_url: materialUrl,
+        status: "pending",
+      })
+      .select("id")
+      .single();
+
+    if (sendInsertError) {
+      console.error("TABLE_EMAIL_LOG_INSERT", sendInsertError);
+      return jsonResponse({
+        ok: false,
+        error: databaseNotReady(sendInsertError) ? "DATABASE_NOT_READY" : "DATABASE_ERROR",
+      }, 503);
+    }
+
+    const resendApiKey = Deno.env.get("RESEND_API_KEY") || "";
+    const emailFrom = Deno.env.get("EMAIL_FROM") || "";
+    if (!resendApiKey || !emailFrom) {
+      await supabaseAdmin
+        .from("app_table_email_sends")
+        .update({ status: "failed", error_message: "EMAIL_SERVICE_NOT_CONFIGURED" })
+        .eq("id", sendRow.id);
+
+      return jsonResponse({ ok: false, error: "EMAIL_SERVICE_NOT_CONFIGURED" }, 503);
+    }
+
+    let providerResponse: Response;
+    let providerBody: Record<string, unknown> = {};
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15_000);
+      try {
+        providerResponse = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${resendApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: emailFrom,
+            to: [email],
+            subject: `Таблица «${materialTitle}» — АРХИТЕКТУРА`,
+            html: emailHtml({ title: materialTitle, url: materialUrl }),
+            text: emailText({ title: materialTitle, url: materialUrl }),
+          }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      try {
+        providerBody = await providerResponse.json() as Record<string, unknown>;
+      } catch (_error) {
+        providerBody = {};
+      }
+    } catch (error) {
+      console.error("TABLE_EMAIL_RESEND_NETWORK", error);
+      await supabaseAdmin
+        .from("app_table_email_sends")
+        .update({
+          status: "failed",
+          error_message: String(
+            error instanceof Error ? error.message : "RESEND_NETWORK_ERROR",
+          ).slice(0, 500),
+        })
+        .eq("id", sendRow.id);
+
+      return jsonResponse({ ok: false, error: "EMAIL_SEND_FAILED" }, 502);
+    }
+
+    if (!providerResponse.ok || !providerBody.id) {
+      const providerError = String(
+        providerBody.message || providerBody.name || `RESEND_HTTP_${providerResponse.status}`,
+      ).slice(0, 500);
+
+      console.error("TABLE_EMAIL_RESEND_REJECTED", providerResponse.status, providerError);
+      await supabaseAdmin
+        .from("app_table_email_sends")
+        .update({ status: "failed", error_message: providerError })
+        .eq("id", sendRow.id);
+
+      return jsonResponse({ ok: false, error: "EMAIL_SEND_FAILED" }, 502);
+    }
+
+    const { error: sendUpdateError } = await supabaseAdmin
+      .from("app_table_email_sends")
+      .update({
+        status: "sent",
+        provider_message_id: String(providerBody.id),
+        sent_at: new Date().toISOString(),
+      })
+      .eq("id", sendRow.id);
+
+    if (sendUpdateError) {
+      console.error("TABLE_EMAIL_LOG_UPDATE", sendUpdateError);
     }
 
     return jsonResponse({
       ok: true,
-      hasEmail: Boolean(data && data.email),
-      maskedEmail: data && data.email ? maskEmail(data.email) : "",
+      maskedEmail: maskEmail(email),
+      messageId: String(providerBody.id),
     });
-  }
-
-  const materialUrl = normalizeGoogleSheetUrl(body && body.materialUrl);
-  if (!materialUrl) {
-    return jsonResponse({ ok: false, error: "INVALID_TABLE_URL" }, 400);
-  }
-  const materialTitle = normalizeTitle(body && body.materialTitle);
-  const materialKind = normalizeKind(body && body.materialKind);
-
-  let email = normalizeEmail(body && body.email);
-  if (email && !isValidEmail(email)) {
-    return jsonResponse({ ok: false, error: "INVALID_EMAIL" }, 400);
-  }
-
-  if (!email) {
-    const { data, error } = await supabase
-      .from("app_table_email_profiles")
-      .select("email")
-      .eq("telegram_id", telegram.telegramId)
-      .maybeSingle();
-
-    if (error) {
-      console.error("TABLE_EMAIL_PROFILE_LOOKUP", error);
-      return jsonResponse({ ok: false, error: databaseNotReady(error) ? "DATABASE_NOT_READY" : "DATABASE_ERROR" }, 503);
-    }
-    email = normalizeEmail(data && data.email);
-  }
-
-  if (!isValidEmail(email)) {
-    return jsonResponse({ ok: false, error: "EMAIL_REQUIRED" }, 400);
-  }
-
-  const now = Date.now();
-  try {
-    const lastMinute = await countRecentSends(
-      supabase,
-      telegram.telegramId,
-      new Date(now - 60 * 1000).toISOString(),
-    );
-    if (lastMinute >= MINUTE_LIMIT) {
-      return jsonResponse({ ok: false, error: "RATE_LIMIT_MINUTE" }, 429);
-    }
-
-    const lastDay = await countRecentSends(
-      supabase,
-      telegram.telegramId,
-      new Date(now - 24 * 60 * 60 * 1000).toISOString(),
-    );
-    if (lastDay >= DAILY_LIMIT) {
-      return jsonResponse({ ok: false, error: "RATE_LIMIT_DAY" }, 429);
-    }
-  } catch (error) {
-    console.error("TABLE_EMAIL_RATE_LIMIT", error);
-    return jsonResponse({ ok: false, error: databaseNotReady(error) ? "DATABASE_NOT_READY" : "DATABASE_ERROR" }, 503);
-  }
-
-  const { error: profileError } = await supabase
-    .from("app_table_email_profiles")
-    .upsert({
-      telegram_id: telegram.telegramId,
-      email,
-      first_name: telegram.user.firstName,
-      last_name: telegram.user.lastName,
-      username: telegram.user.username,
-      email_updated_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "telegram_id" });
-
-  if (profileError) {
-    console.error("TABLE_EMAIL_PROFILE_UPSERT", profileError);
-    return jsonResponse({ ok: false, error: databaseNotReady(profileError) ? "DATABASE_NOT_READY" : "DATABASE_ERROR" }, 503);
-  }
-
-  const { data: sendRow, error: sendInsertError } = await supabase
-    .from("app_table_email_sends")
-    .insert({
-      telegram_id: telegram.telegramId,
-      email,
-      material_title: materialTitle,
-      material_kind: materialKind,
-      material_url: materialUrl,
-      status: "pending",
-    })
-    .select("id")
-    .single();
-
-  if (sendInsertError) {
-    console.error("TABLE_EMAIL_LOG_INSERT", sendInsertError);
-    return jsonResponse({ ok: false, error: databaseNotReady(sendInsertError) ? "DATABASE_NOT_READY" : "DATABASE_ERROR" }, 503);
-  }
-
-  const resendApiKey = Deno.env.get("RESEND_API_KEY") || "";
-  const emailFrom = Deno.env.get("EMAIL_FROM") || "";
-  if (!resendApiKey || !emailFrom) {
-    await supabase
-      .from("app_table_email_sends")
-      .update({ status: "failed", error_message: "EMAIL_SERVICE_NOT_CONFIGURED" })
-      .eq("id", sendRow.id);
-    return jsonResponse({ ok: false, error: "EMAIL_SERVICE_NOT_CONFIGURED" }, 503);
-  }
-
-  let providerResponse;
-  let providerBody = {};
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-    try {
-      providerResponse = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${resendApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: emailFrom,
-          to: [email],
-          subject: `Таблица «${materialTitle}» — АРХИТЕКТУРА`,
-          html: emailHtml({ title: materialTitle, url: materialUrl }),
-          text: emailText({ title: materialTitle, url: materialUrl }),
-        }),
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    try {
-      providerBody = await providerResponse.json();
-    } catch (_error) {
-      providerBody = {};
-    }
-  } catch (error) {
-    console.error("TABLE_EMAIL_RESEND_NETWORK", error);
-    await supabase
-      .from("app_table_email_sends")
-      .update({
-        status: "failed",
-        error_message: String(error && error.message || "RESEND_NETWORK_ERROR").slice(0, 500),
-      })
-      .eq("id", sendRow.id);
-    return jsonResponse({ ok: false, error: "EMAIL_SEND_FAILED" }, 502);
-  }
-
-  if (!providerResponse.ok || !providerBody.id) {
-    const providerError = String(
-      providerBody && (providerBody.message || providerBody.name) || `RESEND_HTTP_${providerResponse.status}`,
-    ).slice(0, 500);
-    console.error("TABLE_EMAIL_RESEND_REJECTED", providerResponse.status, providerError);
-    await supabase
-      .from("app_table_email_sends")
-      .update({ status: "failed", error_message: providerError })
-      .eq("id", sendRow.id);
-    return jsonResponse({ ok: false, error: "EMAIL_SEND_FAILED" }, 502);
-  }
-
-  const { error: sendUpdateError } = await supabase
-    .from("app_table_email_sends")
-    .update({
-      status: "sent",
-      provider_message_id: String(providerBody.id),
-      sent_at: new Date().toISOString(),
-    })
-    .eq("id", sendRow.id);
-
-  if (sendUpdateError) console.error("TABLE_EMAIL_LOG_UPDATE", sendUpdateError);
-
-  return jsonResponse({
-    ok: true,
-    maskedEmail: maskEmail(email),
-    messageId: String(providerBody.id),
-  });
-});
+  }),
+};
