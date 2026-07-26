@@ -5,6 +5,7 @@ on:
     paths:
       - "index.html"
       - "table-email.js"
+      - "table-email-pilot-gate.js"
       - "table-email.css"
       - "supabase/functions/send-table-email/**"
       - "supabase/migrations/20260726_table_email_pilot.sql"
@@ -23,7 +24,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Validate browser JavaScript syntax
-        run: node --check table-email.js
+        run: |
+          node --check table-email.js
+          node --check table-email-pilot-gate.js
 
       - name: Validate Edge Function TypeScript syntax
         run: |
@@ -43,6 +46,8 @@ jobs:
 
           index = Path("index.html").read_text(encoding="utf-8")
           frontend = Path("table-email.js").read_text(encoding="utf-8")
+          gate = Path("table-email-pilot-gate.js").read_text(encoding="utf-8")
+          css = Path("table-email.css").read_text(encoding="utf-8")
           function = Path("supabase/functions/send-table-email/index.ts").read_text(encoding="utf-8")
           migration = Path("supabase/migrations/20260726_table_email_pilot.sql").read_text(encoding="utf-8")
           config = Path("supabase/config.toml").read_text(encoding="utf-8")
@@ -50,12 +55,15 @@ jobs:
           required_index_entries = (
               'table-email.css?v=v140-table-email-pilot-20260726',
               'table-email.js?v=v140-table-email-pilot-20260726',
+              'table-email-pilot-gate.js?v=v140-table-email-pilot-20260726',
           )
           for entry in required_index_entries:
               assert entry in index, f"index.html is missing {entry}"
 
           assert index.index('finance-thinking-v138.js') < index.index('table-email.js'), \
               "table-email.js must load after lesson modules"
+          assert index.index('table-email.js') < index.index('table-email-pilot-gate.js'), \
+              "pilot gate must load after table-email.js"
 
           assert 'Telegram.WebApp' in frontend
           assert 'initData' in frontend
@@ -64,6 +72,16 @@ jobs:
           assert 'TELEGRAM_BOT_TOKEN' not in frontend
           assert 'SUPABASE_SERVICE_ROLE_KEY' not in frontend
           assert 'SUPABASE_SECRET_KEYS' not in frontend
+
+          assert 'Telegram.WebApp' in gate
+          assert 'action: "profile"' in gate
+          assert 'table-email-pilot-enabled-v140' in gate
+          assert 'RESEND_API_KEY' not in gate
+          assert 'TELEGRAM_BOT_TOKEN' not in gate
+
+          assert '.table-email-btn-v140' in css
+          assert 'display: none' in css
+          assert 'html.table-email-pilot-enabled-v140' in css
 
           for marker in (
               'withSupabase({ auth: "none" }',
@@ -90,7 +108,7 @@ jobs:
               'sb_secret_',
               'service_role ey',
           )
-          combined = frontend + "\n" + function + "\n" + migration
+          combined = frontend + "\n" + gate + "\n" + function + "\n" + migration
           for fragment in forbidden_fragments:
               assert fragment not in combined, f"Possible committed secret marker: {fragment}"
 
