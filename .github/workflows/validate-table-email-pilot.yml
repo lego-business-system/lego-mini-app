@@ -33,6 +33,7 @@ jobs:
             --platform=neutral \
             --format=esm \
             --external:npm:* \
+            --external:jsr:* \
             --outfile=/tmp/send-table-email.mjs
 
       - name: Validate pilot wiring and security boundaries
@@ -65,6 +66,8 @@ jobs:
           assert 'SUPABASE_SECRET_KEYS' not in frontend
 
           for marker in (
+              'withSupabase({ auth: "none" }',
+              'ctx.supabaseAdmin',
               'validateTelegramInitData',
               'https://api.resend.com/emails',
               'RESEND_API_KEY',
