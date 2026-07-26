@@ -1,6 +1,11 @@
 /* v140 — отправка таблиц на email */
 .table-email-btn-v140 {
+  display: none;
   min-height: 46px;
+}
+
+html.table-email-pilot-enabled-v140 .table-email-btn-v140 {
+  display: flex;
 }
 
 .table-email-btn-v140.is-loading-v140 {
