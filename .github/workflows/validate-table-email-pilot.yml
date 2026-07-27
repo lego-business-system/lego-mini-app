@@ -6,6 +6,7 @@ on:
       - "index.html"
       - "table-email.js"
       - "table-email.css"
+      - "tests/table-email-frontend-smoke.mjs"
       - "supabase/functions/send-table-email/**"
       - "supabase/migrations/20260726_table_email_pilot.sql"
       - "supabase/config.toml"
@@ -24,6 +25,9 @@ jobs:
 
       - name: Validate browser JavaScript syntax
         run: node --check table-email.js
+
+      - name: Run frontend behavior smoke tests
+        run: node tests/table-email-frontend-smoke.mjs
 
       - name: Validate Edge Function TypeScript syntax
         run: |
@@ -50,7 +54,7 @@ jobs:
 
           required_index_entries = (
               'table-email.css?v=v142-table-email-mobile-ui-20260727',
-              'table-email.js?v=v140-table-email-pilot-20260726',
+              'table-email.js?v=v143-table-email-release-20260727',
           )
           for entry in required_index_entries:
               assert entry in index, f"index.html is missing {entry}"
@@ -67,6 +71,11 @@ jobs:
           assert 'TELEGRAM_BOT_TOKEN' not in frontend
           assert 'SUPABASE_SERVICE_ROLE_KEY' not in frontend
           assert 'SUPABASE_SECRET_KEYS' not in frontend
+          assert 'Email сохранится для следующих отправок.' in frontend
+          assert 'В пилотной версии' not in frontend
+          assert 'Сервис ещё не подключён к базе данных.' not in frontend
+          assert 'Почтовый сервис ещё не настроен.' not in frontend
+          assert 'Доступны только Google Таблицы.' not in frontend
 
           assert '.table-email-btn-v140' in css
           assert '.table-email-btn-v140 {\n  display: none' not in css
@@ -92,6 +101,16 @@ jobs:
               'docs.google.com',
               'RATE_LIMIT_MINUTE',
               'RATE_LIMIT_DAY',
+              'url.protocol !== "https:"',
+              'url.hostname !== "docs.google.com"',
+              'receivedHash',
+              'auth_date',
+              'app_table_email_profiles',
+              'app_table_email_sends',
+              'status: "pending"',
+              'status: "sent"',
+              'provider_message_id',
+              'sent_at',
           ):
               assert marker in function, f"Edge Function is missing {marker}"
 
