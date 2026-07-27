@@ -1,0 +1,42 @@
+name: Apply table email release cleanup
+
+on:
+  push:
+    branches:
+      - agent/table-email-release-cleanup
+    paths:
+      - scripts/apply-table-email-release-cleanup.py
+      - .github/workflows/apply-table-email-release-cleanup.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout cleanup branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/table-email-release-cleanup
+
+      - name: Apply release cleanup
+        run: python3 scripts/apply-table-email-release-cleanup.py
+
+      - name: Validate generated frontend
+        run: |
+          node --check table-email.js
+          node tests/table-email-frontend-smoke.mjs
+          git diff --check
+
+      - name: Commit generated changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add table-email.js index.html .github/workflows/validate-table-email-pilot.yml tests/table-email-frontend-smoke.mjs docs/table-email-pilot-setup.md
+          if git diff --cached --quiet; then
+            echo "No generated changes"
+            exit 0
+          fi
+          git commit -m "Очистить тексты и усилить проверку email-функции"
+          git push origin HEAD:agent/table-email-release-cleanup
