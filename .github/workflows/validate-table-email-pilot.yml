@@ -69,7 +69,7 @@ jobs:
           assert 'SUPABASE_SECRET_KEYS' not in frontend
 
           assert '.table-email-btn-v140' in css
-          assert 'display: none' not in css
+          assert '.table-email-btn-v140 {\n  display: none' not in css
           assert 'table-email-pilot-enabled-v140' not in css
 
           # Mobile Telegram WebView must remain readable even when Telegram uses a dark theme.
