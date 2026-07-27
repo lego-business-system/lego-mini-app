@@ -1,11 +1,11 @@
 /* =====================================================
-   v140 — Отправка Google-таблиц на email (пилот)
+   v143 — Отправка Google-таблиц на email
    Изолированный модуль: не изменяет app.js, прогресс, роли и уроки.
    ===================================================== */
-(function installTableEmailPilotV140(){
+(function installTableEmailPublicV143(){
   "use strict";
 
-  var TABLE_EMAIL_VERSION_V140 = "v140-table-email-pilot-20260726";
+  var TABLE_EMAIL_VERSION_V140 = "v143-table-email-release-20260727";
   var TABLE_EMAIL_API_URL_V140 = "https://soxtekhspohkddpdidvp.supabase.co/functions/v1/send-table-email";
   var TABLE_EMAIL_SELECTOR_V140 = "#app a[href], #app button[onclick]";
   var TABLE_EMAIL_PROFILE_V140 = {
@@ -260,12 +260,12 @@
       TELEGRAM_DATA_INVALID: "Сессия Telegram устарела. Закройте приложение, откройте его заново и повторите попытку.",
       TELEGRAM_DATA_EXPIRED: "Сессия Telegram устарела. Закройте приложение, откройте его заново и повторите попытку.",
       INVALID_EMAIL: "Проверьте адрес электронной почты.",
-      EMAIL_REQUIRED: "Сначала укажите адрес электронной почты.",
-      INVALID_TABLE_URL: "Эту ссылку нельзя отправить. Доступны только Google Таблицы.",
-      RATE_LIMIT_MINUTE: "Письмо уже отправлялось недавно. Повторите через минуту.",
-      RATE_LIMIT_DAY: "Достигнут дневной лимит отправок. Повторите завтра.",
-      DATABASE_NOT_READY: "Сервис ещё не подключён к базе данных.",
-      EMAIL_SERVICE_NOT_CONFIGURED: "Почтовый сервис ещё не настроен.",
+      EMAIL_REQUIRED: "Укажите адрес электронной почты.",
+      INVALID_TABLE_URL: "Для этого материала отправка на почту недоступна.",
+      RATE_LIMIT_MINUTE: "Письмо уже отправлено. Новую отправку можно выполнить через минуту.",
+      RATE_LIMIT_DAY: "Сегодня уже отправлено максимальное количество материалов. Повторите завтра.",
+      DATABASE_NOT_READY: "Не удалось подготовить отправку. Повторите попытку позже.",
+      EMAIL_SERVICE_NOT_CONFIGURED: "Отправка временно недоступна. Повторите попытку позже.",
       EMAIL_SEND_FAILED: "Почтовый сервис временно не отправил письмо. Повторите попытку позже.",
       NETWORK_ERROR: "Не удалось связаться с сервером. Проверьте интернет и повторите попытку."
     };
@@ -385,9 +385,9 @@
       '<button class="table-email-modal-close-v140" type="button" aria-label="Закрыть">×</button>' +
       '<p class="eyebrow">работа на компьютере</p>' +
       '<h2>Куда отправить таблицу?</h2>' +
-      '<p>Укажите почту, которую удобно открыть на компьютере или ноутбуке.</p>' +
+      '<p>Укажите email, который удобно открыть на компьютере или ноутбуке.</p>' +
       '<form class="table-email-form-v140" novalidate>' +
-        '<label for="table-email-input-v140">Email</label>' +
+        '<label for="table-email-input-v140">Электронная почта</label>' +
         '<input id="table-email-input-v140" name="email" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" value="' + tableEmailEscV140(presetEmail || "") + '" required maxlength="254">' +
         '<p class="table-email-field-error-v140" aria-live="polite"></p>' +
         '<div class="table-email-modal-actions-v140">' +
@@ -395,7 +395,7 @@
           '<button class="btn secondary table-email-cancel-v140" type="button">Отмена</button>' +
         '</div>' +
       '</form>' +
-      '<p class="small">В пилотной версии адрес сохраняется без отдельного подтверждения. Его можно изменить после любой отправки.</p>'
+      '<p class="small">Email сохранится для следующих отправок. Изменить его можно после любой отправки.</p>'
     );
 
     var form = overlay.querySelector(".table-email-form-v140");
