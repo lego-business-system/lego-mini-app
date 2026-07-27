@@ -1,24 +1,27 @@
 name: Apply table email release cleanup
 
 on:
-  push:
+  pull_request:
+    types: [opened, synchronize, reopened]
     branches:
-      - agent/table-email-release-cleanup
+      - main
     paths:
       - scripts/apply-table-email-release-cleanup.py
       - .github/workflows/apply-table-email-release-cleanup.yml
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   apply:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout cleanup branch
         uses: actions/checkout@v4
         with:
-          ref: agent/table-email-release-cleanup
+          ref: ${{ github.head_ref }}
 
       - name: Apply release cleanup
         run: python3 scripts/apply-table-email-release-cleanup.py
@@ -39,4 +42,4 @@ jobs:
             exit 0
           fi
           git commit -m "Очистить тексты и усилить проверку email-функции"
-          git push origin HEAD:agent/table-email-release-cleanup
+          git push origin HEAD:${{ github.head_ref }}
