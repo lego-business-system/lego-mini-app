@@ -2,12 +2,25 @@
 
 import { createHash } from "node:crypto";
 import {
+  closeSync,
+  constants,
+  fchmodSync,
+  fstatSync,
+  fsyncSync,
   lstatSync,
+  openSync,
   readFileSync,
   realpathSync,
+  writeFileSync,
 } from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import {
+  fileURLToPath,
+  pathToFileURL,
+} from "node:url";
+
+const scriptFile = fileURLToPath(import.meta.url);
+const repositoryRoot = path.resolve(path.dirname(scriptFile), "..");
 
 const FINANCE_STAGING_REF = "makgsbjduobcphuqzaoq";
 const MAIN_STAGING_REF = "bljeoovhydhjhdzwplxh";
@@ -32,6 +45,7 @@ const MAX_DISABLED_RESPONSE_BYTES = 128;
 const EXACT_DISABLED_BODY =
   Buffer.from('{"ok":false,"error":"temporarily_unavailable"}', "utf8");
 const EXACT_CONTENT_TYPE = "application/json; charset=utf-8";
+const PROOF_RECEIPT_KIND = "disabled-staging-edge-proof-v1";
 const ALLOWED_CONTENT_ENCODINGS = Object.freeze(
   new Set(["br", "deflate", "gzip"]),
 );
@@ -689,6 +703,157 @@ export async function verifyDisabledStagingEdge({
   });
 }
 
+export function buildDisabledStagingProofReceipt(
+  result,
+  {
+    now = new Date(),
+    verifierSource,
+  },
+) {
+  if (
+    result?.ok !== true
+    || result.environment !== "staging"
+    || result.productionTouched !== false
+    || result.exactDisabledResponseProved !== true
+    || result.credentialValidated !== true
+    || result.secretPrinted !== false
+    || !Array.isArray(result.cases)
+    || result.cases.length !== EXPECTED_CASE_SPECS.length
+  ) {
+    refuse("proof receipt input is not an exact successful staging result");
+  }
+  const createdAt = now instanceof Date ? now : new Date(now);
+  if (Number.isNaN(createdAt.getTime())) {
+    refuse("proof receipt time is invalid");
+  }
+  if (
+    !(
+      Buffer.isBuffer(verifierSource)
+      || verifierSource instanceof Uint8Array
+    )
+    || verifierSource.byteLength < 1
+  ) {
+    refuse("proof receipt verifier source is unavailable");
+  }
+  const cases = result.cases.map((item, index) => {
+    const expected = EXPECTED_CASE_SPECS[index];
+    if (
+      item?.name !== expected.name
+      || item.status !== 503
+      || item.disabled !== true
+    ) {
+      refuse("proof receipt case inventory differs");
+    }
+    return Object.freeze({
+      name: expected.name,
+      url: expected.url,
+      status: 503,
+      bodySha256: sha256(EXACT_DISABLED_BODY),
+      disabled: true,
+    });
+  });
+  const core = Object.freeze({
+    schemaVersion: 1,
+    kind: PROOF_RECEIPT_KIND,
+    environment: "staging",
+    financeProjectRef: FINANCE_STAGING_REF,
+    mainProjectRef: MAIN_STAGING_REF,
+    financeWebOrigin: FINANCE_WEB_STAGING_ORIGIN,
+    mainWebOrigin: MAIN_WEB_STAGING_ORIGIN,
+    verifierSourceSha256: sha256(verifierSource),
+    exactDisabledBodySha256: sha256(EXACT_DISABLED_BODY),
+    cases,
+    productionDenied: true,
+    credentialValidated: true,
+    secretPrinted: false,
+    createdAt: createdAt.toISOString(),
+  });
+  return Object.freeze({
+    ...core,
+    proofSha256: sha256(
+      Buffer.from(`${JSON.stringify(core)}\n`, "utf8"),
+    ),
+  });
+}
+
+export function writeDisabledStagingProofReceipt(
+  receiptPath,
+  receipt,
+) {
+  if (
+    typeof receiptPath !== "string"
+    || !path.isAbsolute(receiptPath)
+    || path.resolve(receiptPath) !== receiptPath
+  ) {
+    refuse("proof receipt path must be absolute and normalized");
+  }
+  const relativeToRepository = path.relative(repositoryRoot, receiptPath);
+  if (
+    relativeToRepository === ""
+    || (
+      relativeToRepository !== ".."
+      && !relativeToRepository.startsWith(`..${path.sep}`)
+    )
+  ) {
+    refuse("proof receipt must stay outside the repository");
+  }
+  const parent = path.dirname(receiptPath);
+  const parentStatus = lstatSync(parent);
+  if (
+    !parentStatus.isDirectory()
+    || parentStatus.isSymbolicLink()
+    || realpathSync(parent) !== parent
+    || (parentStatus.mode & 0o777) !== 0o700
+    || (
+      typeof process.getuid === "function"
+      && parentStatus.uid !== process.getuid()
+    )
+  ) {
+    refuse("proof receipt parent boundary differs");
+  }
+  const bytes = Buffer.from(`${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+  const descriptor = openSync(
+    receiptPath,
+    constants.O_CREAT
+      | constants.O_EXCL
+      | constants.O_WRONLY
+      | constants.O_NOFOLLOW,
+    0o600,
+  );
+  try {
+    writeFileSync(descriptor, bytes);
+    fchmodSync(descriptor, 0o600);
+    fsyncSync(descriptor);
+    const status = fstatSync(descriptor);
+    if (
+      !status.isFile()
+      || status.nlink !== 1
+      || (status.mode & 0o777) !== 0o600
+      || status.size !== bytes.byteLength
+      || (
+        typeof process.getuid === "function"
+        && status.uid !== process.getuid()
+      )
+    ) {
+      refuse("proof receipt file boundary differs after write");
+    }
+  } finally {
+    closeSync(descriptor);
+  }
+  const finalStatus = lstatSync(receiptPath);
+  if (
+    !finalStatus.isFile()
+    || finalStatus.isSymbolicLink()
+    || finalStatus.nlink !== 1
+    || (finalStatus.mode & 0o777) !== 0o600
+    || realpathSync(receiptPath) !== receiptPath
+    || !readFileSync(receiptPath).equals(bytes)
+  ) {
+    refuse("proof receipt path or bytes changed after write");
+  }
+  return receiptPath;
+}
+
 function argumentsFrom(argv) {
   if (argv.includes("--help")) {
     if (argv.length !== 1) refuse("--help cannot be combined");
@@ -699,7 +864,11 @@ function argumentsFrom(argv) {
   for (let index = 0; index < argv.length; index += 2) {
     const flag = argv[index];
     const value = argv[index + 1];
-    if (!["--finance-public-api", "--finance-public-api-receipt"].includes(flag)) {
+    if (![
+      "--finance-public-api",
+      "--finance-public-api-receipt",
+      "--proof-receipt",
+    ].includes(flag)) {
       refuse(`unknown argument: ${flag ?? "<missing>"}`);
     }
     if (seen.has(flag)) refuse(`duplicate argument: ${flag}`);
@@ -714,6 +883,7 @@ function argumentsFrom(argv) {
     publicApiReceiptFile:
       result["--finance-public-api-receipt"]
       ?? DEFAULT_PUBLIC_API_RECEIPT_FILE,
+    proofReceiptFile: result["--proof-receipt"] ?? null,
   });
 }
 
@@ -723,7 +893,8 @@ function printHelp() {
     "  node scripts/verify-disabled-staging-edge.mjs",
     "  node scripts/verify-disabled-staging-edge.mjs \\",
     "    --finance-public-api /absolute/private/0600/input.env \\",
-    "    --finance-public-api-receipt /absolute/private/0600/receipt.json",
+    "    --finance-public-api-receipt /absolute/private/0600/receipt.json \\",
+    "    --proof-receipt /absolute/private/0600/disabled-proof.json",
     "",
     "Runs five credential-safe POST probes against the exact reviewed Finance",
     "and Main staging Supabase refs. It never prints the Finance anon key.",
@@ -737,8 +908,28 @@ async function main() {
     printHelp();
     return;
   }
+  const verifierSource = readFileSync(scriptFile);
+  const verifierSourceSha256 = sha256(verifierSource);
   const result = await verifyDisabledStagingEdge(options);
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  if (sha256(readFileSync(scriptFile)) !== verifierSourceSha256) {
+    refuse("verifier source changed during the live run");
+  }
+  let output = result;
+  if (options.proofReceiptFile !== null) {
+    const receipt = buildDisabledStagingProofReceipt(result, {
+      verifierSource,
+    });
+    writeDisabledStagingProofReceipt(
+      options.proofReceiptFile,
+      receipt,
+    );
+    output = Object.freeze({
+      ...result,
+      proofReceiptPath: options.proofReceiptFile,
+      proofSha256: receipt.proofSha256,
+    });
+  }
+  process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {

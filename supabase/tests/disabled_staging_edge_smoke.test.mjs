@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   chmodSync,
+  lstatSync,
   mkdtempSync,
   readFileSync,
   realpathSync,
@@ -14,8 +15,10 @@ import test from "node:test";
 import { createHash } from "node:crypto";
 
 import {
+  buildDisabledStagingProofReceipt,
   validateDisabledStagingBoundary,
   verifyDisabledStagingEdge,
+  writeDisabledStagingProofReceipt,
 } from "../../scripts/verify-disabled-staging-edge.mjs";
 
 const FINANCE_REF = "makgsbjduobcphuqzaoq";
@@ -247,6 +250,46 @@ test("the operator sends exactly five staging probes with the reviewed Origin an
   const printed = JSON.stringify(result);
   assert.equal(printed.includes(files.anonKey), false);
   assert.equal(printed.includes(sha256(files.anonKey)), false);
+});
+
+test("a successful five-endpoint run produces one private canonical proof receipt", async t => {
+  const files = fixture(t);
+  const mock = successfulFetch();
+  const result = await verifyDisabledStagingEdge({
+    publicApiFile: files.publicApiFile,
+    publicApiReceiptFile: files.publicApiReceiptFile,
+    fetchImpl: mock.fetchImpl,
+  });
+  const verifierSource = Buffer.from("reviewed verifier fixture\n");
+  const receipt = buildDisabledStagingProofReceipt(result, {
+    now: new Date("2026-07-27T03:00:00.000Z"),
+    verifierSource,
+  });
+  const proofPath = path.join(files.directory, "disabled-edge-proof.json");
+  assert.equal(
+    writeDisabledStagingProofReceipt(proofPath, receipt),
+    proofPath,
+  );
+  assert.equal(lstatSync(proofPath).mode & 0o777, 0o600);
+  assert.deepEqual(JSON.parse(readFileSync(proofPath, "utf8")), receipt);
+  assert.equal(receipt.kind, "disabled-staging-edge-proof-v1");
+  assert.equal(receipt.financeProjectRef, FINANCE_REF);
+  assert.equal(receipt.mainProjectRef, MAIN_REF);
+  assert.equal(receipt.verifierSourceSha256, sha256(verifierSource));
+  assert.equal(receipt.exactDisabledBodySha256, sha256(EXACT_BODY));
+  assert.equal(receipt.productionDenied, true);
+  assert.equal(receipt.credentialValidated, true);
+  assert.equal(receipt.secretPrinted, false);
+  assert.equal(receipt.cases.length, 5);
+  const { proofSha256, ...core } = receipt;
+  assert.equal(
+    proofSha256,
+    sha256(Buffer.from(`${JSON.stringify(core)}\n`)),
+  );
+  assert.throws(
+    () => writeDisabledStagingProofReceipt(proofPath, receipt),
+    /EEXIST|file already exists/,
+  );
 });
 
 test("the immutable boundary rejects production, arbitrary refs, route drift and Origin drift", () => {
