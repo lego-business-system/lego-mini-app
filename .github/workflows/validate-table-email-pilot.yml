@@ -7,6 +7,7 @@ on:
       - "table-email.js"
       - "table-email.css"
       - "tests/table-email-frontend-smoke.mjs"
+      - "docs/table-email-pilot-setup.md"
       - "scripts/apply-table-email-release-cleanup.py"
       - ".github/workflows/apply-table-email-release-cleanup.yml"
       - "supabase/functions/send-table-email/**"
