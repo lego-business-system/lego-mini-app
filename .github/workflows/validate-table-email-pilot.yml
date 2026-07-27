@@ -49,7 +49,7 @@ jobs:
           config = Path("supabase/config.toml").read_text(encoding="utf-8")
 
           required_index_entries = (
-              'table-email.css?v=v141-table-email-public-20260726',
+              'table-email.css?v=v142-table-email-mobile-ui-20260727',
               'table-email.js?v=v140-table-email-pilot-20260726',
           )
           for entry in required_index_entries:
@@ -71,6 +71,16 @@ jobs:
           assert '.table-email-btn-v140' in css
           assert 'display: none' not in css
           assert 'table-email-pilot-enabled-v140' not in css
+
+          # Mobile Telegram WebView must remain readable even when Telegram uses a dark theme.
+          for marker in (
+              'height: 100dvh',
+              'background: #ffffff !important',
+              'color-scheme: light',
+              '-webkit-text-fill-color: #17202b !important',
+              '.table-email-modal-v140:focus-within',
+          ):
+              assert marker in css, f"Mobile email UI is missing {marker}"
 
           for marker in (
               'withSupabase({ auth: "none" }',
