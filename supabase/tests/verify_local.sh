@@ -21,11 +21,14 @@ for node_source in \
   finance-pilot/architecture-finance.js \
   finance-pilot/pilot-shell.js \
   scripts/build-finance-pilot.mjs \
+  scripts/bootstrap-main-finance-staging-access.mjs \
   scripts/configure-finance-pilot-bot.mjs \
   scripts/finance-pilot-safety.mjs \
   scripts/manage-finance-access.mjs \
   scripts/prepare-main-finance-staging.mjs \
+  scripts/seed-finance-pilot-user.mjs \
   scripts/staging-gates.mjs \
+  scripts/staging-revoke-live-proof.mjs \
   scripts/verify-disabled-staging-edge.mjs \
   scripts/verify-finance-pilot-artifact.mjs \
   scripts/verify-finance-pilot-hosted.mjs

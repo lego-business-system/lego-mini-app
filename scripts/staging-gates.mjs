@@ -18,6 +18,13 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import {
+  captureLiveRevokeBaseline,
+  validateLiveRevokeBaseline,
+  validateLiveRevokeProof,
+  verifyLiveRevoke,
+} from "./staging-revoke-live-proof.mjs";
+
 const SCRIPT_FILE = fileURLToPath(import.meta.url);
 const REPOSITORY_ROOT = path.resolve(path.dirname(SCRIPT_FILE), "..");
 
@@ -43,8 +50,6 @@ const RECEIPT_PATTERN = /^([0-9]{6})\.json$/u;
 const UUID_V4 =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const SHA256 = /^[0-9a-f]{64}$/u;
-const REVOKE_PROOF_MAXIMUM_AGE_MS = 15 * 60 * 1_000;
-const REVOKE_PROOF_MAXIMUM_FUTURE_SKEW_MS = 60 * 1_000;
 const CLI_ENVIRONMENT_ALLOWLIST = Object.freeze(new Set([
   "PATH",
   "HOME",
@@ -183,15 +188,22 @@ function assertExactStagingBoundary() {
 function parseArguments(argv) {
   if (argv.includes("--help")) return Object.freeze({ action: "help" });
   const [action, ...rest] = argv;
-  if (!["attest", "advance", "rollback"].includes(action)) {
-    refuse("first argument must be attest, advance or rollback");
+  if (![
+    "attest",
+    "capture-revoke-baseline",
+    "advance",
+    "rollback",
+  ].includes(action)) {
+    refuse(
+      "first argument must be attest, capture-revoke-baseline, advance or rollback",
+    );
   }
   const input = {
     action,
     apply: false,
     receiptDir: null,
     supabaseCli: null,
-    revokeProof: null,
+    revokeEventId: null,
   };
   const seen = new Set();
   for (let index = 0; index < rest.length; index += 1) {
@@ -202,7 +214,11 @@ function parseArguments(argv) {
       input.apply = true;
       continue;
     }
-    if (!["--receipt-dir", "--supabase-cli", "--revoke-proof"].includes(argument)) {
+    if (![
+      "--receipt-dir",
+      "--supabase-cli",
+      "--revoke-event-id",
+    ].includes(argument)) {
       refuse(`unknown argument ${argument}`);
     }
     if (seen.has(argument)) refuse(`duplicate ${argument}`);
@@ -211,19 +227,34 @@ function parseArguments(argv) {
     if (!value || value.startsWith("--")) refuse(`${argument} requires a value`);
     if (argument === "--receipt-dir") input.receiptDir = value;
     else if (argument === "--supabase-cli") input.supabaseCli = value;
-    else input.revokeProof = value;
+    else input.revokeEventId = value;
     index += 1;
   }
   if (!input.receiptDir) refuse("--receipt-dir is required");
   if (!input.supabaseCli) refuse("--supabase-cli is required");
-  if (action === "attest" && (input.apply || input.revokeProof)) {
-    refuse("attest is read-only and rejects --apply and --revoke-proof");
+  if (
+    input.revokeEventId !== null
+    && !UUID_V4.test(input.revokeEventId)
+  ) refuse("--revoke-event-id must be UUIDv4");
+  if (action === "attest" && (input.apply || input.revokeEventId)) {
+    refuse("attest is read-only and rejects --apply and --revoke-event-id");
   }
-  if (action !== "attest" && !input.apply) {
+  if (action === "capture-revoke-baseline") {
+    if (input.apply) {
+      refuse("capture-revoke-baseline is read-only and rejects --apply");
+    }
+    if (!input.revokeEventId) {
+      refuse("capture-revoke-baseline requires --revoke-event-id UUIDv4");
+    }
+  }
+  if (
+    !["attest", "capture-revoke-baseline"].includes(action)
+    && !input.apply
+  ) {
     refuse(`${action} requires explicit --apply`);
   }
-  if (action === "advance" && input.revokeProof) {
-    refuse("advance rejects --revoke-proof");
+  if (action === "advance" && input.revokeEventId) {
+    refuse("advance rejects --revoke-event-id");
   }
   return Object.freeze(input);
 }
@@ -267,38 +298,7 @@ function assertExternalPrivateDirectory(directory) {
   return directory;
 }
 
-function readPrivateExternalJson(file, label, maximumBytes = 16 * 1_024) {
-  if (
-    typeof file !== "string"
-    || !path.isAbsolute(file)
-    || path.resolve(file) !== file
-  ) refuse(`${label} path must be absolute and normalized`);
-  const parent = assertExternalPrivateDirectory(path.dirname(file));
-  const status = lstatSync(file);
-  if (
-    !status.isFile()
-    || status.isSymbolicLink()
-    || status.nlink !== 1
-    || (status.mode & 0o777) !== 0o600
-    || status.size < 2
-    || status.size > maximumBytes
-    || realpathSync(file) !== file
-    || path.dirname(file) !== parent
-  ) refuse(`${label} must be one owner-private mode 0600 file`);
-  if (typeof process.getuid === "function" && status.uid !== process.getuid()) {
-    refuse(`${label} must be owned by the current user`);
-  }
-  const source = readFileSync(file, "utf8");
-  let parsed;
-  try {
-    parsed = JSON.parse(source);
-  } catch {
-    refuse(`${label} contains invalid JSON`);
-  }
-  return Object.freeze({ parsed, source });
-}
-
-function receiptExpectedKeys(kind) {
+function receiptExpectedKeys(kind, schemaVersion) {
   const common = [
     "schemaVersion",
     "kind",
@@ -312,12 +312,37 @@ function receiptExpectedKeys(kind) {
     "receiptSha256",
   ];
   if (kind === "attestation") return [...common, "attestation"];
+  if (kind === "revoke-baseline" && schemaVersion === 2) {
+    return [
+      ...common,
+      "eventId",
+      "financeCommitSha",
+      "mainCommitSha",
+      "gateAttestation",
+      "hostedReadCount",
+      "liveBaseline",
+    ];
+  }
+  if (kind === "revoke-proof" && schemaVersion === 2) {
+    return [
+      ...common,
+      "eventId",
+      "financeCommitSha",
+      "mainCommitSha",
+      "baselineReceiptSha256",
+      "gateAttestation",
+      "hostedReadCount",
+      "liveProof",
+    ];
+  }
   if (kind === "mutation-intent") {
     return [
       ...common,
       "preAttestation",
       "mutation",
-      "revokeProofSha256",
+      schemaVersion === 1
+        ? "revokeProofSha256"
+        : "revokeProofReceiptSha256",
     ];
   }
   if (kind === "mutation-result") {
@@ -409,16 +434,81 @@ function validateReceiptSemantics(receipt, receipts) {
     validateReceiptAttestation(receipt.attestation, "receipt attestation");
     return;
   }
+  if (receipt.kind === "revoke-baseline") {
+    if (
+      receipt.schemaVersion !== 2
+      || receipt.operation !== "capture-revoke-baseline"
+      || receipt.status !== "observed"
+      || receipt.hostedMutationCount !== 0
+      || receipt.hostedReadCount !== 1
+      || typeof receipt.eventId !== "string"
+      || !UUID_V4.test(receipt.eventId)
+      || receipt.financeCommitSha !== FINANCE_COMMIT_SHA
+      || receipt.mainCommitSha !== MAIN_COMMIT_SHA
+    ) refuse("revoke baseline receipt semantics differ");
+    validateReceiptAttestation(
+      receipt.gateAttestation,
+      "revoke baseline gate attestation",
+    );
+    if (receipt.gateAttestation.stateKey !== STATES.fullyEnabled) {
+      refuse("revoke baseline requires all four staging gates enabled");
+    }
+    validateLiveRevokeBaseline(receipt.liveBaseline, receipt.eventId);
+    if (
+      receipts.some(item =>
+        item.kind === "revoke-baseline"
+        && item.eventId === receipt.eventId)
+    ) refuse("revoke baseline event is duplicated");
+    return;
+  }
+  if (receipt.kind === "revoke-proof") {
+    if (
+      receipt.schemaVersion !== 2
+      || receipt.operation !== "verify-revoke"
+      || receipt.status !== "verified"
+      || receipt.hostedMutationCount !== 0
+      || receipt.hostedReadCount !== 3
+      || typeof receipt.eventId !== "string"
+      || !UUID_V4.test(receipt.eventId)
+      || receipt.financeCommitSha !== FINANCE_COMMIT_SHA
+      || receipt.mainCommitSha !== MAIN_COMMIT_SHA
+      || typeof receipt.baselineReceiptSha256 !== "string"
+      || !SHA256.test(receipt.baselineReceiptSha256)
+    ) refuse("revoke proof receipt semantics differ");
+    validateReceiptAttestation(
+      receipt.gateAttestation,
+      "revoke proof gate attestation",
+    );
+    if (receipt.gateAttestation.stateKey !== STATES.financeProtocolOnly) {
+      refuse("revoke proof requires the Main protocol gate disabled");
+    }
+    const baselineReceipt = receipts.find(item =>
+      item.receiptSha256 === receipt.baselineReceiptSha256);
+    if (
+      !baselineReceipt
+      || baselineReceipt.kind !== "revoke-baseline"
+      || baselineReceipt.eventId !== receipt.eventId
+    ) refuse("revoke proof baseline receipt differs");
+    validateLiveRevokeProof(receipt.liveProof, {
+      baseline: baselineReceipt.liveBaseline,
+      eventId: receipt.eventId,
+      now: null,
+    });
+    return;
+  }
   if (receipt.kind === "mutation-intent") {
+    const proofReference = receipt.schemaVersion === 1
+      ? receipt.revokeProofSha256
+      : receipt.revokeProofReceiptSha256;
     if (
       !["advance", "rollback"].includes(receipt.operation)
       || receipt.status !== "pending"
       || receipt.hostedMutationCount !== 0
       || (
-        receipt.revokeProofSha256 !== null
+        proofReference !== null
         && (
-          typeof receipt.revokeProofSha256 !== "string"
-          || !SHA256.test(receipt.revokeProofSha256)
+          typeof proofReference !== "string"
+          || !SHA256.test(proofReference)
         )
       )
     ) refuse("mutation intent receipt semantics differ");
@@ -433,6 +523,22 @@ function validateReceiptSemantics(receipt, receipts) {
         intendedMutation(receipt.operation, receipt.preAttestation),
       )
     ) refuse("mutation intent transition differs");
+    if (receipt.schemaVersion === 2) {
+      const requiresProof = mutationNeedsRevokeProof(receipt.mutation);
+      if (
+        requiresProof
+        && (
+          !previous
+          || previous.kind !== "revoke-proof"
+          || previous.receiptSha256 !== proofReference
+          || previous.gateAttestation.gateSetSha256
+            !== receipt.preAttestation.gateSetSha256
+        )
+      ) refuse("Main sync rollback proof binding differs");
+      if (!requiresProof && proofReference !== null) {
+        refuse("unexpected revoke proof receipt reference");
+      }
+    }
     return;
   }
   if (receipt.kind === "mutation-result") {
@@ -480,6 +586,10 @@ function validateReceiptSemantics(receipt, receipts) {
         previous.kind === "mutation-result"
         && previous.status === "unknown"
       )
+      || (
+        previous.kind === "reconciliation"
+        && previous.outcome === "diverged"
+      )
     )
     || receipt.reconcilesReceiptSha256 !== previous.receiptSha256
     || !["applied", "not_applied", "diverged"].includes(receipt.outcome)
@@ -518,9 +628,17 @@ function readReceiptChain(receiptDirectory) {
     } catch {
       refuse("receipt JSON differs");
     }
-    exactKeys(receipt, receiptExpectedKeys(receipt.kind), "receipt");
+    exactKeys(
+      receipt,
+      receiptExpectedKeys(receipt.kind, receipt.schemaVersion),
+      "receipt",
+    );
     if (
-      receipt.schemaVersion !== 1
+      ![1, 2].includes(receipt.schemaVersion)
+      || (
+        ["revoke-baseline", "revoke-proof"].includes(receipt.kind)
+        && receipt.schemaVersion !== 2
+      )
       || receipt.sequence !== index + 1
       || receipt.previousReceiptSha256 !== previousReceiptSha256
       || typeof receipt.receiptSha256 !== "string"
@@ -541,7 +659,7 @@ function readReceiptChain(receiptDirectory) {
 function appendReceipt(receiptDirectory, chain, fields) {
   const sequence = chain.length + 1;
   const core = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     ...fields,
     sequence,
     previousReceiptSha256: chain.at(-1)?.receiptSha256 ?? null,
@@ -743,103 +861,21 @@ function mutationForRollback(preAttestation) {
   }
 }
 
-function attestationSnapshots(chain) {
-  const snapshots = [];
-  for (const receipt of chain) {
-    if (receipt.attestation) snapshots.push(receipt.attestation);
-    if (receipt.preAttestation) snapshots.push(receipt.preAttestation);
-    if (receipt.postAttestation) snapshots.push(receipt.postAttestation);
-  }
-  return snapshots;
+function mutationNeedsRevokeProof(mutation) {
+  return (
+    mutation.gateKey === "mainFinanceSync"
+    && mutation.desiredState === DISABLED
+  );
 }
 
-function revokeProofRequired(chain, mutation) {
-  if (mutation.gateKey !== "mainFinanceSync" || mutation.desiredState !== DISABLED) {
-    return false;
+function revokeBaselineForEvent(chain, eventId) {
+  const matches = chain.filter(receipt =>
+    receipt.kind === "revoke-baseline"
+    && receipt.eventId === eventId);
+  if (matches.length !== 1) {
+    refuse("exactly one captured live revoke baseline is required");
   }
-  const snapshots = attestationSnapshots(chain);
-  const trustedDisabledBaseline = snapshots.some(
-    snapshot => snapshot.stateKey === STATES.allDisabled,
-  );
-  const mainProtocolWasObservedEnabled = snapshots.some(
-    snapshot => snapshot.gateStates?.mainFinanceProtocol === ENABLED,
-  );
-  return mainProtocolWasObservedEnabled || !trustedDisabledBaseline;
-}
-
-function validateRevokeProofValue(proof, now) {
-  exactKeys(proof, [
-    "schemaVersion",
-    "kind",
-    "environment",
-    "financeProjectRef",
-    "mainProjectRef",
-    "financeCommitSha",
-    "mainCommitSha",
-    "subjectTelegramIdHash",
-    "entitlementEventId",
-    "mainOutboxState",
-    "financeEventState",
-    "desiredState",
-    "appliedState",
-    "queueCounts",
-    "activeCounts",
-    "financialDataRetained",
-    "observedAt",
-    "proofSha256",
-  ], "revoke proof");
-  exactKeys(
-    proof.queueCounts,
-    ["pending", "retry_wait", "processing", "dead_letter"],
-    "revoke proof queueCounts",
-  );
-  exactKeys(
-    proof.activeCounts,
-    ["activeCodes", "activeDevices", "activeSessions"],
-    "revoke proof activeCounts",
-  );
-  const observedAtMs = Date.parse(proof.observedAt);
-  if (
-    proof.schemaVersion !== 1
-    || proof.kind !== "staging-revoke-proof-v1"
-    || proof.environment !== "staging"
-    || proof.financeProjectRef !== STAGING_GATE_BOUNDARY.financeStagingRef
-    || proof.mainProjectRef !== STAGING_GATE_BOUNDARY.mainStagingRef
-    || proof.financeCommitSha !== FINANCE_COMMIT_SHA
-    || proof.mainCommitSha !== MAIN_COMMIT_SHA
-    || typeof proof.subjectTelegramIdHash !== "string"
-    || !SHA256.test(proof.subjectTelegramIdHash)
-    || !UUID_V4.test(proof.entitlementEventId)
-    || proof.mainOutboxState !== "applied"
-    || proof.financeEventState !== "applied"
-    || proof.desiredState !== "revoked"
-    || proof.appliedState !== "revoked"
-    || Object.values(proof.queueCounts).some(value => value !== 0)
-    || Object.values(proof.activeCounts).some(value => value !== 0)
-    || proof.financialDataRetained !== true
-    || typeof proof.observedAt !== "string"
-    || !Number.isFinite(observedAtMs)
-    || new Date(observedAtMs).toISOString() !== proof.observedAt
-    || now.getTime() - observedAtMs > REVOKE_PROOF_MAXIMUM_AGE_MS
-    || observedAtMs - now.getTime() > REVOKE_PROOF_MAXIMUM_FUTURE_SKEW_MS
-    || typeof proof.proofSha256 !== "string"
-    || !SHA256.test(proof.proofSha256)
-  ) refuse("revoke proof contract differs");
-  const { proofSha256, ...core } = proof;
-  if (sha256(canonicalJson(core)) !== proofSha256) {
-    refuse("revoke proof self-hash differs");
-  }
-  return proof.proofSha256;
-}
-
-export function validateStagingRevokeProof(file, {
-  now = new Date(),
-} = {}) {
-  const reviewed = readPrivateExternalJson(file, "revoke proof");
-  if (reviewed.source !== `${canonicalJson(reviewed.parsed)}\n`) {
-    refuse("revoke proof is not canonical JSON");
-  }
-  return validateRevokeProofValue(reviewed.parsed, now);
+  return matches[0];
 }
 
 function intendedMutation(action, preAttestation) {
@@ -898,23 +934,35 @@ function blockingReceipt(chain) {
   if (
     latest.kind === "mutation-intent"
     || (latest.kind === "mutation-result" && latest.status === "unknown")
+    || (latest.kind === "reconciliation" && latest.outcome === "diverged")
   ) return latest;
   return null;
 }
 
+function precedingBlocker(chain, blocker) {
+  if (blocker.kind !== "reconciliation") return blocker;
+  const preceding = chain.find(
+    receipt => receipt.receiptSha256 === blocker.reconcilesReceiptSha256,
+  );
+  if (!preceding) refuse("reconciliation blocker origin is absent");
+  return precedingBlocker(chain, preceding);
+}
+
 function mutationFromBlocker(chain, blocker) {
-  if (blocker.mutation) return blocker.mutation;
+  const origin = precedingBlocker(chain, blocker);
+  if (origin.mutation) return origin.mutation;
   const intent = chain.find(
-    receipt => receipt.receiptSha256 === blocker.intentReceiptSha256,
+    receipt => receipt.receiptSha256 === origin.intentReceiptSha256,
   );
   if (!intent?.mutation) refuse("unknown outcome intent is absent");
   return intent.mutation;
 }
 
 function preAttestationFromBlocker(chain, blocker) {
-  if (blocker.preAttestation) return blocker.preAttestation;
+  const origin = precedingBlocker(chain, blocker);
+  if (origin.preAttestation) return origin.preAttestation;
   const intent = chain.find(
-    receipt => receipt.receiptSha256 === blocker.intentReceiptSha256,
+    receipt => receipt.receiptSha256 === origin.intentReceiptSha256,
   );
   if (!intent?.preAttestation) refuse("unknown outcome pre-attestation is absent");
   return intent.preAttestation;
@@ -963,6 +1011,7 @@ export async function operateStagingGates(argv, {
   environment = process.env,
   now = () => new Date(),
   runCli = defaultRunCli,
+  fetchImpl = globalThis.fetch,
 } = {}) {
   assertExactStagingBoundary();
   const input = parseArguments(argv);
@@ -972,8 +1021,9 @@ export async function operateStagingGates(argv, {
       mode: "help",
       usage: [
         "staging-gates.mjs attest --receipt-dir ABS_0700 --supabase-cli ABS",
+        "staging-gates.mjs capture-revoke-baseline --receipt-dir ABS_0700 --supabase-cli ABS --revoke-event-id UUIDv4",
         "staging-gates.mjs advance --receipt-dir ABS_0700 --supabase-cli ABS --apply",
-        "staging-gates.mjs rollback --receipt-dir ABS_0700 --supabase-cli ABS --apply [--revoke-proof ABS_0600]",
+        "staging-gates.mjs rollback --receipt-dir ABS_0700 --supabase-cli ABS --apply [--revoke-event-id UUIDv4]",
       ],
     });
   }
@@ -1029,17 +1079,83 @@ export async function operateStagingGates(argv, {
     });
   }
 
-  const mutation = intendedMutation(input.action, preAttestation);
-  let revokeProofSha256 = null;
-  if (input.action === "rollback" && revokeProofRequired(chain, mutation)) {
-    if (!input.revokeProof) {
-      refuse("disabling Main sync requires a fresh canonical revoke proof");
+  if (input.action === "capture-revoke-baseline") {
+    if (preAttestation.stateKey !== STATES.fullyEnabled) {
+      refuse("capture-revoke-baseline requires all four staging gates enabled");
     }
-    revokeProofSha256 = validateStagingRevokeProof(input.revokeProof, {
+    if (chain.some(receipt =>
+      receipt.kind === "revoke-baseline"
+      && receipt.eventId === input.revokeEventId)) {
+      refuse("revoke baseline event is already captured");
+    }
+    const liveBaseline = await captureLiveRevokeBaseline({
+      eventId: input.revokeEventId,
+      accessToken: dependencies.environment.SUPABASE_ACCESS_TOKEN,
+      fetchImpl,
+    });
+    const written = appendReceipt(receiptDirectory, chain, {
+      kind: "revoke-baseline",
+      operation: "capture-revoke-baseline",
+      status: "observed",
+      recordedAt: currentTime.toISOString(),
+      productionDenied: true,
+      hostedMutationCount: 0,
+      hostedReadCount: 1,
+      eventId: input.revokeEventId,
+      financeCommitSha: FINANCE_COMMIT_SHA,
+      mainCommitSha: MAIN_COMMIT_SHA,
+      gateAttestation: preAttestation,
+      liveBaseline,
+    });
+    return Object.freeze({
+      ok: true,
+      mode: "revoke-baseline-captured",
+      state: preAttestation.stateKey,
+      eventId: input.revokeEventId,
+      receiptFile: written.file,
+      receiptSha256: written.receipt.receiptSha256,
+      hostedReadCount: 1,
+      productionTouched: false,
+    });
+  }
+
+  const mutation = intendedMutation(input.action, preAttestation);
+  let revokeProofReceiptSha256 = null;
+  if (input.action === "rollback" && mutationNeedsRevokeProof(mutation)) {
+    if (!input.revokeEventId) {
+      refuse("disabling Main sync requires --revoke-event-id UUIDv4");
+    }
+    const baselineReceipt = revokeBaselineForEvent(
+      chain,
+      input.revokeEventId,
+    );
+    const liveProof = await verifyLiveRevoke({
+      eventId: input.revokeEventId,
+      baseline: baselineReceipt.liveBaseline,
+      accessToken: dependencies.environment.SUPABASE_ACCESS_TOKEN,
+      fetchImpl,
       now: currentTime,
     });
-  } else if (input.revokeProof) {
-    refuse("--revoke-proof is accepted only at the Main sync rollback barrier");
+    const proofWritten = appendReceipt(receiptDirectory, chain, {
+      kind: "revoke-proof",
+      operation: "verify-revoke",
+      status: "verified",
+      recordedAt: currentTime.toISOString(),
+      productionDenied: true,
+      hostedMutationCount: 0,
+      hostedReadCount: 3,
+      eventId: input.revokeEventId,
+      financeCommitSha: FINANCE_COMMIT_SHA,
+      mainCommitSha: MAIN_COMMIT_SHA,
+      baselineReceiptSha256: baselineReceipt.receiptSha256,
+      gateAttestation: preAttestation,
+      liveProof,
+    });
+    revokeProofReceiptSha256 = proofWritten.receipt.receiptSha256;
+  } else if (input.revokeEventId) {
+    refuse(
+      "--revoke-event-id is accepted only for baseline capture or the Main sync rollback barrier",
+    );
   }
 
   const intentWritten = appendReceipt(receiptDirectory, chain, {
@@ -1051,7 +1167,7 @@ export async function operateStagingGates(argv, {
     hostedMutationCount: 0,
     preAttestation,
     mutation,
-    revokeProofSha256,
+    revokeProofReceiptSha256,
   });
 
   let mutationResult;
