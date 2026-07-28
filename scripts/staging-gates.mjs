@@ -31,9 +31,9 @@ export const STAGING_GATE_BOUNDARY = Object.freeze({
 });
 
 const FINANCE_COMMIT_SHA =
-  "36981a9030a571cbf5269705f8875af9c866be3e";
+  "2c2f68356a4021a59904382ea6af4b0892c17d84";
 const MAIN_COMMIT_SHA =
-  "c07dba9b10764b05719e89b1239b2873cca0a586";
+  "92ca53aea17a0e5a4e72f4252a59433a26ab5a8b";
 const CLI_VERSION = "2.109.1";
 const ENABLED = "enabled";
 const DISABLED = "disabled";
