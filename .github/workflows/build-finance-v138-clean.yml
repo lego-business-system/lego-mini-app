@@ -1,0 +1,122 @@
+name: Build and verify finance v138 clean bundle
+
+on:
+  push:
+    branches:
+      - feature/finance-thinking-v138-clean-release
+    paths:
+      - .github/workflows/build-finance-v138-clean.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/finance-thinking-v138-clean-release
+          fetch-depth: 0
+
+      - name: Download exact source bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            'https://drive.google.com/uc?export=download&id=1K5K4lVgL4xqa_00oPOPJG1z_0_Fl9Pv_' \
+            --output /tmp/finance-v138-bundle-source.txt
+          test -s /tmp/finance-v138-bundle-source.txt
+
+      - name: Verify, decode and split bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import base64, gzip, hashlib, json, re, shutil
+
+          source = Path('/tmp/finance-v138-bundle-source.txt')
+          raw = source.read_text(encoding='utf-8', errors='strict')
+          encoded = re.sub(r'\s+', '', raw)
+
+          expected_encoded = '58d22c1dc2a2019648fbee982c87637e7ae4ecfcdd18a5eae17b598be6f8311b'
+          expected_gzip = '9b4342becd67601b86d8098471ea4fe89682e207864358761cbe2387f9215ac1'
+          expected_payload = 'e1f88c803c0a60916d283085540ea303bfea4f62200769487437dae3d98a1c3d'
+
+          actual_encoded = hashlib.sha256(encoded.encode('ascii')).hexdigest()
+          if actual_encoded != expected_encoded:
+              raise SystemExit(f'encoded SHA mismatch: {actual_encoded}')
+
+          compressed = base64.b64decode(encoded, validate=True)
+          actual_gzip = hashlib.sha256(compressed).hexdigest()
+          if actual_gzip != expected_gzip:
+              raise SystemExit(f'gzip SHA mismatch: {actual_gzip}')
+
+          payload_bytes = gzip.decompress(compressed)
+          actual_payload = hashlib.sha256(payload_bytes).hexdigest()
+          if actual_payload != expected_payload:
+              raise SystemExit(f'payload SHA mismatch: {actual_payload}')
+
+          payload = json.loads(payload_bytes.decode('utf-8'))
+          if not isinstance(payload, dict):
+              raise SystemExit('payload must be an object')
+          for key in ('runtime', 'css', 'data'):
+              if not payload.get(key):
+                  raise SystemExit(f'missing payload key: {key}')
+
+          out = Path('content/finance_thinking_v138/bundle')
+          if out.exists():
+              shutil.rmtree(out)
+          out.mkdir(parents=True, exist_ok=True)
+
+          count = 24
+          base, extra = divmod(len(encoded), count)
+          start = 0
+          for index in range(count):
+              length = base + (1 if index < extra else 0)
+              chunk = encoded[start:start + length]
+              start += length
+              (out / f'part-{index:02d}.txt').write_text(chunk, encoding='utf-8')
+          if start != len(encoded):
+              raise SystemExit('split did not consume source')
+
+          rebuilt = ''.join((out / f'part-{index:02d}.txt').read_text(encoding='utf-8') for index in range(count))
+          if hashlib.sha256(rebuilt.encode('ascii')).hexdigest() != expected_encoded:
+              raise SystemExit('rebuilt bundle SHA mismatch')
+
+          Path('/tmp/finance-v138-runtime.js').write_text(payload['runtime'], encoding='utf-8')
+          Path('/tmp/finance-v138-css.css').write_text(payload['css'], encoding='utf-8')
+          Path('/tmp/finance-v138-data.json').write_text(json.dumps(payload['data'], ensure_ascii=False), encoding='utf-8')
+          print(json.dumps({
+              'encoded_bytes': len(encoded),
+              'gzip_bytes': len(compressed),
+              'payload_bytes': len(payload_bytes),
+              'parts': count,
+              'keys': sorted(payload.keys()),
+          }, ensure_ascii=False))
+          PY
+
+      - name: Check JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check finance-thinking-v138.js
+          node --check /tmp/finance-v138-runtime.js
+
+      - name: Commit verified parts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add content/finance_thinking_v138/bundle/part-*.txt
+          if git diff --cached --quiet; then
+            echo 'Bundle parts are already exact; no commit required.'
+            exit 0
+          fi
+          git commit -m 'Generate verified finance v138 bundle parts'
+          git push origin HEAD:feature/finance-thinking-v138-clean-release

@@ -150,7 +150,7 @@ function readManifest() {
     .join("");
   if (
     manifest.edgeDeploymentSetSha256
-      !== "bf81111ecd4d7adbe2d2e603cb52007c39650d3cad88f4e45bfb3c5cae023cba"
+      !== "8ecac081bf2c64bd107350efcdd1141a0f95d1d8da551db17164b24f141170b4"
     || sha256(deploymentSet) !== manifest.edgeDeploymentSetSha256
   ) fail("Edge deployment set fingerprint differs");
   for (const item of manifest.edgeDeploymentFiles) {

@@ -12,3 +12,6 @@ verify_jwt = false
 # secret before it can claim the service-only durable outbox.
 [functions.finance-sync-entitlements]
 verify_jwt = false
+
+[functions.send-table-email]
+verify_jwt = false

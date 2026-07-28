@@ -660,3 +660,121 @@
   .ba-root .ba-two-column,.ba-root .ba-library-list,.ba-root .ba-library-controls { grid-template-columns:1fr; }
   .ba-root .ba-library-card p:not(.ba-eyebrow) { min-height:0; }
 }
+
+
+/* =========================================================
+   Первая часть курса: дополнительные компоненты v135
+   ========================================================= */
+
+.ba-root .ba-part-progress {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 30px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--ba-soft);
+  color: var(--ba-blue);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.ba-root .ba-part-result {
+  margin-top: 11px;
+}
+
+.ba-root .ba-case-index {
+  font-size: 9px;
+  letter-spacing: .04em;
+  line-height: 1.1;
+}
+
+.ba-root .ba-material-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 11px;
+}
+
+.ba-root .ba-material-card {
+  display: block;
+  width: 100%;
+  padding: 15px;
+  border: 1px solid var(--ba-line);
+  border-radius: 17px;
+  background: #fff;
+  color: var(--ba-navy);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(11,41,72,.04);
+}
+
+.ba-root .ba-material-card:hover {
+  border-color: #b7c8d9;
+}
+
+.ba-root .ba-material-card.is-done {
+  border-color: #a8d5c1;
+  background: var(--ba-success-soft);
+}
+
+.ba-root .ba-material-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ba-root .ba-material-card-top small {
+  display: block;
+  color: var(--ba-orange);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.ba-root .ba-material-card-top b {
+  display: block;
+  margin-top: 5px;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.ba-root .ba-material-card-text {
+  display: block;
+  margin-top: 9px;
+  color: var(--ba-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.ba-root .ba-material-card-progress {
+  display: block;
+  overflow: hidden;
+  height: 7px;
+  margin-top: 13px;
+  border-radius: 999px;
+  background: #e4eaf0;
+}
+
+.ba-root .ba-material-card-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg,var(--ba-teal),var(--ba-blue));
+}
+
+.ba-root .ba-material-card-meta {
+  display: block;
+  margin-top: 7px;
+  color: var(--ba-muted);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+@media(max-width:760px){
+  .ba-root .ba-material-grid { grid-template-columns:1fr; }
+  .ba-root .ba-part-head-row { grid-template-columns:42px minmax(0,1fr) auto; }
+  .ba-root .ba-part-progress { min-width:38px; padding:4px 7px; }
+}

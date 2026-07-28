@@ -63,11 +63,11 @@
     "expectedPublicDataRows": 0,
     "expectedAuthUsers": 0
   },
-  "edgeDeploymentSetSha256": "bf81111ecd4d7adbe2d2e603cb52007c39650d3cad88f4e45bfb3c5cae023cba",
+  "edgeDeploymentSetSha256": "8ecac081bf2c64bd107350efcdd1141a0f95d1d8da551db17164b24f141170b4",
   "edgeDeploymentFiles": [
     {
       "path": "supabase/config.toml",
-      "sha256": "3f54838bbbe242a2c462b9978518ba37155243afa7f287eb14ad0b752f0edd83"
+      "sha256": "24cc6d4c35bedc3e0de6e579238777fcfc3c2f98e53a7603e4f379f310c0ffa4"
     },
     {
       "path": "supabase/functions/_shared/main-edge-runtime.ts",

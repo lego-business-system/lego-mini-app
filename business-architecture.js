@@ -6,10 +6,11 @@
 (function(){
   'use strict';
 
-  const RELEASE = 'ba-v4-quiz-review-20260721';
+  const RELEASE = 'ba-v5-part1-20260722';
   const STORAGE_KEY = 'architecture_business_progress_v2';
   const CATALOG_URL = 'content/business_architecture/catalog.json';
   const LESSON_BASE_URL = 'content/business_architecture/lessons/';
+  const CASE_BASE_URL = 'content/business_architecture/cases/';
   const EXAMPLES_URL = 'content/business_architecture/examples.json';
   const SYNC_ENDPOINT = 'https://soxtekhspohkddpdidvp.supabase.co/functions/v1/business-architecture-progress';
   const SYNC_DEBOUNCE_MS = 850;
@@ -543,23 +544,26 @@
     });
   }
 
-  function courseProgressInfo(){
-    const progress = loadProgress();
-    let completedStages = 0;
-    let completedLessons = 0;
-    Object.keys(progress.lessons || {}).forEach(function(id){
-      const lp = progress.lessons[id] || {};
-      completedStages += Array.isArray(lp.completedStages) ? lp.completedStages.length : 0;
-      if (lp.completedAt) completedLessons += 1;
-    });
-    return {
-      completedStages,
-      completedLessons,
-      totalStages: runtime.catalog ? runtime.catalog.module.total_stages : 80,
-      totalLessons: runtime.catalog ? runtime.catalog.module.total_lessons : 20,
-      percent: runtime.catalog ? Math.round((completedStages / runtime.catalog.module.total_stages) * 100) : 0
-    };
-  }
+function courseProgressInfo(){
+  const entries = catalogEntries();
+  let completedStages = 0;
+  let completedItems = 0;
+  entries.forEach(function(entry){
+    const lp = itemProgress(entry.id) || {};
+    completedStages += Array.isArray(lp.completedStages) ? lp.completedStages.length : 0;
+    if (lp.completedAt) completedItems += 1;
+  });
+  const totalStages = entries.reduce(function(total, entry){
+    return total + Number(entry.stages || 4);
+  }, 0);
+  return {
+    completedStages,
+    completedItems,
+    totalStages,
+    totalItems: entries.length,
+    percent: totalStages ? Math.round((completedStages / totalStages) * 100) : 0
+  };
+}
 
   async function fetchJson(url){
     const divider = String(url).includes('?') ? '&' : '?';
@@ -574,12 +578,12 @@
     return runtime.catalog;
   }
 
-  async function ensureLesson(lessonId){
-    if (runtime.lessons[lessonId]) return runtime.lessons[lessonId];
-    runtime.lessons[lessonId] = await fetchJson(LESSON_BASE_URL + encodeURIComponent(lessonId) + '.json');
-    return runtime.lessons[lessonId];
-  }
-
+async function ensureLesson(lessonId){
+  if (runtime.lessons[lessonId]) return runtime.lessons[lessonId];
+  const baseUrl = String(lessonId || '').startsWith('PART-') ? CASE_BASE_URL : LESSON_BASE_URL;
+  runtime.lessons[lessonId] = await fetchJson(baseUrl + encodeURIComponent(lessonId) + '.json');
+  return runtime.lessons[lessonId];
+}
 
   async function ensureExamples(){
     if (runtime.examples) return runtime.examples;
@@ -587,10 +591,119 @@
     return runtime.examples;
   }
 
-  function lessonNumber(lessonId){
-    const match = String(lessonId || '').match(/(\d+)$/);
-    return match ? Number(match[1]) : 1;
+function lessonNumber(lessonId){
+  const meta = findCatalogEntry(lessonId);
+  if (meta && Number.isFinite(Number(meta.number))) return Number(meta.number);
+  const match = String(lessonId || '').match(/(\d+)$/);
+  return match ? Number(match[1]) : 1;
+}
+
+function isAdminPreview(){
+  try {
+    return typeof window.isAdminMode === 'function' && Boolean(window.isAdminMode());
+  } catch(e){
+    return false;
   }
+}
+
+function firstAvailablePart(){
+  const catalog = runtime.catalog;
+  if (!catalog || !Array.isArray(catalog.parts)) return null;
+  return catalog.parts.find(function(part){
+    return Array.isArray(part.lessons) && part.lessons.some(function(item){ return item.status === 'available'; });
+  }) || catalog.parts[0] || null;
+}
+
+function catalogEntries(){
+  const part = firstAvailablePart();
+  if (!part) return [];
+  const lessons = (part.lessons || []).filter(function(item){ return item.status === 'available'; }).map(function(item){
+    return Object.assign({}, item, {item_type:'lesson', part_id:part.id, part_number:part.number});
+  });
+  const caseMeta = part.integration_case && part.integration_case.status === 'available'
+    ? [Object.assign({}, part.integration_case, {
+        item_type:'case',
+        part_id:part.id,
+        part_number:part.number,
+        chapter:'Итог'
+      })]
+    : [];
+  return lessons.concat(caseMeta);
+}
+
+function findCatalogEntry(entryId){
+  const entries = catalogEntries();
+  return entries.find(function(item){ return item.id === entryId; }) || null;
+}
+
+function itemProgress(entryId){
+  const progress = loadProgress();
+  return progress.lessons && progress.lessons[entryId] ? progress.lessons[entryId] : null;
+}
+
+function itemCompleted(entryId){
+  const lp = itemProgress(entryId);
+  return Boolean(lp && lp.completedAt);
+}
+
+function itemHasProgress(entryId){
+  const lp = itemProgress(entryId);
+  if (!lp) return false;
+  return Boolean(
+    lp.completedAt ||
+    (Array.isArray(lp.completedStages) && lp.completedStages.length) ||
+    hasWorkspaceContent(lp) ||
+    (lp.quiz && Array.isArray(lp.quiz.attempts) && lp.quiz.attempts.length)
+  );
+}
+
+function entryIndex(entryId){
+  return catalogEntries().findIndex(function(item){ return item.id === entryId; });
+}
+
+function entryUnlocked(entryId){
+  if (isAdminPreview()) return true;
+  const entries = catalogEntries();
+  const index = entries.findIndex(function(item){ return item.id === entryId; });
+  if (index < 0) return false;
+  if (entries[index].status !== 'available') return false;
+  if (index === 0 || itemHasProgress(entryId)) return true;
+  return itemCompleted(entries[index - 1].id);
+}
+
+function nextCatalogEntry(entryId){
+  const entries = catalogEntries();
+  const index = entries.findIndex(function(item){ return item.id === entryId; });
+  return index >= 0 && index < entries.length - 1 ? entries[index + 1] : null;
+}
+
+function firstIncompleteEntry(){
+  const entries = catalogEntries();
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = entries[index];
+    if (!itemCompleted(entry.id) && entryUnlocked(entry.id)) return entry;
+  }
+  return null;
+}
+
+function entryLabel(meta){
+  if (!meta) return '';
+  if (meta.item_type === 'case') return 'Комплексный разбор';
+  return 'Урок ' + Number(meta.number || 1);
+}
+
+function entrySourceLabel(data){
+  if (data && data.item_type === 'integrated_case') return 'ЧАСТЬ I · КОМПЛЕКСНЫЙ РАЗБОР';
+  const partNumber = data && data.part ? data.part.number : 1;
+  const chapter = data && data.lesson ? data.lesson.chapter_number : '';
+  return 'ЧАСТЬ ' + partNumber + ' · ГЛАВА ' + chapter;
+}
+
+function availableWorkspaceIds(){
+  return catalogEntries().filter(function(entry){
+    return workspaceUnlocked(entry.id);
+  }).map(function(entry){ return entry.id; });
+}
 
   function hasWorkspaceContent(lp){
     if (!lp || !lp.workspace) return false;
@@ -603,10 +716,14 @@
     });
   }
 
-  function workspaceUnlocked(lessonId){
-    const lp = getLessonProgress(lessonId).lesson;
-    return stageDone(lessonId, 'decision_lab') || hasWorkspaceContent(lp) || stageDone(lessonId, 'architecture_assembly');
-  }
+function workspaceUnlocked(lessonId){
+  if (isAdminPreview()) return true;
+  const lp = itemProgress(lessonId);
+  if (!lp) return false;
+  return (Array.isArray(lp.completedStages) && lp.completedStages.includes('decision_lab')) ||
+    hasWorkspaceContent(lp) ||
+    (Array.isArray(lp.completedStages) && lp.completedStages.includes('architecture_assembly'));
+}
 
   function renderWithAppShell(content, activeTab, options){
     const opts = options || {};
@@ -655,64 +772,71 @@
     return 'в подготовке';
   }
 
-  function renderPart(part, index){
-    const progress = loadProgress();
-    const visibleLessons = part.lessons.filter(function(lesson){
-      const lp = progress.lessons && progress.lessons[lesson.id];
-      return lesson.status === 'available' || Boolean(lp && (lp.completedAt || (lp.completedStages || []).length));
-    });
-    if (!visibleLessons.length) return '';
-    const lessons = visibleLessons.map(function(lesson){
-      const lp = progress.lessons && progress.lessons[lesson.id];
-      const done = Boolean(lp && lp.completedAt);
-      return '<button class="ba-lesson-row ' + (done ? 'is-done' : '') + '" onclick="BusinessArchitecture.openLesson(\'' + escapeHtml(lesson.id) + '\')">' +
-        '<span class="ba-lesson-index">' + String(lesson.number).padStart(2,'0') + '</span>' +
-        '<span><b>' + escapeHtml(lesson.title) + '</b><small>Урок ' + escapeHtml(lesson.number) + ' · четыре раздела</small></span>' +
-        '<span class="ba-row-arrow">›</span>' +
-      '</button>';
-    }).join('');
-    return '<section class="ba-part is-open" data-ba-part="' + escapeHtml(part.id) + '">' +
-      '<div class="ba-part-head ba-part-head-static"><span class="ba-part-head-row"><span class="ba-number-chip">' + escapeHtml(part.number) + '</span>' +
-        '<span><b>' + escapeHtml(part.title) + '</b><small>' + escapeHtml(part.description) + '</small></span></span></div>' +
-      '<div class="ba-part-body"><div class="ba-lesson-list">' + lessons + '</div></div>' +
-    '</section>';
-  }
-  async function renderHome(){
-    try {
-      loadingView('Открываем курс');
-      await ensureRemoteSync(false);
-      const catalog = await ensureCatalog();
-      const progress = loadProgress();
-      const lp = getLessonProgress('BA-01').lesson;
-      const completed = Array.isArray(lp.completedStages) ? lp.completedStages.length : 0;
-      const currentStage = ['system_analysis','business_examples','decision_lab','architecture_assembly'].find(function(id){ return !lp.completedStages.includes(id); }) || 'architecture_assembly';
-      const stageLabels = {
-        system_analysis:'Финансовая система',
-        business_examples:'Практические материалы',
-        decision_lab:'Управленческие задачи',
-        architecture_assembly:'Мой финансовый контур'
-      };
-      const materialsButton = workspaceUnlocked('BA-01')
-        ? '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.renderMyArchitecture()">Мои материалы</button>'
-        : '';
-      const visibleParts = catalog.parts.map(renderPart).filter(Boolean).join('');
-      const html =
-        '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openAppHome()">← Главная</button></div>' +
-        '<section class="ba-hero ba-hero-compact">' +
-          '<p class="ba-eyebrow">БИЗНЕС КАК СИСТЕМА</p>' +
-          '<h1>' + escapeHtml(catalog.module.title) + '</h1>' +
-          '<p>Пошаговый курс о том, как связать деньги, стратегию, процессы, людей, риски и рост в единую управляемую систему.</p>' +
-          '<div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.continueRoute()">' + (completed ? 'Продолжить обучение' : 'Начать обучение') + '</button>' +
-          '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.openExamplesLibrary()">Практические материалы</button>' + materialsButton + '</div>' +
-        '</section>' +
-        (completed ? '<section class="ba-card ba-course-progress"><div><p class="ba-eyebrow">ВАШ ПРОГРЕСС</p><h2>' + escapeHtml(stageLabels[currentStage]) + '</h2><p>Пройдено ' + completed + ' из 4 разделов первого урока.</p><div class="ba-progress-bar"><i style="width:' + Math.round((completed/4)*100) + '%"></i></div></div></section>' : '') +
-        '<section class="ba-card"><p class="ba-eyebrow">НАЧАЛО КУРСА</p><h2>Финансовая и стратегическая основа</h2><p>Начните с финансовой реальности бизнеса: прибыли, денег, обязательств, безубыточности и доступной мощности.</p><div class="ba-part-list">' + visibleParts + '</div></section>' +
-        '<section class="ba-card"><p class="ba-eyebrow">КАК ПРОХОДИТ ОБУЧЕНИЕ</p><div class="ba-step-strip">' +
-          '<div><b>1</b><span>Разобрать систему</span></div><div><b>2</b><span>Посмотреть рабочие материалы</span></div><div><b>3</b><span>Принять решения по кейсам</span></div><div><b>4</b><span>Собрать свой финансовый контур</span></div>' +
-        '</div></section><div class="ba-footer-space"></div>';
-      renderWithAppShell(html, 'home');
-    } catch(error){ errorView(error); }
-  }
+function renderPart(part, index){
+  const entries = catalogEntries();
+  if (!entries.length || !part || part.id !== entries[0].part_id) return '';
+  const completedCount = entries.filter(function(entry){ return itemCompleted(entry.id); }).length;
+  const rows = entries.map(function(entry){
+    const done = itemCompleted(entry.id);
+    const unlocked = entryUnlocked(entry.id);
+    const isCase = entry.item_type === 'case';
+    const cls = done ? 'is-done' : (!unlocked ? 'is-locked' : '');
+    const click = unlocked
+      ? ' onclick="BusinessArchitecture.openLesson(\'' + escapeHtml(entry.id) + '\')"'
+      : ' disabled aria-disabled="true"';
+    const indexLabel = isCase ? 'ИТОГ' : String(entry.number).padStart(2,'0');
+    const small = isCase
+      ? 'Связывает финансовую систему, стратегию, поток и управление'
+      : 'Глава ' + escapeHtml(entry.chapter) + ' · четыре раздела';
+    const status = done ? 'готово' : (unlocked ? 'открыто' : 'после предыдущего');
+    return '<button class="ba-lesson-row ' + cls + '"' + click + '>' +
+      '<span class="ba-lesson-index ' + (isCase ? 'ba-case-index' : '') + '">' + indexLabel + '</span>' +
+      '<span><b>' + escapeHtml(entry.title) + '</b><small>' + small + '</small></span>' +
+      '<span class="ba-status ' + (done ? 'is-done' : unlocked ? 'is-active' : '') + '">' + status + '</span>' +
+    '</button>';
+  }).join('');
+  return '<section class="ba-part is-open" data-ba-part="' + escapeHtml(part.id) + '">' +
+    '<div class="ba-part-head ba-part-head-static"><span class="ba-part-head-row"><span class="ba-number-chip">' + escapeHtml(part.number) + '</span>' +
+      '<span><b>' + escapeHtml(part.title) + '</b><small>' + escapeHtml(part.description) + '</small></span>' +
+      '<span class="ba-part-progress">' + completedCount + '/' + entries.length + '</span></span></div>' +
+    '<div class="ba-part-body"><div class="ba-lesson-list">' + rows + '</div>' +
+      '<div class="ba-note ba-note-teal ba-part-result"><b>Результат части:</b> ' + escapeHtml(part.result) + '</div>' +
+    '</div></section>';
+}
+
+async function renderHome(){
+  try {
+    loadingView('Открываем курс');
+    await ensureRemoteSync(false);
+    const catalog = await ensureCatalog();
+    const part = firstAvailablePart();
+    const info = courseProgressInfo();
+    const currentEntry = firstIncompleteEntry();
+    const hasStarted = info.completedStages > 0 || catalogEntries().some(function(entry){ return itemHasProgress(entry.id); });
+    const materialsButton = availableWorkspaceIds().length
+      ? '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.renderMyArchitecture()">Мои материалы</button>'
+      : '';
+    const continueLabel = hasStarted ? 'Продолжить обучение' : 'Начать обучение';
+    const html =
+      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openAppHome()">← Главная</button></div>' +
+      '<section class="ba-hero ba-hero-compact">' +
+        '<p class="ba-eyebrow">БИЗНЕС КАК СИСТЕМА</p>' +
+        '<h1>' + escapeHtml(catalog.module.title) + '</h1>' +
+        '<p>Пошаговая система управления бизнесом: деньги, стратегия, поток ценности и архитектура решений.</p>' +
+        '<div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.continueRoute()">' + continueLabel + '</button>' +
+        '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.openExamplesLibrary()">Практические материалы</button>' + materialsButton + '</div>' +
+      '</section>' +
+      (hasStarted && currentEntry
+        ? '<section class="ba-card ba-course-progress"><div><p class="ba-eyebrow">ПРОДОЛЖИТЬ</p><h2>' + escapeHtml(currentEntry.title) + '</h2><p>Первая часть курса: выполнено ' + info.completedItems + ' из ' + info.totalItems + ' шагов.</p><div class="ba-progress-bar"><i style="width:' + clamp(info.percent,0,100) + '%"></i></div></div></section>'
+        : '') +
+      '<section class="ba-card"><p class="ba-eyebrow">ПЕРВАЯ ЧАСТЬ</p><h2>' + escapeHtml(part ? part.title : 'Финансовая и стратегическая основа') + '</h2>' +
+        '<p>Сначала выстраиваются финансовая реальность, стратегический выбор, сквозной поток и система управления. После четырёх уроков открывается комплексный разбор.</p>' +
+        '<div class="ba-part-list">' + (part ? renderPart(part,0) : '') + '</div>' +
+      '</section><div class="ba-footer-space"></div>';
+    renderWithAppShell(html, 'home');
+  } catch(error){ errorView(error); }
+}
+
   function togglePart(partId){
     const node = document.querySelector('[data-ba-part="' + CSS.escape(partId) + '"]');
     if (node) node.classList.toggle('is-open');
@@ -723,71 +847,89 @@
     window.location.reload();
   }
 
-  async function continueRoute(){
-    try {
-      await ensureLesson('BA-01');
-      const lp = getLessonProgress('BA-01').lesson;
-      const lesson = runtime.lessons['BA-01'];
-      const firstIncomplete = lesson.stages.find(function(stage){ return !lp.completedStages.includes(stage.id); });
-      if (!firstIncomplete) return renderMyArchitecture();
-      return openStage('BA-01', firstIncomplete.id);
-    } catch(error){ errorView(error); }
-  }
+async function continueRoute(){
+  try {
+    await ensureCatalog();
+    const entry = firstIncompleteEntry();
+    if (!entry) return renderMyArchitecture();
+    await ensureLesson(entry.id);
+    const lp = getLessonProgress(entry.id).lesson;
+    const data = runtime.lessons[entry.id];
+    const firstIncomplete = data.stages.find(function(stage){ return !lp.completedStages.includes(stage.id); });
+    if (!firstIncomplete) return openLesson(entry.id);
+    return openStage(entry.id, firstIncomplete.id);
+  } catch(error){ errorView(error); }
+}
 
-  function lessonStageState(lessonId, stageIndex, stages){
-    const lp = getLessonProgress(lessonId).lesson;
-    const stage = stages[stageIndex];
-    const done = lp.completedStages.includes(stage.id);
-    const unlocked = stageIndex === 0 || lp.completedStages.includes(stages[stageIndex - 1].id);
-    return {done, unlocked};
-  }
+function lessonStageState(lessonId, stageIndex, stages){
+  const lp = getLessonProgress(lessonId).lesson;
+  const stage = stages[stageIndex];
+  const done = lp.completedStages.includes(stage.id);
+  const unlocked = isAdminPreview() || stageIndex === 0 || lp.completedStages.includes(stages[stageIndex - 1].id);
+  return {done, unlocked};
+}
 
-  async function openLesson(lessonId){
-    try {
-      await ensureRemoteSync(false);
-      const catalog = await ensureCatalog();
-      let meta = null;
-      catalog.parts.some(function(part){
-        meta = part.lessons.find(function(item){ return item.id === lessonId; }) || null;
-        return Boolean(meta);
-      });
-      if (!meta || meta.status !== 'available') {
-        safeAlert('Этот урок появится позднее.');
-        return;
-      }
-      loadingView('Открываем урок');
-      const data = await ensureLesson(lessonId);
-      runtime.currentLessonId = lessonId;
-      const lp = getLessonProgress(lessonId).lesson;
-      const completed = lp.completedStages.length;
-      const percent = Math.round((completed / data.stages.length) * 100);
-      const stageCards = data.stages.map(function(stage, index){
-        const state = lessonStageState(lessonId, index, data.stages);
-        const cls = state.done ? 'is-done' : (!state.unlocked ? 'is-locked' : '');
-        const click = state.unlocked ? ' onclick="BusinessArchitecture.openStage(\'' + lessonId + '\',\'' + stage.id + '\')"' : ' disabled';
-        const small = state.done ? 'Завершено' : (state.unlocked ? stage.description : 'Откроется после предыдущего раздела');
-        return '<button class="ba-stage-card ' + cls + '"' + click + '><span class="ba-stage-no">РАЗДЕЛ ' + (index + 1) + '</span><b>' + escapeHtml(stage.title) + '</b><small>' + escapeHtml(small) + '</small></button>';
-      }).join('');
-      const materialsButton = workspaceUnlocked(lessonId)
-        ? '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.renderMyArchitecture()">Мои материалы</button>'
-        : '';
-      const html =
-        '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.renderHome()">← К курсу</button><span class="ba-status ' + (lp.completedAt ? 'is-done' : 'is-active') + '">' + (lp.completedAt ? 'Урок завершён' : 'Урок ' + lessonNumber(lessonId)) + '</span></div>' +
-        '<section class="ba-hero ba-hero-compact"><p class="ba-eyebrow">ЧАСТЬ ' + escapeHtml(data.part.number) + ' · ГЛАВА ' + escapeHtml(data.lesson.chapter_number) + '</p><h2>' + escapeHtml(data.lesson.title) + '</h2><p>' + escapeHtml(data.lesson.subtitle) + '</p><div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.continueLesson(\'' + lessonId + '\')">' + (completed ? 'Продолжить' : 'Начать урок') + '</button>' + materialsButton + '</div></section>' +
-        '<section class="ba-card ba-progress-card"><div><p class="ba-eyebrow">ПРОГРЕСС УРОКА</p><h2>' + completed + ' из ' + data.stages.length + ' разделов</h2><div class="ba-progress-bar"><i style="width:' + percent + '%"></i></div></div><div class="ba-progress-number">' + percent + '%</div></section>' +
-        '<section class="ba-card"><p class="ba-eyebrow">ЧТО ДАСТ ЭТОТ УРОК</p><p>' + escapeHtml(data.lesson.purpose) + '</p></section>' +
-        '<section class="ba-card"><p class="ba-eyebrow">СОДЕРЖАНИЕ</p><div class="ba-stage-grid">' + stageCards + '</div></section>' +
-        '<section class="ba-card"><p class="ba-eyebrow">ПОСЛЕ УРОКА ВЫ СМОЖЕТЕ</p><ol class="ba-list">' + data.lesson.learning_outcomes.map(function(item){ return '<li>' + escapeHtml(item) + '</li>'; }).join('') + '</ol></section><div class="ba-footer-space"></div>';
-      renderWithAppShell(html, 'home');
-    } catch(error){ errorView(error); }
-  }
-  async function continueLesson(lessonId){
+async function openLesson(lessonId){
+  try {
+    await ensureRemoteSync(false);
+    await ensureCatalog();
+    const meta = findCatalogEntry(lessonId);
+    if (!meta || meta.status !== 'available') {
+      safeAlert('Этот материал пока недоступен.');
+      return;
+    }
+    if (!entryUnlocked(lessonId)) {
+      const entries = catalogEntries();
+      const index = entries.findIndex(function(item){ return item.id === lessonId; });
+      const previous = index > 0 ? entries[index - 1] : null;
+      safeAlert(previous ? 'Сначала завершите: «' + previous.title + '».' : 'Сначала завершите предыдущий шаг.');
+      return renderHome();
+    }
+    loadingView(meta.item_type === 'case' ? 'Открываем комплексный разбор' : 'Открываем урок');
     const data = await ensureLesson(lessonId);
+    runtime.currentLessonId = lessonId;
     const lp = getLessonProgress(lessonId).lesson;
-    const next = data.stages.find(function(stage){ return !lp.completedStages.includes(stage.id); });
-    if (!next) return renderMyArchitecture();
-    return openStage(lessonId, next.id);
-  }
+    const completed = lp.completedStages.length;
+    const percent = Math.round((completed / data.stages.length) * 100);
+    const stageCards = data.stages.map(function(stage, index){
+      const state = lessonStageState(lessonId, index, data.stages);
+      const cls = state.done ? 'is-done' : (!state.unlocked ? 'is-locked' : '');
+      const click = state.unlocked ? ' onclick="BusinessArchitecture.openStage(\'' + lessonId + '\',\'' + stage.id + '\')"' : ' disabled';
+      const small = state.done ? 'Завершено' : (state.unlocked ? stage.description : 'Откроется после предыдущего раздела');
+      return '<button class="ba-stage-card ' + cls + '"' + click + '><span class="ba-stage-no">РАЗДЕЛ ' + (index + 1) + '</span><b>' + escapeHtml(stage.title) + '</b><small>' + escapeHtml(small) + '</small></button>';
+    }).join('');
+    const materialsButton = availableWorkspaceIds().length
+      ? '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.renderMyArchitecture()">Мои материалы</button>'
+      : '';
+    const isCase = meta.item_type === 'case' || data.item_type === 'integrated_case';
+    const topLabel = lp.completedAt ? 'Завершено' : entryLabel(meta);
+    const introTitle = isCase ? 'Что нужно сделать' : 'Что даст этот урок';
+    const outcomesTitle = isCase ? 'В результате вы сможете' : 'После урока вы сможете';
+    const html =
+      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.renderHome()">← К курсу</button><span class="ba-status ' + (lp.completedAt ? 'is-done' : 'is-active') + '">' + escapeHtml(topLabel) + '</span></div>' +
+      '<section class="ba-hero ba-hero-compact"><p class="ba-eyebrow">' + escapeHtml(entrySourceLabel(data)) + '</p><h2>' + escapeHtml(data.lesson.title) + '</h2><p>' + escapeHtml(data.lesson.subtitle) + '</p>' +
+        '<div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.continueLesson(\'' + lessonId + '\')">' + (completed ? 'Продолжить' : (isCase ? 'Начать разбор' : 'Начать урок')) + '</button>' + materialsButton + '</div></section>' +
+      '<section class="ba-card ba-progress-card"><div><p class="ba-eyebrow">ПРОГРЕСС</p><h2>' + completed + ' из ' + data.stages.length + ' разделов</h2><div class="ba-progress-bar"><i style="width:' + percent + '%"></i></div></div><div class="ba-progress-number">' + percent + '%</div></section>' +
+      '<section class="ba-card"><p class="ba-eyebrow">' + introTitle.toUpperCase() + '</p><p>' + escapeHtml(data.lesson.purpose) + '</p></section>' +
+      '<section class="ba-card"><p class="ba-eyebrow">СОДЕРЖАНИЕ</p><div class="ba-stage-grid">' + stageCards + '</div></section>' +
+      '<section class="ba-card"><p class="ba-eyebrow">' + outcomesTitle.toUpperCase() + '</p><ol class="ba-list">' + data.lesson.learning_outcomes.map(function(item){ return '<li>' + escapeHtml(item) + '</li>'; }).join('') + '</ol></section><div class="ba-footer-space"></div>';
+    renderWithAppShell(html, 'home');
+  } catch(error){ errorView(error); }
+}
+
+async function openNextEntry(entryId){
+  const next = nextCatalogEntry(entryId);
+  if (next && entryUnlocked(next.id)) return openLesson(next.id);
+  return renderMyArchitecture();
+}
+
+async function continueLesson(lessonId){
+  const data = await ensureLesson(lessonId);
+  const lp = getLessonProgress(lessonId).lesson;
+  const nextStage = data.stages.find(function(stage){ return !lp.completedStages.includes(stage.id); });
+  if (nextStage) return openStage(lessonId, nextStage.id);
+  return openNextEntry(lessonId);
+}
 
   async function openStage(lessonId, stageId){
     try {
@@ -830,29 +972,30 @@
     return html;
   }
 
-  async function renderSystemAnalysis(lessonId, requestedIndex){
-    const data = await ensureLesson(lessonId);
-    const stage = data.stages.find(function(item){ return item.id === 'system_analysis'; });
-    const lp = getLessonProgress(lessonId).lesson;
-    const savedIndex = lp.systemAnalysis && Number.isFinite(Number(lp.systemAnalysis.screenIndex)) ? Number(lp.systemAnalysis.screenIndex) : 0;
-    runtime.screenIndex = clamp(requestedIndex === undefined ? savedIndex : requestedIndex, 0, stage.screens.length - 1);
-    const screen = stage.screens[runtime.screenIndex];
-    updateLessonProgress(lessonId, function(item){ item.systemAnalysis.screenIndex = runtime.screenIndex; });
+async function renderSystemAnalysis(lessonId, requestedIndex){
+  const data = await ensureLesson(lessonId);
+  const stage = data.stages.find(function(item){ return item.id === 'system_analysis'; });
+  const lp = getLessonProgress(lessonId).lesson;
+  const savedIndex = lp.systemAnalysis && Number.isFinite(Number(lp.systemAnalysis.screenIndex)) ? Number(lp.systemAnalysis.screenIndex) : 0;
+  runtime.screenIndex = clamp(requestedIndex === undefined ? savedIndex : requestedIndex, 0, stage.screens.length - 1);
+  const screen = stage.screens[runtime.screenIndex];
+  updateLessonProgress(lessonId, function(item){ item.systemAnalysis.screenIndex = runtime.screenIndex; });
 
-    const prevDisabled = runtime.screenIndex === 0 ? ' disabled' : '';
-    const last = runtime.screenIndex === stage.screens.length - 1;
-    const nextLabel = last ? (stageDone(lessonId,'system_analysis') ? 'Раздел завершён' : 'Завершить раздел') : 'Следующий экран →';
-    const nextAction = last ? 'BusinessArchitecture.completeSystemAnalysis(\'' + lessonId + '\')' : 'BusinessArchitecture.moveSystemScreen(1)';
+  const prevDisabled = runtime.screenIndex === 0 ? ' disabled' : '';
+  const last = runtime.screenIndex === stage.screens.length - 1;
+  const nextLabel = last ? (stageDone(lessonId,'system_analysis') ? 'Раздел завершён' : 'Завершить раздел') : 'Следующий экран →';
+  const nextAction = last ? 'BusinessArchitecture.completeSystemAnalysis(\'' + lessonId + '\')' : 'BusinessArchitecture.moveSystemScreen(1)';
+  const eyebrow = stage.eyebrow || data.lesson.title;
 
-    const html =
-      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status is-active">Раздел 1 из 4</span></div>' +
-      '<div class="ba-screen-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveSystemScreen(-1)"' + prevDisabled + '>← Назад</button><div class="ba-screen-counter">' + (runtime.screenIndex + 1) + ' из ' + stage.screens.length + '</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + nextAction + '">' + nextLabel + '</button></div>' +
-      '<article class="ba-reading-card"><p class="ba-eyebrow">ФИНАНСОВАЯ СИСТЕМА</p><h2>' + escapeHtml(screen.title) + '</h2>' +
-        (screen.content || []).map(function(p){ return '<p>' + escapeHtml(p) + '</p>'; }).join('') + screenExtraHtml(screen) + '</article>' +
-      '<div class="ba-screen-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveSystemScreen(-1)"' + prevDisabled + '>← Назад</button><div class="ba-screen-counter">Позиция сохраняется автоматически</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + nextAction + '">' + nextLabel + '</button></div>' +
-      '<div class="ba-footer-space"></div>';
-    renderWithAppShell(html, 'home');
-  }
+  const html =
+    '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← Назад</button><span class="ba-status is-active">Раздел 1 из 4</span></div>' +
+    '<div class="ba-screen-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveSystemScreen(-1)"' + prevDisabled + '>← Назад</button><div class="ba-screen-counter">' + (runtime.screenIndex + 1) + ' из ' + stage.screens.length + '</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + nextAction + '">' + nextLabel + '</button></div>' +
+    '<article class="ba-reading-card"><p class="ba-eyebrow">' + escapeHtml(eyebrow) + '</p><h2>' + escapeHtml(screen.title) + '</h2>' +
+      (screen.content || []).map(function(p){ return '<p>' + escapeHtml(p) + '</p>'; }).join('') + screenExtraHtml(screen) + '</article>' +
+    '<div class="ba-screen-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveSystemScreen(-1)"' + prevDisabled + '>← Назад</button><div class="ba-screen-counter">Позиция сохраняется автоматически</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + nextAction + '">' + nextLabel + '</button></div>' +
+    '<div class="ba-footer-space"></div>';
+  renderWithAppShell(html, 'home');
+}
 
   function moveSystemScreen(delta){
     const lessonId = runtime.currentLessonId || 'BA-01';
@@ -863,36 +1006,38 @@
     renderSystemAnalysis(lessonId, next);
   }
 
-  function completeSystemAnalysis(lessonId){
-    markStageDone(lessonId, 'system_analysis');
-    safeAlert('Первый раздел завершён. Теперь можно перейти к практическим материалам.');
-    openLesson(lessonId);
-  }
+function completeSystemAnalysis(lessonId){
+  markStageDone(lessonId, 'system_analysis');
+  safeAlert('Раздел завершён. Теперь откройте практические материалы.');
+  openLesson(lessonId);
+}
 
-  async function renderBusinessExamples(lessonId){
-    const data = await ensureLesson(lessonId);
-    const stage = data.stages.find(function(item){ return item.id === 'business_examples'; });
-    const lp = getLessonProgress(lessonId).lesson;
-    const opened = Array.isArray(lp.examplesOpened) ? lp.examplesOpened : [];
-    const allOpened = stage.examples.every(function(item){ return opened.includes(item.id); });
-    const cards = stage.examples.map(function(item){
-      const viewed = opened.includes(item.id);
-      return '<article class="ba-example-card ' + (viewed ? 'is-opened' : '') + '">' +
-        '<div class="ba-example-title-row"><h3>' + escapeHtml(item.title) + '</h3>' + (viewed ? '<span class="ba-viewed">Просмотрено</span>' : '') + '</div>' +
-        '<p>' + escapeHtml(item.purpose) + '</p>' +
-        '<div class="ba-actions"><button class="ba-btn ba-btn-secondary ba-btn-small" onclick="BusinessArchitecture.openExample(\'' + lessonId + '\',\'' + item.id + '\')">Посмотреть пример</button></div>' +
-      '</article>';
-    }).join('');
-    const viewedCount = stage.examples.filter(function(item){ return opened.includes(item.id); }).length;
-    const html =
-      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status is-active">Раздел 2 из 4</span></div>' +
-      '<section class="ba-hero ba-hero-compact"><p class="ba-eyebrow">ПРАКТИЧЕСКИЕ МАТЕРИАЛЫ</p><h2>Как финансовая система выглядит в работе</h2><p>Посмотрите четыре документа, на которых строятся решения о прибыли, деньгах, безубыточности и росте.</p></section>' +
-      '<section class="ba-card"><div class="ba-section-progress"><span>Просмотрено ' + viewedCount + ' из ' + stage.examples.length + '</span><div class="ba-progress-bar"><i style="width:' + Math.round((viewedCount/stage.examples.length)*100) + '%"></i></div></div><div class="ba-example-list">' + cards + '</div>' +
-        '<div class="ba-actions"><button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.openExamplesLibrary()">Библиотека практических материалов</button><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.completeExamples(\'' + lessonId + '\')" ' + (allOpened ? '' : 'disabled') + '>Продолжить</button></div>' +
-        (!allOpened ? '<div class="ba-note" style="margin-top:12px">Чтобы перейти дальше, посмотрите все четыре материала.</div>' : '') +
-      '</section><div class="ba-footer-space"></div>';
-    renderWithAppShell(html, 'home');
-  }
+async function renderBusinessExamples(lessonId){
+  const data = await ensureLesson(lessonId);
+  const stage = data.stages.find(function(item){ return item.id === 'business_examples'; });
+  const lp = getLessonProgress(lessonId).lesson;
+  const opened = Array.isArray(lp.examplesOpened) ? lp.examplesOpened : [];
+  const allOpened = stage.examples.every(function(item){ return opened.includes(item.id); });
+  const cards = stage.examples.map(function(item){
+    const viewed = opened.includes(item.id);
+    return '<article class="ba-example-card ' + (viewed ? 'is-opened' : '') + '">' +
+      '<div class="ba-example-title-row"><h3>' + escapeHtml(item.title) + '</h3>' + (viewed ? '<span class="ba-viewed">Просмотрено</span>' : '') + '</div>' +
+      '<p>' + escapeHtml(item.purpose) + '</p>' +
+      '<div class="ba-actions"><button class="ba-btn ba-btn-secondary ba-btn-small" onclick="BusinessArchitecture.openExample(\'' + lessonId + '\',\'' + item.id + '\')">Посмотреть пример</button></div>' +
+    '</article>';
+  }).join('');
+  const viewedCount = stage.examples.filter(function(item){ return opened.includes(item.id); }).length;
+  const headline = stage.headline || 'Практические материалы урока';
+  const intro = stage.intro || stage.description || 'Разберите рабочие материалы и решения, для которых они используются.';
+  const html =
+    '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← Назад</button><span class="ba-status is-active">Раздел 2 из 4</span></div>' +
+    '<section class="ba-hero ba-hero-compact"><p class="ba-eyebrow">ПРАКТИЧЕСКИЕ МАТЕРИАЛЫ</p><h2>' + escapeHtml(headline) + '</h2><p>' + escapeHtml(intro) + '</p></section>' +
+    '<section class="ba-card"><div class="ba-section-progress"><span>Просмотрено ' + viewedCount + ' из ' + stage.examples.length + '</span><div class="ba-progress-bar"><i style="width:' + Math.round((viewedCount/stage.examples.length)*100) + '%"></i></div></div><div class="ba-example-list">' + cards + '</div>' +
+      '<div class="ba-actions"><button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.openExamplesLibrary()">Библиотека практических материалов</button><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.completeExamples(\'' + lessonId + '\')" ' + (allOpened ? '' : 'disabled') + '>Продолжить</button></div>' +
+      (!allOpened ? '<div class="ba-note" style="margin-top:12px">Чтобы перейти дальше, посмотрите все материалы этого раздела.</div>' : '') +
+    '</section><div class="ba-footer-space"></div>';
+  renderWithAppShell(html, 'home');
+}
 
   function exampleById(examples, exampleId){
     return (examples.items || []).find(function(item){ return item.id === exampleId; }) || null;
@@ -960,19 +1105,19 @@
     const empty = document.getElementById('ba-library-empty');
     if (empty) empty.style.display = visible ? 'none' : '';
   }
-  function completeExamples(lessonId){
-    const lesson = runtime.lessons[lessonId];
-    const stage = lesson && lesson.stages.find(function(item){ return item.id === 'business_examples'; });
-    const lp = getLessonProgress(lessonId).lesson;
-    const allOpened = stage && stage.examples.every(function(item){ return lp.examplesOpened.includes(item.id); });
-    if (!allOpened) {
-      safeAlert('Сначала откройте все четыре практических примера.');
-      return;
-    }
-    markStageDone(lessonId, 'business_examples');
-    safeAlert('Практические материалы просмотрены. Теперь можно перейти к задачам.');
-    openLesson(lessonId);
+function completeExamples(lessonId){
+  const lesson = runtime.lessons[lessonId];
+  const stage = lesson && lesson.stages.find(function(item){ return item.id === 'business_examples'; });
+  const lp = getLessonProgress(lessonId).lesson;
+  const allOpened = stage && stage.examples.every(function(item){ return lp.examplesOpened.includes(item.id); });
+  if (!allOpened) {
+    safeAlert('Сначала посмотрите все практические материалы этого раздела.');
+    return;
   }
+  markStageDone(lessonId, 'business_examples');
+  safeAlert('Практические материалы изучены. Открыты управленческие задачи.');
+  openLesson(lessonId);
+}
 
   function ensureQuizDraft(lessonId, questions){
     updateLessonProgress(lessonId, function(lp){
@@ -1091,34 +1236,34 @@
     return selected.length ? selected : stage.questions;
   }
 
-  async function renderQuiz(lessonId, requestedIndex, focusQuestion){
-    const data = await ensureLesson(lessonId);
-    const stage = data.stages.find(function(item){ return item.id === 'decision_lab'; });
-    ensureQuizDraft(lessonId, stage.questions);
-    const lp = getLessonProgress(lessonId).lesson;
-    if (lp.quiz.lastResult) return renderQuizResult(lessonId);
+async function renderQuiz(lessonId, requestedIndex, focusQuestion){
+  const data = await ensureLesson(lessonId);
+  const stage = data.stages.find(function(item){ return item.id === 'decision_lab'; });
+  ensureQuizDraft(lessonId, stage.questions);
+  const lp = getLessonProgress(lessonId).lesson;
+  if (lp.quiz.lastResult) return renderQuizResult(lessonId);
 
-    const reviewIds = quizReviewQuestionIds(lp, stage);
-    const reviewMode = reviewIds.length ? String(lp.quiz.reviewMode || 'all') : '';
-    const questions = activeQuizQuestions(stage, lp);
-    runtime.quizIndex = clamp(requestedIndex === undefined ? runtime.quizIndex : requestedIndex, 0, questions.length - 1);
-    const q = questions[runtime.quizIndex];
-    const answeredCount = stage.questions.filter(function(item){ return questionAnswered(item, lp); }).length;
-    const last = runtime.quizIndex === questions.length - 1;
+  const reviewIds = quizReviewQuestionIds(lp, stage);
+  const reviewMode = reviewIds.length ? String(lp.quiz.reviewMode || 'all') : '';
+  const questions = activeQuizQuestions(stage, lp);
+  runtime.quizIndex = clamp(requestedIndex === undefined ? runtime.quizIndex : requestedIndex, 0, questions.length - 1);
+  const q = questions[runtime.quizIndex];
+  const answeredCount = stage.questions.filter(function(item){ return questionAnswered(item, lp); }).length;
+  const last = runtime.quizIndex === questions.length - 1;
 
-    const introHtml = reviewIds.length
-      ? '<section class="ba-card ba-quiz-intro"><p class="ba-eyebrow">ПЕРЕСМОТР РЕШЕНИЙ</p><h2>' + (reviewMode === 'critical' ? 'Ключевые решения' : 'Решения, которые требуют уточнения') + '</h2><p>Остальные ответы сохранены. Измените только решения, которые повлияли на итог, и отправьте их на повторную проверку.</p><div class="ba-quiz-line"><span>На пересмотре <b>' + questions.length + '</b></span><span>После последнего вопроса результат будет пересчитан</span></div></section>'
-      : '<section class="ba-card ba-quiz-intro"><p class="ba-eyebrow">УПРАВЛЕНЧЕСКИЕ ЗАДАЧИ</p><h2>Разбор финансовых решений</h2><p>В каждом задании нужно сопоставить факты, ограничения и последствия. К материалам урока можно возвращаться в любой момент.</p><div class="ba-quiz-line"><span>Отвечено <b data-ba-answered>' + answeredCount + '</b> из ' + stage.questions.length + '</span><span>Для прохождения — ' + stage.pass_score + '% и без ошибок в ключевых вопросах</span></div></section>';
+  const introHtml = reviewIds.length
+    ? '<section class="ba-card ba-quiz-intro"><p class="ba-eyebrow">ПЕРЕСМОТР РЕШЕНИЙ</p><h2>' + (reviewMode === 'critical' ? 'Ключевые решения' : 'Решения, которые требуют уточнения') + '</h2><p>Остальные ответы сохранены. Измените только решения, которые повлияли на итог, и отправьте их на повторную проверку.</p><div class="ba-quiz-line"><span>На пересмотре <b>' + questions.length + '</b></span><span>После последнего вопроса результат будет пересчитан</span></div></section>'
+    : '<section class="ba-card ba-quiz-intro"><p class="ba-eyebrow">УПРАВЛЕНЧЕСКИЕ ЗАДАЧИ</p><h2>' + escapeHtml(data.lesson.title) + '</h2><p>В каждом задании нужно сопоставить факты, ограничения, последовательность и последствия. К материалам можно возвращаться в любой момент.</p><div class="ba-quiz-line"><span>Отвечено <b data-ba-answered>' + answeredCount + '</b> из ' + stage.questions.length + '</span><span>Для прохождения — ' + stage.pass_score + '% и без ошибок в ключевых вопросах</span></div></section>';
 
-    const html =
-      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status is-warning">Раздел 3 из 4</span></div>' +
-      introHtml +
-      '<div class="ba-screen-nav ba-quiz-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveQuiz(-1)" ' + (runtime.quizIndex === 0 ? 'disabled' : '') + '>← Назад</button><div class="ba-screen-counter">Вопрос ' + (runtime.quizIndex + 1) + ' из ' + questions.length + '</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + (last ? 'BusinessArchitecture.submitQuiz(\'' + lessonId + '\')' : 'BusinessArchitecture.moveQuiz(1)') + '">' + (last ? 'Проверить ответы' : 'Следующий →') + '</button></div>' +
-      '<article class="ba-question-card"><div class="ba-question-top"><span class="ba-question-skill">' + escapeHtml(q.skill) + '</span>' + (q.critical ? '<span class="ba-critical">КЛЮЧЕВОЙ ВОПРОС</span>' : '') + '</div>' +
-        (q.case ? '<div class="ba-case">' + escapeHtml(q.case) + '</div>' : '') + '<h2>' + escapeHtml(q.question) + '</h2>' + questionInputHtml(q, lp) + '</article>' +
-      '<div class="ba-screen-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveQuiz(-1)" ' + (runtime.quizIndex === 0 ? 'disabled' : '') + '>← Назад</button><div class="ba-screen-counter">Изменения сохраняются автоматически</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + (last ? 'BusinessArchitecture.submitQuiz(\'' + lessonId + '\')' : 'BusinessArchitecture.moveQuiz(1)') + '">' + (last ? 'Проверить ответы' : 'Следующий →') + '</button></div><div class="ba-footer-space"></div>';
-    renderWithAppShell(html, 'home', focusQuestion ? {target:'.ba-question-card'} : {});
-  }
+  const html =
+    '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← Назад</button><span class="ba-status is-warning">Раздел 3 из 4</span></div>' +
+    introHtml +
+    '<div class="ba-screen-nav ba-quiz-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveQuiz(-1)" ' + (runtime.quizIndex === 0 ? 'disabled' : '') + '>← Назад</button><div class="ba-screen-counter">Вопрос ' + (runtime.quizIndex + 1) + ' из ' + questions.length + '</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + (last ? 'BusinessArchitecture.submitQuiz(\'' + lessonId + '\')' : 'BusinessArchitecture.moveQuiz(1)') + '">' + (last ? 'Проверить ответы' : 'Следующий →') + '</button></div>' +
+    '<article class="ba-question-card"><div class="ba-question-top"><span class="ba-question-skill">' + escapeHtml(q.skill) + '</span>' + (q.critical ? '<span class="ba-critical">КЛЮЧЕВОЙ ВОПРОС</span>' : '') + '</div>' +
+      (q.case ? '<div class="ba-case">' + escapeHtml(q.case) + '</div>' : '') + '<h2>' + escapeHtml(q.question) + '</h2>' + questionInputHtml(q, lp) + '</article>' +
+    '<div class="ba-screen-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveQuiz(-1)" ' + (runtime.quizIndex === 0 ? 'disabled' : '') + '>← Назад</button><div class="ba-screen-counter">Изменения сохраняются автоматически</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="' + (last ? 'BusinessArchitecture.submitQuiz(\'' + lessonId + '\')' : 'BusinessArchitecture.moveQuiz(1)') + '">' + (last ? 'Проверить ответы' : 'Следующий →') + '</button></div><div class="ba-footer-space"></div>';
+  renderWithAppShell(html, 'home', focusQuestion ? {target:'.ba-question-card'} : {});
+}
 
   function moveQuiz(delta){
     const lessonId = runtime.currentLessonId || 'BA-01';
@@ -1216,59 +1361,63 @@
     renderQuiz(lessonId, 0, true);
   }
 
-  function renderQuizResult(lessonId){
-    const lesson = runtime.lessons[lessonId];
-    const stage = lesson.stages.find(function(item){ return item.id === 'decision_lab'; });
-    const lp = getLessonProgress(lessonId).lesson;
-    const result = lp.quiz.lastResult;
-    if (!result) return renderQuiz(lessonId,0);
+function renderQuizResult(lessonId){
+  const lesson = runtime.lessons[lessonId];
+  const stage = lesson.stages.find(function(item){ return item.id === 'decision_lab'; });
+  const practiceStage = lesson.stages.find(function(item){ return item.id === 'architecture_assembly'; });
+  const artifactTitle = practiceStage && practiceStage.artifact_title
+    ? practiceStage.artifact_title
+    : (practiceStage && practiceStage.completion_gate ? practiceStage.completion_gate.final_artifact : 'Практическая работа');
+  const lp = getLessonProgress(lessonId).lesson;
+  const result = lp.quiz.lastResult;
+  if (!result) return renderQuiz(lessonId,0);
 
-    const wrongResults = (result.results || []).filter(function(item){ return !item.correct; });
-    const wrongCritical = wrongResults.filter(function(item){ return item.critical; });
-    const scorePassed = Number(result.score) >= Number(stage.pass_score);
-    const keyOnly = scorePassed && !result.criticalPassed;
+  const wrongResults = (result.results || []).filter(function(item){ return !item.correct; });
+  const wrongCritical = wrongResults.filter(function(item){ return item.critical; });
+  const scorePassed = Number(result.score) >= Number(stage.pass_score);
+  const keyOnly = scorePassed && !result.criticalPassed;
 
-    const orderedQuestions = stage.questions.slice().sort(function(left, right){
-      const leftResult = result.results.find(function(item){ return item.id === left.id; });
-      const rightResult = result.results.find(function(item){ return item.id === right.id; });
-      return Number(Boolean(leftResult && leftResult.correct)) - Number(Boolean(rightResult && rightResult.correct));
-    });
+  const orderedQuestions = stage.questions.slice().sort(function(left, right){
+    const leftResult = result.results.find(function(item){ return item.id === left.id; });
+    const rightResult = result.results.find(function(item){ return item.id === right.id; });
+    return Number(Boolean(leftResult && leftResult.correct)) - Number(Boolean(rightResult && rightResult.correct));
+  });
 
-    const reviews = orderedQuestions.map(function(q){
-      const originalIndex = stage.questions.findIndex(function(item){ return item.id === q.id; });
-      const r = result.results.find(function(item){ return item.id === q.id; });
-      return '<details class="ba-review-item ' + (r && r.correct ? 'is-correct' : 'is-wrong') + '"><summary>' + (r && r.correct ? 'Ответ обоснован' : 'Нужно пересмотреть') + ' · Вопрос ' + (originalIndex + 1) + ' · ' + escapeHtml(q.skill) + '</summary><div class="ba-review-body"><b>Задание:</b> ' + escapeHtml(q.question) + '<br><br><b>Ваш ответ:</b> ' + escapeHtml(answerDisplay(q,lp)) + '<br><br><b>Разбор:</b> ' + escapeHtml(q.explanation || '') + '</div></details>';
-    }).join('');
+  const reviews = orderedQuestions.map(function(q){
+    const originalIndex = stage.questions.findIndex(function(item){ return item.id === q.id; });
+    const r = result.results.find(function(item){ return item.id === q.id; });
+    return '<details class="ba-review-item ' + (r && r.correct ? 'is-correct' : 'is-wrong') + '"><summary>' + (r && r.correct ? 'Ответ обоснован' : 'Нужно пересмотреть') + ' · Вопрос ' + (originalIndex + 1) + ' · ' + escapeHtml(q.skill) + '</summary><div class="ba-review-body"><b>Задание:</b> ' + escapeHtml(q.question) + '<br><br><b>Ваш ответ:</b> ' + escapeHtml(answerDisplay(q,lp)) + '<br><br><b>Разбор:</b> ' + escapeHtml(q.explanation || '') + '</div></details>';
+  }).join('');
 
-    let statusText = 'Нужно пересмотреть решения';
-    let heading = 'Часть решений требует пересмотра';
-    let noteClass = 'ba-note-danger';
-    let noteText = 'Правильно решено ' + result.correctCount + ' из ' + result.total + ' заданий. Для перехода к практике нужно пересмотреть ' + wrongResults.length + ' ' + pluralRu(wrongResults.length, 'решение', 'решения', 'решений') + '.';
-    let primaryAction = '<button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.reviewQuizMistakes(\'' + lessonId + '\',\'all\')">Пересмотреть неверные решения</button>';
+  let statusText = 'Нужно пересмотреть решения';
+  let heading = 'Часть решений требует пересмотра';
+  let noteClass = 'ba-note-danger';
+  let noteText = 'Правильно решено ' + result.correctCount + ' из ' + result.total + ' заданий. Для перехода к практике нужно пересмотреть ' + wrongResults.length + ' ' + pluralRu(wrongResults.length, 'решение', 'решения', 'решений') + '.';
+  let primaryAction = '<button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.reviewQuizMistakes(\'' + lessonId + '\',\'all\')">Пересмотреть неверные решения</button>';
 
-    if (result.passed) {
-      statusText = 'Тест пройден';
-      heading = 'Вы готовы перейти к практической работе';
-      noteClass = 'ba-note-teal';
-      noteText = 'Все условия выполнены. Теперь можно собрать финансовый контур своего или учебного бизнеса.';
-      primaryAction = '<button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.openStage(\'' + lessonId + '\',\'architecture_assembly\')">Перейти к практике</button>';
-    } else if (keyOnly) {
-      statusText = 'Нужно уточнить ключевые решения';
-      heading = 'Проходной уровень достигнут';
-      noteText = 'Общий результат — ' + result.score + '%. Проходной уровень достигнут, но ' + wrongCritical.length + ' ' + pluralRu(wrongCritical.length, 'ключевое решение требует', 'ключевых решения требуют', 'ключевых решений требуют') + ' пересмотра.';
-      primaryAction = '<button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.reviewQuizMistakes(\'' + lessonId + '\',\'critical\')">Исправить ключевые решения</button>';
-    } else if (wrongCritical.length) {
-      noteText += ' Среди них ' + wrongCritical.length + ' ' + pluralRu(wrongCritical.length, 'ключевой вопрос', 'ключевых вопроса', 'ключевых вопросов') + '.';
-    }
-
-    const html =
-      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status ' + (result.passed ? 'is-done' : 'is-warning') + '">' + statusText + '</span></div>' +
-      '<section class="ba-card"><p class="ba-eyebrow">РЕЗУЛЬТАТ</p><h2>' + heading + '</h2><div class="ba-result-summary" style="margin-top:14px"><div class="ba-result-box"><span>Итог</span><b>' + result.score + '%</b></div><div class="ba-result-box"><span>Правильных ответов</span><b>' + result.correctCount + '/' + result.total + '</b></div><div class="ba-result-box"><span>Ключевые вопросы</span><b>' + (result.criticalPassed ? 'без ошибок' : wrongCritical.length + ' ' + pluralRu(wrongCritical.length, 'ошибка', 'ошибки', 'ошибок')) + '</b></div></div>' +
-        '<div class="ba-note ' + noteClass + '" style="margin-top:13px">' + noteText + '</div>' +
-        '<div class="ba-actions">' + primaryAction + (!result.passed ? '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.restartQuiz(\'' + lessonId + '\')">Начать тест заново</button>' : '') + '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">К уроку</button></div></section>' +
-      '<section class="ba-card"><p class="ba-eyebrow">РАЗБОР ОТВЕТОВ</p><h2>Логика каждого решения</h2><p>Сначала показаны решения, которые требуют пересмотра. Раскройте задание, чтобы увидеть недостающие данные и последствия.</p>' + reviews + '</section><div class="ba-footer-space"></div>';
-    renderWithAppShell(html, 'home');
+  if (result.passed) {
+    statusText = 'Тест пройден';
+    heading = 'Можно переходить к практической работе';
+    noteClass = 'ba-note-teal';
+    noteText = 'Все условия выполнены. Следующий шаг — собрать материал «' + escapeHtml(artifactTitle) + '».';
+    primaryAction = '<button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.openStage(\'' + lessonId + '\',\'architecture_assembly\')">Перейти к практике</button>';
+  } else if (keyOnly) {
+    statusText = 'Нужно уточнить ключевые решения';
+    heading = 'Проходной уровень достигнут';
+    noteText = 'Общий результат — ' + result.score + '%. Проходной уровень достигнут, но ' + wrongCritical.length + ' ' + pluralRu(wrongCritical.length, 'ключевое решение требует', 'ключевых решения требуют', 'ключевых решений требуют') + ' пересмотра.';
+    primaryAction = '<button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.reviewQuizMistakes(\'' + lessonId + '\',\'critical\')">Исправить ключевые решения</button>';
+  } else if (wrongCritical.length) {
+    noteText += ' Среди них ' + wrongCritical.length + ' ' + pluralRu(wrongCritical.length, 'ключевой вопрос', 'ключевых вопроса', 'ключевых вопросов') + '.';
   }
+
+  const html =
+    '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← Назад</button><span class="ba-status ' + (result.passed ? 'is-done' : 'is-warning') + '">' + statusText + '</span></div>' +
+    '<section class="ba-card"><p class="ba-eyebrow">РЕЗУЛЬТАТ</p><h2>' + heading + '</h2><div class="ba-result-summary" style="margin-top:14px"><div class="ba-result-box"><span>Итог</span><b>' + result.score + '%</b></div><div class="ba-result-box"><span>Правильных ответов</span><b>' + result.correctCount + '/' + result.total + '</b></div><div class="ba-result-box"><span>Ключевые вопросы</span><b>' + (result.criticalPassed ? 'без ошибок' : wrongCritical.length + ' ' + pluralRu(wrongCritical.length, 'ошибка', 'ошибки', 'ошибок')) + '</b></div></div>' +
+      '<div class="ba-note ' + noteClass + '" style="margin-top:13px">' + noteText + '</div>' +
+      '<div class="ba-actions">' + primaryAction + (!result.passed ? '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.restartQuiz(\'' + lessonId + '\')">Начать тест заново</button>' : '') + '<button class="ba-btn ba-btn-light" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">Назад</button></div></section>' +
+    '<section class="ba-card"><p class="ba-eyebrow">РАЗБОР ОТВЕТОВ</p><h2>Логика каждого решения</h2><p>Сначала показаны решения, которые требуют пересмотра. Раскройте задание, чтобы увидеть недостающие данные и последствия.</p>' + reviews + '</section><div class="ba-footer-space"></div>';
+  renderWithAppShell(html, 'home');
+}
 
   function restartQuiz(lessonId){
     updateLessonProgress(lessonId, function(lp){
@@ -1282,14 +1431,22 @@
     renderQuiz(lessonId,0,false);
   }
 
-  function routeInfo(routeId){
-    const map = {
-      real_business: {title:'Мой действующий бизнес', rule:'Использовать закрытый фактический период и указывать источник каждого числа.'},
-      designed_business: {title:'Проектируемый бизнес', rule:'Отделять подтверждённые факты рынка от допущений модели и задавать диапазоны.'},
-      training_case: {title:'Учебный кейс «Ритм»', rule:'Использовать данные кейса и явно обосновывать недостающие допущения.'}
-    };
-    return map[routeId] || null;
+function routeInfo(routeId, lessonId){
+  const lesson = runtime.lessons[lessonId || runtime.currentLessonId];
+  if (lesson && Array.isArray(lesson.stages)) {
+    const stage = lesson.stages.find(function(item){ return item.id === 'architecture_assembly'; });
+    const route = stage && Array.isArray(stage.routes)
+      ? stage.routes.find(function(item){ return item.id === routeId; })
+      : null;
+    if (route) return {title:route.title, rule:route.rule};
   }
+  const map = {
+    real_business: {title:'Мой действующий бизнес', rule:'Использовать фактический период и указывать источник каждого числа.'},
+    designed_business: {title:'Проектируемый бизнес', rule:'Отделять подтверждённые факты от допущений модели и задавать диапазоны.'},
+    training_case: {title:'Учебный кейс', rule:'Использовать данные кейса и явно обосновывать недостающие допущения.'}
+  };
+  return map[routeId] || null;
+}
 
   function chooseWorkspaceRoute(lessonId, routeId){
     updateLessonProgress(lessonId, function(lp, progress){ lp.workspace.route = routeId; progress.selectedRoute = routeId; });
@@ -1328,56 +1485,81 @@
     return {filled, total, percent:Math.round((filled/total)*100)};
   }
 
-  function workspaceCompleteness(lp, stage){
-    let filled = 0;
-    let total = 0;
-    stage.sections.forEach(function(section){
-      const info = sectionCompleteness(lp, section);
-      filled += info.filled;
-      total += info.total;
+function finalFieldDefinitions(stage){
+  if (stage && Array.isArray(stage.final_fields) && stage.final_fields.length) return stage.final_fields;
+  return [
+    {key:'fact_or_assumption', label:'Подтверждённый факт или явное допущение'},
+    {key:'conclusion', label:'Главный вывод'},
+    {key:'decision_now', label:'Решение, которое принимается сейчас'},
+    {key:'decision_later', label:'Решение, которое откладывается'},
+    {key:'metric', label:'Контрольная метрика'},
+    {key:'review_date', label:'Дата повторной проверки'},
+    {key:'material_note', label:'Рабочий материал: ссылка или описание'}
+  ];
+}
+
+function workspaceCompleteness(lp, stage){
+  let filled = 0;
+  let total = 0;
+  stage.sections.forEach(function(section){
+    const info = sectionCompleteness(lp, section);
+    filled += info.filled;
+    total += info.total;
+  });
+  finalFieldDefinitions(stage).forEach(function(field){
+    total += 1;
+    if (String(lp.workspace.final[field.key] || '').trim()) filled += 1;
+  });
+  return {filled, total, percent:total ? Math.round((filled/total)*100) : 0, complete:filled === total};
+}
+
+async function renderWorkspace(lessonId, requestedIndex){
+  if (!workspaceUnlocked(lessonId)) {
+    safeAlert('Мои материалы откроются после прохождения управленческих задач.');
+    return openLesson(lessonId);
+  }
+  const lesson = await ensureLesson(lessonId);
+  const stage = lesson.stages.find(function(item){ return item.id === 'architecture_assembly'; });
+  const lp = getLessonProgress(lessonId).lesson;
+  runtime.workspaceSectionIndex = clamp(requestedIndex === undefined ? Number(lp.workspace.sectionIndex || 0) : requestedIndex, 0, stage.sections.length);
+  updateLessonProgress(lessonId, function(item){ item.workspace.sectionIndex = runtime.workspaceSectionIndex; });
+
+  if (!lp.workspace.route && Array.isArray(stage.routes) && stage.routes.length === 1) {
+    updateLessonProgress(lessonId, function(item, progress){
+      item.workspace.route = stage.routes[0].id;
+      progress.selectedRoute = stage.routes[0].id;
     });
-    const finalKeys = ['fact_or_assumption','conclusion','decision_now','decision_later','metric','review_date','material_note'];
-    finalKeys.forEach(function(key){ total += 1; if (String(lp.workspace.final[key] || '').trim()) filled += 1; });
-    return {filled, total, percent:Math.round((filled/total)*100), complete:filled === total};
+    return renderWorkspace(lessonId, requestedIndex);
   }
 
-  async function renderWorkspace(lessonId, requestedIndex){
-    if (!workspaceUnlocked(lessonId)) { safeAlert('Мои материалы откроются после прохождения управленческих задач.'); return openLesson(lessonId); }
-    const lesson = await ensureLesson(lessonId);
-    const stage = lesson.stages.find(function(item){ return item.id === 'architecture_assembly'; });
-    const lp = getLessonProgress(lessonId).lesson;
-    runtime.workspaceSectionIndex = clamp(requestedIndex === undefined ? Number(lp.workspace.sectionIndex || 0) : requestedIndex, 0, stage.sections.length);
-    updateLessonProgress(lessonId, function(item){ item.workspace.sectionIndex = runtime.workspaceSectionIndex; });
-
-    if (!lp.workspace.route) {
-      const routes = stage.routes.map(function(route){
-        return '<button class="ba-route-card" onclick="BusinessArchitecture.chooseWorkspaceRoute(\'' + lessonId + '\',\'' + route.id + '\')"><b>' + escapeHtml(route.title) + '</b><p>' + escapeHtml(route.rule) + '</p></button>';
-      }).join('');
-      const html = '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status is-active">Раздел 4 из 4</span></div>' +
-        '<section class="ba-hero"><p class="ba-eyebrow">МОЙ ФИНАНСОВЫЙ КОНТУР</p><h2>К какой ситуации применяем материал?</h2><p>Выберите действующий бизнес, проектируемую модель или учебный кейс. Требования к обоснованию решений остаются одинаковыми.</p></section>' +
-        '<section class="ba-card"><div class="ba-route-list">' + routes + '</div></section><div class="ba-footer-space"></div>';
-      return renderWithAppShell(html,'home');
-    }
-
-    if (runtime.workspaceSectionIndex >= stage.sections.length) return renderWorkspaceFinal(lessonId);
-
-    const section = stage.sections[runtime.workspaceSectionIndex];
-    const data = workspaceSectionData(lp, section.id);
-    const complete = sectionCompleteness(lp, section);
-    const overall = workspaceCompleteness(lp, stage);
-    const route = routeInfo(lp.workspace.route);
-
-    const fields = section.required_fields.map(function(field, index){
-      return '<div class="ba-field-block"><label>' + escapeHtml(field) + '</label><textarea class="ba-textarea" oninput="BusinessArchitecture.updateWorkspaceField(\'' + lessonId + '\',\'' + section.id + '\',' + index + ',this.value)">' + escapeHtml(data.fields[field] || '') + '</textarea></div>';
+  if (!lp.workspace.route) {
+    const routes = stage.routes.map(function(route){
+      return '<button class="ba-route-card" onclick="BusinessArchitecture.chooseWorkspaceRoute(\'' + lessonId + '\',\'' + route.id + '\')"><b>' + escapeHtml(route.title) + '</b><p>' + escapeHtml(route.rule) + '</p></button>';
     }).join('');
-
-    const html =
-      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← К уроку</button><span class="ba-status is-active">Раздел 4 из 4</span></div>' +
-      '<section class="ba-card"><div class="ba-workspace-head"><div><p class="ba-eyebrow">МОИ МАТЕРИАЛЫ · ' + escapeHtml(route.title) + '</p><h2>' + escapeHtml(section.title) + '</h2><p>' + escapeHtml(route.rule) + '</p></div><b class="ba-progress-number">' + complete.percent + '%</b></div><div class="ba-progress-bar"><i style="width:' + complete.percent + '%"></i></div></section>' +
-      '<section class="ba-card"><div class="ba-workspace-fields">' + fields + '<div class="ba-field-block"><label>Доказательство завершения</label><textarea class="ba-textarea" oninput="BusinessArchitecture.updateWorkspaceEvidence(\'' + lessonId + '\',\'' + section.id + '\',this.value)">' + escapeHtml(data.evidence || '') + '</textarea><span class="ba-field-hint">Критерий: ' + escapeHtml(section.completion_evidence) + '</span></div></div><div class="ba-completeness"><span data-ba-saved class="ba-saved">Сохранено</span><b>Заполнено ' + complete.filled + ' из ' + complete.total + '</b></div></section>' +
-      '<div class="ba-screen-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveWorkspace(-1)" ' + (runtime.workspaceSectionIndex === 0 ? 'disabled' : '') + '>← Предыдущий раздел</button><div class="ba-screen-counter">Раздел ' + (runtime.workspaceSectionIndex + 1) + ' из ' + stage.sections.length + '</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="BusinessArchitecture.moveWorkspace(1)">' + (runtime.workspaceSectionIndex === stage.sections.length - 1 ? 'К итоговому решению →' : 'Следующий раздел →') + '</button></div><div class="ba-footer-space"></div>';
-    renderWithAppShell(html,'home');
+    const html = '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← Назад</button><span class="ba-status is-active">Раздел 4 из 4</span></div>' +
+      '<section class="ba-hero"><p class="ba-eyebrow">МОИ МАТЕРИАЛЫ</p><h2>' + escapeHtml(stage.artifact_title || stage.completion_gate.final_artifact) + '</h2><p>' + escapeHtml(stage.artifact_description || stage.description) + '</p><p>Выберите контекст, к которому будете применять материал.</p></section>' +
+      '<section class="ba-card"><div class="ba-route-list">' + routes + '</div></section><div class="ba-footer-space"></div>';
+    return renderWithAppShell(html,'home');
   }
+
+  if (runtime.workspaceSectionIndex >= stage.sections.length) return renderWorkspaceFinal(lessonId);
+
+  const section = stage.sections[runtime.workspaceSectionIndex];
+  const data = workspaceSectionData(lp, section.id);
+  const complete = sectionCompleteness(lp, section);
+  const route = routeInfo(lp.workspace.route, lessonId) || {title:'Выбранный контекст', rule:''};
+
+  const fields = section.required_fields.map(function(field, index){
+    return '<div class="ba-field-block"><label>' + escapeHtml(field) + '</label><textarea class="ba-textarea" oninput="BusinessArchitecture.updateWorkspaceField(\'' + lessonId + '\',\'' + section.id + '\',' + index + ',this.value)">' + escapeHtml(data.fields[field] || '') + '</textarea></div>';
+  }).join('');
+
+  const html =
+    '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.openLesson(\'' + lessonId + '\')">← Назад</button><span class="ba-status is-active">Раздел 4 из 4</span></div>' +
+    '<section class="ba-card"><div class="ba-workspace-head"><div><p class="ba-eyebrow">МОИ МАТЕРИАЛЫ · ' + escapeHtml(route.title) + '</p><h2>' + escapeHtml(section.title) + '</h2><p>' + escapeHtml(route.rule) + '</p></div><b class="ba-progress-number">' + complete.percent + '%</b></div><div class="ba-progress-bar"><i style="width:' + complete.percent + '%"></i></div></section>' +
+    '<section class="ba-card"><div class="ba-workspace-fields">' + fields + '<div class="ba-field-block"><label>Доказательство завершения</label><textarea class="ba-textarea" oninput="BusinessArchitecture.updateWorkspaceEvidence(\'' + lessonId + '\',\'' + section.id + '\',this.value)">' + escapeHtml(data.evidence || '') + '</textarea><span class="ba-field-hint">Критерий: ' + escapeHtml(section.completion_evidence) + '</span></div></div><div class="ba-completeness"><span data-ba-saved class="ba-saved">Сохранено</span><b>Заполнено ' + complete.filled + ' из ' + complete.total + '</b></div></section>' +
+    '<div class="ba-screen-nav"><button class="ba-btn ba-btn-light ba-btn-small" onclick="BusinessArchitecture.moveWorkspace(-1)" ' + (runtime.workspaceSectionIndex === 0 ? 'disabled' : '') + '>← Предыдущий раздел</button><div class="ba-screen-counter">Раздел ' + (runtime.workspaceSectionIndex + 1) + ' из ' + stage.sections.length + '</div><button class="ba-btn ba-btn-primary ba-btn-small" onclick="BusinessArchitecture.moveWorkspace(1)">' + (runtime.workspaceSectionIndex === stage.sections.length - 1 ? 'К итоговому решению →' : 'Следующий раздел →') + '</button></div><div class="ba-footer-space"></div>';
+  renderWithAppShell(html,'home');
+}
 
   function moveWorkspace(delta){
     const lessonId = runtime.currentLessonId || 'BA-01';
@@ -1387,46 +1569,49 @@
     renderWorkspace(lessonId, runtime.workspaceSectionIndex);
   }
 
-  function renderWorkspaceFinal(lessonId){
-    const lesson = runtime.lessons[lessonId];
-    const stage = lesson.stages.find(function(item){ return item.id === 'architecture_assembly'; });
-    const lp = getLessonProgress(lessonId).lesson;
-    const info = workspaceCompleteness(lp, stage);
-    const final = lp.workspace.final || {};
-    const fields = [
-      ['fact_or_assumption','Подтверждённый факт или явное допущение'],
-      ['conclusion','Главный финансовый вывод'],
-      ['decision_now','Решение, которое принимается сейчас'],
-      ['decision_later','Решение, которое откладывается'],
-      ['metric','Контрольная метрика'],
-      ['review_date','Дата повторной проверки'],
-      ['material_note','Какой рабочий материал подтверждает решение']
-    ];
-    const form = fields.map(function(row){ return '<div class="ba-field-block"><label>' + escapeHtml(row[1]) + '</label><textarea class="ba-textarea" oninput="BusinessArchitecture.updateWorkspaceFinal(\'' + lessonId + '\',\'' + row[0] + '\',this.value)">' + escapeHtml(final[row[0]] || '') + '</textarea></div>'; }).join('');
-    const html =
-      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.renderWorkspace(\'' + lessonId + '\',' + (stage.sections.length - 1) + ')">← К разделам</button><span class="ba-status ' + (info.complete ? 'is-done' : 'is-warning') + '">' + (info.complete ? 'Готово к завершению' : 'Заполните оставшиеся поля') + '</span></div>' +
-      '<section class="ba-hero ba-hero-compact"><p class="ba-eyebrow">ИТОГОВОЕ РЕШЕНИЕ</p><h2>Финансовый контур бизнеса</h2><p>Зафиксируйте вывод, решение, контрольную метрику и дату повторной проверки.</p></section>' +
-      '<section class="ba-card"><div class="ba-workspace-fields">' + form + '</div><div class="ba-completeness"><span data-ba-saved class="ba-saved">Сохранено</span><b>' + info.percent + '%</b></div><div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.completeWorkspace(\'' + lessonId + '\')" ' + (info.complete ? '' : 'disabled') + '>Завершить работу</button></div>' +
-      (!info.complete ? '<div class="ba-note" style="margin-top:13px">Для завершения заполните все разделы и итоговое решение.</div>' : '') + '</section><div class="ba-footer-space"></div>';
-    renderWithAppShell(html,'home');
+function renderWorkspaceFinal(lessonId){
+  const lesson = runtime.lessons[lessonId];
+  const stage = lesson.stages.find(function(item){ return item.id === 'architecture_assembly'; });
+  const lp = getLessonProgress(lessonId).lesson;
+  const info = workspaceCompleteness(lp, stage);
+  const final = lp.workspace.final || {};
+  const definitions = finalFieldDefinitions(stage);
+  const form = definitions.map(function(field){
+    return '<div class="ba-field-block"><label>' + escapeHtml(field.label) + '</label><textarea class="ba-textarea" oninput="BusinessArchitecture.updateWorkspaceFinal(\'' + lessonId + '\',\'' + field.key + '\',this.value)">' + escapeHtml(final[field.key] || '') + '</textarea></div>';
+  }).join('');
+  const title = stage.artifact_title || (stage.completion_gate && stage.completion_gate.final_artifact) || 'Итоговый материал';
+  const description = stage.artifact_description || 'Зафиксируйте вывод, решение, метрики и дату повторной проверки.';
+  const html =
+    '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.renderWorkspace(\'' + lessonId + '\',' + (stage.sections.length - 1) + ')">← К разделам</button><span class="ba-status ' + (info.complete ? 'is-done' : 'is-warning') + '">' + (info.complete ? 'Готово к завершению' : 'Заполните оставшиеся поля') + '</span></div>' +
+    '<section class="ba-hero ba-hero-compact"><p class="ba-eyebrow">ИТОГОВОЕ РЕШЕНИЕ</p><h2>' + escapeHtml(title) + '</h2><p>' + escapeHtml(description) + '</p></section>' +
+    '<section class="ba-card"><div class="ba-workspace-fields">' + form + '</div><div class="ba-completeness"><span data-ba-saved class="ba-saved">Сохранено</span><b>' + info.percent + '%</b></div><div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.completeWorkspace(\'' + lessonId + '\')" ' + (info.complete ? '' : 'disabled') + '>Завершить работу</button></div>' +
+    (!info.complete ? '<div class="ba-note" style="margin-top:13px">Для завершения заполните все разделы и итоговое решение.</div>' : '') + '</section><div class="ba-footer-space"></div>';
+  renderWithAppShell(html,'home');
+}
+
+function completeWorkspace(lessonId){
+  const lesson = runtime.lessons[lessonId];
+  const stage = lesson.stages.find(function(item){ return item.id === 'architecture_assembly'; });
+  const bundle = getLessonProgress(lessonId);
+  const info = workspaceCompleteness(bundle.lesson, stage);
+  if (!info.complete) {
+    safeAlert('Практическая работа заполнена не полностью.');
+    return;
   }
-  function completeWorkspace(lessonId){
-    const lesson = runtime.lessons[lessonId];
-    const stage = lesson.stages.find(function(item){ return item.id === 'architecture_assembly'; });
-    const bundle = getLessonProgress(lessonId);
-    const info = workspaceCompleteness(bundle.lesson, stage);
-    if (!info.complete) {
-      safeAlert('Практическая работа заполнена не полностью.');
-      return;
-    }
-    updateLessonProgress(lessonId, function(lp){
-      lp.workspace.completedAt = lp.workspace.completedAt || nowIso();
-      if (!lp.completedStages.includes('architecture_assembly')) lp.completedStages.push('architecture_assembly');
-      lp.completedAt = lp.completedAt || nowIso();
-    });
-    safeAlert('Работа завершена. Финансовый контур сохранён в разделе «Мои материалы».');
-    renderMyArchitecture();
+  updateLessonProgress(lessonId, function(lp){
+    lp.workspace.completedAt = lp.workspace.completedAt || nowIso();
+    if (!lp.completedStages.includes('architecture_assembly')) lp.completedStages.push('architecture_assembly');
+    lp.completedAt = lp.completedAt || nowIso();
+  });
+  const title = stage.artifact_title || (stage.completion_gate && stage.completion_gate.final_artifact) || 'Рабочий материал';
+  const next = nextCatalogEntry(lessonId);
+  if (next && entryUnlocked(next.id)) {
+    safeAlert('Материал «' + title + '» сохранён. Открыт следующий шаг: «' + next.title + '».');
+    return openLesson(next.id);
   }
+  safeAlert('Материал «' + title + '» сохранён в разделе «Мои материалы».');
+  renderMyArchitecture();
+}
 
   function exportWorkspace(lessonId){
     const bundle = getLessonProgress(lessonId);
@@ -1449,33 +1634,55 @@
     setTimeout(function(){ URL.revokeObjectURL(url); },500);
   }
 
-  async function renderMyArchitecture(){
-    try {
-      await ensureRemoteSync(false);
-      await ensureCatalog();
-      const lesson = await ensureLesson('BA-01');
-      const lp = getLessonProgress('BA-01').lesson;
-      if (!workspaceUnlocked('BA-01')) {
-        const html = '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.renderHome()">← К курсу</button></div>' +
-          '<section class="ba-card ba-empty"><p class="ba-eyebrow">МОИ МАТЕРИАЛЫ</p><h2>Здесь появится ваш финансовый контур</h2><p>Сначала пройдите финансовую систему, посмотрите практические материалы и решите управленческие задачи. После этого откроется рабочая форма.</p><div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.continueRoute()">Продолжить урок</button></div></section>';
-        return renderWithAppShell(html,'home');
-      }
-      const stage4 = lesson.stages.find(function(item){ return item.id === 'architecture_assembly'; });
-      const info = workspaceCompleteness(lp, stage4);
-      const route = lp.workspace.route ? routeInfo(lp.workspace.route) : null;
-      const sections = stage4.sections.map(function(section, index){
-        const c = sectionCompleteness(lp, section);
-        const label = c.percent === 100 ? 'готово' : (c.filled ? 'в работе' : 'не начато');
-        return '<button class="ba-lesson-row ' + (c.percent === 100 ? 'is-done' : '') + '" onclick="BusinessArchitecture.renderWorkspace(\'BA-01\',' + index + ')"><span class="ba-lesson-index">' + (index+1) + '</span><span><b>' + escapeHtml(section.title.replace(/^\d+\.\s*/,'')) + '</b><small>' + escapeHtml(section.completion_evidence) + '</small></span><span class="ba-status ' + (c.percent === 100 ? 'is-done' : '') + '">' + label + '</span></button>';
-      }).join('');
-      const html =
-        '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.renderHome()">← К курсу</button><span class="ba-status ' + (lp.completedAt ? 'is-done' : 'is-active') + '">' + (lp.completedAt ? 'Работа завершена' : 'Черновик') + '</span></div>' +
-        '<section class="ba-hero ba-hero-compact"><p class="ba-eyebrow">МОИ МАТЕРИАЛЫ</p><h2>Финансовый контур бизнеса</h2><p>Здесь собираются ваши расчёты, правила учёта и решения по итогам первого урока.</p><div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.renderWorkspace(\'BA-01\')">Продолжить заполнение</button></div></section>' +
-        '<section class="ba-card"><div class="ba-material-summary"><div><span>Готовность</span><b>' + info.percent + '%</b></div><div><span>Контекст</span><b>' + escapeHtml(route ? route.title : 'не выбран') + '</b></div></div><div class="ba-progress-bar"><i style="width:' + info.percent + '%"></i></div></section>' +
-        '<section class="ba-card"><p class="ba-eyebrow">РАЗДЕЛЫ</p><div class="ba-lesson-list">' + sections + '</div></section><div class="ba-footer-space"></div>';
-      renderWithAppShell(html,'home');
-    } catch(error){ errorView(error); }
-  }
+async function renderMyArchitecture(){
+  try {
+    await ensureRemoteSync(false);
+    await ensureCatalog();
+    const entries = catalogEntries();
+    const visibleEntries = entries.filter(function(entry){
+      return workspaceUnlocked(entry.id) || itemHasProgress(entry.id);
+    });
+
+    if (!visibleEntries.length) {
+      const html = '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.renderHome()">← К курсу</button></div>' +
+        '<section class="ba-card ba-empty"><p class="ba-eyebrow">МОИ МАТЕРИАЛЫ</p><h2>Здесь будут собираться рабочие карты бизнеса</h2><p>Сначала завершите управленческие задачи первого урока. После этого откроется практическая форма, а следующие материалы будут добавляться по мере прохождения первой части.</p><div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.continueRoute()">Продолжить обучение</button></div></section>';
+      return renderWithAppShell(html,'home');
+    }
+
+    const materials = [];
+    for (const entry of visibleEntries) {
+      const lesson = await ensureLesson(entry.id);
+      const stage = lesson.stages.find(function(item){ return item.id === 'architecture_assembly'; });
+      const lp = getLessonProgress(entry.id).lesson;
+      const info = workspaceCompleteness(lp, stage);
+      const route = lp.workspace.route ? routeInfo(lp.workspace.route, entry.id) : null;
+      materials.push({entry, lesson, stage, lp, info, route});
+    }
+
+    const completedCount = materials.filter(function(item){ return item.lp.completedAt; }).length;
+    const cards = materials.map(function(item){
+      const status = item.lp.completedAt ? 'готово' : (item.info.filled ? 'в работе' : 'доступно');
+      const cls = item.lp.completedAt ? 'is-done' : '';
+      const title = item.stage.artifact_title || item.stage.completion_gate.final_artifact;
+      const description = item.stage.artifact_description || item.lesson.lesson.completion_result;
+      return '<button class="ba-material-card ' + cls + '" onclick="BusinessArchitecture.renderWorkspace(\'' + item.entry.id + '\')">' +
+        '<span class="ba-material-card-top"><span><small>' + escapeHtml(entryLabel(item.entry)) + '</small><b>' + escapeHtml(title) + '</b></span><span class="ba-status ' + (item.lp.completedAt ? 'is-done' : 'is-active') + '">' + status + '</span></span>' +
+        '<span class="ba-material-card-text">' + escapeHtml(description) + '</span>' +
+        '<span class="ba-material-card-progress"><i style="width:' + item.info.percent + '%"></i></span>' +
+        '<span class="ba-material-card-meta">' + item.info.percent + '% · ' + escapeHtml(item.route ? item.route.title : 'контекст не выбран') + '</span>' +
+      '</button>';
+    }).join('');
+
+    const finalDone = itemCompleted('PART-01-CASE');
+    const html =
+      '<div class="ba-topline"><button class="ba-back" onclick="BusinessArchitecture.renderHome()">← К курсу</button><span class="ba-status ' + (finalDone ? 'is-done' : 'is-active') + '">' + (finalDone ? 'Первая часть завершена' : 'Черновики сохраняются') + '</span></div>' +
+      '<section class="ba-hero ba-hero-compact"><p class="ba-eyebrow">МОИ МАТЕРИАЛЫ</p><h2>' + (finalDone ? 'Финансово-стратегическая карта бизнеса' : 'Рабочие карты первой части') + '</h2><p>' + (finalDone ? 'Финансовая система, стратегия, поток ценности и архитектура управления связаны в единый результат.' : 'Здесь накапливаются материалы, которые вы создаёте после каждого урока.') + '</p><div class="ba-actions"><button class="ba-btn ba-btn-primary" onclick="BusinessArchitecture.continueRoute()">Продолжить обучение</button></div></section>' +
+      '<section class="ba-card"><div class="ba-material-summary"><div><span>Доступно материалов</span><b>' + materials.length + '</b></div><div><span>Завершено</span><b>' + completedCount + '</b></div></div></section>' +
+      '<section class="ba-card"><p class="ba-eyebrow">ПЕРВАЯ ЧАСТЬ</p><div class="ba-material-grid">' + cards + '</div></section><div class="ba-footer-space"></div>';
+    renderWithAppShell(html,'home');
+  } catch(error){ errorView(error); }
+}
+
   function patchPrimaryRoutes(){
     const original = window.primaryRoutesHtmlV40;
     if (typeof original !== 'function' || original.__businessArchitectureV1) return;
