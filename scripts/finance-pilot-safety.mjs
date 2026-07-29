@@ -350,7 +350,7 @@ export function financePilotContentSecurityPolicy(config) {
     "worker-src 'none'",
     `connect-src ${config.mainEdgeOrigin}`,
     "form-action 'none'",
-    "frame-ancestors 'none'",
+    "frame-ancestors https://web.telegram.org",
     "upgrade-insecure-requests",
   ].join("; ");
 }

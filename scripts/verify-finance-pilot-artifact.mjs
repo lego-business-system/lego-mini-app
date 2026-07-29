@@ -128,8 +128,8 @@ export function verifyFinancePilotArtifact({
   if (directives.get("connect-src") !== config.mainEdgeOrigin) {
     throw new Error("artifact CSP does not pin the exact Main staging origin");
   }
-  if (directives.get("frame-ancestors") !== "'none'") {
-    throw new Error("artifact CSP must deny every frame ancestor");
+  if (directives.get("frame-ancestors") !== "https://web.telegram.org") {
+    throw new Error("artifact CSP must allow only the exact Telegram Web frame ancestor");
   }
   const expectedHttpHeaders = [
     ["Content-Security-Policy", contentSecurityPolicy],

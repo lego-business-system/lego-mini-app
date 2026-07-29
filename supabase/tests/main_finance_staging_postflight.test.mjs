@@ -7,7 +7,7 @@ import { planMainFinanceStaging } from "../../scripts/prepare-main-finance-stagi
 
 const STAGING_REF = "bljeoovhydhjhdzwplxh";
 const PRODUCTION_REF = "soxtekhspohkddpdidvp";
-const POSTFLIGHT_SHA256 = "fcf2e403abc496b397db3427029feb9d64fc730821543731384739d743de6090";
+const POSTFLIGHT_SHA256 = "e010d27d41e5ea01c7f8c95523456a5d995a8d8a019ca78fb18ed119d17b79f2";
 const DEPLOYMENT_SET_SHA256 = "8ecac081bf2c64bd107350efcdd1141a0f95d1d8da551db17164b24f141170b4";
 
 const manifest = JSON.parse(readFileSync(
@@ -35,9 +35,13 @@ test("postflight requires exact history, catalog, ACL and data-less state", () =
     "finance_entitlement_outbox_v1",
     "20260715020000",
     "finance_subject_resolver_v1",
+    "20260729010000",
+    "finance_security_definer_owner_acl_v1",
+    "20260729020000",
+    "finance_security_definer_nested_execute_acl_v1",
     "remote_schema",
   ]) assert.match(postflight, new RegExp(value));
-  assert.match(postflight, /v_count <> 4/);
+  assert.match(postflight, /v_count <> 6/);
   assert.match(postflight, /v_count <> 5/);
   assert.match(postflight, /v_count <> 57/);
   assert.match(postflight, /v_count <> 49/);
@@ -45,7 +49,11 @@ test("postflight requires exact history, catalog, ACL and data-less state", () =
   assert.match(postflight, /v_count <> 4 THEN[\s\S]*exact trigger count differs/);
   assert.equal((postflight.match(/'architecture_[a-z_]+_internal'/g) || []).length >= 9, true);
   assert.match(postflight, /exact nine-function contract differs/);
-  assert.match(postflight, /direct table or column ACL remains/);
+  assert.match(postflight, /exact owner-only table or column ACL allow-list differs/);
+  assert.match(
+    postflight,
+    /architecture_upsert_product_entitlement_internal[\s\S]*?'postgres', 'postgres', 'EXECUTE', false/,
+  );
   assert.match(postflight, /exact function ACL allow-list differs/);
   assert.match(postflight, /namespace\.nspname = 'public'[\s\S]*relation\.relkind IN \('r', 'p'\)[\s\S]*SELECT EXISTS/);
   assert.match(postflight, /auth\.users is not empty/);

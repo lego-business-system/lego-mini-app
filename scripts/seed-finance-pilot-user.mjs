@@ -144,7 +144,7 @@ export const EXPECTED_USERS_SCHEMA = Object.freeze({
 
 const INSPECT_USERS_SQL = `SELECT
   (
-    SELECT pg_catalog.coalesce(
+    SELECT COALESCE(
       pg_catalog.jsonb_agg(
         pg_catalog.jsonb_build_object(
           'ordinal_position', columns.ordinal_position::text,
@@ -163,7 +163,7 @@ const INSPECT_USERS_SQL = `SELECT
       AND columns.table_name = 'users'
   ) AS columns,
   (
-    SELECT pg_catalog.coalesce(
+    SELECT COALESCE(
       pg_catalog.jsonb_agg(
         pg_catalog.jsonb_build_object(
           'name', constraints.constraint_name,
@@ -222,7 +222,7 @@ export const SEED_FINANCE_PILOT_SQL = Object.freeze({
 });
 
 export const SEED_FINANCE_PILOT_SQL_SHA256 = Object.freeze({
-  inspect: "bfc22cb081b00618dc9a2437cfa1ab1abd9776243b2bee500bca6b263ecb2b57",
+  inspect: "2abfc2edc36a01d6d30f87f6eedf356fd6597727d257df514d565c017f6f714b",
   insert: "8144d7d8c053dfe64ebc3872a911d835692df27204589a20f1d18cbac459e779",
 });
 

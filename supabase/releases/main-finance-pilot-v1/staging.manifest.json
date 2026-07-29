@@ -11,7 +11,7 @@
     "soxtekhspohkddpdidvp.supabase.co"
   ],
   "supabaseCliVersion": "2.109.1",
-  "migrationSetSha256": "fa249161e5032bef09945b3baf6db3e4ecf054cc44cb6cbafd39d4ba8d98e79a",
+  "migrationSetSha256": "a22faf5d0c9f8d7b230b46b2be42a750f5dcd0ced2b94d974f068b8e465b3508",
   "migrations": [
     {
       "path": "supabase/migrations/20260714235900_finance_integration_foundation.sql",
@@ -24,6 +24,14 @@
     {
       "path": "supabase/migrations/20260715020000_finance_subject_resolver_v1.sql",
       "sha256": "1896a473adb43411c94da47226e2ed4b070043b152ebf92df903dee1073f338c"
+    },
+    {
+      "path": "supabase/migrations/20260729010000_finance_security_definer_owner_acl_v1.sql",
+      "sha256": "a02fb206c54c6f186fe246c430410c9b97a9126c3e959293455122eac3aa0905"
+    },
+    {
+      "path": "supabase/migrations/20260729020000_finance_security_definer_nested_execute_acl_v1.sql",
+      "sha256": "493b3963053e317e04803b6662bfb2aba9ce1e24292262e2921261a1b4c425a3"
     }
   ],
   "remoteBaseline": {
@@ -57,9 +65,9 @@
   ],
   "postflight": {
     "path": "supabase/releases/main-finance-pilot-v1/postflight.sql",
-    "sha256": "fcf2e403abc496b397db3427029feb9d64fc730821543731384739d743de6090",
+    "sha256": "e010d27d41e5ea01c7f8c95523456a5d995a8d8a019ca78fb18ed119d17b79f2",
     "transactionMode": "read only",
-    "expectedMigrationCount": 4,
+    "expectedMigrationCount": 6,
     "expectedPublicDataRows": 0,
     "expectedAuthUsers": 0
   },

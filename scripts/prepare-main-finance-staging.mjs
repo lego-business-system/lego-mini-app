@@ -89,17 +89,19 @@ function readManifest() {
     || manifest.allowedStagingProjectRefs[0] !== "bljeoovhydhjhdzwplxh"
   ) fail("Main staging allow-list differs from the reviewed contract");
   if (manifest.supabaseCliVersion !== "2.109.1") fail("Supabase CLI pin differs");
-  if (!Array.isArray(manifest.migrations) || manifest.migrations.length !== 3) {
-    fail("manifest must contain exactly three migrations");
+  if (!Array.isArray(manifest.migrations) || manifest.migrations.length !== 5) {
+    fail("manifest must contain exactly five staging migrations");
   }
   const expectedNames = [
     "20260714235900_finance_integration_foundation.sql",
     "20260715010000_finance_entitlement_outbox_v1.sql",
     "20260715020000_finance_subject_resolver_v1.sql",
+    "20260729010000_finance_security_definer_owner_acl_v1.sql",
+    "20260729020000_finance_security_definer_nested_execute_acl_v1.sql",
   ];
   const actualNames = manifest.migrations.map(item => path.basename(item.path));
   if (JSON.stringify(actualNames) !== JSON.stringify(expectedNames)) {
-    fail("migration order differs from the reviewed three-file contract");
+    fail("migration order differs from the reviewed five-file contract");
   }
   const migrationSet = manifest.migrations
     .map(item => `${item.path}\0${item.sha256}\n`)
@@ -118,9 +120,9 @@ function readManifest() {
   }
   if (
     manifest.postflight?.path !== "supabase/releases/main-finance-pilot-v1/postflight.sql"
-    || manifest.postflight.sha256 !== "fcf2e403abc496b397db3427029feb9d64fc730821543731384739d743de6090"
+    || manifest.postflight.sha256 !== "e010d27d41e5ea01c7f8c95523456a5d995a8d8a019ca78fb18ed119d17b79f2"
     || manifest.postflight.transactionMode !== "read only"
-    || manifest.postflight.expectedMigrationCount !== 4
+    || manifest.postflight.expectedMigrationCount !== 6
     || manifest.postflight.expectedPublicDataRows !== 0
     || manifest.postflight.expectedAuthUsers !== 0
   ) fail("hosted staging postflight contract differs");

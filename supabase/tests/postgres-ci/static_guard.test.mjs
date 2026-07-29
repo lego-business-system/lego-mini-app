@@ -19,6 +19,14 @@ const resolverMigrationUrl = new URL(
   "supabase/migrations/20260715020000_finance_subject_resolver_v1.sql",
   root,
 );
+const ownerAclMigrationUrl = new URL(
+  "supabase/migrations/20260729010000_finance_security_definer_owner_acl_v1.sql",
+  root,
+);
+const ownerExecuteMigrationUrl = new URL(
+  "supabase/migrations/20260729020000_finance_security_definer_nested_execute_acl_v1.sql",
+  root,
+);
 const releasePostflightUrl = new URL(
   "supabase/releases/main-finance-pilot-v1/postflight.sql",
   root,
@@ -30,6 +38,7 @@ const workflow = readFileSync(
 const migration = readFileSync(migrationUrl, "utf8");
 const outboxMigration = readFileSync(outboxMigrationUrl, "utf8");
 const resolverMigration = readFileSync(resolverMigrationUrl, "utf8");
+const ownerExecuteMigration = readFileSync(ownerExecuteMigrationUrl, "utf8");
 const releasePostflight = readFileSync(releasePostflightUrl, "utf8");
 const runScript = readFileSync(new URL("run.sh", harness), "utf8");
 const bootstrap = readFileSync(new URL("bootstrap.sql", harness), "utf8");
@@ -40,6 +49,14 @@ const outboxBehaviorSmoke = readFileSync(
 );
 const postflight = readFileSync(new URL("postflight.sql", harness), "utf8");
 const outboxPostflight = readFileSync(new URL("outbox_postflight.sql", harness), "utf8");
+const ownerAclPostflight = readFileSync(
+  new URL("owner_acl_postflight.sql", harness),
+  "utf8",
+);
+const ownerExecutePostflight = readFileSync(
+  new URL("owner_execute_postflight.sql", harness),
+  "utf8",
+);
 const resolverBehaviorSmoke = readFileSync(
   new URL("resolver_behavior_smoke.sql", harness),
   "utf8",
@@ -58,6 +75,8 @@ const expectedHarnessFiles = [
   "catalog_fingerprint.sql",
   "outbox_behavior_smoke.sql",
   "outbox_postflight.sql",
+  "owner_acl_postflight.sql",
+  "owner_execute_postflight.sql",
   "postflight.sql",
   "resolver_behavior_smoke.sql",
   "resolver_postflight.sql",
@@ -237,12 +256,12 @@ test("subject resolver is service-only and preserves bigint identity as text", (
 test("hosted Main staging postflight is pinned, read-only and exercised locally", () => {
   assert.equal(
     createHash("sha256").update(releasePostflight).digest("hex"),
-    "fcf2e403abc496b397db3427029feb9d64fc730821543731384739d743de6090",
+    "e010d27d41e5ea01c7f8c95523456a5d995a8d8a019ca78fb18ed119d17b79f2",
   );
   assert.match(releasePostflight, /^SET TRANSACTION READ ONLY;$/m);
   assert.match(releasePostflight, /bljeoovhydhjhdzwplxh/);
   assert.match(releasePostflight, /soxtekhspohkddpdidvp/);
-  assert.match(releasePostflight, /migration history is not one remote_schema plus the exact three v1 migrations/);
+  assert.match(releasePostflight, /migration history is not one remote_schema plus the exact five staging migrations/);
   assert.match(releasePostflight, /exact five-table\/RLS\/owner contract differs/);
   assert.match(releasePostflight, /exact nine-function contract differs/);
   assert.match(releasePostflight, /data-less public table %I\.%I is not empty/);
@@ -275,6 +294,9 @@ test("harness inputs are regular files and runner fails closed", () => {
   const resolverMigrationStatus = lstatSync(resolverMigrationUrl);
   assert.ok(resolverMigrationStatus.isFile());
   assert.ok(!resolverMigrationStatus.isSymbolicLink());
+  const ownerAclMigrationStatus = lstatSync(ownerAclMigrationUrl);
+  assert.ok(ownerAclMigrationStatus.isFile());
+  assert.ok(!ownerAclMigrationStatus.isSymbolicLink());
   const releasePostflightStatus = lstatSync(releasePostflightUrl);
   assert.ok(releasePostflightStatus.isFile());
   assert.ok(!releasePostflightStatus.isSymbolicLink());
@@ -408,6 +430,15 @@ test("external postflight and fingerprint cover semantic catalog state", () => {
   assert.match(outboxPostflight, /v_index_count <> 10/);
   assert.match(outboxPostflight, /forbidden identity or secret column exists/);
   assert.match(outboxPostflight, /exact function ACL allow-list differs/);
+  assert.match(ownerAclPostflight, /owner DML allow-list differs/);
+  assert.match(ownerAclPostflight, /service_role has direct table access/);
+  assert.match(ownerAclPostflight, /unexpected table ACL exists/);
+  assert.equal(
+    createHash("sha256").update(ownerExecuteMigration).digest("hex"),
+    "493b3963053e317e04803b6662bfb2aba9ce1e24292262e2921261a1b4c425a3",
+  );
+  assert.match(ownerExecutePostflight, /v_acl_count IS DISTINCT FROM 1/);
+  assert.match(ownerExecutePostflight, /unexpected nested entitlement primitive ACL exists/);
   assert.match(fingerprint, /architecture_finance_access_desired/);
   assert.match(fingerprint, /architecture_finance_access_outbox/);
   assert.match(fingerprint, /architecture_claim_finance_access_outbox_internal/);

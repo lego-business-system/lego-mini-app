@@ -242,7 +242,8 @@ hash внешнего environment-файла. В environment-файле оба g
 7. Собрать и проверить отдельный connector artifact из ровно семи файлов.
    Седьмой файл `_headers` предназначен для Cloudflare Pages: он возвращает
    побайтово тот же CSP как HTTP header, оставляет в `connect-src` только один
-   точный Main staging origin, устанавливает `frame-ancestors 'none'`,
+   точный Main staging origin, разрешает `frame-ancestors` только для точного
+   origin `https://web.telegram.org`, необходимого Telegram Web Mini App,
    `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, закрытую
    Permissions Policy, `Cross-Origin-Opener-Policy: same-origin` и
    `Cross-Origin-Resource-Policy: same-origin`. Опубликовать только эту output-

@@ -49,7 +49,7 @@ BEGIN
   INTO v_count
   FROM supabase_migrations.schema_migrations;
 
-  IF v_count <> 4
+  IF v_count <> 6
      OR NOT EXISTS (
        SELECT 1 FROM supabase_migrations.schema_migrations
        WHERE version = '20260714235900'
@@ -65,12 +65,23 @@ BEGIN
        WHERE version = '20260715020000'
          AND name = 'finance_subject_resolver_v1'
      )
+     OR NOT EXISTS (
+       SELECT 1 FROM supabase_migrations.schema_migrations
+       WHERE version = '20260729010000'
+         AND name = 'finance_security_definer_owner_acl_v1'
+     )
+     OR NOT EXISTS (
+       SELECT 1 FROM supabase_migrations.schema_migrations
+       WHERE version = '20260729020000'
+         AND name = 'finance_security_definer_nested_execute_acl_v1'
+     )
      OR (
        SELECT count(*)
        FROM supabase_migrations.schema_migrations
        WHERE name = 'remote_schema'
          AND version ~ '^[0-9]{14}$'
          AND version > '20260715020000'
+         AND version < '20260729010000'
      ) <> 1
      OR EXISTS (
        SELECT 1
@@ -78,14 +89,16 @@ BEGIN
        WHERE (version, name) NOT IN (
          ('20260714235900', 'finance_integration_foundation'),
          ('20260715010000', 'finance_entitlement_outbox_v1'),
-         ('20260715020000', 'finance_subject_resolver_v1')
+         ('20260715020000', 'finance_subject_resolver_v1'),
+         ('20260729010000', 'finance_security_definer_owner_acl_v1'),
+         ('20260729020000', 'finance_security_definer_nested_execute_acl_v1')
        )
          AND name IS DISTINCT FROM 'remote_schema'
      )
   THEN
     RAISE EXCEPTION USING
       ERRCODE = '55000',
-      MESSAGE = 'Main staging postflight failed: migration history is not one remote_schema plus the exact three v1 migrations.';
+      MESSAGE = 'Main staging postflight failed: migration history is not one remote_schema plus the exact five staging migrations.';
   END IF;
 
   SELECT count(*)
@@ -337,13 +350,41 @@ BEGIN
   END IF;
 
   IF EXISTS (
+    WITH expected(relation_name, grantee_name, grantor_name, privilege_type, is_grantable) AS (
+      SELECT
+        relation_name,
+        'postgres'::text,
+        'postgres'::text,
+        privilege_type,
+        false
+      FROM unnest(v_expected_tables) AS relation_name
+      CROSS JOIN unnest(ARRAY['SELECT', 'INSERT', 'UPDATE']::text[]) AS privilege_type
+    ),
+    actual AS (
+      SELECT
+        relation.relname::text AS relation_name,
+        CASE WHEN exploded.grantee = 0 THEN 'PUBLIC'
+          ELSE pg_catalog.pg_get_userbyid(exploded.grantee) END AS grantee_name,
+        pg_catalog.pg_get_userbyid(exploded.grantor) AS grantor_name,
+        exploded.privilege_type,
+        exploded.is_grantable
+      FROM pg_catalog.pg_class AS relation
+      JOIN pg_catalog.pg_namespace AS namespace
+        ON namespace.oid = relation.relnamespace
+      CROSS JOIN LATERAL pg_catalog.aclexplode(relation.relacl) AS exploded
+      WHERE namespace.nspname = 'public'
+        AND relation.relname::text = ANY (v_expected_tables)
+    )
     SELECT 1
-    FROM pg_catalog.pg_class AS relation
-    JOIN pg_catalog.pg_namespace AS namespace
-      ON namespace.oid = relation.relnamespace
-    CROSS JOIN LATERAL pg_catalog.aclexplode(relation.relacl) AS exploded
-    WHERE namespace.nspname = 'public'
-      AND relation.relname::text = ANY (v_expected_tables)
+    FROM expected
+    FULL JOIN actual USING (
+      relation_name,
+      grantee_name,
+      grantor_name,
+      privilege_type,
+      is_grantable
+    )
+    WHERE expected.relation_name IS NULL OR actual.relation_name IS NULL
   ) OR EXISTS (
     SELECT 1
     FROM pg_catalog.pg_attribute AS attribute
@@ -361,7 +402,7 @@ BEGIN
       AND NOT attribute.attisdropped
   ) THEN
     RAISE EXCEPTION USING ERRCODE = '42501',
-      MESSAGE = 'Main staging postflight failed: direct table or column ACL remains.';
+      MESSAGE = 'Main staging postflight failed: exact owner-only table or column ACL allow-list differs.';
   END IF;
 
   IF NOT pg_catalog.has_schema_privilege('service_role', 'public', 'USAGE')
@@ -374,7 +415,8 @@ BEGIN
            ('architecture_get_finance_access_status_internal', 'uuid, uuid', 'service_role', 'postgres', 'EXECUTE', false),
            ('architecture_claim_finance_access_outbox_internal', 'uuid, text, integer, uuid', 'service_role', 'postgres', 'EXECUTE', false),
            ('architecture_finish_finance_access_outbox_internal', 'uuid, uuid, text, text', 'service_role', 'postgres', 'EXECUTE', false),
-           ('architecture_resolve_finance_subject_internal', 'uuid', 'service_role', 'postgres', 'EXECUTE', false)
+           ('architecture_resolve_finance_subject_internal', 'uuid', 'service_role', 'postgres', 'EXECUTE', false),
+           ('architecture_upsert_product_entitlement_internal', 'bytea, text, text, timestamp with time zone, timestamp with time zone', 'postgres', 'postgres', 'EXECUTE', false)
        ),
        actual AS (
          SELECT

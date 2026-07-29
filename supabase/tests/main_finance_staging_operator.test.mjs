@@ -19,6 +19,8 @@ const MIGRATIONS = [
   "20260714235900_finance_integration_foundation.sql",
   "20260715010000_finance_entitlement_outbox_v1.sql",
   "20260715020000_finance_subject_resolver_v1.sql",
+  "20260729010000_finance_security_definer_owner_acl_v1.sql",
+  "20260729020000_finance_security_definer_nested_execute_acl_v1.sql",
 ];
 
 function temporaryDirectory(t, prefix) {
@@ -83,6 +85,8 @@ if (args[0] === "--version") {
     "20260714235900 |                | 2026-07-14",
     "20260715010000 |                | 2026-07-15",
     "20260715020000 |                | 2026-07-15",
+    "20260729010000 |                | 2026-07-29",
+    "20260729020000 |                | 2026-07-29",
     "20260722120000 | 20260722120000 | 2026-07-22",
   ].join("\\n") + "\\n");
 } else if (args[0] === "db" && args[1] === "push" && args.includes("--dry-run")) {
@@ -131,7 +135,7 @@ function calls(fixture) {
   return entries(fixture).map(entry => entry.args);
 }
 
-test("default is a local plan with the exact three-file and two-function boundary", () => {
+test("default is a local plan with the exact five-file and two-function boundary", () => {
   assert.match(readFileSync(".gitignore", "utf8"), /^supabase\/\.temp\/$/m);
   const result = planMainFinanceStaging(["--project-ref", STAGING_REF], {
     environment: new Proxy({}, {

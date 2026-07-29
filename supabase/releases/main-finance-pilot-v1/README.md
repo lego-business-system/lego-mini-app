@@ -7,7 +7,7 @@
 
 - допустимый Main staging: `bljeoovhydhjhdzwplxh`;
 - запрещённый Main production: `soxtekhspohkddpdidvp`;
-- миграции: ровно три файла из `staging.manifest.json`;
+- миграции: ровно пять файлов из `staging.manifest.json`;
 - Edge Functions: только `finance-sync-entitlements` и `finance-issue-code`;
 - оба server gate до E2E: `disabled`;
 - production-данные в staging: `0` строк.
@@ -23,7 +23,7 @@ node scripts/prepare-main-finance-staging.mjs \
 `config push`, `secrets set` или `functions deploy`. `--apply` всегда
 отклоняется.
 
-## Postflight после трёх миграций
+## Postflight после пяти миграций
 
 [`postflight.sql`](postflight.sql) запускается только через соединение, уже
 независимо подтверждённое как exact Main staging. Connection string или пароль
@@ -32,17 +32,20 @@ node scripts/prepare-main-finance-staging.mjs \
 SHA-256:
 
 ```text
-fcf2e403abc496b397db3427029feb9d64fc730821543731384739d743de6090
+e010d27d41e5ea01c7f8c95523456a5d995a8d8a019ca78fb18ed119d17b79f2
 ```
 
 Postflight открывает `READ ONLY` транзакцию и требует одновременно:
 
-1. историю из одной поздней `<timestamp>/remote_schema` и трёх точных v1
+1. историю из одной `<timestamp>/remote_schema` и пяти точных staging
    миграций;
 2. пять точных integration tables, 57 колонок, 49 constraints, 20 indexes и
    четыре пользовательских trigger;
-3. RLS без policy, владельца `postgres`, отсутствие прямых table/column ACL;
-4. девять точных function signatures/bodies/metadata и семь service-only ACL;
+3. RLS без policy, владельца `postgres`, ровно owner-only
+   `SELECT`/`INSERT`/`UPDATE` ACL на пяти integration tables и отсутствие
+   column ACL;
+4. девять точных function signatures/bodies/metadata, семь service-only ACL
+   и один owner-only `EXECUTE` на вложенном entitlement primitive;
 5. исходный контракт `public.users.id uuid UNIQUE NOT NULL` и
    `telegram_id bigint UNIQUE NOT NULL`;
 6. ноль строк во всех `public` tables и в `auth.users`.

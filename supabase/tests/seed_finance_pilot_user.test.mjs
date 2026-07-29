@@ -28,7 +28,7 @@ const TELEGRAM_ID = "987654321";
 const ACCESS_TOKEN = "sbp_fixture_management_access_token_0123456789";
 const RECORDED_AT = "2026-07-29T00:00:00.000Z";
 const INSPECT_SHA256 =
-  "bfc22cb081b00618dc9a2437cfa1ab1abd9776243b2bee500bca6b263ecb2b57";
+  "2abfc2edc36a01d6d30f87f6eedf356fd6597727d257df514d565c017f6f714b";
 const INSERT_SHA256 =
   "8144d7d8c053dfe64ebc3872a911d835692df27204589a20f1d18cbac459e779";
 

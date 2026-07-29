@@ -6,6 +6,8 @@ harness_dir="$repo_root/supabase/tests/postgres-ci"
 foundation_migration="$repo_root/supabase/migrations/20260714235900_finance_integration_foundation.sql"
 outbox_migration="$repo_root/supabase/migrations/20260715010000_finance_entitlement_outbox_v1.sql"
 resolver_migration="$repo_root/supabase/migrations/20260715020000_finance_subject_resolver_v1.sql"
+owner_acl_migration="$repo_root/supabase/migrations/20260729010000_finance_security_definer_owner_acl_v1.sql"
+owner_execute_migration="$repo_root/supabase/migrations/20260729020000_finance_security_definer_nested_execute_acl_v1.sql"
 release_postflight="$repo_root/supabase/releases/main-finance-pilot-v1/postflight.sql"
 
 readonly -a required_harness_files=(
@@ -15,6 +17,8 @@ readonly -a required_harness_files=(
   catalog_fingerprint.sql
   outbox_behavior_smoke.sql
   outbox_postflight.sql
+  owner_acl_postflight.sql
+  owner_execute_postflight.sql
   postflight.sql
   resolver_behavior_smoke.sql
   resolver_postflight.sql
@@ -93,7 +97,13 @@ done
 
 [[ -d "$harness_dir" && ! -L "$harness_dir" ]] ||
   fail "harness directory must be a real non-symlink directory"
-for migration_path in "$foundation_migration" "$outbox_migration" "$resolver_migration"; do
+for migration_path in \
+  "$foundation_migration" \
+  "$outbox_migration" \
+  "$resolver_migration" \
+  "$owner_acl_migration" \
+  "$owner_execute_migration"
+do
   [[ -f "$migration_path" && ! -L "$migration_path" ]] ||
     fail "reviewed migration must be a regular non-symlink file"
 done
@@ -209,6 +219,10 @@ apply_file "$outbox_migration"
 apply_file "$harness_dir/outbox_postflight.sql"
 apply_file "$resolver_migration"
 apply_file "$harness_dir/resolver_postflight.sql"
+apply_file "$owner_acl_migration"
+apply_file "$harness_dir/owner_acl_postflight.sql"
+apply_file "$owner_execute_migration"
+apply_file "$harness_dir/owner_execute_postflight.sql"
 
 psql_ci --command="
   CREATE SCHEMA supabase_migrations AUTHORIZATION postgres;
@@ -222,6 +236,8 @@ psql_ci --command="
     ('20260714235900', ARRAY[]::text[], 'finance_integration_foundation'),
     ('20260715010000', ARRAY[]::text[], 'finance_entitlement_outbox_v1'),
     ('20260715020000', ARRAY[]::text[], 'finance_subject_resolver_v1'),
+    ('20260729010000', ARRAY[]::text[], 'finance_security_definer_owner_acl_v1'),
+    ('20260729020000', ARRAY[]::text[], 'finance_security_definer_nested_execute_acl_v1'),
     ('20260722120000', ARRAY[]::text[], 'remote_schema');
   DELETE FROM public.users;
 " >/dev/null
@@ -245,6 +261,8 @@ stable_data_fingerprint="$(data_fingerprint)"
 apply_file "$harness_dir/outbox_behavior_smoke.sql"
 apply_file "$harness_dir/resolver_behavior_smoke.sql"
 apply_file "$harness_dir/outbox_postflight.sql"
+apply_file "$harness_dir/owner_acl_postflight.sql"
+apply_file "$harness_dir/owner_execute_postflight.sql"
 apply_file "$harness_dir/resolver_postflight.sql"
 
 if psql_ci --command="
@@ -331,6 +349,12 @@ smoke_data_fingerprint="$(data_fingerprint)"
 [[ "$smoke_data_fingerprint" == "$stable_data_fingerprint" ]] ||
   fail "data changed during rollback or access-denial smoke tests"
 
+owner_execute_retry_catalog_fingerprint="$(catalog_fingerprint)"
+apply_file "$owner_execute_migration"
+apply_file "$harness_dir/owner_execute_postflight.sql"
+[[ "$(catalog_fingerprint)" == "$owner_execute_retry_catalog_fingerprint" ]] ||
+  fail "owner EXECUTE correction changed stable catalog state"
+
 if foundation_retry_output="$(psql_ci --set=VERBOSITY=verbose --file="$foundation_migration" 2>&1)"; then
   fail "foundation one-shot migration unexpectedly accepted a second application"
 fi
@@ -355,7 +379,16 @@ fi
 [[ "$resolver_retry_output" == *"Finance subject resolver already exists; this one-shot staging migration rejects drift and reruns."* ]] ||
   fail "rejected resolver retry did not report the reviewed one-shot preflight error"
 
+owner_acl_retry_catalog_fingerprint="$(catalog_fingerprint)"
+owner_acl_retry_data_fingerprint="$(data_fingerprint)"
+apply_file "$owner_acl_migration"
+apply_file "$harness_dir/owner_acl_postflight.sql"
+[[ "$(catalog_fingerprint)" == "$owner_acl_retry_catalog_fingerprint" ]] ||
+  fail "owner ACL correction changed stable catalog state"
+[[ "$(data_fingerprint)" == "$owner_acl_retry_data_fingerprint" ]] ||
+  fail "owner ACL correction changed stable data state"
 apply_file "$harness_dir/outbox_postflight.sql"
+apply_file "$harness_dir/owner_execute_postflight.sql"
 apply_file "$harness_dir/resolver_postflight.sql"
 final_catalog_fingerprint="$(catalog_fingerprint)"
 final_data_fingerprint="$(data_fingerprint)"

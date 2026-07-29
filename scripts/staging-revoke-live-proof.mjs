@@ -147,7 +147,7 @@ function snapshotSelect(table) {
        pg_catalog.encode(
          extensions.digest(
            pg_catalog.convert_to(
-             pg_catalog.coalesce(
+             COALESCE(
                pg_catalog.string_agg(
                  row_sha256,
                  E'\\n'
@@ -190,7 +190,7 @@ catalog_proof AS (
          pg_catalog.encode(
            extensions.digest(
              pg_catalog.convert_to(
-               pg_catalog.coalesce(
+               COALESCE(
                  pg_catalog.string_agg(
                    relation_name,
                    E'\\n'
@@ -586,11 +586,11 @@ export const STAGING_REVOKE_SQL = Object.freeze({
 
 export const STAGING_REVOKE_SQL_SHA256 = Object.freeze({
   financeBaseline:
-    "2b80d13aa8ae9dcc8c35b8c2d2827a555c23279aee5844f7d670dba1980f5fd1",
+    "da14115bfa491297a9a8a43dfddcf255b896554c8b3ef19e465512eb167be2ec",
   mainFinal:
     "9d2d55e073da30f4ce832a268dcd224b4a8889acb2549419598593fe9948752c",
   financeFinal:
-    "1525346a9f588953a0df547d17b2413d5c94027f2ee8b19144033621484452a6",
+    "7e34bcbd22f26fdcb91a2ef29af83822bf2c70446b54d4088cb94387edba87ca",
 });
 
 for (const [queryId, query] of Object.entries(STAGING_REVOKE_SQL)) {

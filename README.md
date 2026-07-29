@@ -34,8 +34,9 @@
 Полный Main-сайт не является pilot artifact. Сборка физически содержит ровно
 семь файлов: Telegram shell, публичную staging-конфигурацию, Finance JS/CSS и
 Cloudflare Pages `_headers`. Последний возвращает тот же CSP как HTTP-заголовок,
-фиксирует единственный Main staging origin в `connect-src`, запрещает все
-`frame-ancestors` и добавляет `nosniff`, `no-referrer`, Permissions Policy,
+фиксирует единственный Main staging origin в `connect-src`, разрешает
+встраивание только точному origin `https://web.telegram.org` и добавляет
+`nosniff`, `no-referrer`, Permissions Policy,
 COOP и CORP. Сборка не копирует `app.js`, форум или модуль бизнес-архитектуры.
 Корень production-сайта остаётся неизменным.
 

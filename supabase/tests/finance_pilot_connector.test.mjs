@@ -146,7 +146,7 @@ test("Cloudflare Pages headers enforce the exact HTTP CSP and isolation policies
   assert.match(headers, new RegExp(`^  Content-Security-Policy: ${csp.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "mu"));
   assert.match(csp, new RegExp(`(?:^|; )connect-src ${MAIN_ORIGIN}(?:;|$)`));
   assert.doesNotMatch(csp, /connect-src[^;]*(?:\*|https:\s|http:)/u);
-  assert.match(csp, /(?:^|; )frame-ancestors 'none'(?:;|$)/u);
+  assert.match(csp, /(?:^|; )frame-ancestors https:\/\/web\.telegram\.org(?:;|$)/u);
   assert.match(headers, /^  X-Content-Type-Options: nosniff$/mu);
   assert.match(headers, /^  Referrer-Policy: no-referrer$/mu);
   assert.match(headers, /^  Permissions-Policy: camera=\(\), display-capture=\(\), geolocation=\(\), microphone=\(\), payment=\(\), publickey-credentials-get=\(\), usb=\(\)$/mu);
