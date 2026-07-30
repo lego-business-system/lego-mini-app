@@ -24,6 +24,7 @@ import {
   validateLiveRevokeProof,
   verifyLiveRevoke,
 } from "./staging-revoke-live-proof.mjs";
+import { readReviewedExternalJson } from "./finance-pilot-safety.mjs";
 
 const SCRIPT_FILE = fileURLToPath(import.meta.url);
 const REPOSITORY_ROOT = path.resolve(path.dirname(SCRIPT_FILE), "..");
@@ -37,9 +38,9 @@ export const STAGING_GATE_BOUNDARY = Object.freeze({
   ]),
 });
 
-const FINANCE_COMMIT_SHA =
+const LEGACY_UNVERIFIED_FINANCE_COMMIT_SHA =
   "2c2f68356a4021a59904382ea6af4b0892c17d84";
-const MAIN_COMMIT_SHA =
+const LEGACY_UNVERIFIED_MAIN_COMMIT_SHA =
   "92ca53aea17a0e5a4e72f4252a59433a26ab5a8b";
 const CLI_VERSION = "2.109.1";
 const ENABLED = "enabled";
@@ -50,6 +51,31 @@ const RECEIPT_PATTERN = /^([0-9]{6})\.json$/u;
 const UUID_V4 =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const SHA256 = /^[0-9a-f]{64}$/u;
+const GIT_OBJECT_ID = /^[0-9a-f]{40}$/u;
+const ZERO_GIT_OBJECT_ID = "0".repeat(40);
+const SOURCE_PROVENANCE_KIND = "staging-gate-source-provenance-v2";
+const SOURCE_PROVENANCE_MODE =
+  "trusted-git+clean-main-head+byte-bound-runtime+reviewed-finance-v2";
+const REVIEWED_PROVENANCE_KIND =
+  "staging-gate-release-provenance-v2";
+const SOURCE_RUNTIME_FILES = Object.freeze([
+  Object.freeze({
+    path: "scripts/finance-pilot-safety.mjs",
+    mode: "100644",
+  }),
+  Object.freeze({
+    path: "scripts/staging-gates.mjs",
+    mode: "100644",
+  }),
+  Object.freeze({
+    path: "scripts/staging-revoke-live-proof.mjs",
+    mode: "100644",
+  }),
+  Object.freeze({
+    path: "supabase/contracts/staging-revoke-preservation-v1.json",
+    mode: "100644",
+  }),
+]);
 const CLI_ENVIRONMENT_ALLOWLIST = Object.freeze(new Set([
   "PATH",
   "HOME",
@@ -62,6 +88,18 @@ const CLI_ENVIRONMENT_ALLOWLIST = Object.freeze(new Set([
   "LC_ALL",
   "NO_COLOR",
   "SUPABASE_ACCESS_TOKEN",
+]));
+const GIT_ENVIRONMENT_ALLOWLIST = Object.freeze(new Set([
+  "PATH",
+  "HOME",
+  "TMPDIR",
+  "TMP",
+  "TEMP",
+  "SSL_CERT_FILE",
+  "SSL_CERT_DIR",
+  "LANG",
+  "LC_ALL",
+  "NO_COLOR",
 ]));
 
 const GATES = Object.freeze([
@@ -121,6 +159,11 @@ function refuse(message) {
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function gitBlobSha1(value) {
+  const header = Buffer.from(`blob ${value.length}\0`, "utf8");
+  return createHash("sha1").update(header).update(value).digest("hex");
 }
 
 function canonicalJson(value) {
@@ -201,6 +244,8 @@ function parseArguments(argv) {
   const input = {
     action,
     apply: false,
+    gitCli: null,
+    releaseProvenance: null,
     receiptDir: null,
     supabaseCli: null,
     revokeEventId: null,
@@ -215,6 +260,8 @@ function parseArguments(argv) {
       continue;
     }
     if (![
+      "--git-cli",
+      "--release-provenance",
       "--receipt-dir",
       "--supabase-cli",
       "--revoke-event-id",
@@ -225,7 +272,10 @@ function parseArguments(argv) {
     seen.add(argument);
     const value = rest[index + 1];
     if (!value || value.startsWith("--")) refuse(`${argument} requires a value`);
-    if (argument === "--receipt-dir") input.receiptDir = value;
+    if (argument === "--git-cli") input.gitCli = value;
+    else if (argument === "--release-provenance") {
+      input.releaseProvenance = value;
+    } else if (argument === "--receipt-dir") input.receiptDir = value;
     else if (argument === "--supabase-cli") input.supabaseCli = value;
     else input.revokeEventId = value;
     index += 1;
@@ -238,6 +288,23 @@ function parseArguments(argv) {
   ) refuse("--revoke-event-id must be UUIDv4");
   if (action === "attest" && (input.apply || input.revokeEventId)) {
     refuse("attest is read-only and rejects --apply and --revoke-event-id");
+  }
+  const provenanceRequired = (
+    action === "capture-revoke-baseline"
+    || (action === "rollback" && input.revokeEventId !== null)
+  );
+  if (provenanceRequired && (!input.gitCli || !input.releaseProvenance)) {
+    refuse(
+      `${action} with revoke evidence requires --git-cli and --release-provenance`,
+    );
+  }
+  if (
+    !provenanceRequired
+    && (input.gitCli !== null || input.releaseProvenance !== null)
+  ) {
+    refuse(
+      "--git-cli and --release-provenance are accepted only for live revoke evidence",
+    );
   }
   if (action === "capture-revoke-baseline") {
     if (input.apply) {
@@ -259,18 +326,18 @@ function parseArguments(argv) {
   return Object.freeze(input);
 }
 
-function assertExecutable(file) {
+function assertExecutable(file, label = "Supabase CLI") {
   if (
     typeof file !== "string"
     || !path.isAbsolute(file)
     || path.resolve(file) !== file
-  ) refuse("Supabase CLI path must be absolute and normalized");
+  ) refuse(`${label} path must be absolute and normalized`);
   const status = lstatSync(file);
   if (
     !status.isFile()
     || status.isSymbolicLink()
     || (status.mode & 0o111) === 0
-  ) refuse("Supabase CLI must be an executable regular non-symlink file");
+  ) refuse(`${label} must be an executable regular non-symlink file`);
   return realpathSync(file);
 }
 
@@ -298,6 +365,523 @@ function assertExternalPrivateDirectory(directory) {
   return directory;
 }
 
+function readReviewedReleaseProvenance(file) {
+  let reviewed;
+  try {
+    reviewed = readReviewedExternalJson(
+      file,
+      REPOSITORY_ROOT,
+      "staging gate release provenance",
+    );
+  } catch {
+    refuse("reviewed release provenance is unavailable or unsafe");
+  }
+  if ((reviewed.mode & 0o777) !== 0o600) {
+    refuse("reviewed release provenance must have exact mode 0600");
+  }
+  exactKeys(reviewed.value, [
+    "schemaVersion",
+    "kind",
+    "environment",
+    "mainProjectRef",
+    "financeProjectRef",
+    "mainExpectedCommitSha",
+    "mainExpectedTreeSha",
+    "financeReviewedCommitSha",
+    "gitExecutableRealPath",
+    "gitExecutableSha256",
+    "gitVersion",
+  ], "reviewed release provenance");
+  if (
+    reviewed.value.schemaVersion !== 2
+    || reviewed.value.kind !== REVIEWED_PROVENANCE_KIND
+    || reviewed.value.environment !== "staging"
+    || reviewed.value.mainProjectRef !== STAGING_GATE_BOUNDARY.mainStagingRef
+    || reviewed.value.financeProjectRef
+      !== STAGING_GATE_BOUNDARY.financeStagingRef
+    || typeof reviewed.value.mainExpectedCommitSha !== "string"
+    || !GIT_OBJECT_ID.test(reviewed.value.mainExpectedCommitSha)
+    || typeof reviewed.value.mainExpectedTreeSha !== "string"
+    || !GIT_OBJECT_ID.test(reviewed.value.mainExpectedTreeSha)
+    || typeof reviewed.value.financeReviewedCommitSha !== "string"
+    || !GIT_OBJECT_ID.test(reviewed.value.financeReviewedCommitSha)
+    || typeof reviewed.value.gitExecutableRealPath !== "string"
+    || !path.isAbsolute(reviewed.value.gitExecutableRealPath)
+    || path.resolve(reviewed.value.gitExecutableRealPath)
+      !== reviewed.value.gitExecutableRealPath
+    || typeof reviewed.value.gitExecutableSha256 !== "string"
+    || !SHA256.test(reviewed.value.gitExecutableSha256)
+    || typeof reviewed.value.gitVersion !== "string"
+    || !/^git version [\x20-\x7e]{1,160}$/u.test(reviewed.value.gitVersion)
+    || [
+      reviewed.value.mainExpectedCommitSha,
+      reviewed.value.mainExpectedTreeSha,
+      reviewed.value.financeReviewedCommitSha,
+    ].includes(ZERO_GIT_OBJECT_ID)
+  ) refuse("reviewed release provenance contract differs");
+  return Object.freeze({
+    ...reviewed.value,
+    descriptorSha256: reviewed.sha256,
+  });
+}
+
+function scrubGitEnvironment(environment) {
+  const scrubbed = {};
+  for (const [name, value] of Object.entries(environment)) {
+    if (
+      GIT_ENVIRONMENT_ALLOWLIST.has(name)
+      && typeof value === "string"
+    ) scrubbed[name] = value;
+  }
+  return Object.freeze({
+    ...scrubbed,
+    GIT_CONFIG_GLOBAL: "/dev/null",
+    GIT_CONFIG_NOSYSTEM: "1",
+    GIT_OPTIONAL_LOCKS: "0",
+    GIT_TERMINAL_PROMPT: "0",
+  });
+}
+
+function safeGitArguments(command) {
+  return [
+    "-c",
+    "core.autocrlf=false",
+    "-c",
+    "core.fileMode=true",
+    "-c",
+    "core.fsmonitor=false",
+    "-c",
+    "core.hooksPath=/dev/null",
+    "-c",
+    "core.ignoreCase=false",
+    "-c",
+    "core.untrackedCache=false",
+    "-C",
+    REPOSITORY_ROOT,
+    ...command,
+  ];
+}
+
+function invokeGit(dependencies, command) {
+  let result;
+  try {
+    result = dependencies.runGit(
+      dependencies.git,
+      safeGitArguments(command),
+      dependencies.gitEnvironment,
+    );
+  } catch {
+    refuse("Git provenance inspection failed; output withheld");
+  }
+  if (!successfulCliResult(result)) {
+    refuse("Git provenance inspection failed; output withheld");
+  }
+  return result.stdout;
+}
+
+function exactGitLine(source, label) {
+  if (
+    typeof source !== "string"
+    || source.includes("\0")
+    || !/^[^\r\n]+(?:\n)?$/u.test(source)
+  ) refuse(`${label} output differs`);
+  return source.endsWith("\n") ? source.slice(0, -1) : source;
+}
+
+function readPinnedFile(file, label) {
+  let descriptor;
+  try {
+    descriptor = openSync(
+      file,
+      fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0),
+    );
+    const before = fstatSync(descriptor);
+    const bytes = readFileSync(descriptor);
+    const after = fstatSync(descriptor);
+    if (
+      !before.isFile()
+      || !after.isFile()
+      || before.dev !== after.dev
+      || before.ino !== after.ino
+      || before.size !== after.size
+      || before.mtimeMs !== after.mtimeMs
+    ) refuse(`${label} changed while it was inspected`);
+    return Object.freeze({ bytes, status: before });
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Staging gate operator refused:")) {
+      throw error;
+    }
+    refuse(`${label} is unavailable or unsafe`);
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+}
+
+function assertTrustedGitExecutable(file, reviewed, dependencies) {
+  if (
+    typeof file !== "string"
+    || !path.isAbsolute(file)
+    || path.resolve(file) !== file
+    || file !== reviewed.gitExecutableRealPath
+  ) refuse("Git CLI path differs from reviewed release provenance");
+  let status;
+  let realPath;
+  try {
+    status = lstatSync(file);
+    realPath = realpathSync(file);
+  } catch {
+    refuse("Git CLI is unavailable or unsafe");
+  }
+  const currentUid = typeof process.getuid === "function"
+    ? process.getuid()
+    : null;
+  if (
+    !status.isFile()
+    || status.isSymbolicLink()
+    || realPath !== file
+    || (status.mode & 0o111) === 0
+    || (status.mode & 0o022) !== 0
+    || (
+      currentUid !== null
+      && status.uid !== 0
+      && status.uid !== currentUid
+    )
+  ) refuse("Git CLI owner, mode or real path is unsafe");
+  const first = readPinnedFile(file, "Git CLI");
+  if (
+    first.status.dev !== status.dev
+    || first.status.ino !== status.ino
+    || sha256(first.bytes) !== reviewed.gitExecutableSha256
+  ) refuse("Git CLI digest differs from reviewed release provenance");
+  const version = exactGitLine(
+    invokeGit(dependencies, ["--version"]),
+    "Git version",
+  );
+  const second = readPinnedFile(file, "Git CLI");
+  if (
+    version !== reviewed.gitVersion
+    || second.status.dev !== first.status.dev
+    || second.status.ino !== first.status.ino
+    || sha256(second.bytes) !== reviewed.gitExecutableSha256
+  ) refuse("Git CLI version or bytes differ from reviewed release provenance");
+  return Object.freeze({
+    executableRealPath: file,
+    executableSha256: reviewed.gitExecutableSha256,
+    version,
+  });
+}
+
+function assertSafeGitBoundary(gitDirectory) {
+  if (
+    typeof gitDirectory !== "string"
+    || !path.isAbsolute(gitDirectory)
+    || path.resolve(gitDirectory) !== gitDirectory
+  ) refuse("Git repository boundary is unsafe");
+  let repositoryStatus;
+  let dotGitStatus;
+  let gitDirectoryStatus;
+  let repositoryRealPath;
+  let gitDirectoryRealPath;
+  try {
+    repositoryStatus = lstatSync(REPOSITORY_ROOT);
+    dotGitStatus = lstatSync(path.join(REPOSITORY_ROOT, ".git"));
+    gitDirectoryStatus = lstatSync(gitDirectory);
+    repositoryRealPath = realpathSync(REPOSITORY_ROOT);
+    gitDirectoryRealPath = realpathSync(gitDirectory);
+  } catch {
+    refuse("Git repository boundary is unavailable");
+  }
+  if (
+    !repositoryStatus.isDirectory()
+    || repositoryStatus.isSymbolicLink()
+    || (repositoryStatus.mode & 0o022) !== 0
+    || repositoryRealPath !== REPOSITORY_ROOT
+    || (!dotGitStatus.isFile() && !dotGitStatus.isDirectory())
+    || dotGitStatus.isSymbolicLink()
+    || (dotGitStatus.mode & 0o022) !== 0
+    || !gitDirectoryStatus.isDirectory()
+    || gitDirectoryStatus.isSymbolicLink()
+    || (gitDirectoryStatus.mode & 0o022) !== 0
+    || gitDirectoryRealPath !== gitDirectory
+  ) refuse("Git repository boundary is unsafe");
+  if (
+    typeof process.getuid === "function"
+    && (
+      repositoryStatus.uid !== process.getuid()
+      || dotGitStatus.uid !== process.getuid()
+      || gitDirectoryStatus.uid !== process.getuid()
+    )
+  ) refuse("Git repository boundary owner differs");
+  const dotGit = path.join(REPOSITORY_ROOT, ".git");
+  if (dotGitStatus.isDirectory()) {
+    if (realpathSync(dotGit) !== gitDirectory) {
+      refuse("Git directory is not associated with the repository .git");
+    }
+    return;
+  }
+  const pinnedPointer = readPinnedFile(dotGit, "repository .git pointer");
+  if (
+    pinnedPointer.status.dev !== dotGitStatus.dev
+    || pinnedPointer.status.ino !== dotGitStatus.ino
+  ) refuse("repository .git pointer changed while it was inspected");
+  const pointer = pinnedPointer.bytes.toString("utf8");
+  const match = /^gitdir: ([^\0\r\n]+)\n?$/u.exec(pointer);
+  if (
+    match === null
+    || !path.isAbsolute(match[1])
+    || path.resolve(match[1]) !== match[1]
+    || match[1] !== gitDirectory
+  ) refuse("repository .git pointer differs");
+  let pointerRealPath;
+  try {
+    pointerRealPath = realpathSync(match[1]);
+  } catch {
+    refuse("repository .git pointer target is unavailable");
+  }
+  if (pointerRealPath !== gitDirectory) {
+    refuse("Git directory is not associated with the repository .git");
+  }
+}
+
+function assertUnambiguousIndex(dependencies) {
+  const sparseCheckout = exactGitLine(
+    invokeGit(dependencies, [
+      "config",
+      "--type=bool",
+      "--get",
+      "--default",
+      "false",
+      "core.sparseCheckout",
+    ]),
+    "Git sparse-checkout setting",
+  );
+  if (sparseCheckout !== "false") {
+    refuse("Git sparse-checkout is enabled");
+  }
+  const index = invokeGit(dependencies, ["ls-files", "-v", "-z"]);
+  const records = index.split("\0");
+  if (records.at(-1) !== "") {
+    refuse("Git index inspection output differs");
+  }
+  records.pop();
+  if (
+    records.length === 0
+    || records.some(record =>
+      record.length < 3
+      || record[1] !== " "
+      || record[0] !== "H")
+  ) {
+    refuse(
+      "Git index contains assume-unchanged, skip-worktree or non-canonical entries",
+    );
+  }
+}
+
+function inspectRuntimeFileBindings(dependencies, mainGitHeadSha) {
+  const bindings = {};
+  for (const specification of SOURCE_RUNTIME_FILES) {
+    const output = invokeGit(dependencies, [
+      "ls-tree",
+      "-z",
+      "--full-tree",
+      mainGitHeadSha,
+      "--",
+      specification.path,
+    ]);
+    const match = /^([0-9]{6}) blob ([0-9a-f]{40})\t([^\0]+)\0$/u.exec(output);
+    if (
+      match === null
+      || match[1] !== specification.mode
+      || match[3] !== specification.path
+    ) refuse(`tracked runtime entry differs for ${specification.path}`);
+    const file = path.join(REPOSITORY_ROOT, specification.path);
+    let status;
+    let realPath;
+    try {
+      status = lstatSync(file);
+      realPath = realpathSync(file);
+    } catch {
+      refuse(`tracked runtime file is unavailable: ${specification.path}`);
+    }
+    const expectedMode = Number.parseInt(specification.mode.slice(-3), 8);
+    if (
+      !status.isFile()
+      || status.isSymbolicLink()
+      || realPath !== file
+      || (status.mode & 0o777) !== expectedMode
+      || (status.mode & 0o022) !== 0
+      || (
+        typeof process.getuid === "function"
+        && status.uid !== process.getuid()
+      )
+    ) refuse(`tracked runtime file boundary differs: ${specification.path}`);
+    const pinned = readPinnedFile(file, `tracked runtime file ${specification.path}`);
+    if (
+      pinned.status.dev !== status.dev
+      || pinned.status.ino !== status.ino
+      || gitBlobSha1(pinned.bytes) !== match[2]
+    ) refuse(`tracked runtime bytes differ from HEAD: ${specification.path}`);
+    bindings[specification.path] = sha256(pinned.bytes);
+  }
+  return Object.freeze(bindings);
+}
+
+function inspectCurrentSourceProvenance({
+  gitCli,
+  releaseProvenance,
+  environment,
+  runGit,
+}) {
+  const reviewed = readReviewedReleaseProvenance(releaseProvenance);
+  const dependencies = {
+    git: gitCli,
+    gitEnvironment: scrubGitEnvironment(environment),
+    runGit,
+  };
+  const trustedGit = assertTrustedGitExecutable(
+    gitCli,
+    reviewed,
+    dependencies,
+  );
+  const repositoryRoot = exactGitLine(
+    invokeGit(dependencies, ["rev-parse", "--show-toplevel"]),
+    "Git repository root",
+  );
+  if (repositoryRoot !== REPOSITORY_ROOT) {
+    refuse("Git repository root differs from the operator repository");
+  }
+  const gitDirectory = exactGitLine(
+    invokeGit(dependencies, ["rev-parse", "--absolute-git-dir"]),
+    "Git directory",
+  );
+  assertSafeGitBoundary(gitDirectory);
+  assertUnambiguousIndex(dependencies);
+  const mainGitHeadSha = exactGitLine(
+    invokeGit(dependencies, ["rev-parse", "--verify", "HEAD^{commit}"]),
+    "Git HEAD",
+  );
+  if (
+    !GIT_OBJECT_ID.test(mainGitHeadSha)
+    || mainGitHeadSha !== reviewed.mainExpectedCommitSha
+  ) refuse("current Main Git HEAD does not match reviewed release provenance");
+  const mainGitTreeSha = exactGitLine(
+    invokeGit(dependencies, [
+      "rev-parse",
+      "--verify",
+      `${mainGitHeadSha}^{tree}`,
+    ]),
+    "Git HEAD tree",
+  );
+  if (
+    !GIT_OBJECT_ID.test(mainGitTreeSha)
+    || mainGitTreeSha !== reviewed.mainExpectedTreeSha
+  ) refuse("current Main Git HEAD does not match reviewed release provenance");
+  const mainExecutableFiles = inspectRuntimeFileBindings(
+    dependencies,
+    mainGitHeadSha,
+  );
+  const status = invokeGit(dependencies, [
+    "status",
+    "--porcelain=v1",
+    "-z",
+    "--untracked-files=all",
+    "--ignored=matching",
+    "--ignore-submodules=none",
+  ]);
+  if (status !== "") {
+    refuse(
+      "Main Git worktree has tracked, untracked or ignored state at the reviewed HEAD",
+    );
+  }
+  const finalMainGitHeadSha = exactGitLine(
+    invokeGit(dependencies, ["rev-parse", "--verify", "HEAD^{commit}"]),
+    "final Git HEAD",
+  );
+  if (finalMainGitHeadSha !== mainGitHeadSha) {
+    refuse("Git HEAD changed while source provenance was inspected");
+  }
+  const finalMainGitTreeSha = exactGitLine(
+    invokeGit(dependencies, [
+      "rev-parse",
+      "--verify",
+      `${finalMainGitHeadSha}^{tree}`,
+    ]),
+    "final Git HEAD tree",
+  );
+  if (
+    finalMainGitTreeSha !== mainGitTreeSha
+  ) refuse("Git HEAD changed while source provenance was inspected");
+  return Object.freeze({
+    kind: SOURCE_PROVENANCE_KIND,
+    verificationMode: SOURCE_PROVENANCE_MODE,
+    mainGitHeadSha,
+    mainGitTreeSha,
+    financeReviewedCommitSha: reviewed.financeReviewedCommitSha,
+    reviewedDescriptorSha256: reviewed.descriptorSha256,
+    trustedGit,
+    mainExecutableFiles,
+  });
+}
+
+function validateSourceProvenance(value, label) {
+  exactKeys(value, [
+    "kind",
+    "verificationMode",
+    "mainGitHeadSha",
+    "mainGitTreeSha",
+    "financeReviewedCommitSha",
+    "reviewedDescriptorSha256",
+    "trustedGit",
+    "mainExecutableFiles",
+  ], label);
+  exactKeys(value.trustedGit, [
+    "executableRealPath",
+    "executableSha256",
+    "version",
+  ], `${label} trusted Git`);
+  exactKeys(
+    value.mainExecutableFiles,
+    SOURCE_RUNTIME_FILES.map(specification => specification.path),
+    `${label} runtime files`,
+  );
+  if (
+    value.kind !== SOURCE_PROVENANCE_KIND
+    || value.verificationMode !== SOURCE_PROVENANCE_MODE
+    || typeof value.mainGitHeadSha !== "string"
+    || !GIT_OBJECT_ID.test(value.mainGitHeadSha)
+    || typeof value.mainGitTreeSha !== "string"
+    || !GIT_OBJECT_ID.test(value.mainGitTreeSha)
+    || typeof value.financeReviewedCommitSha !== "string"
+    || !GIT_OBJECT_ID.test(value.financeReviewedCommitSha)
+    || [
+      value.mainGitHeadSha,
+      value.mainGitTreeSha,
+      value.financeReviewedCommitSha,
+    ].includes(ZERO_GIT_OBJECT_ID)
+    || typeof value.reviewedDescriptorSha256 !== "string"
+    || !SHA256.test(value.reviewedDescriptorSha256)
+    || typeof value.trustedGit.executableRealPath !== "string"
+    || !path.isAbsolute(value.trustedGit.executableRealPath)
+    || path.resolve(value.trustedGit.executableRealPath)
+      !== value.trustedGit.executableRealPath
+    || typeof value.trustedGit.executableSha256 !== "string"
+    || !SHA256.test(value.trustedGit.executableSha256)
+    || typeof value.trustedGit.version !== "string"
+    || !/^git version [\x20-\x7e]{1,160}$/u.test(value.trustedGit.version)
+    || Object.values(value.mainExecutableFiles).some(digest =>
+      typeof digest !== "string" || !SHA256.test(digest))
+  ) refuse(`${label} contract differs`);
+  return Object.freeze({ ...value });
+}
+
+function assertSourceProvenanceEqual(actual, expected) {
+  validateSourceProvenance(actual, "current source provenance");
+  validateSourceProvenance(expected, "baseline source provenance");
+  if (canonicalJson(actual) !== canonicalJson(expected)) {
+    refuse("source provenance changed during the live revoke proof");
+  }
+}
+
 function receiptExpectedKeys(kind, schemaVersion) {
   const common = [
     "schemaVersion",
@@ -323,12 +907,33 @@ function receiptExpectedKeys(kind, schemaVersion) {
       "liveBaseline",
     ];
   }
+  if (kind === "revoke-baseline" && schemaVersion === 3) {
+    return [
+      ...common,
+      "eventId",
+      "sourceProvenance",
+      "gateAttestation",
+      "hostedReadCount",
+      "liveBaseline",
+    ];
+  }
   if (kind === "revoke-proof" && schemaVersion === 2) {
     return [
       ...common,
       "eventId",
       "financeCommitSha",
       "mainCommitSha",
+      "baselineReceiptSha256",
+      "gateAttestation",
+      "hostedReadCount",
+      "liveProof",
+    ];
+  }
+  if (kind === "revoke-proof" && schemaVersion === 3) {
+    return [
+      ...common,
+      "eventId",
+      "sourceProvenance",
       "baselineReceiptSha256",
       "gateAttestation",
       "hostedReadCount",
@@ -436,16 +1041,27 @@ function validateReceiptSemantics(receipt, receipts) {
   }
   if (receipt.kind === "revoke-baseline") {
     if (
-      receipt.schemaVersion !== 2
+      ![2, 3].includes(receipt.schemaVersion)
       || receipt.operation !== "capture-revoke-baseline"
       || receipt.status !== "observed"
       || receipt.hostedMutationCount !== 0
       || receipt.hostedReadCount !== 1
       || typeof receipt.eventId !== "string"
       || !UUID_V4.test(receipt.eventId)
-      || receipt.financeCommitSha !== FINANCE_COMMIT_SHA
-      || receipt.mainCommitSha !== MAIN_COMMIT_SHA
     ) refuse("revoke baseline receipt semantics differ");
+    if (
+      receipt.schemaVersion === 2
+      && (
+        receipt.financeCommitSha !== LEGACY_UNVERIFIED_FINANCE_COMMIT_SHA
+        || receipt.mainCommitSha !== LEGACY_UNVERIFIED_MAIN_COMMIT_SHA
+      )
+    ) refuse("legacy revoke baseline receipt metadata differs");
+    if (receipt.schemaVersion === 3) {
+      validateSourceProvenance(
+        receipt.sourceProvenance,
+        "revoke baseline source provenance",
+      );
+    }
     validateReceiptAttestation(
       receipt.gateAttestation,
       "revoke baseline gate attestation",
@@ -463,18 +1079,29 @@ function validateReceiptSemantics(receipt, receipts) {
   }
   if (receipt.kind === "revoke-proof") {
     if (
-      receipt.schemaVersion !== 2
+      ![2, 3].includes(receipt.schemaVersion)
       || receipt.operation !== "verify-revoke"
       || receipt.status !== "verified"
       || receipt.hostedMutationCount !== 0
       || receipt.hostedReadCount !== 3
       || typeof receipt.eventId !== "string"
       || !UUID_V4.test(receipt.eventId)
-      || receipt.financeCommitSha !== FINANCE_COMMIT_SHA
-      || receipt.mainCommitSha !== MAIN_COMMIT_SHA
       || typeof receipt.baselineReceiptSha256 !== "string"
       || !SHA256.test(receipt.baselineReceiptSha256)
     ) refuse("revoke proof receipt semantics differ");
+    if (
+      receipt.schemaVersion === 2
+      && (
+        receipt.financeCommitSha !== LEGACY_UNVERIFIED_FINANCE_COMMIT_SHA
+        || receipt.mainCommitSha !== LEGACY_UNVERIFIED_MAIN_COMMIT_SHA
+      )
+    ) refuse("legacy revoke proof receipt metadata differs");
+    if (receipt.schemaVersion === 3) {
+      validateSourceProvenance(
+        receipt.sourceProvenance,
+        "revoke proof source provenance",
+      );
+    }
     validateReceiptAttestation(
       receipt.gateAttestation,
       "revoke proof gate attestation",
@@ -488,7 +1115,13 @@ function validateReceiptSemantics(receipt, receipts) {
       !baselineReceipt
       || baselineReceipt.kind !== "revoke-baseline"
       || baselineReceipt.eventId !== receipt.eventId
+      || baselineReceipt.schemaVersion !== receipt.schemaVersion
     ) refuse("revoke proof baseline receipt differs");
+    if (
+      receipt.schemaVersion === 3
+      && canonicalJson(receipt.sourceProvenance)
+        !== canonicalJson(baselineReceipt.sourceProvenance)
+    ) refuse("revoke proof source provenance differs from baseline");
     validateLiveRevokeProof(receipt.liveProof, {
       baseline: baselineReceipt.liveBaseline,
       eventId: receipt.eventId,
@@ -634,10 +1267,14 @@ function readReceiptChain(receiptDirectory) {
       "receipt",
     );
     if (
-      ![1, 2].includes(receipt.schemaVersion)
+      ![1, 2, 3].includes(receipt.schemaVersion)
       || (
         ["revoke-baseline", "revoke-proof"].includes(receipt.kind)
-        && receipt.schemaVersion !== 2
+        && ![2, 3].includes(receipt.schemaVersion)
+      )
+      || (
+        receipt.schemaVersion === 3
+        && !["revoke-baseline", "revoke-proof"].includes(receipt.kind)
       )
       || receipt.sequence !== index + 1
       || receipt.previousReceiptSha256 !== previousReceiptSha256
@@ -875,6 +1512,11 @@ function revokeBaselineForEvent(chain, eventId) {
   if (matches.length !== 1) {
     refuse("exactly one captured live revoke baseline is required");
   }
+  if (matches[0].schemaVersion !== 3) {
+    refuse(
+      "legacy revoke baseline has no verified source provenance and cannot authorize rollback",
+    );
+  }
   return matches[0];
 }
 
@@ -1011,6 +1653,7 @@ export async function operateStagingGates(argv, {
   environment = process.env,
   now = () => new Date(),
   runCli = defaultRunCli,
+  runGit = defaultRunCli,
   fetchImpl = globalThis.fetch,
 } = {}) {
   assertExactStagingBoundary();
@@ -1021,9 +1664,9 @@ export async function operateStagingGates(argv, {
       mode: "help",
       usage: [
         "staging-gates.mjs attest --receipt-dir ABS_0700 --supabase-cli ABS",
-        "staging-gates.mjs capture-revoke-baseline --receipt-dir ABS_0700 --supabase-cli ABS --revoke-event-id UUIDv4",
+        "staging-gates.mjs capture-revoke-baseline --receipt-dir ABS_0700 --supabase-cli ABS --git-cli ABS --release-provenance ABS_0600 --revoke-event-id UUIDv4",
         "staging-gates.mjs advance --receipt-dir ABS_0700 --supabase-cli ABS --apply",
-        "staging-gates.mjs rollback --receipt-dir ABS_0700 --supabase-cli ABS --apply [--revoke-event-id UUIDv4]",
+        "staging-gates.mjs rollback --receipt-dir ABS_0700 --supabase-cli ABS --apply [--git-cli ABS --release-provenance ABS_0600 --revoke-event-id UUIDv4]",
       ],
     });
   }
@@ -1037,8 +1680,16 @@ export async function operateStagingGates(argv, {
   if (blocker && input.action !== "attest") {
     refuse("an unknown or pending mutation requires read-only attest reconciliation");
   }
+  const sourceProvenance = input.releaseProvenance === null
+    ? null
+    : inspectCurrentSourceProvenance({
+      gitCli: input.gitCli,
+      releaseProvenance: input.releaseProvenance,
+      environment,
+      runGit,
+    });
   const dependencies = {
-    cli: assertExecutable(input.supabaseCli),
+    cli: assertExecutable(input.supabaseCli, "Supabase CLI"),
     runCli,
     environment: scrubEnvironment(environment),
   };
@@ -1093,7 +1744,15 @@ export async function operateStagingGates(argv, {
       accessToken: dependencies.environment.SUPABASE_ACCESS_TOKEN,
       fetchImpl,
     });
+    const finalSourceProvenance = inspectCurrentSourceProvenance({
+      gitCli: input.gitCli,
+      releaseProvenance: input.releaseProvenance,
+      environment,
+      runGit,
+    });
+    assertSourceProvenanceEqual(finalSourceProvenance, sourceProvenance);
     const written = appendReceipt(receiptDirectory, chain, {
+      schemaVersion: 3,
       kind: "revoke-baseline",
       operation: "capture-revoke-baseline",
       status: "observed",
@@ -1102,8 +1761,7 @@ export async function operateStagingGates(argv, {
       hostedMutationCount: 0,
       hostedReadCount: 1,
       eventId: input.revokeEventId,
-      financeCommitSha: FINANCE_COMMIT_SHA,
-      mainCommitSha: MAIN_COMMIT_SHA,
+      sourceProvenance,
       gateAttestation: preAttestation,
       liveBaseline,
     });
@@ -1129,6 +1787,10 @@ export async function operateStagingGates(argv, {
       chain,
       input.revokeEventId,
     );
+    assertSourceProvenanceEqual(
+      sourceProvenance,
+      baselineReceipt.sourceProvenance,
+    );
     const liveProof = await verifyLiveRevoke({
       eventId: input.revokeEventId,
       baseline: baselineReceipt.liveBaseline,
@@ -1136,7 +1798,18 @@ export async function operateStagingGates(argv, {
       fetchImpl,
       now: currentTime,
     });
+    const finalSourceProvenance = inspectCurrentSourceProvenance({
+      gitCli: input.gitCli,
+      releaseProvenance: input.releaseProvenance,
+      environment,
+      runGit,
+    });
+    assertSourceProvenanceEqual(
+      finalSourceProvenance,
+      baselineReceipt.sourceProvenance,
+    );
     const proofWritten = appendReceipt(receiptDirectory, chain, {
+      schemaVersion: 3,
       kind: "revoke-proof",
       operation: "verify-revoke",
       status: "verified",
@@ -1145,8 +1818,7 @@ export async function operateStagingGates(argv, {
       hostedMutationCount: 0,
       hostedReadCount: 3,
       eventId: input.revokeEventId,
-      financeCommitSha: FINANCE_COMMIT_SHA,
-      mainCommitSha: MAIN_COMMIT_SHA,
+      sourceProvenance: finalSourceProvenance,
       baselineReceiptSha256: baselineReceipt.receiptSha256,
       gateAttestation: preAttestation,
       liveProof,

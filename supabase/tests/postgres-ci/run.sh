@@ -224,6 +224,20 @@ apply_file "$harness_dir/owner_acl_postflight.sql"
 apply_file "$owner_execute_migration"
 apply_file "$harness_dir/owner_execute_postflight.sql"
 
+if psql_ci \
+  --command="
+    BEGIN;
+    REVOKE UPDATE
+    ON TABLE public.architecture_finance_access_outbox
+    FROM postgres;
+  " \
+  --file="$harness_dir/outbox_postflight.sql" \
+  >/dev/null 2>&1
+then
+  fail "partial outbox table ACL unexpectedly passed exact-state postflight"
+fi
+apply_file "$harness_dir/outbox_postflight.sql"
+
 psql_ci --command="
   CREATE SCHEMA supabase_migrations AUTHORIZATION postgres;
   CREATE TABLE supabase_migrations.schema_migrations (

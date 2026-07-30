@@ -9,6 +9,8 @@ DECLARE
   v_function_count integer;
   v_trigger_count integer;
   v_policy_count integer;
+  v_table_acl_count integer;
+  v_table_acl_differs boolean;
 BEGIN
   SELECT count(*)
   INTO v_table_count
@@ -130,18 +132,63 @@ BEGIN
       MESSAGE = 'Outbox external postflight failed: a forbidden identity or secret column exists.';
   END IF;
 
-  IF EXISTS (
-    SELECT 1
+  WITH expected(
+    relation_name,
+    grantee_name,
+    grantor_name,
+    privilege_type,
+    is_grantable
+  ) AS (
+    VALUES
+      ('architecture_finance_access_desired', 'postgres', 'postgres', 'SELECT', false),
+      ('architecture_finance_access_desired', 'postgres', 'postgres', 'INSERT', false),
+      ('architecture_finance_access_desired', 'postgres', 'postgres', 'UPDATE', false),
+      ('architecture_finance_access_outbox', 'postgres', 'postgres', 'SELECT', false),
+      ('architecture_finance_access_outbox', 'postgres', 'postgres', 'INSERT', false),
+      ('architecture_finance_access_outbox', 'postgres', 'postgres', 'UPDATE', false)
+  ),
+  actual AS (
+    SELECT
+      relation.relname AS relation_name,
+      CASE
+        WHEN exploded.grantee = 0 THEN 'PUBLIC'
+        ELSE pg_catalog.pg_get_userbyid(exploded.grantee)
+      END AS grantee_name,
+      pg_catalog.pg_get_userbyid(exploded.grantor) AS grantor_name,
+      exploded.privilege_type,
+      exploded.is_grantable
     FROM pg_catalog.pg_class AS relation
     JOIN pg_catalog.pg_namespace AS namespace
       ON namespace.oid = relation.relnamespace
     CROSS JOIN LATERAL pg_catalog.aclexplode(relation.relacl) AS exploded
     WHERE namespace.nspname = 'public'
+      AND relation.relkind = 'r'
       AND relation.relname IN (
         'architecture_finance_access_desired',
         'architecture_finance_access_outbox'
       )
-  ) OR EXISTS (
+  ),
+  difference AS (
+    SELECT 1
+    FROM expected
+    FULL JOIN actual USING (
+      relation_name,
+      grantee_name,
+      grantor_name,
+      privilege_type,
+      is_grantable
+    )
+    WHERE expected.relation_name IS NULL
+       OR actual.relation_name IS NULL
+  )
+  SELECT
+    (SELECT count(*) FROM actual),
+    EXISTS (SELECT 1 FROM difference)
+  INTO v_table_acl_count, v_table_acl_differs;
+
+  IF v_table_acl_count NOT IN (0, 6)
+     OR (v_table_acl_count = 6 AND v_table_acl_differs)
+     OR EXISTS (
     SELECT 1
     FROM pg_catalog.pg_attribute AS attribute
     CROSS JOIN LATERAL pg_catalog.aclexplode(attribute.attacl) AS exploded
@@ -151,10 +198,14 @@ BEGIN
       )
       AND attribute.attnum > 0
       AND NOT attribute.attisdropped
-  ) THEN
+  )
+  THEN
     RAISE EXCEPTION USING
       ERRCODE = '42501',
-      MESSAGE = 'Outbox external postflight failed: direct table or column ACL remains.';
+      MESSAGE = format(
+        'Outbox external postflight failed: table ACL must be empty or the exact six-entry postgres DML allow-list, and column ACL must be empty (table_acl_count=%s).',
+        v_table_acl_count
+      );
   END IF;
 
   IF EXISTS (

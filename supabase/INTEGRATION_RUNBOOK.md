@@ -274,6 +274,101 @@ production boundary, `--apply`; для немедленной адресной �
 `--dispatch`. Если сеть оборвалась после setter, повторная mutation запрещена до
 read-only `status`: outcome считается неизвестным.
 
+## Live revoke proof и честная source provenance
+
+Снимок сохранности Finance и rollback barrier выполняются только оператором
+`staging-gates.mjs`. Перед baseline оператор требует внешний reviewed provenance
+файл с точным режимом `0600`, принадлежащий текущему пользователю, без symlink и
+вне репозитория:
+
+```json
+{
+  "schemaVersion": 2,
+  "kind": "staging-gate-release-provenance-v2",
+  "environment": "staging",
+  "mainProjectRef": "bljeoovhydhjhdzwplxh",
+  "financeProjectRef": "makgsbjduobcphuqzaoq",
+  "mainExpectedCommitSha": "<reviewed clean Main HEAD, 40 lowercase hex>",
+  "mainExpectedTreeSha": "<tree of that exact Main HEAD, 40 lowercase hex>",
+  "financeReviewedCommitSha": "<reviewed Finance release commit, 40 lowercase hex>",
+  "gitExecutableRealPath": "</absolute/real/path/to/reviewed/git>",
+  "gitExecutableSha256": "<SHA-256 of the exact Git executable bytes, 64 lowercase hex>",
+  "gitVersion": "<exact single-line output of that executable --version>"
+}
+```
+
+`mainExpectedCommitSha` и `mainExpectedTreeSha` создаются только после commit
+точного Main release-кандидата. `gitExecutableRealPath`,
+`gitExecutableSha256` и `gitVersion` фиксируются владельцем одновременно с
+review release: путь должен быть абсолютным и уже раскрытым realpath, файл —
+обычным executable без symlink, не group/world-writable и принадлежащим root
+либо текущему оператору. Перед каждым source snapshot оператор дважды читает
+bytes Git executable без следования конечному symlink, сверяет SHA-256 и exact
+`--version`; произвольный binary в `--git-cli` не принимается.
+
+Оператор самостоятельно связывает ответ Git с фактическим `.git`: для обычного
+репозитория realpath каталога `.git` обязан совпасть с
+`rev-parse --absolute-git-dir`; для worktree безопасно прочитанный единственный
+absolute `gitdir:` pointer обязан указывать ровно на тот же реальный каталог.
+Repository root, `.git` и Git directory должны быть real, принадлежать текущему
+оператору и не быть group/world-writable.
+
+До hosted read и повторно перед записью receipt оператор требует одновременно:
+
+- `core.sparseCheckout=false`;
+- ни одной `assume-unchanged`, `skip-worktree` или иной неканонической index
+  записи (`git ls-files -v -z` допускает только normal `H`);
+- пустой porcelain status с учётом всех tracked, всех untracked и matching
+  ignored paths; даже `supabase/.temp/` и иной ignored residue блокируют proof;
+- независимое совпадение фактических bytes с Git blob из exact проверенного
+  commit OID для
+  `scripts/staging-gates.mjs`, `scripts/staging-revoke-live-proof.mjs`,
+  `scripts/finance-pilot-safety.mjs` и
+  `supabase/contracts/staging-revoke-preservation-v1.json`.
+
+Перед операторским запуском sparse-checkout нужно отключить, index-флаги снять,
+а tracked, untracked и ignored residue удалить или перенести вне worktree.
+После проверки runtime bytes и полного status оператор повторно сверяет, что
+HEAD и его tree не изменились за время source snapshot.
+SHA-256 каждого из четырёх runtime-файлов и identity проверенного Git входят в
+`sourceProvenance`; поэтому изменение runtime bytes между baseline и proof
+блокирует rollback.
+
+Finance SHA не объявляется live-проверкой развёрнутого Finance: в receipt он
+называется `financeReviewedCommitSha` и связан SHA-256 с exact bytes внешнего
+reviewed descriptor. Проверка фактического hosted Finance state выполняется
+отдельным Main A → Finance → Main B read-only proof.
+
+До revoke, при четырёх включённых gate:
+
+```bash
+node scripts/staging-gates.mjs capture-revoke-baseline \
+  --receipt-dir /absolute/owner-private/gate-receipts \
+  --supabase-cli /absolute/pinned/supabase \
+  --git-cli /absolute/git \
+  --release-provenance /absolute/owner-private/release-provenance.json \
+  --revoke-event-id <UUIDv4>
+```
+
+После подтверждённого `revoke` со статусом `applied` сначала отключается Main
+protocol. На следующем rollback тот же provenance и UUID обязательны:
+
+```bash
+node scripts/staging-gates.mjs rollback \
+  --receipt-dir /absolute/owner-private/gate-receipts \
+  --supabase-cli /absolute/pinned/supabase \
+  --git-cli /absolute/git \
+  --release-provenance /absolute/owner-private/release-provenance.json \
+  --revoke-event-id <UUIDv4> \
+  --apply
+```
+
+Новые baseline/proof receipts имеют `schemaVersion: 3` и объект
+`sourceProvenance`; прежние v2 receipts с фиксированными commit-полями читаются
+только как историческая hash-chain. Legacy v2 baseline не может разрешить новое
+отключение Main sync: требуется новый UUID и новый v3 baseline. Ни descriptor,
+ни receipt не доказывают deploy сами по себе.
+
 ## Обязательный E2E
 
 1. Вне Telegram, пустой/невалидный/устаревший `initData` → код не выдаётся.

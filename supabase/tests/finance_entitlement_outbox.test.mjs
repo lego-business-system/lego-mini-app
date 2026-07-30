@@ -112,7 +112,34 @@ test("disposable PostgreSQL harness executes and rolls back outbox behavior", ()
   assert.match(behavior, /retry did not enter deterministic backoff/);
   assert.match(behavior, /permanent failure did not enter dead-letter/);
   assert.match(behavior, /^ROLLBACK;$/m);
-  assert.match(postflight, /direct table or column ACL remains/);
+  assert.match(
+    postflight,
+    /v_table_acl_count NOT IN \(0, 6\)/,
+  );
+  assert.match(
+    postflight,
+    /v_table_acl_count = 6 AND v_table_acl_differs/,
+  );
+  assert.match(
+    postflight,
+    /\('architecture_finance_access_desired', 'postgres', 'postgres', 'SELECT', false\)/,
+  );
+  assert.match(
+    postflight,
+    /\('architecture_finance_access_outbox', 'postgres', 'postgres', 'UPDATE', false\)/,
+  );
+  assert.equal(
+    [...postflight.matchAll(
+      /\('architecture_finance_access_(?:desired|outbox)', 'postgres', 'postgres', '(?:SELECT|INSERT|UPDATE)', false\)/g,
+    )].length,
+    6,
+  );
+  assert.match(
+    postflight,
+    /FULL JOIN actual USING \([\s\S]*?grantor_name,[\s\S]*?is_grantable/,
+  );
+  assert.match(postflight, /table ACL must be empty or the exact six-entry postgres DML allow-list/);
+  assert.match(runner, /partial outbox table ACL unexpectedly passed exact-state postflight/);
   assert.match(postflight, /exact function ACL allow-list differs/);
   assert.match(runner, /service_role unexpectedly bypassed the outbox through legacy upsert/);
 });

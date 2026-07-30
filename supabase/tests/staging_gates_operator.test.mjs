@@ -2,16 +2,20 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import {
   chmodSync,
+  lstatSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
   realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   operateStagingGates,
@@ -30,6 +34,37 @@ const NOW = new Date("2026-07-28T04:00:00.000Z");
 const REVOKE_EVENT_ID = "123e4567-e89b-42d3-a456-426614174000";
 const SUBJECT_DIGEST = "a".repeat(64);
 const PROFILE_ID = "123e4567-e89b-42d3-a456-426614174001";
+const MAIN_COMMIT_SHA = "b".repeat(40);
+const MAIN_TREE_SHA = "c".repeat(40);
+const FINANCE_REVIEWED_COMMIT_SHA = "d".repeat(40);
+const LEGACY_MAIN_COMMIT_SHA =
+  "92ca53aea17a0e5a4e72f4252a59433a26ab5a8b";
+const LEGACY_FINANCE_COMMIT_SHA =
+  "2c2f68356a4021a59904382ea6af4b0892c17d84";
+const REPOSITORY_ROOT = realpathSync(path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../..",
+));
+const GIT_CLI = realpathSync("/usr/bin/git");
+const GIT_EXECUTABLE_SHA256 = sha256(readFileSync(GIT_CLI));
+const GIT_VERSION = "git version fixture-pinned";
+const DOT_GIT = path.join(REPOSITORY_ROOT, ".git");
+const dotGitStatus = lstatSync(DOT_GIT);
+const REPOSITORY_GIT_DIRECTORY = dotGitStatus.isDirectory()
+  ? realpathSync(DOT_GIT)
+  : realpathSync(
+    /^gitdir: ([^\r\n]+)\n?$/u.exec(readFileSync(DOT_GIT, "utf8"))[1],
+  );
+const SOURCE_RUNTIME_FILES = Object.freeze([
+  "scripts/finance-pilot-safety.mjs",
+  "scripts/staging-gates.mjs",
+  "scripts/staging-revoke-live-proof.mjs",
+  "supabase/contracts/staging-revoke-preservation-v1.json",
+]);
+const INTEGRATION_RUNBOOK = readFileSync(
+  path.join(REPOSITORY_ROOT, "supabase/INTEGRATION_RUNBOOK.md"),
+  "utf8",
+);
 const ENABLED_SHA256 = sha256("enabled");
 const DISABLED_SHA256 = sha256("disabled");
 const GATE_SPECS = Object.freeze([
@@ -55,6 +90,20 @@ function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+function gitBlobSha1(value) {
+  return createHash("sha1")
+    .update(Buffer.from(`blob ${value.length}\0`, "utf8"))
+    .update(value)
+    .digest("hex");
+}
+
+function runtimeSha256Bindings() {
+  return Object.fromEntries(SOURCE_RUNTIME_FILES.map(relativePath => [
+    relativePath,
+    sha256(readFileSync(path.join(REPOSITORY_ROOT, relativePath))),
+  ]));
+}
+
 function canonicalJson(value) {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) {
@@ -71,7 +120,7 @@ function temporaryPrivateDirectory(t, prefix = "staging-gates-") {
   return directory;
 }
 
-function operatorArgs(action, receiptDir, extras = []) {
+function operatorArgs(action, receiptDir, extras = [], provenance = null) {
   return [
     action,
     "--receipt-dir",
@@ -81,8 +130,121 @@ function operatorArgs(action, receiptDir, extras = []) {
     ...(["attest", "capture-revoke-baseline"].includes(action)
       ? []
       : ["--apply"]),
+    ...(provenance === null
+      ? []
+      : [
+        "--git-cli",
+        provenance.gitCli,
+        "--release-provenance",
+        provenance.file,
+      ]),
     ...extras,
   ];
+}
+
+function provenanceFixture(t, {
+  descriptorTransform = value => value,
+  descriptorSource = null,
+  dirty = false,
+  ignored = false,
+  gitDirectoryTransform = value => value,
+  gitVersion = GIT_VERSION,
+  headSha = MAIN_COMMIT_SHA,
+  headSequence = null,
+  indexTransform = records => records,
+  runtimeBlobTransform = value => value,
+  sparseCheckout = false,
+  treeSha = MAIN_TREE_SHA,
+} = {}) {
+  const directory = temporaryPrivateDirectory(t, "staging-provenance-");
+  const gitDirectory = REPOSITORY_GIT_DIRECTORY;
+  const descriptor = descriptorTransform({
+    schemaVersion: 2,
+    kind: "staging-gate-release-provenance-v2",
+    environment: "staging",
+    mainProjectRef: MAIN_REF,
+    financeProjectRef: FINANCE_REF,
+    mainExpectedCommitSha: MAIN_COMMIT_SHA,
+    mainExpectedTreeSha: MAIN_TREE_SHA,
+    financeReviewedCommitSha: FINANCE_REVIEWED_COMMIT_SHA,
+    gitExecutableRealPath: GIT_CLI,
+    gitExecutableSha256: GIT_EXECUTABLE_SHA256,
+    gitVersion: GIT_VERSION,
+  });
+  const source = descriptorSource ?? `${JSON.stringify(descriptor, null, 2)}\n`;
+  const file = path.join(directory, "reviewed-release-provenance.json");
+  writeFileSync(file, source, { mode: 0o600 });
+  const calls = [];
+  let headReadCount = 0;
+  const runGit = (_cli, args, environment) => {
+    calls.push({ args: [...args], environment: { ...environment } });
+    assert.equal(Object.hasOwn(environment, "SUPABASE_ACCESS_TOKEN"), false);
+    assert.equal(environment.GIT_CONFIG_GLOBAL, "/dev/null");
+    assert.equal(environment.GIT_CONFIG_NOSYSTEM, "1");
+    assert.equal(environment.GIT_OPTIONAL_LOCKS, "0");
+    assert.equal(environment.GIT_TERMINAL_PROMPT, "0");
+    const command = args.slice(args.indexOf("-C") + 2);
+    let stdout;
+    if (command.join(" ") === "--version") {
+      stdout = `${gitVersion}\n`;
+    } else if (command.join(" ") === "rev-parse --show-toplevel") {
+      stdout = `${REPOSITORY_ROOT}\n`;
+    } else if (command.join(" ") === "rev-parse --absolute-git-dir") {
+      stdout = `${gitDirectoryTransform(gitDirectory)}\n`;
+    } else if (command.join(" ") === "rev-parse --verify HEAD^{commit}") {
+      const sequence = headSequence ?? [headSha];
+      stdout = `${
+        sequence[Math.min(headReadCount, sequence.length - 1)]
+      }\n`;
+      headReadCount += 1;
+    } else if (
+      command.join(" ")
+      === `rev-parse --verify ${MAIN_COMMIT_SHA}^{tree}`
+    ) {
+      stdout = `${treeSha}\n`;
+    } else if (
+      command.join(" ")
+      === "config --type=bool --get --default false core.sparseCheckout"
+    ) {
+      stdout = `${sparseCheckout ? "true" : "false"}\n`;
+    } else if (command.join(" ") === "ls-files -v -z") {
+      const records = SOURCE_RUNTIME_FILES.map(relativePath =>
+        `H ${relativePath}`);
+      stdout = `${indexTransform(records).join("\0")}\0`;
+    } else if (
+      command[0] === "ls-tree"
+      && command[1] === "-z"
+      && command[2] === "--full-tree"
+      && command[3] === MAIN_COMMIT_SHA
+      && command[4] === "--"
+      && SOURCE_RUNTIME_FILES.includes(command[5])
+    ) {
+      const bytes = readFileSync(path.join(REPOSITORY_ROOT, command[5]));
+      const blob = runtimeBlobTransform(gitBlobSha1(bytes), command[5]);
+      stdout = `100644 blob ${blob}\t${command[5]}\0`;
+    } else if (
+      command.join(" ")
+      === "status --porcelain=v1 -z --untracked-files=all --ignored=matching --ignore-submodules=none"
+    ) {
+      stdout = dirty
+        ? " M scripts/staging-gates.mjs\0"
+        : ignored
+          ? "!! supabase/.temp/\0"
+          : "";
+    } else {
+      throw new Error(`unexpected fake Git command: ${command.join(" ")}`);
+    }
+    return { status: 0, signal: null, error: null, stdout };
+  };
+  return {
+    calls,
+    descriptor,
+    file,
+    gitCli: GIT_CLI,
+    gitDirectory,
+    runGit,
+    source,
+  };
 }
 
 function fakeSupabase({
@@ -178,6 +340,20 @@ function readReceipts(directory) {
     .filter(name => /^[0-9]{6}\.json$/u.test(name))
     .sort()
     .map(name => JSON.parse(readFileSync(path.join(directory, name), "utf8")));
+}
+
+function replaceReceipt(directory, sequence, fields) {
+  const { receiptSha256: _discarded, ...core } = fields;
+  const receipt = {
+    ...core,
+    receiptSha256: sha256(canonicalJson(core)),
+  };
+  writeFileSync(
+    path.join(directory, `${String(sequence).padStart(6, "0")}.json`),
+    `${canonicalJson(receipt)}\n`,
+    { mode: 0o600 },
+  );
+  return receipt;
 }
 
 function preservationSnapshot() {
@@ -353,6 +529,7 @@ function liveEnvironment() {
 async function prepareMainSyncRollbackBarrier(t, api) {
   const receiptDir = temporaryPrivateDirectory(t);
   const fake = fakeSupabase();
+  const provenance = provenanceFixture(t);
   for (let index = 0; index < 4; index += 1) {
     await operateStagingGates(operatorArgs("advance", receiptDir), {
       runCli: fake.runCli,
@@ -363,9 +540,10 @@ async function prepareMainSyncRollbackBarrier(t, api) {
     operatorArgs("capture-revoke-baseline", receiptDir, [
       "--revoke-event-id",
       REVOKE_EVENT_ID,
-    ]),
+    ], provenance),
     {
       runCli: fake.runCli,
+      runGit: provenance.runGit,
       fetchImpl: api.fetchImpl,
       now: () => NOW,
       environment: liveEnvironment(),
@@ -375,7 +553,7 @@ async function prepareMainSyncRollbackBarrier(t, api) {
     runCli: fake.runCli,
     now: () => NOW,
   });
-  return { fake, receiptDir };
+  return { fake, provenance, receiptDir };
 }
 
 test("read-only attest performs exact two staging lists and writes a canonical private receipt", async t => {
@@ -628,6 +806,7 @@ test("rollback captures a live baseline and enforces the in-process Main A, Fina
   const receiptDir = temporaryPrivateDirectory(t);
   const fake = fakeSupabase();
   const api = fakeManagementApi();
+  const provenance = provenanceFixture(t);
   for (let index = 0; index < 4; index += 1) {
     await operateStagingGates(operatorArgs("advance", receiptDir), {
       runCli: fake.runCli,
@@ -639,9 +818,10 @@ test("rollback captures a live baseline and enforces the in-process Main A, Fina
     operatorArgs("capture-revoke-baseline", receiptDir, [
       "--revoke-event-id",
       REVOKE_EVENT_ID,
-    ]),
+    ], provenance),
     {
       runCli: fake.runCli,
+      runGit: provenance.runGit,
       fetchImpl: api.fetchImpl,
       now: () => NOW,
       environment: liveEnvironment(),
@@ -670,9 +850,10 @@ test("rollback captures a live baseline and enforces the in-process Main A, Fina
     operatorArgs("rollback", receiptDir, [
       "--revoke-event-id",
       REVOKE_EVENT_ID,
-    ]),
+    ], provenance),
     {
       runCli: fake.runCli,
+      runGit: provenance.runGit,
       fetchImpl: api.fetchImpl,
       now: () => NOW,
       environment: liveEnvironment(),
@@ -707,7 +888,24 @@ test("rollback captures a live baseline and enforces the in-process Main A, Fina
     receipt.kind === "mutation-intent"
     && receipt.mutation.gateKey === "mainFinanceSync"
     && receipt.mutation.desiredState === "disabled");
-  assert.equal(baselineReceipt.schemaVersion, 2);
+  assert.equal(baselineReceipt.schemaVersion, 3);
+  assert.equal(Object.hasOwn(baselineReceipt, "mainCommitSha"), false);
+  assert.equal(Object.hasOwn(baselineReceipt, "financeCommitSha"), false);
+  assert.deepEqual(baselineReceipt.sourceProvenance, {
+    kind: "staging-gate-source-provenance-v2",
+    verificationMode:
+      "trusted-git+clean-main-head+byte-bound-runtime+reviewed-finance-v2",
+    mainGitHeadSha: MAIN_COMMIT_SHA,
+    mainGitTreeSha: MAIN_TREE_SHA,
+    financeReviewedCommitSha: FINANCE_REVIEWED_COMMIT_SHA,
+    reviewedDescriptorSha256: sha256(provenance.source),
+    trustedGit: {
+      executableRealPath: GIT_CLI,
+      executableSha256: GIT_EXECUTABLE_SHA256,
+      version: GIT_VERSION,
+    },
+    mainExecutableFiles: runtimeSha256Bindings(),
+  });
   assert.equal(baselineReceipt.hostedReadCount, 1);
   assert.equal(
     baselineReceipt.liveBaseline.query.result.preservation_snapshot.length,
@@ -722,6 +920,401 @@ test("rollback captures a live baseline and enforces the in-process Main A, Fina
     barrierIntent.revokeProofReceiptSha256,
     proofReceipt.receiptSha256,
   );
+});
+
+test("live revoke evidence requires an external reviewed provenance and exact Git CLI", async t => {
+  const receiptDir = temporaryPrivateDirectory(t);
+  const fake = fakeSupabase({ initial: "eeee" });
+  await assert.rejects(
+    operateStagingGates(
+      operatorArgs("capture-revoke-baseline", receiptDir, [
+        "--revoke-event-id",
+        REVOKE_EVENT_ID,
+      ]),
+      { runCli: fake.runCli, now: () => NOW },
+    ),
+    /requires --git-cli and --release-provenance/,
+  );
+  assert.equal(fake.calls.length, 0);
+  assert.equal(readReceipts(receiptDir).length, 0);
+});
+
+test("Git provenance mismatch, dirty state and unsafe gitdir fail before staging is read", async t => {
+  const scenarios = [
+    {
+      name: "HEAD mismatch",
+      provenance: provenanceFixture(t, { headSha: "e".repeat(40) }),
+      expected: /current Main Git HEAD does not match/,
+    },
+    {
+      name: "tree mismatch",
+      provenance: provenanceFixture(t, { treeSha: "e".repeat(40) }),
+      expected: /current Main Git HEAD does not match/,
+    },
+    {
+      name: "HEAD changes during inspection",
+      provenance: provenanceFixture(t, {
+        headSequence: [MAIN_COMMIT_SHA, "e".repeat(40)],
+      }),
+      expected: /Git HEAD changed while source provenance was inspected/,
+    },
+    {
+      name: "dirty worktree",
+      provenance: provenanceFixture(t, { dirty: true }),
+      expected: /tracked, untracked or ignored state/,
+    },
+    {
+      name: "ignored worktree state",
+      provenance: provenanceFixture(t, { ignored: true }),
+      expected: /tracked, untracked or ignored state/,
+    },
+    {
+      name: "sparse checkout",
+      provenance: provenanceFixture(t, { sparseCheckout: true }),
+      expected: /sparse-checkout is enabled/,
+    },
+    {
+      name: "assume unchanged index entry",
+      provenance: provenanceFixture(t, {
+        indexTransform: records => records.map((record, index) =>
+          index === 0 ? `h${record.slice(1)}` : record),
+      }),
+      expected: /assume-unchanged, skip-worktree/,
+    },
+    {
+      name: "skip worktree index entry",
+      provenance: provenanceFixture(t, {
+        indexTransform: records => records.map((record, index) =>
+          index === 0 ? `S${record.slice(1)}` : record),
+      }),
+      expected: /assume-unchanged, skip-worktree/,
+    },
+    {
+      name: "runtime bytes differ from HEAD",
+      provenance: provenanceFixture(t, {
+        runtimeBlobTransform: (blob, relativePath) =>
+          relativePath === "scripts/staging-gates.mjs"
+            ? "f".repeat(40)
+            : blob,
+      }),
+      expected: /tracked runtime bytes differ from HEAD/,
+    },
+    {
+      name: "symlink gitdir",
+      provenance: (() => {
+        const linkDirectory = temporaryPrivateDirectory(
+          t,
+          "symlink-gitdir-",
+        );
+        const link = path.join(linkDirectory, "git-dir-link");
+        return provenanceFixture(t, {
+          gitDirectoryTransform: value => {
+            symlinkSync(value, link);
+            return link;
+          },
+        });
+      })(),
+      expected: /Git repository boundary is unsafe/,
+    },
+    {
+      name: "unassociated gitdir",
+      provenance: (() => {
+        const unrelated = temporaryPrivateDirectory(
+          t,
+          "unassociated-gitdir-",
+        );
+        return provenanceFixture(t, {
+          gitDirectoryTransform: () => unrelated,
+        });
+      })(),
+      expected: /repository \.git pointer differs|not associated with the repository \.git/,
+    },
+    {
+      name: "Git version differs",
+      provenance: provenanceFixture(t, {
+        gitVersion: "git version unexpected",
+      }),
+      expected: /Git CLI version or bytes differ/,
+    },
+  ];
+  for (const scenario of scenarios) {
+    const receiptDir = temporaryPrivateDirectory(
+      t,
+      `provenance-fail-${scenario.name.replaceAll(" ", "-")}-`,
+    );
+    const fake = fakeSupabase({ initial: "eeee" });
+    const api = fakeManagementApi();
+    await assert.rejects(
+      operateStagingGates(
+        operatorArgs("capture-revoke-baseline", receiptDir, [
+          "--revoke-event-id",
+          REVOKE_EVENT_ID,
+        ], scenario.provenance),
+        {
+          runCli: fake.runCli,
+          runGit: scenario.provenance.runGit,
+          fetchImpl: api.fetchImpl,
+          now: () => NOW,
+          environment: liveEnvironment(),
+        },
+      ),
+      scenario.expected,
+      scenario.name,
+    );
+    assert.equal(fake.calls.length, 0, scenario.name);
+    assert.equal(api.calls.length, 0, scenario.name);
+    assert.equal(readReceipts(receiptDir).length, 0, scenario.name);
+  }
+});
+
+test("source provenance documentation and fixtures pin the exact ambiguity guards", () => {
+  assert.match(
+    INTEGRATION_RUNBOOK,
+    /`core\.sparseCheckout=false`;/,
+  );
+  assert.match(
+    INTEGRATION_RUNBOOK,
+    /`git ls-files -v -z` допускает только normal `H`/,
+  );
+  assert.match(
+    INTEGRATION_RUNBOOK,
+    /всех tracked, всех untracked и matching[\s\S]*?ignored paths/,
+  );
+  assert.match(
+    INTEGRATION_RUNBOOK,
+    /Git blob из exact проверенного\s+commit OID/,
+  );
+  assert.match(
+    INTEGRATION_RUNBOOK,
+    /что\s+HEAD и его tree не изменились за время source snapshot/,
+  );
+  assert.match(
+    INTEGRATION_RUNBOOK,
+    /`gitExecutableRealPath`,[\s\S]*?`gitExecutableSha256` и `gitVersion`/,
+  );
+});
+
+test("reviewed provenance must be private, external and non-symlink", async t => {
+  const scenarios = [];
+  const writable = provenanceFixture(t);
+  chmodSync(writable.file, 0o644);
+  scenarios.push({
+    name: "non-private descriptor",
+    provenance: writable,
+    expected: /exact mode 0600/,
+  });
+  const linked = provenanceFixture(t);
+  const link = path.join(path.dirname(linked.file), "linked-provenance.json");
+  symlinkSync(linked.file, link);
+  scenarios.push({
+    name: "symlink descriptor",
+    provenance: { ...linked, file: link },
+    expected: /unavailable or unsafe/,
+  });
+  const placeholder = provenanceFixture(t, {
+    descriptorTransform: value => ({
+      ...value,
+      financeReviewedCommitSha: "0".repeat(40),
+    }),
+  });
+  scenarios.push({
+    name: "placeholder Finance commit",
+    provenance: placeholder,
+    expected: /contract differs/,
+  });
+  const wrongGitDigest = provenanceFixture(t, {
+    descriptorTransform: value => ({
+      ...value,
+      gitExecutableSha256: "f".repeat(64),
+    }),
+  });
+  scenarios.push({
+    name: "Git executable digest mismatch",
+    provenance: wrongGitDigest,
+    expected: /Git CLI digest differs/,
+  });
+  const arbitraryExecutable = provenanceFixture(t);
+  scenarios.push({
+    name: "arbitrary executable in place of reviewed Git",
+    provenance: {
+      ...arbitraryExecutable,
+      gitCli: realpathSync(process.execPath),
+    },
+    expected: /Git CLI path differs/,
+  });
+  const unsafeGitDirectory = temporaryPrivateDirectory(t, "unsafe-git-cli-");
+  const unsafeGitPath = path.join(unsafeGitDirectory, "git");
+  writeFileSync(unsafeGitPath, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  chmodSync(unsafeGitPath, 0o777);
+  const unsafeGitMode = provenanceFixture(t, {
+    descriptorTransform: value => ({
+      ...value,
+      gitExecutableRealPath: unsafeGitPath,
+      gitExecutableSha256: sha256(readFileSync(unsafeGitPath)),
+    }),
+  });
+  scenarios.push({
+    name: "group writable reviewed Git",
+    provenance: { ...unsafeGitMode, gitCli: unsafeGitPath },
+    expected: /Git CLI owner, mode or real path is unsafe/,
+  });
+  for (const scenario of scenarios) {
+    const receiptDir = temporaryPrivateDirectory(t);
+    const fake = fakeSupabase({ initial: "eeee" });
+    await assert.rejects(
+      operateStagingGates(
+        operatorArgs("capture-revoke-baseline", receiptDir, [
+          "--revoke-event-id",
+          REVOKE_EVENT_ID,
+        ], scenario.provenance),
+        {
+          runCli: fake.runCli,
+          runGit: scenario.provenance.runGit,
+          now: () => NOW,
+          environment: liveEnvironment(),
+        },
+      ),
+      scenario.expected,
+      scenario.name,
+    );
+    assert.equal(fake.calls.length, 0, scenario.name);
+    assert.equal(scenario.provenance.calls.length, 0, scenario.name);
+    assert.equal(readReceipts(receiptDir).length, 0, scenario.name);
+  }
+});
+
+test("baseline refuses provenance drift across its hosted read", async t => {
+  const receiptDir = temporaryPrivateDirectory(t);
+  const fake = fakeSupabase({ initial: "eeee" });
+  const api = fakeManagementApi();
+  const provenance = provenanceFixture(t);
+  const fetchImpl = async (...args) => {
+    const response = await api.fetchImpl(...args);
+    const changed = {
+      ...provenance.descriptor,
+      financeReviewedCommitSha: "e".repeat(40),
+    };
+    writeFileSync(
+      provenance.file,
+      `${JSON.stringify(changed, null, 2)}\n`,
+      { mode: 0o600 },
+    );
+    return response;
+  };
+  await assert.rejects(
+    operateStagingGates(
+      operatorArgs("capture-revoke-baseline", receiptDir, [
+        "--revoke-event-id",
+        REVOKE_EVENT_ID,
+      ], provenance),
+      {
+        runCli: fake.runCli,
+        runGit: provenance.runGit,
+        fetchImpl,
+        now: () => NOW,
+        environment: liveEnvironment(),
+      },
+    ),
+    /source provenance changed during the live revoke proof/,
+  );
+  assert.equal(api.calls.length, 1);
+  assert.equal(fake.mutationCalls, 0);
+  assert.equal(readReceipts(receiptDir).length, 0);
+});
+
+test("rollback proof refuses reviewed provenance drift from its baseline", async t => {
+  const api = fakeManagementApi();
+  const { fake, provenance, receiptDir } =
+    await prepareMainSyncRollbackBarrier(t, api);
+  const changed = {
+    ...provenance.descriptor,
+    financeReviewedCommitSha: "e".repeat(40),
+  };
+  writeFileSync(
+    provenance.file,
+    `${JSON.stringify(changed, null, 2)}\n`,
+    { mode: 0o600 },
+  );
+  const before = fake.mutationCalls;
+  await assert.rejects(
+    operateStagingGates(
+      operatorArgs("rollback", receiptDir, [
+        "--revoke-event-id",
+        REVOKE_EVENT_ID,
+      ], provenance),
+      {
+        runCli: fake.runCli,
+        runGit: provenance.runGit,
+        fetchImpl: api.fetchImpl,
+        now: () => NOW,
+        environment: liveEnvironment(),
+      },
+    ),
+    /source provenance changed during the live revoke proof/,
+  );
+  assert.equal(fake.mutationCalls, before);
+  assert.equal(api.calls.length, 1);
+  assert.equal(
+    readReceipts(receiptDir).some(receipt =>
+      receipt.kind === "revoke-proof"),
+    false,
+  );
+});
+
+test("legacy v2 baseline remains readable but cannot authorize a new rollback barrier", async t => {
+  const receiptDir = temporaryPrivateDirectory(t);
+  const fake = fakeSupabase({ initial: "eeee" });
+  const api = fakeManagementApi();
+  const provenance = provenanceFixture(t);
+  await operateStagingGates(
+    operatorArgs("capture-revoke-baseline", receiptDir, [
+      "--revoke-event-id",
+      REVOKE_EVENT_ID,
+    ], provenance),
+    {
+      runCli: fake.runCli,
+      runGit: provenance.runGit,
+      fetchImpl: api.fetchImpl,
+      now: () => NOW,
+      environment: liveEnvironment(),
+    },
+  );
+  const [current] = readReceipts(receiptDir);
+  const {
+    sourceProvenance: _sourceProvenance,
+    ...legacyCore
+  } = current;
+  replaceReceipt(receiptDir, 1, {
+    ...legacyCore,
+    schemaVersion: 2,
+    financeCommitSha: LEGACY_FINANCE_COMMIT_SHA,
+    mainCommitSha: LEGACY_MAIN_COMMIT_SHA,
+  });
+
+  const first = await operateStagingGates(
+    operatorArgs("rollback", receiptDir),
+    { runCli: fake.runCli, now: () => NOW },
+  );
+  assert.equal(first.mutatedGate, "mainFinanceProtocol");
+  const before = fake.mutationCalls;
+  await assert.rejects(
+    operateStagingGates(
+      operatorArgs("rollback", receiptDir, [
+        "--revoke-event-id",
+        REVOKE_EVENT_ID,
+      ], provenance),
+      {
+        runCli: fake.runCli,
+        runGit: provenance.runGit,
+        fetchImpl: api.fetchImpl,
+        now: () => NOW,
+        environment: liveEnvironment(),
+      },
+    ),
+    /legacy revoke baseline has no verified source provenance/,
+  );
+  assert.equal(fake.mutationCalls, before);
+  assert.equal(api.calls.length, 1);
 });
 
 test("caller-supplied revoke proof files are no longer accepted", async t => {
@@ -800,7 +1393,8 @@ test("live revoke barrier fails closed on queue, Auth, retention and sandwich dr
     },
   ];
   for (const scenario of scenarios) {
-    const { fake, receiptDir } = await prepareMainSyncRollbackBarrier(
+    const { fake, provenance, receiptDir } =
+      await prepareMainSyncRollbackBarrier(
       t,
       scenario.api,
     );
@@ -810,9 +1404,10 @@ test("live revoke barrier fails closed on queue, Auth, retention and sandwich dr
         operatorArgs("rollback", receiptDir, [
           "--revoke-event-id",
           REVOKE_EVENT_ID,
-        ]),
+        ], provenance),
         {
           runCli: fake.runCli,
+          runGit: provenance.runGit,
           fetchImpl: scenario.api.fetchImpl,
           now: () => NOW,
           environment: liveEnvironment(),
@@ -835,14 +1430,16 @@ test("baseline capture rejects non-201 Management API responses before writing a
   const receiptDir = temporaryPrivateDirectory(t);
   const fake = fakeSupabase({ initial: "eeee" });
   const api = fakeManagementApi({ status: 200 });
+  const provenance = provenanceFixture(t);
   await assert.rejects(
     operateStagingGates(
       operatorArgs("capture-revoke-baseline", receiptDir, [
         "--revoke-event-id",
         REVOKE_EVENT_ID,
-      ]),
+      ], provenance),
       {
         runCli: fake.runCli,
+        runGit: provenance.runGit,
         fetchImpl: api.fetchImpl,
         now: () => NOW,
         environment: liveEnvironment(),
