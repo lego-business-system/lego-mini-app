@@ -1,1 +1,98 @@
-{"schema_version":"architecture.learning-module-manifest.v1","module_id":"M01","title":"Бизнес как метасистема","release":"lds-m01-staging-20260731","lesson_count":6,"segments":["Ситуация","Модель","Пример","Практика","Проверка","Результат"],"lessons":[{"lesson_id":"M01L01","title":"Границы системы и способ управления","screen_count":17,"status":"STAGING_ADAPTER_READY","file":"M01L01.json"},{"lesson_id":"M01L02","title":"Шесть потоков бизнеса","screen_count":17,"status":"SCREEN_SPEC_V1_COMPLETE_ADAPTER_EXTENSION_OPEN","file":"M01L02.json"},{"lesson_id":"M01L03","title":"Управленческий цикл: от факта к изменению","screen_count":17,"status":"SCREEN_SPEC_V1_COMPLETE_ADAPTER_EXTENSION_OPEN","file":"M01L03.json"},{"lesson_id":"M01L04","title":"Причинные связи и отложенные последствия","screen_count":17,"status":"SCREEN_SPEC_V1_COMPLETE_ADAPTER_EXTENSION_OPEN","file":"M01L04.json"},{"lesson_id":"M01L05","title":"Критические ворота и зрелость","screen_count":17,"status":"SCREEN_SPEC_V1_COMPLETE_ADAPTER_EXTENSION_OPEN","file":"M01L05.json"},{"lesson_id":"M01L06","title":"Версии архитектуры и здоровье системы","screen_count":17,"status":"SCREEN_SPEC_V1_COMPLETE_ADAPTER_EXTENSION_OPEN","file":"M01L06.json"}],"progression":["Определить объект и границу","Провести шесть потоков","Замкнуть управленческий цикл","Проверить причинные последствия","Пройти критические ворота","Управлять версиями и архитектурным долгом"],"capstone":"Паспорт метасистемы бизнеса по одному реальному решению","production_catalog_changed":false}
+{
+  "schema_version": "architecture.learning-module-manifest.v2",
+  "module_id": "M01",
+  "title": "Бизнес как метасистема",
+  "subtitle": "Как увидеть один управленческий объект целиком: определить границы, провести потоки, замкнуть решения, проверить последствия, пройти критические ворота и управлять версиями.",
+  "result": "Паспорт метасистемы бизнеса по одному реальному решению.",
+  "release": "lds-m01-module-staging-20260731-v2",
+  "lesson_count": 6,
+  "screen_count": 102,
+  "estimated_guided_minutes": 900,
+  "segments": ["Ситуация", "Модель", "Пример", "Практика", "Проверка", "Результат"],
+  "lessons": [
+    {
+      "lesson_id": "M01L01",
+      "title": "Границы системы и способ управления",
+      "result": "Карта объекта, границы, владельца и режима управления.",
+      "screen_count": 17,
+      "status": "STAGING_ADAPTER_READY",
+      "file": "M01L01.json"
+    },
+    {
+      "lesson_id": "M01L02",
+      "title": "Шесть потоков бизнеса",
+      "result": "Карта шести потоков и предполагаемого системного ограничения.",
+      "screen_count": 17,
+      "status": "STAGING_ADAPTER_READY",
+      "file": "M01L02.json"
+    },
+    {
+      "lesson_id": "M01L03",
+      "title": "Управленческий цикл: от факта к изменению",
+      "result": "Карточка решения с владельцем, evidence и датой проверки эффекта.",
+      "screen_count": 17,
+      "status": "STAGING_ADAPTER_READY",
+      "file": "M01L03.json"
+    },
+    {
+      "lesson_id": "M01L04",
+      "title": "Причинные связи и отложенные последствия",
+      "result": "Причинная гипотеза с задержкой, guardrail и условием опровержения.",
+      "screen_count": 17,
+      "status": "STAGING_ADAPTER_READY",
+      "file": "M01L04.json"
+    },
+    {
+      "lesson_id": "M01L05",
+      "title": "Критические ворота и зрелость",
+      "result": "Critical gate review с разрешённым и запрещённым следующим шагом.",
+      "screen_count": 17,
+      "status": "STAGING_ADAPTER_READY",
+      "file": "M01L05.json"
+    },
+    {
+      "lesson_id": "M01L06",
+      "title": "Версии архитектуры и здоровье системы",
+      "result": "Карточка архитектурного объекта и план вывода старой версии.",
+      "screen_count": 17,
+      "status": "STAGING_ADAPTER_READY",
+      "file": "M01L06.json"
+    }
+  ],
+  "progression": [
+    "Определить объект и границу",
+    "Провести шесть потоков",
+    "Замкнуть управленческий цикл",
+    "Проверить причинные последствия",
+    "Пройти критические ворота",
+    "Управлять версиями и архитектурным долгом"
+  ],
+  "capstone": "Паспорт метасистемы бизнеса",
+  "completion_rule": {
+    "sequential_lessons": true,
+    "minimum_practice_fields_per_lesson": 4,
+    "micro_check_requires_answer": true,
+    "quiz_requires_answer": true,
+    "learning_completion_is_not_business_approval": true
+  },
+  "practice_assets": {
+    "template": {
+      "file_name": "M01_Практикум_шаблон_v1_0.xlsx",
+      "url": "",
+      "status": "BINARY_ASSET_UPLOAD_OPEN"
+    },
+    "example": {
+      "file_name": "M01_Практикум_заполненный_пример_v1_0.xlsx",
+      "url": "",
+      "status": "BINARY_ASSET_UPLOAD_OPEN"
+    }
+  },
+  "staging": {
+    "adapter": "business-architecture-learning-module.js",
+    "styles": "business-architecture-learning-module.css",
+    "activation": "?ba_learning_preview=m01",
+    "direct_lesson": "?ba_learning_preview=m01&ba_learning_lesson=M01L03",
+    "review_unlock": "?ba_learning_preview=m01&ba_learning_unlock=all"
+  },
+  "production_catalog_changed": false
+}
