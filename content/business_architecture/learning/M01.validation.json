@@ -1,1 +1,99 @@
-{"schema_version":"architecture.learning-validation.v1","module_id":"M01","validated_at":"2026-07-31","scope":"Six mobile-first lesson specifications and local generic renderer","summary":{"lessons":6,"screens":102,"unique_screen_ids":102,"segments_per_lesson":6,"micro_checks":6,"final_quizzes":6,"micro_practices":6,"json_parse_errors":0,"javascript_syntax_errors":0,"horizontal_overflow_mobile_390px":0,"end_to_end_lessons_completed":6},"checks":[{"id":"JSON_STRUCTURE","status":"PASS","evidence":"All six JSON files parse; each contains 17 unique screens in the sequence Situation, Model, Example, Practice, Check, Result."},{"id":"QUIZ_FLOW","status":"PASS_LOCAL_HARNESS","evidence":"Each lesson blocks progression until an option is selected, displays explanation, and then allows progression."},{"id":"PRACTICE_GATE","status":"PASS_LOCAL_HARNESS","evidence":"Each lesson blocks progression until at least four micro-practice fields are filled."},{"id":"PROGRESS_PERSISTENCE","status":"PASS_LOCAL_HARNESS","evidence":"Reopening M01L01 restored screen 4; each lesson stored independent learningFlow state."},{"id":"MODULE_COMPLETION","status":"PASS_LOCAL_HARNESS","evidence":"All six lessons were completed end-to-end in a 390x844 Chromium harness."},{"id":"SYNC_CALL","status":"PASS_STUB_ONLY","evidence":"Debounced BusinessArchitecture.syncNow call executed in the harness; real Supabase/Telegram acceptance remains open."},{"id":"TELEGRAM_IOS_ANDROID","status":"OPEN","evidence":"Requires deployment of the branch and manual test inside Telegram WebApp."},{"id":"XLSX_ASSETS","status":"OPEN","evidence":"Blank and filled workbooks exist locally; binary attachment to the staging branch remains open."}],"limitations":["Local harness used the real lesson JSON and renderer logic but a stub app shell and stub sync method.","No claim is made that Telegram keyboard, safe-area or Supabase persistence is already accepted.","M01L01 is connected to the current staging adapter; M01L02-M01L06 specifications are complete and await adapter extension on the branch."],"production_catalog_changed":false}
+{
+  "schema_version": "architecture.learning-validation.v2",
+  "module_id": "M01",
+  "validated_at": "2026-07-31",
+  "scope": "Six lesson specifications, module-level staging adapter, lesson-specific visual renderers and isolated progress model",
+  "summary": {
+    "lessons": 6,
+    "screens": 102,
+    "unique_screen_ids": 102,
+    "segments_per_lesson": 6,
+    "micro_checks": 6,
+    "final_quizzes": 6,
+    "micro_practices": 6,
+    "module_adapter_lessons": 6,
+    "lesson_specific_visual_models": 6,
+    "json_parse_errors": 0,
+    "javascript_syntax_errors": 0,
+    "production_files_replaced": 0
+  },
+  "checks": [
+    {
+      "id": "JSON_STRUCTURE",
+      "status": "PASS",
+      "evidence": "All six JSON specifications contain 17 screens and the shared sequence Situation, Model, Example, Practice, Check, Result. Previous local harness validated 102 unique screen IDs."
+    },
+    {
+      "id": "MODULE_ADAPTER",
+      "status": "PASS_STATIC_AND_SYNTAX",
+      "evidence": "business-architecture-learning-module.js passed node --check and resolves M01L01-M01L06 through the module manifest."
+    },
+    {
+      "id": "CUSTOM_VISUAL_MODELS",
+      "status": "PASS_IMPLEMENTED",
+      "evidence": "Dedicated renderers exist for system_map, flow_map, management_cycle, causal_loop, gate_board and version_lifecycle."
+    },
+    {
+      "id": "SEQUENTIAL_ROUTE",
+      "status": "PASS_IMPLEMENTED",
+      "evidence": "Normal mode unlocks lessons sequentially; admin/review mode can inspect all lessons through ba_learning_unlock=all."
+    },
+    {
+      "id": "QUIZ_FLOW",
+      "status": "PASS_IMPLEMENTED",
+      "evidence": "Micro-check and final quiz block progression until an answer is selected, then display the explanation before continuing."
+    },
+    {
+      "id": "PRACTICE_GATE",
+      "status": "PASS_IMPLEMENTED",
+      "evidence": "Each lesson requires at least four micro-practice fields before the learner can continue."
+    },
+    {
+      "id": "PROGRESS_ISOLATION",
+      "status": "PASS_IMPLEMENTED",
+      "evidence": "Each lesson stores independent learningFlow state under architecture_business_progress_v2 / lessons.<lessonId>.learningFlow. Existing course progress fields are preserved."
+    },
+    {
+      "id": "SYNC_CALL",
+      "status": "PASS_CODE_PATH_REAL_ACCEPTANCE_OPEN",
+      "evidence": "The adapter calls the existing BusinessArchitecture.syncNow() after local persistence. Supabase and Telegram acceptance are not claimed."
+    },
+    {
+      "id": "CAPSTONE_LOGIC",
+      "status": "PASS_IMPLEMENTED",
+      "evidence": "The module assembles six artefacts around one object and explicitly allows STOP as a correct business decision when a critical gate is red."
+    },
+    {
+      "id": "PRODUCTION_ISOLATION",
+      "status": "PASS",
+      "evidence": "Main business-architecture.js, business-architecture.css, catalog.json, Supabase endpoint and production user data were not replaced. New files are loaded only on the draft branch and activated by preview/admin mode."
+    },
+    {
+      "id": "XLSX_ASSETS",
+      "status": "OPEN_BINARY_UPLOAD",
+      "evidence": "Blank and filled XLSX workbooks exist as completed local artefacts. The staging manifest intentionally keeps download URLs empty until a durable binary delivery location is connected."
+    },
+    {
+      "id": "TELEGRAM_IOS_ANDROID",
+      "status": "OPEN",
+      "evidence": "Requires deployment of the draft branch and manual acceptance in Telegram WebApp on iPhone and Android."
+    },
+    {
+      "id": "SUPABASE_PERSISTENCE",
+      "status": "OPEN",
+      "evidence": "Requires a real Telegram session, save/reload on another device and conflict-merge verification against the existing endpoint."
+    }
+  ],
+  "limitations": [
+    "Static and syntax verification does not replace browser acceptance inside the real Telegram WebApp.",
+    "Practice XLSX buttons remain disabled until the two binary assets receive durable URLs.",
+    "The draft branch contains the complete six-lesson staging route but does not replace the production BA catalogue.",
+    "The existing standalone M01L01 adapter remains for legacy prototype review; the new module route uses ba_learning_preview=m01."
+  ],
+  "activation": {
+    "module": "?ba_learning_preview=m01",
+    "direct_lesson": "?ba_learning_preview=m01&ba_learning_lesson=M01L03",
+    "review_all": "?ba_learning_preview=m01&ba_learning_unlock=all"
+  },
+  "production_catalog_changed": false
+}
