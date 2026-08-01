@@ -20,9 +20,9 @@ const SHA256 = /^[0-9a-f]{64}$/u;
 const DECIMAL = /^(?:0|[1-9][0-9]*)$/u;
 const TABLE_IDENTIFIER = /^finance_[a-z0-9_]+$/u;
 const EXPECTED_DATABASE_ROLE = "supabase_read_only_user";
-const EXPECTED_FINANCE_CATALOG_COUNT = "133";
+const EXPECTED_FINANCE_CATALOG_COUNT = "135";
 const EXPECTED_FINANCE_CATALOG_SHA256 =
-  "1d661c60bd419d9a82e7013e82e48c7a859296bf5abd3f5dbe9dff0aa59fe576";
+  "842604191d7304888ca979cb3fa1c70c25ce37eb75195ed7a90f1f0558005e17";
 
 export const STAGING_REVOKE_BOUNDARY = Object.freeze({
   financeProjectRef: "makgsbjduobcphuqzaoq",
@@ -105,11 +105,11 @@ function loadReviewedManifest() {
     || parsed.tablePrefix !== "finance_"
     || !Array.isArray(parsed.preservedTables)
     || !Array.isArray(parsed.mutableTables)
-    || parsed.preservedTables.length !== 127
+    || parsed.preservedTables.length !== 129
     || parsed.mutableTables.length !== 6
     || parsed.preservedTables.some(name => !TABLE_IDENTIFIER.test(name))
     || parsed.mutableTables.some(name => !TABLE_IDENTIFIER.test(name))
-    || new Set(parsed.preservedTables).size !== 127
+    || new Set(parsed.preservedTables).size !== 129
     || new Set(parsed.mutableTables).size !== 6
     || canonicalJson([...parsed.preservedTables].sort())
       !== canonicalJson(parsed.preservedTables)
@@ -127,7 +127,7 @@ function loadReviewedManifest() {
   ) fail("reviewed preservation manifest differs");
   const catalog = [...parsed.preservedTables, ...parsed.mutableTables].sort();
   if (
-    catalog.length !== 133
+    catalog.length !== 135
     || sha256(catalog.join("\n")) !== EXPECTED_FINANCE_CATALOG_SHA256
   ) fail("reviewed Finance catalog boundary differs");
   return Object.freeze({
@@ -245,7 +245,7 @@ const TIMESTAMP_SQL = column =>
 const FINANCE_BASELINE_SQL = `WITH
 ${CATALOG_CT},
 ${SNAPSHOT_CT}
-SELECT pg_catalog.current_user::text AS database_role,
+SELECT CURRENT_USER::text AS database_role,
        ${DATABASE_CLOCK_SQL} AS database_clock,
        catalog_proof.table_count AS catalog_table_count,
        catalog_proof.catalog_sha256,
@@ -345,7 +345,7 @@ global_counts AS (
         )
       )) AS managed_gate_mismatch
 )
-SELECT pg_catalog.current_user::text AS database_role,
+SELECT CURRENT_USER::text AS database_role,
        ${DATABASE_CLOCK_SQL} AS database_clock,
        (SELECT pg_catalog.count(*)::text FROM target_outbox) AS event_count,
        (SELECT event_id::text FROM target_outbox) AS outbox_event_id,
@@ -523,7 +523,7 @@ active_counts AS (
       WHERE relay.flow_state_id IN (SELECT id FROM target_flow_states)
     ) AS saml_relay_states
 )
-SELECT pg_catalog.current_user::text AS database_role,
+SELECT CURRENT_USER::text AS database_role,
        ${DATABASE_CLOCK_SQL} AS database_clock,
        catalog_proof.table_count AS catalog_table_count,
        catalog_proof.catalog_sha256,
@@ -586,11 +586,11 @@ export const STAGING_REVOKE_SQL = Object.freeze({
 
 export const STAGING_REVOKE_SQL_SHA256 = Object.freeze({
   financeBaseline:
-    "da14115bfa491297a9a8a43dfddcf255b896554c8b3ef19e465512eb167be2ec",
+    "ac80bd5c8c30789d73ff9b5fa92d5cfb7ec9e7884ba638066b72b96052dac28c",
   mainFinal:
-    "9d2d55e073da30f4ce832a268dcd224b4a8889acb2549419598593fe9948752c",
+    "fe9d65115ef53966770503a03db58f26493e29ae3fc0b2d8d9c7550c75c214e1",
   financeFinal:
-    "7e34bcbd22f26fdcb91a2ef29af83822bf2c70446b54d4088cb94387edba87ca",
+    "319a776c0ef819e2d897ec23002c93269a32a4e23d8b27063cff86a703162803",
 });
 
 for (const [queryId, query] of Object.entries(STAGING_REVOKE_SQL)) {
@@ -747,7 +747,7 @@ const CATALOG_KEYS = [
 ];
 
 function validateSnapshot(snapshot, label) {
-  if (!Array.isArray(snapshot) || snapshot.length !== 127) {
+  if (!Array.isArray(snapshot) || snapshot.length !== 129) {
     fail(`${label} table count differs`);
   }
   const normalized = snapshot.map((entry, index) => {
@@ -770,7 +770,7 @@ function validateCatalogRow(row, expectedKeys, label) {
     || !canonicalTimestamp(row.database_clock)
     || row.catalog_table_count !== EXPECTED_FINANCE_CATALOG_COUNT
     || row.catalog_sha256 !== EXPECTED_FINANCE_CATALOG_SHA256
-    || row.manifest_table_count !== "127"
+    || row.manifest_table_count !== "129"
     || row.manifest_sha256 !== PRESERVATION_MANIFEST.manifestSha256
   ) fail(`${label} catalog contract differs`);
   return validateSnapshot(row.preservation_snapshot, `${label} snapshot`);

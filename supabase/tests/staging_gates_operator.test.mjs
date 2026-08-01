@@ -368,10 +368,10 @@ function catalogFields(databaseClock) {
   return {
     database_role: "supabase_read_only_user",
     database_clock: databaseClock,
-    catalog_table_count: "133",
+    catalog_table_count: "135",
     catalog_sha256:
-      "1d661c60bd419d9a82e7013e82e48c7a859296bf5abd3f5dbe9dff0aa59fe576",
-    manifest_table_count: "127",
+      "842604191d7304888ca979cb3fa1c70c25ce37eb75195ed7a90f1f0558005e17",
+    manifest_table_count: "129",
     manifest_sha256: PRESERVATION_MANIFEST.manifestSha256,
     preservation_snapshot: preservationSnapshot(),
   };
@@ -909,7 +909,7 @@ test("rollback captures a live baseline and enforces the in-process Main A, Fina
   assert.equal(baselineReceipt.hostedReadCount, 1);
   assert.equal(
     baselineReceipt.liveBaseline.query.result.preservation_snapshot.length,
-    127,
+    129,
   );
   assert.equal(proofReceipt.hostedReadCount, 3);
   assert.equal(
