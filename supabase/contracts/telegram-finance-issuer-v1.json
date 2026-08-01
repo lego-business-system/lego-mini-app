@@ -1,0 +1,40 @@
+{
+  "contract_id": "architecture.finance.telegram-code.issuer",
+  "contract_version": 1,
+  "vector_id": "golden-v1-001",
+  "key_material_notice": "PUBLIC TEST VECTOR ONLY. NEVER USE IN ANY ENVIRONMENT.",
+  "request": {
+    "method": "POST",
+    "path": "/functions/v1/finance-issue-telegram-code",
+    "timestamp": "1784040000",
+    "request_id": "018f1f3a-7b6a-4a7d-87e0-4fe2d24739c3",
+    "telegram_id": "123456789",
+    "product_code": "architecture_finance"
+  },
+  "test_only_key_material": {
+    "nonce_hmac_key": "test-only-nonce-key-0123456789abcdef-0123456789abcdef",
+    "issuer_hmac_key": "test-only-issuer-key-0123456789abcdef-0123456789abcdef",
+    "code_generator_key": "test-only-code-key-0123456789abcdef-0123456789abcdef"
+  },
+  "success_source": {
+    "expires_at": "2026-07-14T14:45:00.000Z",
+    "replayed": false
+  },
+  "expected": {
+    "request_body_utf8": "{\"telegram_id\":\"123456789\",\"product_code\":\"architecture_finance\"}",
+    "request_body_sha256": "6e05479533fba8a509e834fd6ebb7402e500b249029c2f994d5104e273bb503b",
+    "nonce": "97f6cbd7013c096335d9ee007bb4b62bd860268744d5a5d5c52c620168e1edc1",
+    "canonical_request": "POST\n/functions/v1/finance-issue-telegram-code\n1784040000\n97f6cbd7013c096335d9ee007bb4b62bd860268744d5a5d5c52c620168e1edc1\n018f1f3a-7b6a-4a7d-87e0-4fe2d24739c3\n6e05479533fba8a509e834fd6ebb7402e500b249029c2f994d5104e273bb503b",
+    "signature": "v1=da8ccda5b73e2810f95d344d01f22c56eff37a8458457037ba64bc7adfa784b2",
+    "code_generation_context": "018f1f3a-7b6a-4a7d-87e0-4fe2d24739c3:97f6cbd7013c096335d9ee007bb4b62bd860268744d5a5d5c52c620168e1edc1:123456789:architecture_finance:6e05479533fba8a509e834fd6ebb7402e500b249029c2f994d5104e273bb503b",
+    "raw_code": "57854575",
+    "success_payload": {
+      "ok": true,
+      "code": "5785 4575",
+      "expires_at": "2026-07-14T14:45:00.000Z",
+      "replayed": false,
+      "request_id": "018f1f3a-7b6a-4a7d-87e0-4fe2d24739c3"
+    },
+    "success_body_utf8": "{\"ok\":true,\"code\":\"5785 4575\",\"expires_at\":\"2026-07-14T14:45:00.000Z\",\"replayed\":false,\"request_id\":\"018f1f3a-7b6a-4a7d-87e0-4fe2d24739c3\"}"
+  }
+}

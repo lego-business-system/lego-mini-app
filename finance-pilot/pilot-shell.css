@@ -1,0 +1,129 @@
+:root {
+  color-scheme: light;
+  --lego-navy: #10243a;
+  --lego-gray-700: #4d5b6b;
+  --pilot-paper: #f5f7f8;
+  --pilot-border: rgba(16, 36, 58, 0.12);
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--pilot-paper);
+  color: var(--lego-navy);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  padding: max(18px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  background:
+    radial-gradient(circle at top right, rgba(70, 159, 150, 0.16), transparent 38%),
+    var(--pilot-paper);
+}
+
+#app {
+  width: min(100%, 620px);
+  margin: 0 auto;
+}
+
+.pilot-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.card-v2 {
+  overflow: hidden;
+  padding: 20px;
+  border: 1px solid var(--pilot-border);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 14px 38px rgba(16, 36, 58, 0.08);
+}
+
+.card-v2 h1,
+.card-v2 h2,
+.card-v2 p {
+  margin-top: 0;
+}
+
+.card-v2 h1 {
+  margin-bottom: 10px;
+  font-size: clamp(25px, 8vw, 38px);
+  line-height: 1.08;
+}
+
+.card-v2 h2 {
+  margin-bottom: 10px;
+  font-size: 19px;
+}
+
+.card-v2 p:last-child {
+  margin-bottom: 0;
+}
+
+.blue-card-v2 {
+  color: #fff;
+}
+
+.eyebrow {
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.small {
+  color: var(--lego-gray-700);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.btn {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 14px;
+  font: inherit;
+  font-weight: 750;
+}
+
+.btn.primary {
+  color: #fff;
+  background: #16796f;
+}
+
+.btn.secondary {
+  color: var(--lego-navy);
+  background: #e8eef0;
+}
+
+.pilot-denied {
+  display: grid;
+  min-height: min(72vh, 560px);
+  place-items: center;
+}
+
+.pilot-denied .card-v2 {
+  width: 100%;
+}
+
+.pilot-denied h1 {
+  font-size: 24px;
+}
+
+noscript {
+  display: block;
+  max-width: 620px;
+  margin: 16px auto;
+  color: #7d2620;
+}

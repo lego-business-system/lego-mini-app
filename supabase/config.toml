@@ -1,2 +1,17 @@
+project_id = "lego-mini-app"
+
+# Supabase Auth is intentionally not the identity source for this endpoint:
+# live main auth.users is currently empty. The handler independently validates
+# fresh Telegram WebApp initData, then the database requires an exact product
+# entitlement and service_role for every internal RPC.
+[functions.finance-issue-code]
+verify_jwt = false
+
+# Private staging worker. Supabase JWT is not its authentication mechanism:
+# the handler rejects browser context and requires a separate server trigger
+# secret before it can claim the service-only durable outbox.
+[functions.finance-sync-entitlements]
+verify_jwt = false
+
 [functions.send-table-email]
 verify_jwt = false

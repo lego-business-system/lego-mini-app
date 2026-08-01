@@ -1,0 +1,91 @@
+name: Verify Finance integration
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-finance-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17.10-bookworm@sha256:17b6c778de50f4bb9a878c36e736110fbcd9b7020377d6fdfdf20f7c0347e40a
+        env:
+          POSTGRES_DB: main_finance_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: main-finance-ci-ephemeral-only
+        ports:
+          - 5432/tcp
+        options: >-
+          --health-cmd "pg_isready -U postgres -d main_finance_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Use Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24.18.0
+          check-latest: false
+          package-manager-cache: false
+
+      - name: Use Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: 2.9.2
+
+      - name: Install pinned ripgrep
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ripgrep=14.1.0-1
+          test "$(rg --version | head -n 1)" = "ripgrep 14.1.0"
+
+      - name: Enforce reviewed Finance v2 pilot scope
+        run: |
+          test -f finance-pilot/index.template.html
+          test -f scripts/build-finance-pilot.mjs
+          test -f scripts/verify-finance-pilot-hosted.mjs
+          test -f supabase/functions/finance-sync-entitlements/index.ts
+          test -f supabase/functions/_shared/main-entitlement-protocol-v2.mjs
+          test ! -e supabase/migrations/20260715030000_finance_subject_rotation_v2.sql
+          test ! -e supabase/functions/finance-sync-entitlements-v2
+          test ! -e scripts/manage-finance-subject-rotation-v2.mjs
+
+      - name: Run Finance pilot verification
+        run: ./supabase/tests/verify_local.sh
+
+      - name: Validate disposable PostgreSQL harness
+        run: node --test supabase/tests/postgres-ci/static_guard.test.mjs
+
+      - name: Verify frozen Edge dependency graph
+        run: |
+          deno check --config supabase/functions/finance-issue-code/deno.json --frozen supabase/functions/finance-issue-code/index.ts
+          (cd supabase/functions/finance-issue-code && deno audit --frozen)
+          deno check --config supabase/functions/finance-sync-entitlements/deno.json --frozen supabase/functions/finance-sync-entitlements/index.ts
+          (cd supabase/functions/finance-sync-entitlements && deno audit --frozen)
+
+      - name: Execute main Finance foundation on disposable PostgreSQL 17
+        env:
+          CI: "true"
+          MAIN_FINANCE_CI_ALLOW_EPHEMERAL: "1"
+          PGHOST: 127.0.0.1
+          PGPORT: ${{ job.services.postgres.ports[5432] }}
+          PGDATABASE: main_finance_ci
+          PGUSER: postgres
+          PGPASSWORD: main-finance-ci-ephemeral-only
+          PGSSLMODE: disable
+          PGCONNECT_TIMEOUT: "5"
+        run: ./supabase/tests/postgres-ci/run.sh

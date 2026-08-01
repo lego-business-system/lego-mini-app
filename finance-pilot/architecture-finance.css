@@ -1,0 +1,100 @@
+.architecture-finance-entry-v128 {
+  border-color: rgba(36, 122, 118, 0.32) !important;
+  background: linear-gradient(145deg, #ffffff 0%, #eef8f5 100%) !important;
+}
+
+.architecture-finance-hero-v128 {
+  background: linear-gradient(145deg, #10243a 0%, #1f5160 100%);
+}
+
+.architecture-finance-flow-v128 ol {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+  padding-left: 24px;
+  color: var(--lego-gray-700, #4d5b6b);
+  line-height: 1.5;
+}
+
+.architecture-finance-action-card-v128 {
+  display: grid;
+  gap: 12px;
+}
+
+.architecture-finance-notice-v128 {
+  padding: 12px 14px;
+  border: 1px solid #f2d38a;
+  border-radius: 14px;
+  color: #714b00;
+  background: #fff8e7;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.architecture-finance-notice-v128.success {
+  border-color: #a8dfcf;
+  color: #125f4f;
+  background: #ebf9f5;
+}
+
+.architecture-finance-notice-v128.error {
+  border-color: #f0bbb7;
+  color: #8f2d25;
+  background: #fff1f0;
+}
+
+.architecture-finance-code-panel-v128 {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid rgba(36, 122, 118, 0.28);
+  border-radius: 18px;
+  background: linear-gradient(145deg, #f2fbf8, #ffffff);
+  text-align: center;
+}
+
+.architecture-finance-code-panel-v128 > span {
+  color: var(--lego-gray-700, #4d5b6b);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.architecture-finance-code-panel-v128 > strong {
+  color: var(--lego-navy, #10243a);
+  font-size: clamp(34px, 10vw, 48px);
+  line-height: 1;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+}
+
+.architecture-finance-code-panel-v128 p {
+  margin: 0;
+  color: var(--lego-gray-700, #4d5b6b);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.architecture-finance-actions-v128 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 4px;
+}
+
+.architecture-finance-action-card-v128 .btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+@media (max-width: 420px) {
+  .architecture-finance-actions-v128 {
+    grid-template-columns: 1fr;
+  }
+
+  .architecture-finance-code-panel-v128 > strong {
+    font-size: 34px;
+    letter-spacing: 0.08em;
+  }
+}
