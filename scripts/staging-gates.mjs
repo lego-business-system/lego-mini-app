@@ -106,7 +106,7 @@ const GATES = Object.freeze([
   Object.freeze({
     key: "financeEntitlementSync",
     projectRef: STAGING_GATE_BOUNDARY.financeStagingRef,
-    secretName: "FINANCE_ENTITLEMENT_SYNC_MODE",
+    secretName: "FINANCE_ENTITLEMENT_V2_SYNC_MODE",
   }),
   Object.freeze({
     key: "mainFinanceSync",

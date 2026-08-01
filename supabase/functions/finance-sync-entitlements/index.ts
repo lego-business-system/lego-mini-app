@@ -1,10 +1,11 @@
 import {
-  buildEntitlementRequest,
-  classifyEntitlementResponse,
+  buildEntitlementV2Request,
+  classifyEntitlementV2Response,
+  ENTITLEMENT_V2_PATH,
   normalizeTelegramId,
   parseEntitlementClaim,
   validateEntitlementEndpoint,
-} from "../_shared/main-entitlement-protocol.mjs";
+} from "../_shared/main-entitlement-protocol-v2.mjs";
 import {
   constantTimeHexEqual,
   derivePrivateDigest,
@@ -24,7 +25,7 @@ import {
 
 const decoder = new TextDecoder("utf-8", { fatal: true });
 const INCOMING_PATH = "/functions/v1/finance-sync-entitlements";
-const UPSTREAM_PATH = "/functions/v1/finance-apply-entitlement-event";
+const UPSTREAM_PATH = ENTITLEMENT_V2_PATH;
 const PRODUCT_CODE = "architecture_finance";
 const WORKER_REF = "worker:finance_entitlement_sync_v1";
 const TRIGGER_HEADER = "x-architecture-sync-trigger";
@@ -154,7 +155,7 @@ function readWorkerConfig(): WorkerConfig {
   }
 
   const triggerSecret = requireSecret("MAIN_FINANCE_SYNC_TRIGGER_SECRET");
-  const hmacSecret = requireSecret("MAIN_FINANCE_ENTITLEMENT_HMAC_SECRET");
+  const hmacSecret = requireSecret("MAIN_FINANCE_ENTITLEMENT_V2_HMAC_SECRET");
   const privacyKey = requireSecret("MAIN_FINANCE_PRIVACY_HMAC_KEY");
   if (!TRIGGER_SECRET.test(triggerSecret)) {
     throw new ConfigurationRejected("worker trigger secret is malformed");
@@ -162,6 +163,7 @@ function readWorkerConfig(): WorkerConfig {
   const otherSecrets = [
     Deno.env.get("MAIN_FINANCE_ISSUER_HMAC_SECRET"),
     Deno.env.get("MAIN_FINANCE_NONCE_DERIVATION_KEY"),
+    Deno.env.get("MAIN_FINANCE_ENTITLEMENT_HMAC_SECRET"),
     Deno.env.get("TELEGRAM_BOT_TOKEN"),
   ].filter((value): value is string => typeof value === "string" && value.length > 0);
   const separatedSecrets = [triggerSecret, hmacSecret, privacyKey, ...otherSecrets];
@@ -432,12 +434,14 @@ async function processEvent(
   const eventAction = event.desiredState === "granted" ? "grant" : "revoke";
   const timestamp = String(Math.floor(Date.now() / 1_000));
   const nonce = crypto.randomUUID();
-  const request = await buildEntitlementRequest({
+  const request = await buildEntitlementV2Request({
     event: {
       eventId: event.eventId,
       eventVersion: event.eventVersion,
       eventAction,
-      telegramId: identity.telegramId,
+      subjectDigest: event.subjectDigest,
+      predecessorSubjectDigest: null,
+      telegramId: eventAction === "grant" ? identity.telegramId : null,
       productCode: event.productCode,
       eventOccurredAt: event.eventOccurredAt,
     },
@@ -467,7 +471,7 @@ async function processEvent(
     return "retry";
   }
 
-  const classification = classifyEntitlementResponse({
+  const classification = classifyEntitlementV2Response({
     status: upstream.response.status,
     contentType: upstream.response.headers.get("content-type") ?? "",
     contentEncoding: upstream.response.headers.get("content-encoding") ?? "",

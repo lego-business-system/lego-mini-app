@@ -70,7 +70,7 @@ const DISABLED_SHA256 = sha256("disabled");
 const GATE_SPECS = Object.freeze([
   Object.freeze({
     projectRef: FINANCE_REF,
-    secretName: "FINANCE_ENTITLEMENT_SYNC_MODE",
+    secretName: "FINANCE_ENTITLEMENT_V2_SYNC_MODE",
   }),
   Object.freeze({
     projectRef: MAIN_REF,
@@ -706,7 +706,7 @@ test("advance mutates exactly one gate per invocation in the four-gate reviewed 
   const receiptDir = temporaryPrivateDirectory(t);
   const fake = fakeSupabase();
   const expected = [
-    [FINANCE_REF, "FINANCE_ENTITLEMENT_SYNC_MODE=enabled"],
+    [FINANCE_REF, "FINANCE_ENTITLEMENT_V2_SYNC_MODE=enabled"],
     [MAIN_REF, "MAIN_FINANCE_SYNC_MODE=enabled"],
     [FINANCE_REF, "FINANCE_TELEGRAM_PROTOCOL_MODE=enabled"],
     [MAIN_REF, "MAIN_FINANCE_PROTOCOL_MODE=enabled"],
