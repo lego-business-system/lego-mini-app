@@ -8,7 +8,7 @@ import { planMainFinanceStaging } from "../../scripts/prepare-main-finance-stagi
 const STAGING_REF = "bljeoovhydhjhdzwplxh";
 const PRODUCTION_REF = "soxtekhspohkddpdidvp";
 const POSTFLIGHT_SHA256 = "e010d27d41e5ea01c7f8c95523456a5d995a8d8a019ca78fb18ed119d17b79f2";
-const DEPLOYMENT_SET_SHA256 = "8ecac081bf2c64bd107350efcdd1141a0f95d1d8da551db17164b24f141170b4";
+const DEPLOYMENT_SET_SHA256 = "4a8fe721e1b1b81a9f57713a83cba5123276753a352bf5996dc7cb2a6930911e";
 
 const manifest = JSON.parse(readFileSync(
   "supabase/releases/main-finance-pilot-v1/staging.manifest.json",

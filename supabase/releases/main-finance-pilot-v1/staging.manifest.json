@@ -54,7 +54,7 @@
   ],
   "functionConfigPath": "supabase/config.toml",
   "environmentContractPath": "supabase/functions/.env.example",
-  "environmentContractSha256": "8f799eedd3d9802236b02d60a6ce00ef41da42c0e94d36e97100b3f647c9ba83",
+  "environmentContractSha256": "8aa1136efd48cdb434f2565124612229ce36517089d8039b6d3f4e85fa4e40bd",
   "requiredServerSecrets": [
     "TELEGRAM_BOT_TOKEN",
     "MAIN_FINANCE_PRIVACY_HMAC_KEY",
@@ -71,7 +71,7 @@
     "expectedPublicDataRows": 0,
     "expectedAuthUsers": 0
   },
-  "edgeDeploymentSetSha256": "8ecac081bf2c64bd107350efcdd1141a0f95d1d8da551db17164b24f141170b4",
+  "edgeDeploymentSetSha256": "4a8fe721e1b1b81a9f57713a83cba5123276753a352bf5996dc7cb2a6930911e",
   "edgeDeploymentFiles": [
     {
       "path": "supabase/config.toml",
@@ -99,7 +99,7 @@
     },
     {
       "path": "supabase/functions/finance-sync-entitlements/index.ts",
-      "sha256": "b3397d7b7d95e720113c7d7026bbaedbea846b88de533f82240bbf69de346b3a"
+      "sha256": "0e06589f4b9f531e5d266254ab1d532578efca59bc3d323d6c373822fd280050"
     },
     {
       "path": "supabase/functions/finance-issue-code/deno.json",

@@ -152,7 +152,7 @@ function readManifest() {
     .join("");
   if (
     manifest.edgeDeploymentSetSha256
-      !== "8ecac081bf2c64bd107350efcdd1141a0f95d1d8da551db17164b24f141170b4"
+      !== "4a8fe721e1b1b81a9f57713a83cba5123276753a352bf5996dc7cb2a6930911e"
     || sha256(deploymentSet) !== manifest.edgeDeploymentSetSha256
   ) fail("Edge deployment set fingerprint differs");
   for (const item of manifest.edgeDeploymentFiles) {
@@ -182,7 +182,7 @@ function readManifest() {
     manifest.functionConfigPath !== "supabase/config.toml"
     || manifest.environmentContractPath !== "supabase/functions/.env.example"
     || manifest.environmentContractSha256
-      !== "8f799eedd3d9802236b02d60a6ce00ef41da42c0e94d36e97100b3f647c9ba83"
+      !== "8aa1136efd48cdb434f2565124612229ce36517089d8039b6d3f4e85fa4e40bd"
     || sha256(readFileSync(path.join(repositoryRoot, manifest.environmentContractPath)))
       !== manifest.environmentContractSha256
     || JSON.stringify(manifest.requiredServerSecrets) !== JSON.stringify(expectedSecrets)
