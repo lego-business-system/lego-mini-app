@@ -53,17 +53,18 @@ jobs:
           sudo apt-get install --yes --no-install-recommends ripgrep=14.1.0-1
           test "$(rg --version | head -n 1)" = "ripgrep 14.1.0"
 
-      - name: Enforce Finance v1-only pilot scope
+      - name: Enforce reviewed Finance v2 pilot scope
         run: |
           test -f finance-pilot/index.template.html
           test -f scripts/build-finance-pilot.mjs
           test -f scripts/verify-finance-pilot-hosted.mjs
+          test -f supabase/functions/finance-sync-entitlements/index.ts
+          test -f supabase/functions/_shared/main-entitlement-protocol-v2.mjs
           test ! -e supabase/migrations/20260715030000_finance_subject_rotation_v2.sql
           test ! -e supabase/functions/finance-sync-entitlements-v2
-          test ! -e supabase/functions/_shared/main-entitlement-protocol-v2.mjs
           test ! -e scripts/manage-finance-subject-rotation-v2.mjs
 
-      - name: Run Finance v1 pilot verification
+      - name: Run Finance pilot verification
         run: ./supabase/tests/verify_local.sh
 
       - name: Validate disposable PostgreSQL harness

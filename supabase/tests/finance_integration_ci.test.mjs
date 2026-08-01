@@ -30,8 +30,22 @@ test("Finance integration CI is immutable and runs the complete verifier", () =>
     /test "\$\(rg --version \| head -n 1\)" = "ripgrep 14\.1\.0"/,
   );
   assert.match(workflow, /run:\s*\.\/supabase\/tests\/verify_local\.sh/);
-  assert.match(workflow, /Enforce Finance v1-only pilot scope/);
+  assert.match(workflow, /Enforce reviewed Finance v2 pilot scope/);
+  assert.match(
+    workflow,
+    /test -f supabase\/functions\/_shared\/main-entitlement-protocol-v2\.mjs/,
+  );
+  assert.match(
+    workflow,
+    /test -f supabase\/functions\/finance-sync-entitlements\/index\.ts/,
+  );
   assert.match(workflow, /test ! -e supabase\/migrations\/20260715030000_finance_subject_rotation_v2\.sql/);
+  assert.match(workflow, /test ! -e supabase\/functions\/finance-sync-entitlements-v2/);
+  assert.match(workflow, /test ! -e scripts\/manage-finance-subject-rotation-v2\.mjs/);
+  assert.doesNotMatch(
+    workflow,
+    /test ! -e supabase\/functions\/_shared\/main-entitlement-protocol-v2\.mjs/,
+  );
   assert.match(workflow, /test -f scripts\/build-finance-pilot\.mjs/);
   assert.match(
     workflow,
