@@ -388,7 +388,7 @@ function mainProofRow(databaseClock) {
     outbox_desired_state: "revoked",
     outbox_state: "applied",
     outbox_created_at: "2026-07-28T03:45:00.000Z",
-    outbox_updated_at: "2026-07-28T03:51:00.000Z",
+    outbox_updated_at: "2026-07-28T03:51:00.001Z",
     outbox_applied_at: "2026-07-28T03:51:00.000Z",
     desired_count: "1",
     desired_last_event_id: REVOKE_EVENT_ID,
@@ -397,7 +397,7 @@ function mainProofRow(databaseClock) {
     desired_applied_version: "2",
     desired_applied_state: "revoked",
     desired_applied_at: "2026-07-28T03:51:00.000Z",
-    desired_updated_at: "2026-07-28T03:51:00.000Z",
+    desired_updated_at: "2026-07-28T03:51:00.002Z",
     entitlement_count: "1",
     entitlement_status: "blocked",
     entitlement_active_from: null,
@@ -1344,6 +1344,16 @@ test("live revoke barrier fails closed on queue, Auth, retention and sandwich dr
         }),
       }),
       expected: /Main revoke state differs/,
+    },
+    {
+      name: "Main updated_at precedes applied_at",
+      api: fakeManagementApi({
+        mainATransform: row => ({
+          ...row,
+          outbox_updated_at: "2026-07-28T03:50:59.999Z",
+        }),
+      }),
+      expected: /Main revoke lifecycle differs/,
     },
     {
       name: "Auth session residue",

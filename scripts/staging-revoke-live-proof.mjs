@@ -906,13 +906,20 @@ function validateMainRow(row, eventId) {
   ) fail("Main revoke state differs");
   const created = Date.parse(row.outbox_created_at);
   const applied = Date.parse(row.outbox_applied_at);
+  const outboxUpdated = Date.parse(row.outbox_updated_at);
+  const desiredUpdated = Date.parse(row.desired_updated_at);
   const databaseClock = Date.parse(row.database_clock);
   if (
     created > applied
     || applied > databaseClock
     || row.outbox_applied_at !== row.desired_applied_at
-    || row.outbox_updated_at !== row.outbox_applied_at
-    || row.desired_updated_at !== row.desired_applied_at
+    // Both rows use a BEFORE UPDATE trigger backed by clock_timestamp().
+    // PostgreSQL therefore records updated_at a few milliseconds after the
+    // shared applied_at value even when one transaction applies the event.
+    || outboxUpdated < applied
+    || outboxUpdated > databaseClock
+    || desiredUpdated < applied
+    || desiredUpdated > databaseClock
     || Date.parse(row.entitlement_updated_at) > databaseClock
   ) fail("Main revoke lifecycle differs");
   return Object.freeze({ ...row, global_counts: Object.freeze({ ...row.global_counts }) });
