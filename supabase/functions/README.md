@@ -111,7 +111,7 @@ POST
 1. service-only claim получает одну версионированную запись outbox с lease; при указанном `event_id` другое событие не выбирается и batch ограничен одним элементом;
 2. service-only resolver читает подтверждённый `public.users.telegram_id` как decimal string, не допуская округления `bigint` в JavaScript;
 3. worker заново получает keyed digest `main-telegram-subject-v1` и сравнивает его constant-time с outbox;
-4. точные канонические байты подписываются отдельным `MAIN_FINANCE_ENTITLEMENT_HMAC_SECRET` и отправляются только на закреплённый HTTPS Finance path;
+4. точные канонические байты v2 подписываются отдельным `MAIN_FINANCE_ENTITLEMENT_V2_HMAC_SECRET` и отправляются только на закреплённый HTTPS Finance path;
 5. только точный canonical success переводит событие в `applied`; 429/5xx/сеть дают bounded retry, протокольные и постоянные 4xx — `dead_letter`;
 6. текущий grant открывает Main entitlement gate только после Finance success; revoke, retry, dead-letter и устаревший grant оставляют gate закрытым.
 

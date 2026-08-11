@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import path from "node:path";
 import test from "node:test";
 
 import { planMainFinanceStaging } from "../../scripts/prepare-main-finance-staging.mjs";
@@ -8,7 +9,7 @@ import { planMainFinanceStaging } from "../../scripts/prepare-main-finance-stagi
 const STAGING_REF = "bljeoovhydhjhdzwplxh";
 const PRODUCTION_REF = "soxtekhspohkddpdidvp";
 const POSTFLIGHT_SHA256 = "e010d27d41e5ea01c7f8c95523456a5d995a8d8a019ca78fb18ed119d17b79f2";
-const DEPLOYMENT_SET_SHA256 = "4a8fe721e1b1b81a9f57713a83cba5123276753a352bf5996dc7cb2a6930911e";
+const DEPLOYMENT_SET_SHA256 = "232932bdc5e7a6065e4355a4b1d5740fb7631a9dc50097991fe34c30e22fbe0f";
 
 const manifest = JSON.parse(readFileSync(
   "supabase/releases/main-finance-pilot-v1/staging.manifest.json",
@@ -71,35 +72,77 @@ test("Edge deployment file set is byte-pinned", () => {
       return `${item.path}\0${item.sha256}\n`;
     })
     .join("");
-  assert.equal(manifest.edgeDeploymentFiles.length, 10);
+  assert.equal(manifest.edgeDeploymentFiles.length, 11);
+  assert.equal(
+    manifest.edgeDeploymentFiles.some(
+      item => item.path === "supabase/functions/_shared/main-entitlement-protocol-v2.mjs",
+    ),
+    true,
+  );
   assert.equal(createHash("sha256").update(source).digest("hex"), DEPLOYMENT_SET_SHA256);
   assert.equal(manifest.edgeDeploymentSetSha256, DEPLOYMENT_SET_SHA256);
+});
+
+test("Edge deployment file set closes every relative source import", () => {
+  const deploymentPaths = new Set(manifest.edgeDeploymentFiles.map(item => item.path));
+  const sourcePaths = [...deploymentPaths].filter(item => /\.(?:mjs|ts)$/u.test(item));
+
+  for (const sourcePath of sourcePaths) {
+    const source = readFileSync(sourcePath, "utf8");
+    const relativeImports = [
+      ...source.matchAll(/\bfrom\s+["'](\.\.?\/[^"']+)["']/gu),
+      ...source.matchAll(/\bimport\s*\(\s*["'](\.\.?\/[^"']+)["']\s*\)/gu),
+    ].map(match => match[1]);
+
+    for (const relativeImport of relativeImports) {
+      const dependencyPath = path.posix.normalize(path.posix.join(
+        path.posix.dirname(sourcePath),
+        relativeImport,
+      ));
+      assert.equal(
+        deploymentPaths.has(dependencyPath),
+        true,
+        `${sourcePath} imports deployment dependency missing from manifest: ${dependencyPath}`,
+      );
+    }
+  }
 });
 
 test("config/secrets/function commands are an inert exact staging-only plan", () => {
   assert.equal(manifest.edgeDeploymentPlan.implemented, false);
   const commands = manifest.edgeDeploymentPlan.commands;
-  assert.equal(commands.length, 4);
+  assert.equal(commands.length, 3);
   assert.deepEqual(commands.map(command => command.slice(0, 3)), [
-    ["supabase", "config", "push"],
     ["supabase", "secrets", "set"],
     ["supabase", "functions", "deploy"],
     ["supabase", "functions", "deploy"],
   ]);
-  assert.deepEqual(commands.slice(2).map(command => command[3]), [
+  assert.deepEqual(commands.slice(1).map(command => command[3]), [
     "finance-sync-entitlements",
     "finance-issue-code",
   ]);
+  assert.equal(
+    commands.some(command => command[0] === "supabase" && command[1] === "config"),
+    false,
+  );
   for (const command of commands) {
     assert.equal(command[command.indexOf("--project-ref") + 1], STAGING_REF);
     assert.equal(command.includes(PRODUCTION_REF), false);
     assert.equal(command.includes("--yes"), true);
     assert.equal(command.includes("--prune"), false);
   }
-  for (const command of commands.slice(2)) {
+  for (const command of commands.slice(1)) {
     assert.equal(command.includes("--no-verify-jwt"), true);
     assert.equal(command.includes("--use-api"), true);
   }
+  assert.deepEqual(manifest.requiredServerSecrets, [
+    "TELEGRAM_BOT_TOKEN",
+    "MAIN_FINANCE_PRIVACY_HMAC_KEY",
+    "MAIN_FINANCE_NONCE_DERIVATION_KEY",
+    "MAIN_FINANCE_ISSUER_HMAC_SECRET",
+    "MAIN_FINANCE_SYNC_TRIGGER_SECRET",
+    "MAIN_FINANCE_ENTITLEMENT_V2_HMAC_SECRET",
+  ]);
   const envContract = readFileSync("supabase/functions/.env.example", "utf8");
   assert.equal(
     createHash("sha256").update(envContract).digest("hex"),
