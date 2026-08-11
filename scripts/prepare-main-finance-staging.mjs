@@ -134,6 +134,7 @@ function readManifest() {
     "supabase/config.toml",
     "supabase/functions/_shared/main-edge-runtime.ts",
     "supabase/functions/_shared/main-entitlement-protocol.mjs",
+    "supabase/functions/_shared/main-entitlement-protocol-v2.mjs",
     "supabase/functions/_shared/main-finance-protocol.mjs",
     "supabase/functions/finance-sync-entitlements/deno.json",
     "supabase/functions/finance-sync-entitlements/deno.lock",
@@ -152,7 +153,7 @@ function readManifest() {
     .join("");
   if (
     manifest.edgeDeploymentSetSha256
-      !== "4a8fe721e1b1b81a9f57713a83cba5123276753a352bf5996dc7cb2a6930911e"
+      !== "232932bdc5e7a6065e4355a4b1d5740fb7631a9dc50097991fe34c30e22fbe0f"
     || sha256(deploymentSet) !== manifest.edgeDeploymentSetSha256
   ) fail("Edge deployment set fingerprint differs");
   for (const item of manifest.edgeDeploymentFiles) {
@@ -176,7 +177,7 @@ function readManifest() {
     "MAIN_FINANCE_NONCE_DERIVATION_KEY",
     "MAIN_FINANCE_ISSUER_HMAC_SECRET",
     "MAIN_FINANCE_SYNC_TRIGGER_SECRET",
-    "MAIN_FINANCE_ENTITLEMENT_HMAC_SECRET",
+    "MAIN_FINANCE_ENTITLEMENT_V2_HMAC_SECRET",
   ];
   if (
     manifest.functionConfigPath !== "supabase/config.toml"
@@ -189,7 +190,6 @@ function readManifest() {
   ) fail("Edge environment and secret-name contract differs");
   if (manifest.apply?.implemented !== false) fail("manifest must keep apply unimplemented");
   const expectedCommands = [
-    ["supabase", "config", "push", "--project-ref", "bljeoovhydhjhdzwplxh", "--workdir", "<ATTESTED_DEPLOY_WORKDIR>", "--yes"],
     ["supabase", "secrets", "set", "--project-ref", "bljeoovhydhjhdzwplxh", "--env-file", "<EXTERNAL_REVIEWED_ENV_FILE>", "--workdir", "<ATTESTED_DEPLOY_WORKDIR>", "--yes"],
     ["supabase", "functions", "deploy", "finance-sync-entitlements", "--project-ref", "bljeoovhydhjhdzwplxh", "--no-verify-jwt", "--use-api", "--workdir", "<ATTESTED_DEPLOY_WORKDIR>", "--yes"],
     ["supabase", "functions", "deploy", "finance-issue-code", "--project-ref", "bljeoovhydhjhdzwplxh", "--no-verify-jwt", "--use-api", "--workdir", "<ATTESTED_DEPLOY_WORKDIR>", "--yes"],

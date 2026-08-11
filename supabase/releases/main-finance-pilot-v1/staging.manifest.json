@@ -61,7 +61,7 @@
     "MAIN_FINANCE_NONCE_DERIVATION_KEY",
     "MAIN_FINANCE_ISSUER_HMAC_SECRET",
     "MAIN_FINANCE_SYNC_TRIGGER_SECRET",
-    "MAIN_FINANCE_ENTITLEMENT_HMAC_SECRET"
+    "MAIN_FINANCE_ENTITLEMENT_V2_HMAC_SECRET"
   ],
   "postflight": {
     "path": "supabase/releases/main-finance-pilot-v1/postflight.sql",
@@ -71,7 +71,7 @@
     "expectedPublicDataRows": 0,
     "expectedAuthUsers": 0
   },
-  "edgeDeploymentSetSha256": "4a8fe721e1b1b81a9f57713a83cba5123276753a352bf5996dc7cb2a6930911e",
+  "edgeDeploymentSetSha256": "232932bdc5e7a6065e4355a4b1d5740fb7631a9dc50097991fe34c30e22fbe0f",
   "edgeDeploymentFiles": [
     {
       "path": "supabase/config.toml",
@@ -84,6 +84,10 @@
     {
       "path": "supabase/functions/_shared/main-entitlement-protocol.mjs",
       "sha256": "f06857efe7e745922aabc819689366c34a9c8d1993d305d381c473d0acca4e99"
+    },
+    {
+      "path": "supabase/functions/_shared/main-entitlement-protocol-v2.mjs",
+      "sha256": "48e049bcbf770d2ba46891a5ea22aa5da60d6f9237cfe91cd0fce3708d7a8965"
     },
     {
       "path": "supabase/functions/_shared/main-finance-protocol.mjs",
@@ -119,11 +123,6 @@
     "workdirPlaceholder": "<ATTESTED_DEPLOY_WORKDIR>",
     "environmentFilePlaceholder": "<EXTERNAL_REVIEWED_ENV_FILE>",
     "commands": [
-      [
-        "supabase", "config", "push",
-        "--project-ref", "bljeoovhydhjhdzwplxh",
-        "--workdir", "<ATTESTED_DEPLOY_WORKDIR>", "--yes"
-      ],
       [
         "supabase", "secrets", "set",
         "--project-ref", "bljeoovhydhjhdzwplxh",

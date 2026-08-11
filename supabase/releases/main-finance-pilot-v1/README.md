@@ -57,15 +57,18 @@ Postflight открывает `READ ONLY` транзакцию и требует
 После успешного migration postflight и проверки SHA внешнего environment-файла
 разрешён только порядок из manifest:
 
-1. `supabase config push` в exact staging;
-2. `supabase secrets set --env-file <external-reviewed-file>`;
-3. deploy `finance-sync-entitlements` с `--no-verify-jwt --use-api`;
-4. deploy `finance-issue-code` с `--no-verify-jwt --use-api`.
+1. `supabase secrets set --env-file <external-reviewed-file>` только для exact allow-list Finance-секретов;
+2. deploy `finance-sync-entitlements` с `--no-verify-jwt --use-api`;
+3. deploy `finance-issue-code` с `--no-verify-jwt --use-api`.
+
+Общий `supabase config push` запрещён: он может изменить конфигурацию
+других Main-продуктов. Два именованных deploy закрепляют
+`verify_jwt=false` только для Finance-функций.
 
 Deployment set SHA-256:
 
 ```text
-4a8fe721e1b1b81a9f57713a83cba5123276753a352bf5996dc7cb2a6930911e
+232932bdc5e7a6065e4355a4b1d5740fb7631a9dc50097991fe34c30e22fbe0f
 ```
 
 `--prune`, deploy всех функций без имени, корень полного Main-приложения и любой
