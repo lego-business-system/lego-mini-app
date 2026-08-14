@@ -31,6 +31,10 @@ const releasePostflightUrl = new URL(
   "supabase/releases/main-finance-pilot-v1/postflight.sql",
   root,
 );
+const runtimeRecoveryPreflightUrl = new URL(
+  "supabase/releases/main-finance-runtime-recovery-v2/preflight.sql",
+  root,
+);
 const workflow = readFileSync(
   new URL(".github/workflows/verify-finance-integration.yml", root),
   "utf8",
@@ -40,6 +44,7 @@ const outboxMigration = readFileSync(outboxMigrationUrl, "utf8");
 const resolverMigration = readFileSync(resolverMigrationUrl, "utf8");
 const ownerExecuteMigration = readFileSync(ownerExecuteMigrationUrl, "utf8");
 const releasePostflight = readFileSync(releasePostflightUrl, "utf8");
+const runtimeRecoveryPreflight = readFileSync(runtimeRecoveryPreflightUrl, "utf8");
 const runScript = readFileSync(new URL("run.sh", harness), "utf8");
 const bootstrap = readFileSync(new URL("bootstrap.sql", harness), "utf8");
 const behaviorSmoke = readFileSync(new URL("behavior_smoke.sql", harness), "utf8");
@@ -277,6 +282,110 @@ test("hosted Main staging postflight is pinned, read-only and exercised locally"
       runScript.indexOf('stable_catalog_fingerprint="$(catalog_fingerprint)"'),
     "release postflight must run before stable fingerprints",
   );
+});
+
+test("Main Finance runtime recovery preflight is exact, read-only and identity-minimal", () => {
+  assert.equal(
+    createHash("sha256").update(runtimeRecoveryPreflight).digest("hex"),
+    "55090f0ee9194936a049fca1a7a5999d563f3651d763e204782f0b1381e341ea",
+  );
+  const preflightStatus = lstatSync(runtimeRecoveryPreflightUrl);
+  assert.ok(preflightStatus.isFile());
+  assert.ok(!preflightStatus.isSymbolicLink());
+
+  assert.match(runtimeRecoveryPreflight, /^WITH\n/);
+  assert.match(runtimeRecoveryPreflight, /\nFROM preflight_clock;\s*$/);
+  assert.match(
+    runtimeRecoveryPreflight,
+    /^WITH[\s\S]*\nSELECT\n[\s\S]*\nFROM preflight_clock;\s*$/,
+    "preflight must remain one WITH query ending in SELECT",
+  );
+  assert.equal(
+    [...runtimeRecoveryPreflight.matchAll(/;/g)].length,
+    1,
+    "preflight must remain one read-only statement",
+  );
+  assert.equal(
+    [...runtimeRecoveryPreflight.matchAll(/\bcoalesce\s*\(/giu)].length,
+    11,
+    "preflight must retain the exact eleven built-in COALESCE expressions",
+  );
+  assert.doesNotMatch(
+    runtimeRecoveryPreflight,
+    /\bpg_catalog\.coalesce\s*\(/iu,
+    "COALESCE is syntax and must not be resolved as pg_catalog.coalesce(jsonb,jsonb)",
+  );
+  assert.doesNotMatch(
+    runtimeRecoveryPreflight,
+    /\b(?:INSERT|UPDATE|DELETE|TRUNCATE|MERGE|ALTER|DROP|CREATE|GRANT|REVOKE|CALL|DO|COPY|VACUUM|ANALYZE|REFRESH|LOCK|SET|RESET)\b/i,
+  );
+
+  for (const catalog of [
+    "relation_catalog",
+    "column_catalog",
+    "constraint_catalog",
+    "index_catalog",
+    "trigger_catalog",
+    "policy_catalog",
+    "function_catalog",
+    "migration_catalog",
+  ]) {
+    assert.ok(
+      runtimeRecoveryPreflight.includes(`${catalog} AS (`),
+      `${catalog} CTE must remain detailed`,
+    );
+    assert.ok(
+      runtimeRecoveryPreflight.includes(`(SELECT value FROM ${catalog}) AS ${catalog}`),
+      `${catalog} must remain in the sole result row`,
+    );
+  }
+  for (const field of [
+    "column_count",
+    "constraint_count",
+    "index_count",
+    "trigger_count",
+    "policy_count",
+    "column_acl_count",
+    "desired_count",
+    "current_row_count",
+    "current_invalid_count",
+    "entitlement_invalid_count",
+    "entitlement_count",
+    "entitlement_extra_count",
+    "version_invalid_count",
+    "nonterminal_outbox_count",
+    "active_issue_count",
+    "active_replay_count",
+  ]) {
+    assert.match(runtimeRecoveryPreflight, new RegExp(`\\bAS ${field}\\b`));
+  }
+  for (const relation of [
+    "architecture_product_entitlements",
+    "architecture_finance_issue_requests",
+    "architecture_finance_issue_replay_guard",
+    "architecture_finance_access_desired",
+    "architecture_finance_access_outbox",
+  ]) {
+    assert.match(runtimeRecoveryPreflight, new RegExp(`'${relation}'`));
+  }
+  assert.match(
+    runtimeRecoveryPreflight,
+    /WHERE entitlement\.product_code = 'architecture_finance'[\s\S]*?AS entitlement_count/,
+  );
+  assert.match(
+    runtimeRecoveryPreflight,
+    /LEFT JOIN public\.architecture_finance_access_desired AS desired[\s\S]*?desired\.main_user_id IS NULL[\s\S]*?AS entitlement_extra_count/,
+  );
+  assert.match(runtimeRecoveryPreflight, /outbox\.state IS DISTINCT FROM 'applied'/);
+  assert.match(runtimeRecoveryPreflight, /desired\.applied_version <> desired\.version/);
+
+  assert.doesNotMatch(
+    runtimeRecoveryPreflight,
+    /telegram_id|raw_init_data|bot_token|service_role_key|privacy_hmac|operator_secret|access_token|\bemail\b|\bphone\b/i,
+  );
+  assert.doesNotMatch(runtimeRecoveryPreflight, /'subject_digest'\s*,/i);
+  assert.doesNotMatch(runtimeRecoveryPreflight, /subject_digest\s*::\s*text/i);
+  assert.doesNotMatch(runtimeRecoveryPreflight, /encode\s*\([^)]*subject_digest/i);
 });
 
 test("harness inputs are regular files and runner fails closed", () => {

@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 2,
+  "kind": "main-finance-runtime-recovery-v2-environment-contract",
+  "environment": "staging",
+  "mainProjectRef": "bljeoovhydhjhdzwplxh",
+  "financeProjectRef": "makgsbjduobcphuqzaoq",
+  "productionDenyProjectRefs": [
+    "soxtekhspohkddpdidvp",
+    "koibxwgtihwajocxfetb"
+  ],
+  "generatedSecrets": [
+    {
+      "name": "MAIN_FINANCE_ACCESS_OPERATOR_SECRET_V2",
+      "bytes": 48,
+      "encoding": "base64url",
+      "purpose": "operator request authentication only"
+    },
+    {
+      "name": "MAIN_FINANCE_SYNC_TRIGGER_SECRET",
+      "bytes": 48,
+      "encoding": "base64url",
+      "purpose": "rotated internal worker trigger"
+    }
+  ],
+  "stableRuntimeConfig": [
+    "MAIN_FINANCE_ACCESS_V2_MODE",
+    "MAIN_FINANCE_ACCESS_V2_SOURCE_DEPLOYMENT_SHA256",
+    "MAIN_FINANCE_ACCESS_V2_SOURCE_COMMIT_SHA",
+    "MAIN_FINANCE_ACCESS_V2_SOURCE_TREE_SHA",
+    "MAIN_FINANCE_ACCESS_V2_SOURCE_MANIFEST_SHA256",
+    "MAIN_FINANCE_ACCESS_V2_PREFLIGHT_SQL_SHA256",
+    "MAIN_FINANCE_ACCESS_V2_CATALOG_SHA256",
+    "MAIN_FINANCE_ACCESS_V2_PRIVACY_INVENTORY_SHA256",
+    "MAIN_FINANCE_ENTITLEMENT_UPSTREAM_URL",
+    "MAIN_FINANCE_ENTITLEMENT_CANONICAL_PATH",
+    "MAIN_FINANCE_PRODUCT_CODE"
+  ],
+  "stableRuntimeValues": {
+    "MAIN_FINANCE_ACCESS_V2_MODE": "enabled",
+    "MAIN_FINANCE_ENTITLEMENT_UPSTREAM_URL": "https://makgsbjduobcphuqzaoq.supabase.co/functions/v1/finance-apply-entitlement-event-v2",
+    "MAIN_FINANCE_ENTITLEMENT_CANONICAL_PATH": "/functions/v1/finance-apply-entitlement-event-v2",
+    "MAIN_FINANCE_PRODUCT_CODE": "architecture_finance"
+  },
+  "requiredInheritedRuntime": [
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "MAIN_FINANCE_PRIVACY_HMAC_KEY",
+    "MAIN_FINANCE_SYNC_MODE"
+  ],
+  "forbiddenSecretMutations": [
+    "MAIN_FINANCE_PRIVACY_HMAC_KEY",
+    "MAIN_FINANCE_PRIVACY_HMAC_KEY_V2",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "MAIN_SUPABASE_SECRET_KEY",
+    "MAIN_FINANCE_ENTITLEMENT_V2_HMAC_SECRET",
+    "MAIN_FINANCE_ENTITLEMENT_HMAC_SECRET",
+    "MAIN_FINANCE_ISSUER_HMAC_SECRET",
+    "MAIN_FINANCE_NONCE_DERIVATION_KEY",
+    "TELEGRAM_BOT_TOKEN",
+    "MAIN_FINANCE_SYNC_MODE",
+    "MAIN_FINANCE_PROTOCOL_MODE"
+  ],
+  "currentAuthorityRoot": {
+    "requiredActions": [
+      "plan",
+      "apply",
+      "reconcile",
+      "verify"
+    ],
+    "rootMode": "0700",
+    "rootOwnerRequired": true,
+    "rootRealDirectoryRequired": true,
+    "rootSymlinksAllowed": false,
+    "outsideRepository": true,
+    "commonParentRequired": true,
+    "stateDirectoryLifecycle": {
+      "argument": "--state-dir",
+      "directChildRequired": true,
+      "freshPlanMustBeAbsent": true,
+      "createdMode": "0700",
+      "createdOwnerRequired": true,
+      "existingActionsRequireRealDirectory": true,
+      "symlinksAllowed": false
+    },
+    "receiptDirectory": {
+      "argument": "--receipt-dir",
+      "directChildRequired": true,
+      "mustExistBeforeLease": true,
+      "mode": "0700",
+      "ownerRequired": true,
+      "realDirectoryRequired": true,
+      "symlinksAllowed": false
+    },
+    "directChildFiles": [
+      {
+        "argument": "--release-provenance",
+        "mode": "0600",
+        "ownerRequired": true,
+        "regularFileRequired": true,
+        "singleLinkRequired": true,
+        "symlinksAllowed": false
+      },
+      {
+        "argument": "--production-boundary",
+        "mode": "0600",
+        "ownerRequired": true,
+        "regularFileRequired": true,
+        "singleLinkRequired": true,
+        "symlinksAllowed": false
+      },
+      {
+        "argument": "--target-config",
+        "mode": "0600",
+        "ownerRequired": true,
+        "regularFileRequired": true,
+        "singleLinkRequired": true,
+        "symlinksAllowed": false
+      }
+    ],
+    "predecessorRootDistinctAndNonNestedBothWays": true,
+    "validatedAfterReadyManifestBeforeLease": true
+  },
+  "predecessorAdoption": {
+    "requiredForFreshSuccessorPlan": true,
+    "rootPolicy": {
+      "ownerPrivateMode": "0700",
+      "outsideRepository": true,
+      "commonParentRequired": true,
+      "identityBinding": "realpath plus device inode mode and owner",
+      "storePathInReceipt": false
+    },
+    "sourceCommitSha": "b87fe6a9212bdb6e43d8304be36c39074379a153",
+    "sourceTreeSha": "af4bb9b7fec37dd600c086184f101e2c3a094f7e",
+    "planReceiptSha256": "77a406d917a7232bb79ce7366a6166ae0170234f47ee6390dc48c79fb1a7c030",
+    "intentReceiptSha256": "f06ad6bb9ace2b88561b615f81771f9ee31b525eee25f6dbd7e13b42ab4305ce",
+    "unknownReceiptSha256": "10df1795cb53933c45cf856e7cb932d3a4a1d51fa03d476b313228411548d33c",
+    "terminalReceiptSha256": "5978750d44354891f11daaaded5d17493a891732a05287b8e4b0398b8db0f932",
+    "bundleAttestationSha256": "e336b417038d1cdd1398eff69473f5aabe6873a6f17dd92563ab5eac822077dc",
+    "runtimeFileSha256": "8920f620995e6749ae56d5d1d8a9b7461eee8c208adcad22ef56db67d0f1a908",
+    "provenanceFileSha256": "c8f0647c91691c068330aa8b41482ba8ecd08164504dd2172d154334621c88a7",
+    "provenanceDescriptorSha256": "5c6d31aef675f80187209e398eb18b8691a73315c595f5c498760de6b733719f",
+    "expectedSecretDigestSetSha256": "d8f9f9d9c4cbde2bb4e92dc2c8e9c327755c3146ca05c2f4170e2880c45fa8f2",
+    "generatedSecretDigestSetSha256": "b3014c4eb96cf14c75017f10d3e071285c671f9d1387dcbf48310ca63dd5d211",
+    "preinstallFunctionInventorySha256": "769a1fe02c74644f0c185cc2aa660293b1f1b795910e9089824932023d625942",
+    "observedFunctionInventorySha256": "e1edfa70f070fc3cf7b207891c33518107ab516378673dcc3cb07e63e5a09faf",
+    "observedFunctionCount": 12,
+    "installedMainInventorySha256": "66a2630aa9c4c17d9e1a894a9a43f201e40913dab20d0f08c161c48ebb0a7c60",
+    "stableFinanceInventorySha256": "89e6947c4e347081737ec51c198fabfea43a39e9d30a6a851e23ad7435a77c9e",
+    "adoptGeneratedSecretNames": [
+      "MAIN_FINANCE_ACCESS_OPERATOR_SECRET_V2",
+      "MAIN_FINANCE_SYNC_TRIGGER_SECRET"
+    ],
+    "rebuildStableRuntimeConfig": true,
+    "randomGenerationAllowed": false,
+    "planOnlyFlagsAllOrNone": [
+      "--prior-state-dir",
+      "--prior-receipt-dir",
+      "--prior-release-provenance",
+      "--prior-terminal-receipt-sha256"
+    ],
+    "validationBeforePlaintextRead": [
+      "exact root and device/inode identity",
+      "complete receipt chain and exact terminal divergence",
+      "exact provenance and durable bundle envelope",
+      "successor durable bundle preinstall is exact terminal Main and stable Finance plus the exact 12-row observed Function inventory before any successor runtime plaintext read; later current plan inventories remain stage-specific",
+      "terminal function inventory equals the deterministic all-existing-rows version plus one projection of the private predecessor bundle with every other key and value preserved"
+    ],
+    "finalPredecessorSandwichRequired": true
+  },
+  "operatorOutputPolicy": {
+    "printSecretValues": false,
+    "storeSecretValuesInReceipts": false,
+    "runtimeBundleMode": "0600",
+    "receiptDirectoryMode": "0700",
+    "receiptFileMode": "0600"
+  }
+}

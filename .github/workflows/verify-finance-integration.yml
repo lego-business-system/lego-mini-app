@@ -33,12 +33,13 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
+          fetch-depth: 2
           persist-credentials: false
 
       - name: Use Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
-          node-version: 24.18.0
+          node-version: 24.14.0
           check-latest: false
           package-manager-cache: false
 
@@ -58,11 +59,75 @@ jobs:
           test -f finance-pilot/index.template.html
           test -f scripts/build-finance-pilot.mjs
           test -f scripts/verify-finance-pilot-hosted.mjs
+          test -f scripts/main-finance-runtime-recovery-v2-snapshot.mjs
+          test -f scripts/manage-finance-access-v2.mjs
+          test -f scripts/prepare-main-finance-runtime-recovery-v2.mjs
           test -f supabase/functions/finance-sync-entitlements/index.ts
           test -f supabase/functions/_shared/main-entitlement-protocol-v2.mjs
+          test -f supabase/functions/finance-manage-access-v2/deno.json
+          test -f supabase/functions/finance-manage-access-v2/deno.lock
+          test -f supabase/functions/finance-manage-access-v2/index.ts
+          test -f supabase/releases/main-finance-runtime-recovery-v2/README.md
+          test -f supabase/releases/main-finance-runtime-recovery-v2/environment.contract.json
+          test -f supabase/releases/main-finance-runtime-recovery-v2/postflight.contract.json
+          test -f supabase/releases/main-finance-runtime-recovery-v2/preflight.sql
+          test -f supabase/releases/main-finance-runtime-recovery-v2/staging.manifest.json
+          test -f supabase/tests/main_finance_runtime_recovery_release_v2.test.mjs
+          test -f supabase/tests/main_finance_runtime_secret_recovery_v2.test.mjs
+          test -f supabase/tests/manage_finance_access_v2.test.mjs
           test ! -e supabase/migrations/20260715030000_finance_subject_rotation_v2.sql
           test ! -e supabase/functions/finance-sync-entitlements-v2
           test ! -e scripts/manage-finance-subject-rotation-v2.mjs
+
+          if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF}" == "refs/heads/agent/main-finance-staging-runtime-recovery-v2" ]]; then
+            base_commit="adcf7b919d34e512ded6d526ee7321f795f8f887"
+            base_tree="f02055d03d63a1fc2ebdbb17aeed3bcb2aafd22a"
+            test "${GITHUB_SHA}" = "$(GIT_NO_REPLACE_OBJECTS=1 git rev-parse HEAD)"
+            test "$(GIT_NO_REPLACE_OBJECTS=1 git cat-file -t "${base_commit}")" = "commit"
+            base_commit_object="$(GIT_NO_REPLACE_OBJECTS=1 git cat-file -p "${base_commit}")"
+            IFS= read -r base_tree_header <<< "${base_commit_object}"
+            test "${base_tree_header}" = "tree ${base_tree}"
+            commit_object="$(GIT_NO_REPLACE_OBJECTS=1 git cat-file -p "${GITHUB_SHA}")"
+            commit_headers=()
+            header_separator_seen=0
+            while IFS= read -r line; do
+              if [[ -z "${line}" ]]; then
+                header_separator_seen=1
+                break
+              fi
+              commit_headers+=("${line}")
+            done <<< "${commit_object}"
+            test "${header_separator_seen}" = "1"
+            test "${#commit_headers[@]}" = "4"
+            [[ "${commit_headers[0]}" =~ ^tree\ ([0-9a-f]{40})$ ]]
+            head_tree="${BASH_REMATCH[1]}"
+            test "${commit_headers[1]}" = "parent ${base_commit}"
+            [[ "${commit_headers[2]}" =~ ^author\ .+$ ]]
+            [[ "${commit_headers[3]}" =~ ^committer\ .+$ ]]
+            test "$(GIT_NO_REPLACE_OBJECTS=1 git cat-file -t "${base_tree}")" = "tree"
+            test "$(GIT_NO_REPLACE_OBJECTS=1 git cat-file -t "${head_tree}")" = "tree"
+            expected_changes="$(printf '%b\n' \
+              'A\tscripts/main-finance-runtime-recovery-v2-snapshot.mjs' \
+              'A\tscripts/manage-finance-access-v2.mjs' \
+              'A\tscripts/prepare-main-finance-runtime-recovery-v2.mjs' \
+              'A\tsupabase/functions/finance-manage-access-v2/deno.json' \
+              'A\tsupabase/functions/finance-manage-access-v2/deno.lock' \
+              'A\tsupabase/functions/finance-manage-access-v2/index.ts' \
+              'A\tsupabase/releases/main-finance-runtime-recovery-v2/README.md' \
+              'A\tsupabase/releases/main-finance-runtime-recovery-v2/environment.contract.json' \
+              'A\tsupabase/releases/main-finance-runtime-recovery-v2/postflight.contract.json' \
+              'A\tsupabase/releases/main-finance-runtime-recovery-v2/preflight.sql' \
+              'A\tsupabase/releases/main-finance-runtime-recovery-v2/staging.manifest.json' \
+              'A\tsupabase/tests/main_finance_runtime_recovery_release_v2.test.mjs' \
+              'A\tsupabase/tests/main_finance_runtime_secret_recovery_v2.test.mjs' \
+              'A\tsupabase/tests/manage_finance_access_v2.test.mjs' \
+              'M\t.github/workflows/verify-finance-integration.yml' \
+              'M\tsupabase/tests/finance_integration_ci.test.mjs' \
+              'M\tsupabase/tests/postgres-ci/static_guard.test.mjs' \
+              'M\tsupabase/tests/verify_local.sh' | LC_ALL=C sort)"
+            actual_changes="$(GIT_NO_REPLACE_OBJECTS=1 git diff-tree --no-renames --no-commit-id --name-status -r "${base_tree}" "${head_tree}" | LC_ALL=C sort)"
+            test "${actual_changes}" = "${expected_changes}"
+          fi
 
       - name: Run Finance pilot verification
         run: ./supabase/tests/verify_local.sh
@@ -76,6 +141,8 @@ jobs:
           (cd supabase/functions/finance-issue-code && deno audit --frozen)
           deno check --config supabase/functions/finance-sync-entitlements/deno.json --frozen supabase/functions/finance-sync-entitlements/index.ts
           (cd supabase/functions/finance-sync-entitlements && deno audit --frozen)
+          deno check --config supabase/functions/finance-manage-access-v2/deno.json --frozen supabase/functions/finance-manage-access-v2/index.ts
+          (cd supabase/functions/finance-manage-access-v2 && deno audit --frozen)
 
       - name: Execute main Finance foundation on disposable PostgreSQL 17
         env:

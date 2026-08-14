@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 2,
+  "kind": "main-finance-runtime-recovery-v2-staging-release",
+  "releaseStatus": "READY_FOR_SOURCE_ATTESTATION",
+  "environment": "staging",
+  "mainProjectRef": "bljeoovhydhjhdzwplxh",
+  "financeProjectRef": "makgsbjduobcphuqzaoq",
+  "productionDenyProjectRefs": [
+    "soxtekhspohkddpdidvp",
+    "koibxwgtihwajocxfetb"
+  ],
+  "sourceBranch": "agent/main-finance-staging-runtime-recovery-v2",
+  "supabaseCliVersion": "2.109.1",
+  "nodeVersion": "24.14.0",
+  "sourceLineage": {
+    "baseCommitSha": "adcf7b919d34e512ded6d526ee7321f795f8f887",
+    "baseTreeSha": "f02055d03d63a1fc2ebdbb17aeed3bcb2aafd22a",
+    "requiredSoleParentSha": "adcf7b919d34e512ded6d526ee7321f795f8f887",
+    "expectedTrackedFileCount": 935,
+    "changedPaths": [
+      { "status": "M", "path": ".github/workflows/verify-finance-integration.yml" },
+      { "status": "A", "path": "scripts/main-finance-runtime-recovery-v2-snapshot.mjs" },
+      { "status": "A", "path": "scripts/manage-finance-access-v2.mjs" },
+      { "status": "A", "path": "scripts/prepare-main-finance-runtime-recovery-v2.mjs" },
+      { "status": "A", "path": "supabase/functions/finance-manage-access-v2/deno.json" },
+      { "status": "A", "path": "supabase/functions/finance-manage-access-v2/deno.lock" },
+      { "status": "A", "path": "supabase/functions/finance-manage-access-v2/index.ts" },
+      { "status": "A", "path": "supabase/releases/main-finance-runtime-recovery-v2/README.md" },
+      { "status": "A", "path": "supabase/releases/main-finance-runtime-recovery-v2/environment.contract.json" },
+      { "status": "A", "path": "supabase/releases/main-finance-runtime-recovery-v2/postflight.contract.json" },
+      { "status": "A", "path": "supabase/releases/main-finance-runtime-recovery-v2/preflight.sql" },
+      { "status": "A", "path": "supabase/releases/main-finance-runtime-recovery-v2/staging.manifest.json" },
+      { "status": "M", "path": "supabase/tests/finance_integration_ci.test.mjs" },
+      { "status": "A", "path": "supabase/tests/main_finance_runtime_recovery_release_v2.test.mjs" },
+      { "status": "A", "path": "supabase/tests/main_finance_runtime_secret_recovery_v2.test.mjs" },
+      { "status": "A", "path": "supabase/tests/manage_finance_access_v2.test.mjs" },
+      { "status": "M", "path": "supabase/tests/postgres-ci/static_guard.test.mjs" },
+      { "status": "M", "path": "supabase/tests/verify_local.sh" }
+    ]
+  },
+  "sourceCi": {
+    "repository": "lego-business-system/lego-mini-app",
+    "workflowPath": ".github/workflows/verify-finance-integration.yml",
+    "workflowBlobSha": "aad069ba4d133440f9eb06c0db8b82c21566f99a",
+    "jobName": "verify",
+    "requiredSuccessfulSteps": [
+      "Check out repository",
+      "Use Node.js",
+      "Use Deno",
+      "Install pinned ripgrep",
+      "Enforce reviewed Finance v2 pilot scope",
+      "Run Finance pilot verification",
+      "Validate disposable PostgreSQL harness",
+      "Verify frozen Edge dependency graph",
+      "Execute main Finance foundation on disposable PostgreSQL 17"
+    ]
+  },
+  "toolPins": {
+    "git": {
+      "realPath": "/usr/bin/git",
+      "sha256": "179301dcb41ea78accc3fa0048a7e6f6710d891945a751a34addd622020c1818",
+      "version": "git version 2.50.1 (Apple Git-155)"
+    },
+    "node": {
+      "realPath": "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node",
+      "sha256": "90e41658177a192c8c23940e58d8252544e5b40cbaef7bd52a3c3c54caf9dd91",
+      "version": "v24.14.0"
+    },
+    "supabaseCli": {
+      "realPath": "/Users/Maks/Library/pnpm/store/v11/links/@supabase/cli-darwin-arm64/2.109.1/e5fdd9fb276a62ab37eb6abe0330d50b2a81bb692d391bd8bc054b330e5d8133/node_modules/@supabase/cli-darwin-arm64/bin/supabase",
+      "sha256": "b7be23f4e211b75c00a3df5fcd1f96f3905983c74ff3189bfc69ad5b0f7132c4",
+      "version": "2.109.1"
+    },
+    "supabaseArchive": {
+      "realPath": "/private/tmp/supabase_darwin_arm64-v2.109.1.tar.gz",
+      "sha256": "e36776717a56d704769229649349b3a382f413cb31f1fb2ba4647ef8bcf7339b"
+    },
+    "gh": {
+      "realPath": "/Users/Maks/Library/Caches/finance-release-tools-v1/gh_2.97.0_macOS_arm64/bin/gh",
+      "sha256": "0d17dddf96bcc1dc50f3420a064d593d64016b0be16286a6c26121f2a5cb8316",
+      "version": "gh version 2.97.0 (2026-07-31)"
+    }
+  },
+  "edgeFunction": {
+    "name": "finance-manage-access-v2",
+    "verifyJwt": false,
+    "deployArguments": [
+      "functions",
+      "deploy",
+      "finance-manage-access-v2",
+      "--project-ref",
+      "bljeoovhydhjhdzwplxh",
+      "--no-verify-jwt",
+      "--use-api",
+      "--workdir",
+      "<ATTESTED_WORKDIR>",
+      "--yes"
+    ]
+  },
+  "environmentContract": {
+    "path": "supabase/releases/main-finance-runtime-recovery-v2/environment.contract.json",
+    "sha256": "218da969838aaed52722c67bbe008e872d70e579c224413e62183980127093f2"
+  },
+  "preflightSql": {
+    "path": "supabase/releases/main-finance-runtime-recovery-v2/preflight.sql",
+    "sha256": "55090f0ee9194936a049fca1a7a5999d563f3651d763e204782f0b1381e341ea"
+  },
+  "expectedDatabaseCatalogSha256": "a971eb0b475390073157d21ab2030896af9e97b052f290d41cf6678c24ecee50",
+  "postflightContract": {
+    "path": "supabase/releases/main-finance-runtime-recovery-v2/postflight.contract.json",
+    "sha256": "3aba77e8419eb95db96a12e4f6bae4b8b59ac28aaa146ae0d38be7f8b26cfa52"
+  },
+  "deploymentClosureSetSha256": "3026624ad0888173170a87565f856b75a6afb19697a573f6cfee2a85234f5689",
+  "deploymentClosureFiles": [
+    {
+      "path": "supabase/config.toml",
+      "mode": "100644",
+      "sha256": "24cc6d4c35bedc3e0de6e579238777fcfc3c2f98e53a7603e4f379f310c0ffa4"
+    },
+    {
+      "path": "supabase/functions/_shared/main-edge-runtime.ts",
+      "mode": "100644",
+      "sha256": "6a773e3dfbd49c862da6a5aee43d42293dfc6fd7903cc17d8832b7ee803b6f88"
+    },
+    {
+      "path": "supabase/functions/_shared/main-finance-protocol.mjs",
+      "mode": "100644",
+      "sha256": "c900c5a46592f383523a82ba11d6100674eff2bb19faf5c2880f5078ba50dccc"
+    },
+    {
+      "path": "supabase/functions/finance-manage-access-v2/deno.json",
+      "mode": "100644",
+      "sha256": "095f401d35d83336a1e96bdad40e777b0ebf4dc5e713f8dc587418dfa01d55f8"
+    },
+    {
+      "path": "supabase/functions/finance-manage-access-v2/deno.lock",
+      "mode": "100644",
+      "sha256": "e30171a102182933285d51242597b71fe9139c4d8c261e32613690e456e4a9ad"
+    },
+    {
+      "path": "supabase/functions/finance-manage-access-v2/index.ts",
+      "mode": "100644",
+      "sha256": "556bdf155eec87690c805d2f2d9c781ddd8443bf5ee384168d5bbd4884244b5f"
+    }
+  ],
+  "archiveFormat": "main-finance-source-archive-v2-nul-framed",
+  "runtimePins": {
+    "denoLockVersion": "5",
+    "supabaseJsSpecifier": "npm:@supabase/supabase-js@2.106.2",
+    "supabaseJsVersion": "2.106.2",
+    "frozenLock": true
+  },
+  "plan": {
+    "ttlSeconds": 240,
+    "maximumSnapshotAgeSeconds": 300,
+    "futureClockSkewSeconds": 30,
+    "approvalPrefix": "MAIN_FINANCE_RUNTIME_RECOVERY_V2_APPROVED=DEPLOY"
+  },
+  "mutations": {
+    "secretSetNamesSource": "environment.contract.json generatedSecrets + stableRuntimeConfig",
+    "predecessorAdoptionRequired": true,
+    "postSecretFunctionReadRounds": 2,
+    "requiredFunctionInventoryKeys": [
+      "id",
+      "name",
+      "slug",
+      "ezbr_sha256",
+      "entrypoint_path",
+      "status",
+      "verify_jwt",
+      "version",
+      "created_at",
+      "updated_at"
+    ],
+    "allowedSecretFunctionVersionTransitions": [
+      "unchanged",
+      "exact-all-existing-plus-one"
+    ],
+    "causalAttributionClaimed": false,
+    "forbidPrivacyOverwrite": true,
+    "exactFunctionDeployCount": 1,
+    "databaseWrites": false,
+    "productionWrites": false
+  }
+}
