@@ -54,32 +54,36 @@ const FINANCE_REF = "makgsbjduobcphuqzaoq";
 const PRODUCTION_REFS = ["soxtekhspohkddpdidvp", "koibxwgtihwajocxfetb"];
 const SOURCE_COMMIT = "c".repeat(40);
 const SOURCE_TREE = "d".repeat(40);
-const WORKFLOW_BLOB = "aad069ba4d133440f9eb06c0db8b82c21566f99a";
+const WORKFLOW_BLOB = "220ee4c940cfd03e178dbee1fb6f25dc5de0845e";
 const BRANCH = "agent/main-finance-staging-runtime-recovery-v2";
 const RUN_ID = "321";
 const NODE = "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node";
 const SUPABASE = "/Users/Maks/Library/pnpm/store/v11/links/@supabase/cli-darwin-arm64/2.109.1/e5fdd9fb276a62ab37eb6abe0330d50b2a81bb692d391bd8bc054b330e5d8133/node_modules/@supabase/cli-darwin-arm64/bin/supabase";
 const GH = "/Users/Maks/Library/Caches/finance-release-tools-v1/gh_2.97.0_macOS_arm64/bin/gh";
 const ARCHIVE = "/private/tmp/supabase_darwin_arm64-v2.109.1.tar.gz";
+const SUCCESSOR_MUTATION_NAMES = Object.freeze([
+  "MAIN_FINANCE_ACCESS_V2_SOURCE_COMMIT_SHA",
+  "MAIN_FINANCE_ACCESS_V2_SOURCE_TREE_SHA",
+  "MAIN_FINANCE_ACCESS_V2_SOURCE_MANIFEST_SHA256",
+]);
+const SUCCESSOR_METADATA_ONLY_NAMES = Object.freeze([
+  "SUPABASE_ANON_KEY",
+  "SUPABASE_DB_URL",
+  "SUPABASE_JWKS",
+  "SUPABASE_PUBLISHABLE_KEYS",
+  "SUPABASE_SECRET_KEYS",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "SUPABASE_URL",
+]);
 const EXPECTED_CHANGED_PATHS = [
   ["M", ".github/workflows/verify-finance-integration.yml"],
-  ["A", "scripts/main-finance-runtime-recovery-v2-snapshot.mjs"],
-  ["A", "scripts/manage-finance-access-v2.mjs"],
-  ["A", "scripts/prepare-main-finance-runtime-recovery-v2.mjs"],
-  ["A", "supabase/functions/finance-manage-access-v2/deno.json"],
-  ["A", "supabase/functions/finance-manage-access-v2/deno.lock"],
-  ["A", "supabase/functions/finance-manage-access-v2/index.ts"],
-  ["A", "supabase/releases/main-finance-runtime-recovery-v2/README.md"],
-  ["A", "supabase/releases/main-finance-runtime-recovery-v2/environment.contract.json"],
-  ["A", "supabase/releases/main-finance-runtime-recovery-v2/postflight.contract.json"],
-  ["A", "supabase/releases/main-finance-runtime-recovery-v2/preflight.sql"],
-  ["A", "supabase/releases/main-finance-runtime-recovery-v2/staging.manifest.json"],
+  ["M", "scripts/prepare-main-finance-runtime-recovery-v2.mjs"],
+  ["M", "supabase/releases/main-finance-runtime-recovery-v2/environment.contract.json"],
+  ["M", "supabase/releases/main-finance-runtime-recovery-v2/postflight.contract.json"],
+  ["M", "supabase/releases/main-finance-runtime-recovery-v2/README.md"],
+  ["M", "supabase/releases/main-finance-runtime-recovery-v2/staging.manifest.json"],
   ["M", "supabase/tests/finance_integration_ci.test.mjs"],
-  ["A", "supabase/tests/main_finance_runtime_recovery_release_v2.test.mjs"],
-  ["A", "supabase/tests/main_finance_runtime_secret_recovery_v2.test.mjs"],
-  ["A", "supabase/tests/manage_finance_access_v2.test.mjs"],
-  ["M", "supabase/tests/postgres-ci/static_guard.test.mjs"],
-  ["M", "supabase/tests/verify_local.sh"],
+  ["M", "supabase/tests/main_finance_runtime_recovery_release_v2.test.mjs"],
 ].map(([status, changedPath]) => ({ status, path: changedPath }));
 const BASE_MS = Date.parse("2026-08-14T05:00:00.000Z");
 const OPERATOR_SECRET = Buffer.alloc(48, 1).toString("base64url");
@@ -397,6 +401,8 @@ async function importInternalGeneratedRuntimeSecrets(t) {
     "function receiptDirectoryIdentity(directory) {",
     "function assertFreshReceiptAuthorityUnchanged({",
     "function assertSuccessorPredecessorBaselineBinding(",
+    "function validSuccessorMutationSecretDigestMap(value) {",
+    "function assertCurrentReleaseSecretsOnlyBundle(attestation, plan) {",
     "async function collectCompletionAuthority({",
   ];
   let instrumentedSource = operatorSource;
@@ -676,6 +682,14 @@ const PREDECESSOR_ADOPTION = Object.freeze({
 function fixturePinOperatorSource(source) {
   const replacements = [
     [
+      'const BASE_COMMIT_SHA = "a30dedf20e977d9794a8ac9e54abc48b076c9d45";',
+      `const BASE_COMMIT_SHA = "${BASE_COMMIT}";`,
+    ],
+    [
+      'const BASE_TREE_SHA = "92d7aa5df37a09049d4fdaeaa523d2cc02e85cbf";',
+      `const BASE_TREE_SHA = "${BASE_TREE}";`,
+    ],
+    [
       'preinstallFunctionInventorySha256: "769a1fe02c74644f0c185cc2aa660293b1f1b795910e9089824932023d625942"',
       `preinstallFunctionInventorySha256: "${functionSha(PREDECESSOR_FUNCTIONS)}"`,
     ],
@@ -714,8 +728,13 @@ async function importFixturePinnedRecoveryModule() {
   mkdirSync(scriptsDirectory, { mode: 0o700 });
   let operatorSource = fixturePinOperatorSource(readFileSync(OPERATOR_FILE, "utf8"));
   for (const marker of [
+    "function captureRuntimeMutationInput(",
+    "function declarativeMutationInputEvidence(",
+    "function metadataOnlyInventoryDelta(",
+    "function classifyAllExistingFunctionVersionTransition({",
     "function expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(",
     "function classifyMainFinanceRuntimeRecoveryV2FunctionVersionTransition({",
+    "function evaluateMainFinanceRuntimeRecoveryV2StateLegacyCore(",
   ]) {
     assert.equal(operatorSource.split(marker).length, 2);
     operatorSource = operatorSource.replace(marker, `export ${marker}`);
@@ -741,9 +760,14 @@ async function importFixturePinnedRecoveryModule() {
 const fixtureRecovery = await importFixturePinnedRecoveryModule();
 after(() => rmSync(fixtureRecovery.parent, { recursive: true, force: true }));
 const {
+  captureRuntimeMutationInput,
+  classifyAllExistingFunctionVersionTransition,
   classifyMainFinanceRuntimeRecoveryV2FunctionVersionTransition,
-  evaluateMainFinanceRuntimeRecoveryV2State,
+  declarativeMutationInputEvidence,
+  evaluateMainFinanceRuntimeRecoveryV2StateLegacyCore:
+    evaluateMainFinanceRuntimeRecoveryV2State,
   expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows,
+  metadataOnlyInventoryDelta,
 } = fixtureRecovery.module;
 const BUNDLE_BINDING = Object.freeze({
   attestationSha256: BUNDLE_ATTESTATION_SHA,
@@ -1204,9 +1228,10 @@ function transition(chain, {
   bundle = BUNDLE_BINDING,
   expectedDigests = EXPECTED_DIGESTS,
   secretNames = SECRET_NAMES,
+  evaluator = evaluateMainFinanceRuntimeRecoveryV2State,
 } = {}) {
   if (action === "measure") {
-    return evaluateMainFinanceRuntimeRecoveryV2State({
+    return evaluator({
       action,
       checkpoint,
       operationBinding: {
@@ -1258,7 +1283,7 @@ function transition(chain, {
         secondFunctionInventorySha256: functionSha(effectiveFunctions),
       }
       : null);
-  return evaluateMainFinanceRuntimeRecoveryV2State({
+  return evaluator({
     action,
     checkpoint,
     operationBinding: {
@@ -1322,8 +1347,1175 @@ function assertTransition(
   assert.equal(result.productionTouched, false);
 }
 
+const TERMINAL_MAIN_INVENTORY_SHA =
+  "b98949ec772990f98b26471ed4e6ff4356d289709b51fd707419ffdbb1570139";
+const TERMINAL_FINANCE_INVENTORY_SHA =
+  "89e6947c4e347081737ec51c198fabfea43a39e9d30a6a851e23ad7435a77c9e";
+const TERMINAL_FUNCTION_INVENTORY_SHA =
+  "ad7075e78470642d731f628e722efb2f498c31760148b362a6e51ce7225b17e1";
+const TERMINAL_RECEIPT_CHAIN_SHA =
+  "f4196cffb0ad9b6c8dc0d619085e2bf1f44790efb479bc429ed91d1e74e15834";
+const SUCCESSOR_SOURCE_PARENT =
+  "a30dedf20e977d9794a8ac9e54abc48b076c9d45";
+const SUCCESSOR_BASE_TREE =
+  "92d7aa5df37a09049d4fdaeaa523d2cc02e85cbf";
+const SUCCESSOR_CHANGED_PATH_SET = sha256(EXPECTED_CHANGED_PATHS
+  .map(item => `${item.status}\0${item.path}\n`).join(""));
+const SUCCESSOR_MUTATION_DIGESTS = Object.freeze(Object.fromEntries(
+  SUCCESSOR_MUTATION_NAMES.map(name => [name, rawHash(`successor:${name}`)]),
+));
+const SUCCESSOR_BASELINE_MAIN = Object.freeze([
+  ...SUCCESSOR_MUTATION_NAMES.map(name => Object.freeze({
+    name,
+    value: rawHash(`terminal:${name}`),
+    updatedAt: at(-5_000),
+  })),
+  ...SUCCESSOR_METADATA_ONLY_NAMES.map(name => Object.freeze({
+    name,
+    value: rawHash(`terminal:${name}`),
+    updatedAt: at(-5_000),
+  })),
+  Object.freeze({
+    name: "MAIN_FINANCE_ACCESS_OPERATOR_SECRET_V2",
+    value: rawHash("terminal:operator-secret"),
+    updatedAt: at(-5_000),
+  }),
+  Object.freeze({
+    name: "MAIN_FINANCE_SYNC_TRIGGER_SECRET",
+    value: rawHash("terminal:trigger-secret"),
+    updatedAt: at(-5_000),
+  }),
+  Object.freeze({
+    name: "MAIN_UNRELATED_SECRET",
+    value: rawHash("terminal:unrelated-main"),
+    updatedAt: at(-5_000),
+  }),
+]);
+const SUCCESSOR_BASELINE_FINANCE = Object.freeze([
+  Object.freeze({
+    name: "FINANCE_ENTITLEMENT_SYNC_MODE",
+    value: rawHash("terminal:finance-mode"),
+    updatedAt: at(-5_000),
+  }),
+  Object.freeze({
+    name: "FINANCE_UNRELATED_SECRET",
+    value: rawHash("terminal:unrelated-finance"),
+    updatedAt: at(-5_000),
+  }),
+]);
+const SUCCESSOR_INSTALLED_MAIN = Object.freeze(SUCCESSOR_BASELINE_MAIN.map(row =>
+  Object.freeze({
+    ...row,
+    ...(SUCCESSOR_MUTATION_NAMES.includes(row.name)
+      ? { value: SUCCESSOR_MUTATION_DIGESTS[row.name], updatedAt: at(2_500) }
+      : {}),
+    ...(SUCCESSOR_METADATA_ONLY_NAMES.includes(row.name)
+      ? { updatedAt: at(2_600) }
+      : {}),
+  })));
+const SUCCESSOR_DIVERGED_MAIN = Object.freeze(SUCCESSOR_INSTALLED_MAIN.map(row =>
+  Object.freeze({
+    ...row,
+    ...(row.name === SUCCESSOR_MUTATION_NAMES[0]
+      ? { value: rawHash("successor-diverged-secret-digest") }
+      : {}),
+  })));
+const SUCCESSOR_BASELINE_FUNCTIONS = Object.freeze([
+  PURE_EXACT_FUNCTION,
+  ...Array.from({ length: 12 }, (_, index) => functionInventoryRow({
+    id: `${String(index + 10).padStart(8, "0")}-3333-4333-8333-${String(index + 10).padStart(12, "0")}`,
+    slug: `terminal-baseline-${String(index + 1).padStart(2, "0")}`,
+    verify_jwt: index % 2 === 0,
+    version: index + 2,
+    future_cli_field: `stable-${index + 1}`,
+  })),
+]);
+const SUCCESSOR_PLUS_ONE_FUNCTIONS = Object.freeze(
+  SUCCESSOR_BASELINE_FUNCTIONS.map(row => Object.freeze({
+    ...row,
+    version: row.version + 1,
+  })),
+);
+
+function successorInventoryCanonical(rows) {
+  return canonicalJson([...rows].sort((left, right) =>
+    left.name.localeCompare(right.name)));
+}
+
+function successorFunctionCanonical(rows) {
+  return canonicalJson([...rows].sort((left, right) =>
+    left.slug.localeCompare(right.slug)));
+}
+
+function successorInventorySha(rows) {
+  const source = successorInventoryCanonical(rows);
+  if (source === successorInventoryCanonical(SUCCESSOR_BASELINE_MAIN)) {
+    return TERMINAL_MAIN_INVENTORY_SHA;
+  }
+  if (source === successorInventoryCanonical(SUCCESSOR_BASELINE_FINANCE)) {
+    return TERMINAL_FINANCE_INVENTORY_SHA;
+  }
+  return sha256(source);
+}
+
+function successorFunctionSha(rows) {
+  const source = successorFunctionCanonical(rows);
+  return source === successorFunctionCanonical(SUCCESSOR_BASELINE_FUNCTIONS)
+    ? TERMINAL_FUNCTION_INVENTORY_SHA
+    : sha256(source);
+}
+
+function semanticInventorySha(rows) {
+  return sha256(canonicalJson([...rows]
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map(row => ({ name: row.name, value: row.value }))));
+}
+
+function successorMetadataDelta(before, after) {
+  const current = new Map(after.map(row => [row.name, row]));
+  const rows = before
+    .filter(row => !SUCCESSOR_MUTATION_NAMES.includes(row.name))
+    .filter(row => current.get(row.name)?.updatedAt !== row.updatedAt)
+    .map(row => ({
+      name: row.name,
+      beforeUpdatedAt: row.updatedAt,
+      afterUpdatedAt: current.get(row.name).updatedAt,
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+  return Object.freeze({
+    names: Object.freeze(rows.map(row => row.name)),
+    sha256: sha256(canonicalJson(rows)),
+  });
+}
+
+const SUCCESSOR_METADATA_DELTA = successorMetadataDelta(
+  SUCCESSOR_BASELINE_MAIN,
+  SUCCESSOR_INSTALLED_MAIN,
+);
+const SUCCESSOR_ADOPTION = Object.freeze({
+  kind: "main-finance-runtime-recovery-v3-terminal-diverged-predecessor-adoption",
+  priorRootIdentitySha256: rawHash("terminal-diverged-root-identity"),
+  priorSourceCommitSha: SUCCESSOR_SOURCE_PARENT,
+  priorSourceTreeSha: SUCCESSOR_BASE_TREE,
+  priorReleaseProvenanceFileSha256:
+    "34089b8041c72f3abcff3f954067ba7c093f66ba1045a51113ec4d81ccff8063",
+  priorReleaseProvenanceDescriptorSha256:
+    "7ceb2face8c325056b47fb595b801ee4860d27cc0d84816436c55380042972bf",
+  priorPlanReceiptSha256:
+    "62407763c353d6963561c39dc2d04b572632e400b5cc758958d8b81eaad9b701",
+  priorSecretIntentReceiptSha256:
+    "838a88db296495c60bfaea378f8c71fb86468cf8b6aefe099ed6e05071d51c79",
+  priorSecretResultReceiptSha256:
+    "522ced178f2839948f30316d2ae73d9e257385ec1699d0b842218fa49451c677",
+  priorFunctionIntentReceiptSha256:
+    "ddf741ca072b0bbe45bfa5a0098522facdf8e6b10ec407248195ac7b2faf899b",
+  priorFunctionUnknownReceiptSha256:
+    "5dbfe3ad4cd84533888c3b73a77ada3864395fadc4ecd58d361bed7d5d8ea64c",
+  priorTerminalReceiptSha256:
+    "098731b6054f305cb4d211f5658122696400486947dfe31091e5abc937fada0e",
+  priorReceiptChainSha256: TERMINAL_RECEIPT_CHAIN_SHA,
+  priorBundleAttestationSha256:
+    "5f5af08774ad620dc5556fa2083371617db8042fa49055dfebf0844fbe2baddf",
+  priorRuntimeFileSha256:
+    "932d3fde5f7b98fce9606aebea1b335d41f85cec72afc47a873bf12f1c6e2217",
+  generatedSecretNames: Object.freeze([
+    "MAIN_FINANCE_ACCESS_OPERATOR_SECRET_V2",
+    "MAIN_FINANCE_SYNC_TRIGGER_SECRET",
+  ]),
+  generatedSecretDigestSetSha256:
+    "b3014c4eb96cf14c75017f10d3e071285c671f9d1387dcbf48310ca63dd5d211",
+  preinstallMainInventorySha256:
+    "66a2630aa9c4c17d9e1a894a9a43f201e40913dab20d0f08c161c48ebb0a7c60",
+  postSecretMainInventorySha256:
+    "133ab45e43e8b5e0a5fa70be4ed4f978d40b27d955140becb9bc54a32d960ce2",
+  terminalMainInventorySha256: TERMINAL_MAIN_INVENTORY_SHA,
+  stableFinanceInventorySha256: TERMINAL_FINANCE_INVENTORY_SHA,
+  preinstallFunctionInventorySha256:
+    "e1edfa70f070fc3cf7b207891c33518107ab516378673dcc3cb07e63e5a09faf",
+  postSecretFunctionInventorySha256:
+    "73c0f50b78516b1fc46dc7f155bf0f737b6967a2913561a6ddb4693d20fdf80b",
+  terminalFunctionInventorySha256: TERMINAL_FUNCTION_INVENTORY_SHA,
+  terminalFunctionCount: 13,
+  targetFunctionState: "exact-sole-addition",
+  metadataOnlySecretNames: SUCCESSOR_METADATA_ONLY_NAMES,
+  stableReadRounds: 2,
+  functionDeployAlreadyObserved: true,
+  terminalOutcome: "diverged",
+  causalAttribution: false,
+});
+const SUCCESSOR_SOURCE_BINDING = Object.freeze({
+  commit: SOURCE_COMMIT,
+  tree: SOURCE_TREE,
+  parent: SUCCESSOR_SOURCE_PARENT,
+  baseTree: SUCCESSOR_BASE_TREE,
+  changedPaths: EXPECTED_CHANGED_PATHS,
+  changedPathSetSha256: SUCCESSOR_CHANGED_PATH_SET,
+  trackedFileCount: 935,
+  workflowBlobSha: WORKFLOW_BLOB,
+  supabaseArchiveSha256: SUPABASE_ARCHIVE_SHA,
+});
+const SUCCESSOR_RELEASE_BINDING = Object.freeze({
+  schemaVersion: 3,
+  authorizedMutation: "secrets-set",
+  functionDeployAuthorized: false,
+  manifestSha256: RELEASE_MANIFEST_SHA,
+  sourceDeploymentSha256: SOURCE_DEPLOYMENT_SHA,
+  futureClockSkewSeconds: 30,
+});
+const SUCCESSOR_BUNDLE_BINDING = Object.freeze({
+  attestationSha256: BUNDLE_ATTESTATION_SHA,
+  catalogSha256: PLAN_SNAPSHOT.catalogSha256,
+  descriptorSha256: PLAN_SNAPSHOT.descriptorSha256,
+  stateSha256: PLAN_SNAPSHOT.stateSha256,
+  gateInventorySha256: PLAN_SNAPSHOT.gateInventorySha256,
+  privacyInventorySha256: PLAN_SNAPSHOT.privacyInventorySha256,
+  checkedCount: PLAN_SNAPSHOT.checkedCount,
+  preinstallMainInventorySha256: TERMINAL_MAIN_INVENTORY_SHA,
+  preinstallFinanceInventorySha256: TERMINAL_FINANCE_INVENTORY_SHA,
+  preinstallFunctionInventorySha256: TERMINAL_FUNCTION_INVENTORY_SHA,
+  runtimeMutationInputSha256: RUNTIME_INPUT_SHA,
+  mutationSecretNameSetSha256: sha256(canonicalJson(SUCCESSOR_MUTATION_NAMES)),
+  mutationSecretDigestSetSha256: sha256(canonicalJson(
+    SUCCESSOR_MUTATION_DIGESTS,
+  )),
+  productionBoundarySha256: rawHash("successor-production-boundary"),
+  targetDescriptorSha256: rawHash("successor-target-descriptor"),
+  runtimeCommandArgsSha256: RUNTIME_ARGS_SHA,
+  sourceArchiveSha256: SOURCE_ARCHIVE_SHA,
+  operatorDescriptorFileSha256: OPERATOR_DESCRIPTOR_FILE_SHA,
+  predecessorAdoptionSha256: sha256(canonicalJson(SUCCESSOR_ADOPTION)),
+});
+
+async function importSuccessorReducerFixtureModule() {
+  const parent = mkdtempSync(path.join(
+    realpathSync(tmpdir()),
+    "main-finance-v3-reducer-fixture-",
+  ));
+  const scriptsDirectory = path.join(parent, "scripts");
+  mkdirSync(scriptsDirectory, { mode: 0o700 });
+  const hashOverrides = [
+    [successorInventoryCanonical(SUCCESSOR_BASELINE_MAIN),
+      TERMINAL_MAIN_INVENTORY_SHA],
+    [successorInventoryCanonical(SUCCESSOR_BASELINE_FINANCE),
+      TERMINAL_FINANCE_INVENTORY_SHA],
+    [successorFunctionCanonical(SUCCESSOR_BASELINE_FUNCTIONS),
+      TERMINAL_FUNCTION_INVENTORY_SHA],
+  ];
+  const shaMarker = `export function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
+}`;
+  const operatorSource = readFileSync(OPERATOR_FILE, "utf8");
+  assert.equal(operatorSource.split(shaMarker).length, 2);
+  const instrumentedSource = operatorSource.replace(shaMarker, `const TEST_SHA256_OVERRIDES = new Map(${JSON.stringify(hashOverrides)});
+
+export function sha256(value) {
+  return TEST_SHA256_OVERRIDES.get(value)
+    ?? createHash("sha256").update(value).digest("hex");
+}`);
+  writeFileSync(
+    path.join(scriptsDirectory, path.basename(OPERATOR_FILE)),
+    instrumentedSource,
+    { mode: 0o600 },
+  );
+  writeFileSync(
+    path.join(scriptsDirectory, "main-finance-runtime-recovery-v2-snapshot.mjs"),
+    readFileSync(
+      path.join(ROOT, "scripts/main-finance-runtime-recovery-v2-snapshot.mjs"),
+    ),
+    { mode: 0o600 },
+  );
+  const module = await import(pathToFileURL(
+    path.join(scriptsDirectory, path.basename(OPERATOR_FILE)),
+  ).href);
+  return { module, parent };
+}
+
+const successorReducerFixture = await importSuccessorReducerFixtureModule();
+after(() => rmSync(successorReducerFixture.parent, {
+  recursive: true,
+  force: true,
+}));
+
+function appendSuccessorFixture(chain, fields, authority = null) {
+  const core = {
+    ...fields,
+    schemaVersion: 3,
+    sequence: chain.length + 1,
+    previousReceiptSha256: chain.at(-1)?.receiptSha256 ?? null,
+    productionDenied: true,
+  };
+  const receipt = Object.freeze({
+    ...core,
+    receiptSha256: sha256(canonicalJson(core)),
+  });
+  if (authority !== null) {
+    assert.equal(authority.authorizedReceiptSha256, receipt.receiptSha256);
+    assert.equal(authority.payloadSha256, sha256(canonicalJson(fields)));
+  }
+  chain.push(receipt);
+  return receipt;
+}
+
+function successorPlanFields(recordedAt = at(1_000)) {
+  const plusOneSha256 = successorFunctionSha(SUCCESSOR_PLUS_ONE_FUNCTIONS);
+  return {
+    kind: "release-plan",
+    status: "pending",
+    environment: "staging",
+    recordedAt,
+    expiresAt: at(201_000),
+    mainProjectRef: MAIN_REF,
+    financeProjectRef: FINANCE_REF,
+    sourceCommitSha: SOURCE_COMMIT,
+    sourceTreeSha: SOURCE_TREE,
+    sourceParentSha: SUCCESSOR_SOURCE_PARENT,
+    baseTreeSha: SUCCESSOR_BASE_TREE,
+    changedPaths: EXPECTED_CHANGED_PATHS,
+    changedPathSetSha256: SUCCESSOR_CHANGED_PATH_SET,
+    trackedFileCount: 935,
+    workflowBlobSha: WORKFLOW_BLOB,
+    sourceCiRunId: RUN_ID,
+    sourceCiRunApiSha256: CI_BINDING.runApiSha256,
+    sourceCiJobsApiSha256: CI_BINDING.jobsApiSha256,
+    sourceCiBranchApiSha256: CI_BINDING.branchApiSha256,
+    sourceProvenanceFileSha256: PROVENANCE_FILE_SHA,
+    sourceProvenanceDescriptorSha256: PROVENANCE_DESCRIPTOR_SHA,
+    releaseManifestSha256: RELEASE_MANIFEST_SHA,
+    sourceDeploymentSha256: SOURCE_DEPLOYMENT_SHA,
+    bundleAttestationSha256: BUNDLE_ATTESTATION_SHA,
+    sourceArchiveSha256: SOURCE_ARCHIVE_SHA,
+    supabaseArchiveSha256: SUPABASE_ARCHIVE_SHA,
+    operatorDescriptorFileSha256: OPERATOR_DESCRIPTOR_FILE_SHA,
+    runtimeMutationInputSha256: RUNTIME_INPUT_SHA,
+    runtimeCommandArgsSha256: RUNTIME_ARGS_SHA,
+    productionBoundarySha256:
+      SUCCESSOR_BUNDLE_BINDING.productionBoundarySha256,
+    targetDescriptorSha256: SUCCESSOR_BUNDLE_BINDING.targetDescriptorSha256,
+    mainInventorySha256: TERMINAL_MAIN_INVENTORY_SHA,
+    financeInventorySha256: TERMINAL_FINANCE_INVENTORY_SHA,
+    functionInventorySha256: TERMINAL_FUNCTION_INVENTORY_SHA,
+    functionVersionTransition: {
+      beforeFunctionInventorySha256: TERMINAL_FUNCTION_INVENTORY_SHA,
+      unchangedFunctionInventorySha256: TERMINAL_FUNCTION_INVENTORY_SHA,
+      exactAllExistingPlusOneFunctionInventorySha256: plusOneSha256,
+      currentStageFunctionInventorySha256: TERMINAL_FUNCTION_INVENTORY_SHA,
+      currentStageDisposition: "unchanged",
+      currentStageExactAllExistingPlusOneFunctionInventorySha256: plusOneSha256,
+      existingFunctionCount: 13,
+      allowedDispositions: ["unchanged", "exact-all-existing-plus-one"],
+      allOtherFieldsUnchanged: true,
+      stableReadRounds: 2,
+    },
+    predecessorAdoption: SUCCESSOR_ADOPTION,
+    snapshot: PLAN_SNAPSHOT,
+    mutationScope: "secrets-set",
+    resumeFromReceiptSha256: null,
+    hostedMutationCount: 0,
+    productionTouched: false,
+    semanticMainInventorySha256:
+      semanticInventorySha(SUCCESSOR_BASELINE_MAIN),
+    mutationSecretNames: SUCCESSOR_MUTATION_NAMES,
+    mutationSecretNameSetSha256:
+      SUCCESSOR_BUNDLE_BINDING.mutationSecretNameSetSha256,
+    mutationSecretDigestSetSha256:
+      SUCCESSOR_BUNDLE_BINDING.mutationSecretDigestSetSha256,
+    metadataOnlySecretNames: SUCCESSOR_METADATA_ONLY_NAMES,
+    metadataOnlySecretNameSetSha256:
+      sha256(canonicalJson(SUCCESSOR_METADATA_ONLY_NAMES)),
+    predecessorReceiptChainSha256: TERMINAL_RECEIPT_CHAIN_SHA,
+    functionAllExistingPlusOneSha256: plusOneSha256,
+    plannedHostedMutationCount: 1,
+    functionDeployCount: 0,
+  };
+}
+
+function successorIntentFields(plan, recordedAt = at(2_000)) {
+  return {
+    kind: "mutation-intent",
+    mutation: "secrets-set",
+    status: "pending",
+    environment: "staging",
+    recordedAt,
+    planReceiptSha256: plan.receiptSha256,
+    beforeMainInventorySha256: TERMINAL_MAIN_INVENTORY_SHA,
+    beforeFinanceInventorySha256: TERMINAL_FINANCE_INVENTORY_SHA,
+    beforeFunctionInventorySha256: TERMINAL_FUNCTION_INVENTORY_SHA,
+    unchangedFunctionInventorySha256: TERMINAL_FUNCTION_INVENTORY_SHA,
+    exactAllExistingPlusOneFunctionInventorySha256:
+      plan.functionAllExistingPlusOneSha256,
+    requiredStableReadRounds: 2,
+    predecessorAdoptionSha256:
+      SUCCESSOR_BUNDLE_BINDING.predecessorAdoptionSha256,
+    expectedSecretDigestSetSha256:
+      SUCCESSOR_BUNDLE_BINDING.mutationSecretDigestSetSha256,
+    secretNames: SUCCESSOR_MUTATION_NAMES,
+    semanticBeforeMainInventorySha256:
+      semanticInventorySha(SUCCESSOR_BASELINE_MAIN),
+    mutationSecretNameSetSha256:
+      SUCCESSOR_BUNDLE_BINDING.mutationSecretNameSetSha256,
+    metadataOnlySecretNameSetSha256:
+      sha256(canonicalJson(SUCCESSOR_METADATA_ONLY_NAMES)),
+    predecessorReceiptChainSha256: TERMINAL_RECEIPT_CHAIN_SHA,
+    functionAllExistingPlusOneSha256:
+      plan.functionAllExistingPlusOneSha256,
+    hostedMutationCount: 0,
+    functionDeployCount: 0,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  };
+}
+
+function successorCommandPayload() {
+  return {
+    kind: "main-finance-runtime-recovery-v2-command",
+    mutation: "secrets-set",
+    projectRef: MAIN_REF,
+    sourceDeploymentSha256: SOURCE_DEPLOYMENT_SHA,
+    mutationInputSha256: RUNTIME_INPUT_SHA,
+    argsSha256: RUNTIME_ARGS_SHA,
+  };
+}
+
+function successorVerifiedResultFields(
+  intent,
+  functions,
+  disposition,
+  recordedAt = at(3_000),
+) {
+  return {
+    kind: "mutation-result",
+    mutation: "secrets-set",
+    status: "verified",
+    environment: "staging",
+    recordedAt,
+    intentReceiptSha256: intent.receiptSha256,
+    afterMainInventorySha256: successorInventorySha(SUCCESSOR_INSTALLED_MAIN),
+    afterFinanceInventorySha256: TERMINAL_FINANCE_INVENTORY_SHA,
+    afterFunctionInventorySha256: successorFunctionSha(functions),
+    functionVersionTransitionDisposition: disposition,
+    functionInventoryStableReadRounds: 2,
+    predecessorAdoptionSha256:
+      SUCCESSOR_BUNDLE_BINDING.predecessorAdoptionSha256,
+    observation: "installed_observed",
+    state: "state_satisfied",
+    causalAttribution: false,
+    semanticAfterMainInventorySha256:
+      semanticInventorySha(SUCCESSOR_INSTALLED_MAIN),
+    metadataOnlyDeltaNames: SUCCESSOR_METADATA_DELTA.names,
+    metadataOnlyDeltaSha256: SUCCESSOR_METADATA_DELTA.sha256,
+    mutationSecretNames: SUCCESSOR_MUTATION_NAMES,
+    mutationSecretNameSetSha256:
+      SUCCESSOR_BUNDLE_BINDING.mutationSecretNameSetSha256,
+    mutationSecretDigestSetSha256:
+      SUCCESSOR_BUNDLE_BINDING.mutationSecretDigestSetSha256,
+    predecessorReceiptChainSha256: TERMINAL_RECEIPT_CHAIN_SHA,
+    functionAllExistingPlusOneSha256:
+      successorFunctionSha(SUCCESSOR_PLUS_ONE_FUNCTIONS),
+    hostedMutationCount: 1,
+    functionDeployCount: 0,
+    reconcileRequired: false,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  };
+}
+
+function successorUnknownResultFields(intent, recordedAt = at(3_000)) {
+  return {
+    kind: "mutation-result",
+    mutation: "secrets-set",
+    status: "unknown",
+    environment: "staging",
+    recordedAt,
+    intentReceiptSha256: intent.receiptSha256,
+    responseStatus: null,
+    reconcileRequired: true,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  };
+}
+
+function successorReconciliationFields(
+  unresolved,
+  outcome,
+  main,
+  functions,
+  functionDisposition,
+  recordedAt = at(4_000),
+) {
+  const delta = outcome === "diverged"
+    ? null
+    : successorMetadataDelta(SUCCESSOR_BASELINE_MAIN, main);
+  return {
+    kind: "reconciliation",
+    mutation: "secrets-set",
+    outcome,
+    environment: "staging",
+    recordedAt,
+    unresolvedReceiptSha256: unresolved.receiptSha256,
+    mainInventorySha256: successorInventorySha(main),
+    financeInventorySha256: TERMINAL_FINANCE_INVENTORY_SHA,
+    functionInventorySha256: successorFunctionSha(functions),
+    hostedProofSha256: null,
+    hostedD0ResponseSha256: null,
+    observation: outcome === "state_satisfied"
+      ? "installed_observed"
+      : (outcome === "state_unsatisfied" ? "baseline_observed" : "diverged"),
+    state: outcome,
+    causalAttribution: false,
+    functionVersionTransitionDisposition: functionDisposition,
+    inventoryReadRounds: 2,
+    stableObservation: true,
+    predecessorAdoptionSha256:
+      SUCCESSOR_BUNDLE_BINDING.predecessorAdoptionSha256,
+    semanticMainInventorySha256: semanticInventorySha(main),
+    metadataOnlyDeltaNames: delta?.names ?? null,
+    metadataOnlyDeltaSha256: delta?.sha256 ?? null,
+    mutationSecretNames: SUCCESSOR_MUTATION_NAMES,
+    mutationSecretNameSetSha256:
+      SUCCESSOR_BUNDLE_BINDING.mutationSecretNameSetSha256,
+    mutationSecretDigestSetSha256:
+      SUCCESSOR_BUNDLE_BINDING.mutationSecretDigestSetSha256,
+    predecessorReceiptChainSha256: TERMINAL_RECEIPT_CHAIN_SHA,
+    functionAllExistingPlusOneSha256:
+      successorFunctionSha(SUCCESSOR_PLUS_ONE_FUNCTIONS),
+    hostedMutationCount: 0,
+    functionDeployCount: 0,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  };
+}
+
+function successorPostflightFixture({
+  functions,
+  d0Clock = at(5_000),
+  proofClock = at(6_000),
+  d1Clock = at(7_000),
+  label = "successor-completion",
+} = {}) {
+  const base = postflightFixture({
+    main: SUCCESSOR_INSTALLED_MAIN,
+    finance: SUCCESSOR_BASELINE_FINANCE,
+    functions,
+    d0Clock,
+    proofClock,
+    d1Clock,
+    proofSha256: rawHash(`${label}:proof`),
+    d0ResponseLabel: `${label}:d0`,
+    d1ResponseLabel: `${label}:d1`,
+  });
+  return Object.freeze({
+    ...base,
+    d0MainInventorySha256: successorInventorySha(SUCCESSOR_INSTALLED_MAIN),
+    d0FinanceInventorySha256: TERMINAL_FINANCE_INVENTORY_SHA,
+    d0FunctionInventorySha256: successorFunctionSha(functions),
+    d1MainInventorySha256: successorInventorySha(SUCCESSOR_INSTALLED_MAIN),
+    d1FinanceInventorySha256: TERMINAL_FINANCE_INVENTORY_SHA,
+    d1FunctionInventorySha256: successorFunctionSha(functions),
+  });
+}
+
+function successorCompletionFields(
+  plan,
+  cause,
+  postflight,
+  recordedAt = at(8_000),
+) {
+  return {
+    kind: "release-complete",
+    status: "verified",
+    environment: "staging",
+    recordedAt,
+    mainProjectRef: MAIN_REF,
+    financeProjectRef: FINANCE_REF,
+    sourceCommitSha: SOURCE_COMMIT,
+    sourceTreeSha: SOURCE_TREE,
+    sourceParentSha: SUCCESSOR_SOURCE_PARENT,
+    baseTreeSha: SUCCESSOR_BASE_TREE,
+    changedPaths: EXPECTED_CHANGED_PATHS,
+    changedPathSetSha256: SUCCESSOR_CHANGED_PATH_SET,
+    trackedFileCount: 935,
+    workflowPath: ".github/workflows/verify-finance-integration.yml",
+    workflowBlobSha: WORKFLOW_BLOB,
+    sourceCiRunId: RUN_ID,
+    sourceCiRunApiSha256: CI_BINDING.runApiSha256,
+    sourceCiJobsApiSha256: CI_BINDING.jobsApiSha256,
+    sourceCiBranchApiSha256: CI_BINDING.branchApiSha256,
+    sourceCiConclusion: "success",
+    sourceProvenanceFileSha256: PROVENANCE_FILE_SHA,
+    sourceProvenanceDescriptorSha256: PROVENANCE_DESCRIPTOR_SHA,
+    releaseManifestSha256: RELEASE_MANIFEST_SHA,
+    deploymentClosureSha256: SOURCE_DEPLOYMENT_SHA,
+    sourceArchiveSha256: SOURCE_ARCHIVE_SHA,
+    supabaseArchiveSha256: SUPABASE_ARCHIVE_SHA,
+    operatorDescriptorFileSha256: OPERATOR_DESCRIPTOR_FILE_SHA,
+    productionBoundarySha256: plan.productionBoundarySha256,
+    targetDescriptorSha256: plan.targetDescriptorSha256,
+    functionInventorySha256: postflight.d1FunctionInventorySha256,
+    causalHostedProofSha256: null,
+    d0: postflight.d0,
+    hostedProof: postflight.proof,
+    d1: postflight.d1,
+    d0MainInventorySha256: postflight.d0MainInventorySha256,
+    d0FinanceInventorySha256: postflight.d0FinanceInventorySha256,
+    d0FunctionInventorySha256: postflight.d0FunctionInventorySha256,
+    d1MainInventorySha256: postflight.d1MainInventorySha256,
+    d1FinanceInventorySha256: postflight.d1FinanceInventorySha256,
+    d1FunctionInventorySha256: postflight.d1FunctionInventorySha256,
+    completionCauseReceiptSha256: cause.receiptSha256,
+    semanticMainInventorySha256:
+      semanticInventorySha(SUCCESSOR_INSTALLED_MAIN),
+    metadataOnlyDeltaNames: SUCCESSOR_METADATA_DELTA.names,
+    metadataOnlyDeltaSha256: SUCCESSOR_METADATA_DELTA.sha256,
+    mutationSecretNames: SUCCESSOR_MUTATION_NAMES,
+    mutationSecretNameSetSha256:
+      SUCCESSOR_BUNDLE_BINDING.mutationSecretNameSetSha256,
+    mutationSecretDigestSetSha256:
+      SUCCESSOR_BUNDLE_BINDING.mutationSecretDigestSetSha256,
+    predecessorReceiptChainSha256: TERMINAL_RECEIPT_CHAIN_SHA,
+    functionAllExistingPlusOneSha256:
+      successorFunctionSha(SUCCESSOR_PLUS_ONE_FUNCTIONS),
+    hostedMutationCount: 1,
+    functionDeployCount: 0,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  };
+}
+
+function successorTransition(chain, {
+  action = "plan",
+  checkpoint = "request",
+  now = at(1_000),
+  mutation = "none",
+  mutationOutcome = "none",
+  main = SUCCESSOR_BASELINE_MAIN,
+  functions = SUCCESSOR_BASELINE_FUNCTIONS,
+  approval,
+  observationEvidence,
+  postflightEvidence = null,
+  effectPayload = null,
+} = {}) {
+  const plan = [...chain].reverse().find(receipt => receipt.kind === "release-plan");
+  const effectiveApproval = approval === undefined
+    && action === "apply"
+    && checkpoint !== "after-mutation"
+    ? approvalFor(plan)
+    : (approval ?? null);
+  const effectiveObservation = observationEvidence !== undefined
+    ? observationEvidence
+    : (action === "reconcile" ? {
+      inventoryReadRounds: 2,
+      stableObservation: true,
+      firstMainInventorySha256: successorInventorySha(main),
+      firstFinanceInventorySha256: TERMINAL_FINANCE_INVENTORY_SHA,
+      firstFunctionInventorySha256: successorFunctionSha(functions),
+      secondMainInventorySha256: successorInventorySha(main),
+      secondFinanceInventorySha256: TERMINAL_FINANCE_INVENTORY_SHA,
+      secondFunctionInventorySha256: successorFunctionSha(functions),
+    } : null);
+  return successorReducerFixture.module
+    .evaluateMainFinanceRuntimeRecoveryV2State({
+      action,
+      checkpoint,
+      operationBinding: {
+        expectedSha256: OPERATION_BINDING,
+        currentSha256: OPERATION_BINDING,
+      },
+      chain,
+      release: SUCCESSOR_RELEASE_BINDING,
+      source: SUCCESSOR_SOURCE_BINDING,
+      provenance: PROVENANCE_BINDING,
+      ci: CI_BINDING,
+      bundle: SUCCESSOR_BUNDLE_BINDING,
+      approval: effectiveApproval,
+      now,
+      mutation,
+      mutationOutcome,
+      secretEvidence: {
+        preinstallMain: SUCCESSOR_BASELINE_MAIN,
+        preinstallFinance: SUCCESSOR_BASELINE_FINANCE,
+        currentMain: main,
+        currentFinance: SUCCESSOR_BASELINE_FINANCE,
+        expectedDigests: SUCCESSOR_MUTATION_DIGESTS,
+        secretNames: SUCCESSOR_MUTATION_NAMES,
+        metadataOnlyNames: SUCCESSOR_METADATA_ONLY_NAMES,
+      },
+      functionEvidence: {
+        preinstallRows: SUCCESSOR_BASELINE_FUNCTIONS,
+        currentRows: functions,
+        successorBaseline: true,
+      },
+      mutationInputEvidence: action === "apply" && mutation === "secrets-set"
+        ? {
+          expectedSha256: RUNTIME_INPUT_SHA,
+          currentSha256: RUNTIME_INPUT_SHA,
+        }
+        : null,
+      observationEvidence: effectiveObservation,
+      postflightEvidence,
+      effectPayload,
+    });
+}
+
+test("schema-3 reducer completes and verifies both exact allowed Function outcomes", () => {
+  assert.equal(successorInventorySha(SUCCESSOR_BASELINE_MAIN),
+    TERMINAL_MAIN_INVENTORY_SHA);
+  assert.equal(successorInventorySha(SUCCESSOR_BASELINE_FINANCE),
+    TERMINAL_FINANCE_INVENTORY_SHA);
+  assert.equal(successorFunctionSha(SUCCESSOR_BASELINE_FUNCTIONS),
+    TERMINAL_FUNCTION_INVENTORY_SHA);
+  assert.deepEqual(SUCCESSOR_SOURCE_BINDING.changedPaths, EXPECTED_CHANGED_PATHS);
+  assert.equal(SUCCESSOR_SOURCE_BINDING.changedPaths.length, 8);
+  const downgradedPlanPayload = successorPlanFields();
+  const downgradedPlanCore = {
+    ...downgradedPlanPayload,
+    schemaVersion: 2,
+    sequence: 1,
+    previousReceiptSha256: null,
+    productionDenied: true,
+  };
+  const downgradedPlan = {
+    ...downgradedPlanCore,
+    receiptSha256: sha256(canonicalJson(downgradedPlanCore)),
+  };
+  assert.throws(() => successorTransition([downgradedPlan], {
+    action: "apply",
+    checkpoint: "before-intent",
+    now: at(2_000),
+    mutation: "secrets-set",
+    effectPayload: null,
+  }), /secrets-only successor release plan evidence differs/u);
+  assert.throws(() => successorTransition([], {
+    action: "plan",
+    checkpoint: "request",
+    now: downgradedPlanPayload.recordedAt,
+    effectPayload: { ...downgradedPlanPayload, unexpectedAuthority: true },
+  }), /release-plan receipt keys differ/u);
+
+  for (const [label, functions, disposition] of [
+    ["unchanged", SUCCESSOR_BASELINE_FUNCTIONS, "unchanged"],
+    ["all-existing-plus-one", SUCCESSOR_PLUS_ONE_FUNCTIONS,
+      "exact-all-existing-plus-one"],
+  ]) {
+    const chain = [];
+    const effects = [];
+    const planPayload = successorPlanFields();
+    const planAuthority = successorTransition(chain, {
+      action: "plan",
+      checkpoint: "request",
+      now: planPayload.recordedAt,
+      effectPayload: planPayload,
+    });
+    effects.push(planAuthority.effect);
+    assertTransition(planAuthority, "issue-plan", "append-release-plan",
+      "secrets-set");
+    const plan = appendSuccessorFixture(chain, planPayload, planAuthority);
+    assert.equal(plan.mainInventorySha256, TERMINAL_MAIN_INVENTORY_SHA);
+    assert.equal(plan.financeInventorySha256, TERMINAL_FINANCE_INVENTORY_SHA);
+    assert.equal(plan.functionInventorySha256, TERMINAL_FUNCTION_INVENTORY_SHA);
+    assert.equal(plan.plannedHostedMutationCount, 1);
+    assert.equal(plan.functionDeployCount, 0);
+    assert.equal(Object.hasOwn(plan, "deployMutationInputSha256"), false);
+    assert.equal(Object.hasOwn(plan, "deployCommandArgsSha256"), false);
+
+    const intentPayload = successorIntentFields(plan);
+    const intentAuthority = successorTransition(chain, {
+      action: "apply",
+      checkpoint: "before-intent",
+      now: intentPayload.recordedAt,
+      mutation: "secrets-set",
+      effectPayload: intentPayload,
+    });
+    effects.push(intentAuthority.effect);
+    assertTransition(intentAuthority, "record-mutation-intent",
+      "append-mutation-intent", "secrets-set", "secrets-set");
+    const intent = appendSuccessorFixture(chain, intentPayload, intentAuthority);
+    assert.deepEqual(intent.secretNames, SUCCESSOR_MUTATION_NAMES);
+    assert.equal(intent.secretNames.length, 3);
+    assert.equal(intent.hostedMutationCount, 0);
+    assert.equal(intent.functionDeployCount, 0);
+
+    const invokeAuthority = successorTransition(chain, {
+      action: "apply",
+      checkpoint: "before-mutation",
+      now: at(2_500),
+      mutation: "secrets-set",
+      effectPayload: successorCommandPayload(),
+    });
+    effects.push(invokeAuthority.effect);
+    assertTransition(invokeAuthority, "authorize-cli-invocation",
+      "invoke-secrets-set", "secrets-set", "secrets-set");
+
+    const resultPayload = successorVerifiedResultFields(
+      intent,
+      functions,
+      disposition,
+    );
+    if (label === "unchanged") {
+      assert.throws(() => successorTransition(chain, {
+        action: "apply",
+        checkpoint: "after-mutation",
+        now: resultPayload.recordedAt,
+        mutation: "secrets-set",
+        mutationOutcome: "success",
+        main: SUCCESSOR_INSTALLED_MAIN,
+        functions,
+        effectPayload: { ...resultPayload, unexpectedAuthority: true },
+      }), /mutation-result receipt keys differ/u);
+    }
+    const resultAuthority = successorTransition(chain, {
+      action: "apply",
+      checkpoint: "after-mutation",
+      now: resultPayload.recordedAt,
+      mutation: "secrets-set",
+      mutationOutcome: "success",
+      main: SUCCESSOR_INSTALLED_MAIN,
+      functions,
+      effectPayload: resultPayload,
+    });
+    effects.push(resultAuthority.effect);
+    assertTransition(resultAuthority, "secrets-verified",
+      "append-verified-mutation-result");
+    const result = appendSuccessorFixture(
+      chain,
+      resultPayload,
+      resultAuthority,
+    );
+    assert.equal(result.functionVersionTransitionDisposition, disposition);
+    assert.equal(result.hostedMutationCount, 1);
+    assert.equal(result.functionDeployCount, 0);
+    assert.equal(result.causalAttribution, false);
+    assert.deepEqual(result.metadataOnlyDeltaNames,
+      SUCCESSOR_METADATA_ONLY_NAMES);
+
+    const completionPostflight = successorPostflightFixture({
+      functions,
+      label: `verified-${label}`,
+    });
+    const completionPayload = successorCompletionFields(
+      plan,
+      result,
+      completionPostflight,
+    );
+    const completionAuthority = successorTransition(chain, {
+      action: "complete",
+      checkpoint: "before-completion",
+      now: completionPayload.recordedAt,
+      main: SUCCESSOR_INSTALLED_MAIN,
+      functions,
+      postflightEvidence: completionPostflight,
+      effectPayload: completionPayload,
+    });
+    effects.push(completionAuthority.effect);
+    assertTransition(completionAuthority, "release-complete-eligible",
+      "append-release-complete");
+    const complete = appendSuccessorFixture(
+      chain,
+      completionPayload,
+      completionAuthority,
+    );
+    assert.equal(complete.completionCauseReceiptSha256, result.receiptSha256);
+    assert.equal(complete.causalHostedProofSha256, null);
+    assert.equal(complete.hostedMutationCount, 1);
+    assert.equal(complete.functionDeployCount, 0);
+    if (label === "unchanged") {
+      const { receiptSha256: ignored, ...downgradedCompleteCore } = complete;
+      const downgradedComplete = {
+        ...downgradedCompleteCore,
+        schemaVersion: 2,
+      };
+      downgradedComplete.receiptSha256 = sha256(canonicalJson(
+        downgradedComplete,
+      ));
+      assert.throws(() => successorTransition([
+        ...chain.slice(0, -1),
+        downgradedComplete,
+      ], {
+        action: "verify",
+        checkpoint: "request",
+        now: at(12_000),
+        main: SUCCESSOR_INSTALLED_MAIN,
+        functions,
+        postflightEvidence: successorPostflightFixture({
+          functions,
+          d0Clock: at(9_000),
+          proofClock: at(10_000),
+          d1Clock: at(11_000),
+          label: "downgraded-complete",
+        }),
+        effectPayload: null,
+      }), /release completion causal binding differs/u);
+    }
+
+    const verificationPostflight = successorPostflightFixture({
+      functions,
+      d0Clock: at(9_000),
+      proofClock: at(10_000),
+      d1Clock: at(11_000),
+      label: `verify-${label}`,
+    });
+    const verifyAuthority = successorTransition(chain, {
+      action: "verify",
+      checkpoint: "request",
+      now: at(12_000),
+      main: SUCCESSOR_INSTALLED_MAIN,
+      functions,
+      postflightEvidence: verificationPostflight,
+      effectPayload: null,
+    });
+    effects.push(verifyAuthority.effect);
+    assertTransition(verifyAuthority, "verification-evidence-consistent", "none");
+    assert.equal(chain.length, 4);
+    assert.equal(chain.at(-1).kind, "release-complete");
+    assert.equal(effects.includes("invoke-function-deploy"), false);
+    assert.deepEqual(effects.filter(effect => effect.startsWith("invoke-")), [
+      "invoke-secrets-set",
+    ]);
+  }
+});
+
+test("schema-3 reducer reconciles unknown once and makes unsatisfied or diverged states terminal", () => {
+  const buildUnknownChain = () => {
+    const chain = [];
+    const effects = [];
+    const planPayload = successorPlanFields();
+    const planAuthority = successorTransition(chain, {
+      action: "plan",
+      checkpoint: "request",
+      now: planPayload.recordedAt,
+      effectPayload: planPayload,
+    });
+    effects.push(planAuthority.effect);
+    const plan = appendSuccessorFixture(chain, planPayload, planAuthority);
+    const intentPayload = successorIntentFields(plan);
+    const intentAuthority = successorTransition(chain, {
+      action: "apply",
+      checkpoint: "before-intent",
+      now: intentPayload.recordedAt,
+      mutation: "secrets-set",
+      effectPayload: intentPayload,
+    });
+    effects.push(intentAuthority.effect);
+    const intent = appendSuccessorFixture(chain, intentPayload, intentAuthority);
+    const invokeAuthority = successorTransition(chain, {
+      action: "apply",
+      checkpoint: "before-mutation",
+      now: at(2_500),
+      mutation: "secrets-set",
+      effectPayload: successorCommandPayload(),
+    });
+    effects.push(invokeAuthority.effect);
+    assertTransition(invokeAuthority, "authorize-cli-invocation",
+      "invoke-secrets-set", "secrets-set", "secrets-set");
+    const unknownPayload = successorUnknownResultFields(intent);
+    const unknownAuthority = successorTransition(chain, {
+      action: "apply",
+      checkpoint: "after-mutation",
+      now: unknownPayload.recordedAt,
+      mutation: "secrets-set",
+      mutationOutcome: "unknown",
+      effectPayload: unknownPayload,
+    });
+    effects.push(unknownAuthority.effect);
+    assertTransition(unknownAuthority, "reconcile-required",
+      "append-unknown-result", "secrets-set", "secrets-set");
+    const unknown = appendSuccessorFixture(
+      chain,
+      unknownPayload,
+      unknownAuthority,
+    );
+    assert.equal(unknown.schemaVersion, 3);
+    assert.equal(unknown.reconcileRequired, true);
+    return { chain, effects, plan, unknown };
+  };
+
+  const satisfied = buildUnknownChain();
+  const { receiptSha256: ignoredUnknown, ...downgradedUnknownCore } =
+    satisfied.unknown;
+  const downgradedUnknown = {
+    ...downgradedUnknownCore,
+    schemaVersion: 2,
+  };
+  downgradedUnknown.receiptSha256 = sha256(canonicalJson(downgradedUnknown));
+  assert.throws(() => successorTransition([
+    ...satisfied.chain.slice(0, -1),
+    downgradedUnknown,
+  ], {
+    action: "reconcile",
+    checkpoint: "after-mutation",
+    now: at(4_000),
+    mutation: "secrets-set",
+    main: SUCCESSOR_INSTALLED_MAIN,
+    functions: SUCCESSOR_BASELINE_FUNCTIONS,
+    effectPayload: null,
+  }), /secrets-only mutation result schema differs/u);
+  const satisfiedPayload = successorReconciliationFields(
+    satisfied.unknown,
+    "state_satisfied",
+    SUCCESSOR_INSTALLED_MAIN,
+    SUCCESSOR_PLUS_ONE_FUNCTIONS,
+    "exact-all-existing-plus-one",
+  );
+  const satisfiedAuthority = successorTransition(satisfied.chain, {
+    action: "reconcile",
+    checkpoint: "after-mutation",
+    now: satisfiedPayload.recordedAt,
+    mutation: "secrets-set",
+    main: SUCCESSOR_INSTALLED_MAIN,
+    functions: SUCCESSOR_PLUS_ONE_FUNCTIONS,
+    effectPayload: satisfiedPayload,
+  });
+  satisfied.effects.push(satisfiedAuthority.effect);
+  assertTransition(satisfiedAuthority, "reconcile-state-satisfied",
+    "append-reconciliation", null, null, "state_satisfied");
+  const reconciliation = appendSuccessorFixture(
+    satisfied.chain,
+    satisfiedPayload,
+    satisfiedAuthority,
+  );
+  assert.equal(reconciliation.hostedMutationCount, 0);
+  assert.equal(reconciliation.functionDeployCount, 0);
+  assert.equal(reconciliation.causalAttribution, false);
+  const completionPostflight = successorPostflightFixture({
+    functions: SUCCESSOR_PLUS_ONE_FUNCTIONS,
+    label: "reconciled-completion",
+  });
+  const completionPayload = successorCompletionFields(
+    satisfied.plan,
+    reconciliation,
+    completionPostflight,
+  );
+  const completionAuthority = successorTransition(satisfied.chain, {
+    action: "complete",
+    checkpoint: "before-completion",
+    now: completionPayload.recordedAt,
+    main: SUCCESSOR_INSTALLED_MAIN,
+    functions: SUCCESSOR_PLUS_ONE_FUNCTIONS,
+    postflightEvidence: completionPostflight,
+    effectPayload: completionPayload,
+  });
+  satisfied.effects.push(completionAuthority.effect);
+  assertTransition(completionAuthority, "release-complete-eligible",
+    "append-release-complete");
+  const complete = appendSuccessorFixture(
+    satisfied.chain,
+    completionPayload,
+    completionAuthority,
+  );
+  assert.equal(complete.completionCauseReceiptSha256,
+    reconciliation.receiptSha256);
+  assert.equal(complete.hostedMutationCount, 1);
+  assert.equal(complete.functionDeployCount, 0);
+  assert.equal(satisfied.effects.includes("invoke-function-deploy"), false);
+  assert.deepEqual(satisfied.effects.filter(effect => effect.startsWith("invoke-")), [
+    "invoke-secrets-set",
+  ]);
+
+  const terminalCases = [
+    {
+      outcome: "state_unsatisfied",
+      main: SUCCESSOR_BASELINE_MAIN,
+      functions: SUCCESSOR_BASELINE_FUNCTIONS,
+      disposition: "unchanged",
+    },
+    {
+      outcome: "diverged",
+      main: SUCCESSOR_INSTALLED_MAIN,
+      functions: SUCCESSOR_PLUS_ONE_FUNCTIONS.map((row, index) =>
+        index === 0 ? SUCCESSOR_BASELINE_FUNCTIONS[index] : row),
+      disposition: "diverged",
+    },
+    {
+      outcome: "diverged",
+      main: SUCCESSOR_DIVERGED_MAIN,
+      functions: SUCCESSOR_BASELINE_FUNCTIONS,
+      disposition: "diverged",
+    },
+  ];
+  for (const terminalCase of terminalCases) {
+    const state = buildUnknownChain();
+    const payload = successorReconciliationFields(
+      state.unknown,
+      terminalCase.outcome,
+      terminalCase.main,
+      terminalCase.functions,
+      terminalCase.disposition,
+    );
+    const authority = successorTransition(state.chain, {
+      action: "reconcile",
+      checkpoint: "after-mutation",
+      now: payload.recordedAt,
+      mutation: "secrets-set",
+      main: terminalCase.main,
+      functions: terminalCase.functions,
+      effectPayload: payload,
+    });
+    state.effects.push(authority.effect);
+    assertTransition(
+      authority,
+      `reconcile-${terminalCase.outcome.replace("_", "-")}`,
+      "append-reconciliation",
+      null,
+      null,
+      terminalCase.outcome,
+    );
+    const terminal = appendSuccessorFixture(state.chain, payload, authority);
+    assert.equal(terminal.outcome, terminalCase.outcome);
+    assert.equal(terminal.hostedMutationCount, 0);
+    assert.equal(terminal.functionDeployCount, 0);
+    assert.equal(terminal.automaticRetryPerformed, false);
+    assert.equal(state.effects.includes("invoke-function-deploy"), false);
+    assert.deepEqual(state.effects.filter(effect => effect.startsWith("invoke-")), [
+      "invoke-secrets-set",
+    ]);
+    assert.throws(() => successorTransition(state.chain, {
+      action: "plan",
+      checkpoint: "request",
+      now: at(5_000),
+      main: terminalCase.main,
+      functions: terminalCase.functions,
+      effectPayload: null,
+    }), /refused/u);
+    assert.throws(() => successorTransition(state.chain, {
+      action: "apply",
+      checkpoint: "before-mutation",
+      now: at(5_000),
+      mutation: "function-deploy",
+      main: terminalCase.main,
+      functions: terminalCase.functions,
+      effectPayload: {
+        ...successorCommandPayload(),
+        mutation: "function-deploy",
+      },
+    }), /schema-3 secrets-set only/u);
+  }
+
+  const hostile = buildUnknownChain();
+  const hostilePayload = successorReconciliationFields(
+    hostile.unknown,
+    "diverged",
+    SUCCESSOR_DIVERGED_MAIN,
+    SUCCESSOR_BASELINE_FUNCTIONS,
+    "unchanged",
+  );
+  assert.equal(hostilePayload.stableObservation, true);
+  assert.throws(() => successorTransition(hostile.chain, {
+    action: "reconcile",
+    checkpoint: "after-mutation",
+    now: hostilePayload.recordedAt,
+    mutation: "secrets-set",
+    main: SUCCESSOR_DIVERGED_MAIN,
+    functions: SUCCESSOR_BASELINE_FUNCTIONS,
+    effectPayload: hostilePayload,
+  }), /amended secret reconciliation observation evidence differs/u);
+});
+
 test("checked-in READY manifest pins every release byte and measured catalog", () => {
   const checked = JSON.parse(readFileSync(MANIFEST_FILE, "utf8"));
+  assert.equal(checked.schemaVersion, 3);
+  assert.equal(
+    checked.kind,
+    "main-finance-runtime-recovery-v3-secrets-only-staging-release",
+  );
   assert.equal(
     checked.releaseStatus,
     "READY_FOR_SOURCE_ATTESTATION",
@@ -1367,6 +2559,57 @@ test("checked-in READY manifest pins every release byte and measured catalog", (
     );
   }
   const environment = JSON.parse(readFileSync(ENVIRONMENT_FILE, "utf8"));
+  const postflight = JSON.parse(readFileSync(POSTFLIGHT_FILE, "utf8"));
+  assert.equal(environment.schemaVersion, 3);
+  assert.equal(
+    environment.kind,
+    "main-finance-runtime-recovery-v3-secrets-only-environment-contract",
+  );
+  assert.deepEqual(environment.secretMutation.mutationNames, SUCCESSOR_MUTATION_NAMES);
+  assert.deepEqual(
+    environment.secretMutation.proofOnlyGeneratedSecretNames,
+    [
+      "MAIN_FINANCE_ACCESS_OPERATOR_SECRET_V2",
+      "MAIN_FINANCE_SYNC_TRIGGER_SECRET",
+    ],
+  );
+  assert.equal(environment.secretMutation.fullProofRuntimeCount, 13);
+  assert.equal(environment.secretMutation.rebuiltStableRuntimeCount, 11);
+  assert.deepEqual(
+    environment.secretMutation.metadataOnlyUpdatedAtAllowlist,
+    SUCCESSOR_METADATA_ONLY_NAMES,
+  );
+  assert.deepEqual(environment.secretMutation.allowedFunctionVersionTransitions, [
+    "unchanged",
+    "exact-all-existing-plus-one",
+  ]);
+  assert.equal(environment.secretMutation.functionDeployAllowed, false);
+  assert.equal(environment.secretMutation.causalAttributionClaimed, false);
+  assert.deepEqual(checked.mutations.exactSecretSetNames, SUCCESSOR_MUTATION_NAMES);
+  assert.deepEqual(
+    checked.mutations.metadataOnlyUpdatedAtAllowlist,
+    SUCCESSOR_METADATA_ONLY_NAMES,
+  );
+  assert.equal(checked.mutations.exactHostedMutationCount, 1);
+  assert.equal(checked.mutations.exactFunctionDeployCount, 0);
+  assert.equal(checked.edgeFunction.deployAuthorized, false);
+  assert.equal(Object.hasOwn(checked.edgeFunction, "deployArgs"), false);
+  assert.equal(postflight.schemaVersion, 3);
+  assert.equal(
+    postflight.kind,
+    "main-finance-runtime-recovery-v3-secrets-only-postflight-contract",
+  );
+  assert.deepEqual(
+    postflight.snapshotSandwich.functionInventoryPhases.allowedDispositions,
+    ["unchanged", "exact-all-existing-plus-one"],
+  );
+  assert.equal(
+    postflight.snapshotSandwich.functionInventoryPhases.functionDeployAuthorized,
+    false,
+  );
+  assert.equal(postflight.authority.hostedMutationCount, 1);
+  assert.equal(postflight.authority.functionDeployCount, 0);
+  assert.equal(postflight.authority.automaticRetryAllowed, false);
   assert.deepEqual(environment.currentAuthorityRoot, {
     requiredActions: ["plan", "apply", "reconcile", "verify"],
     rootMode: "0700",
@@ -1521,6 +2764,77 @@ test("persisted plan secret digest order remains valid without issuing mutation 
     secretNames: persisted.secretNames,
     effectPayload: intentPayload,
   }), /expected secret evidence differs/u);
+});
+
+test("persisted schema-3 mutation digest map is order-independent and exact", async t => {
+  const {
+    assertCurrentReleaseSecretsOnlyBundle,
+    validSuccessorMutationSecretDigestMap,
+  } = await importInternalGeneratedRuntimeSecrets(t);
+  const digestMap = Object.fromEntries(SUCCESSOR_MUTATION_NAMES.map(name => [
+    name,
+    rawHash(`successor-mutation:${name}`),
+  ]));
+  const attestation = {
+    schemaVersion: 3,
+    kind: "main-finance-runtime-recovery-v3-private-bundle",
+    predecessorAdoption: SUCCESSOR_ADOPTION,
+    runtimeFile: "runtime-proof.env",
+    runtimeMutationFile: "runtime-install.env",
+    mutationSecretNames: SUCCESSOR_MUTATION_NAMES,
+    mutationSecretDigests: digestMap,
+  };
+  const parent = mkdtempSync(path.join(
+    realpathSync(tmpdir()),
+    "main-finance-v3-persisted-digest-map-",
+  ));
+  t.after(() => rmSync(parent, { recursive: true, force: true }));
+  const attestationFile = path.join(parent, "bundle.attestation.json");
+  writeFileSync(attestationFile, `${canonicalJson(attestation)}\n`, { mode: 0o600 });
+  const persisted = JSON.parse(readFileSync(attestationFile, "utf8"));
+  assert.deepEqual(
+    Object.keys(persisted.mutationSecretDigests),
+    [...SUCCESSOR_MUTATION_NAMES].sort(),
+  );
+  assert.equal(validSuccessorMutationSecretDigestMap(
+    persisted.mutationSecretDigests,
+  ), true);
+  assert.equal(
+    assertCurrentReleaseSecretsOnlyBundle(persisted, {
+      predecessorAdoption: SUCCESSOR_ADOPTION,
+    }),
+    persisted,
+  );
+
+  const hostileMaps = [
+    null,
+    [],
+    Object.fromEntries(Object.entries(persisted.mutationSecretDigests).slice(1)),
+    { ...persisted.mutationSecretDigests, EXTRA_SECRET: rawHash("extra") },
+    {
+      ...Object.fromEntries(Object.entries(persisted.mutationSecretDigests).slice(1)),
+      WRONG_SECRET: rawHash("wrong"),
+    },
+    { ...persisted.mutationSecretDigests, [SUCCESSOR_MUTATION_NAMES[0]]: "not-a-sha" },
+  ];
+  for (const mutationSecretDigests of hostileMaps) {
+    assert.equal(validSuccessorMutationSecretDigestMap(mutationSecretDigests), false);
+    assert.throws(() => assertCurrentReleaseSecretsOnlyBundle({
+      ...persisted,
+      mutationSecretDigests,
+    }, { predecessorAdoption: SUCCESSOR_ADOPTION }), /schema-3 secrets-only private bundle/u);
+  }
+  for (const forbidden of ["deployMutationInput", "deployWorkdir"]) {
+    assert.throws(() => assertCurrentReleaseSecretsOnlyBundle({
+      ...persisted,
+      [forbidden]: forbidden === "deployMutationInput" ? [] : "/private/tmp/deploy",
+    }, { predecessorAdoption: SUCCESSOR_ADOPTION }), /schema-3 secrets-only private bundle/u);
+  }
+  assert.equal(
+    (readFileSync(OPERATOR_FILE, "utf8")
+      .match(/!validSuccessorMutationSecretDigestMap\(/gu) ?? []).length,
+    2,
+  );
 });
 
 test("raw reducer plan through verify matrix binds exact receipts commands and fresh evidence", () => {
@@ -1914,6 +3228,139 @@ test("raw reducer operation binding and function inventory schema matrix", () =>
     }]),
     /cannot be incremented safely/u,
   );
+});
+
+test("secrets-only successor rejects value drift and accepts only exact 13-row function transitions", () => {
+  const beforeSecrets = new Map([
+    ["SUPABASE_URL", Object.freeze({
+      name: "SUPABASE_URL",
+      value: rawHash("stable-supabase-url"),
+      updatedAt: at(1_000),
+    })],
+    ["UNRELATED_SECRET", Object.freeze({
+      name: "UNRELATED_SECRET",
+      value: rawHash("stable-unrelated-secret"),
+      updatedAt: at(1_000),
+    })],
+  ]);
+  const metadataOnly = new Map([...beforeSecrets].map(([name, row]) => [
+    name,
+    Object.freeze({
+      ...row,
+      updatedAt: name === "SUPABASE_URL" ? at(2_000) : row.updatedAt,
+    }),
+  ]));
+  assert.deepEqual(metadataOnlyInventoryDelta(beforeSecrets, metadataOnly).names, [
+    "SUPABASE_URL",
+  ]);
+  const valueDrift = new Map(metadataOnly);
+  valueDrift.set("SUPABASE_URL", Object.freeze({
+    ...valueDrift.get("SUPABASE_URL"),
+    value: rawHash("hostile-value-drift"),
+  }));
+  assert.throws(
+    () => metadataOnlyInventoryDelta(beforeSecrets, valueDrift),
+    /secret value drift/u,
+  );
+  const unrelatedMetadataDrift = new Map(beforeSecrets);
+  unrelatedMetadataDrift.set("UNRELATED_SECRET", Object.freeze({
+    ...unrelatedMetadataDrift.get("UNRELATED_SECRET"),
+    updatedAt: at(2_000),
+  }));
+  assert.throws(
+    () => metadataOnlyInventoryDelta(beforeSecrets, unrelatedMetadataDrift),
+    /outside the exact successor allow-list/u,
+  );
+
+  const baseline = Object.freeze([
+    PURE_EXACT_FUNCTION,
+    ...Array.from({ length: 12 }, (_, index) => functionInventoryRow({
+      id: `${(index + 3).toString(16).padStart(8, "0")}-3333-4333-8333-${(index + 3).toString(16).padStart(12, "0")}`,
+      slug: `successor-baseline-${String(index + 1).padStart(2, "0")}`,
+      verify_jwt: index % 2 === 0,
+      version: index + 2,
+      future_cli_field: `stable-${index + 1}`,
+    })),
+  ]);
+  assert.equal(baseline.length, 13);
+  const plusOne = Object.freeze(baseline.map(row => Object.freeze({
+    ...row,
+    version: row.version + 1,
+  })));
+  assert.equal(classifyAllExistingFunctionVersionTransition({
+    beforeRows: baseline,
+    afterRows: baseline,
+  }), "unchanged");
+  assert.equal(classifyAllExistingFunctionVersionTransition({
+    beforeRows: baseline,
+    afterRows: plusOne,
+  }), "exact-all-existing-plus-one");
+  for (const afterRows of [
+    plusOne.map((row, index) => index === 0 ? { ...row, version: row.version + 1 } : row),
+    plusOne.map((row, index) => index === 0 ? baseline[index] : row),
+    plusOne.slice(1),
+    [...plusOne, functionInventoryRow({
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      slug: "successor-extra-row",
+      verify_jwt: true,
+      version: 1,
+    })],
+    plusOne.map((row, index) => index === 0
+      ? { ...row, future_cli_field: "hostile-field-drift" }
+      : row),
+  ]) {
+    assert.equal(classifyAllExistingFunctionVersionTransition({
+      beforeRows: baseline,
+      afterRows,
+    }), "diverged");
+  }
+});
+
+test("secrets-only mutation evidence binds the exact mutation file and detects its drift", t => {
+  const directory = mkdtempSync(path.join(
+    realpathSync(tmpdir()),
+    "main-finance-v3-mutation-input-",
+  ));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const mutationFile = path.join(directory, "runtime-install.env");
+  const proofFile = path.join(directory, "runtime-proof.env");
+  const mutationSource = SUCCESSOR_MUTATION_NAMES
+    .map(name => `${name}=${rawHash(name)}`)
+    .join("\n") + "\n";
+  writeFileSync(mutationFile, mutationSource, { mode: 0o600 });
+  writeFileSync(proofFile, `${mutationSource}PROOF_ONLY=value\n`, { mode: 0o600 });
+  chmodSync(mutationFile, 0o600);
+  chmodSync(proofFile, 0o600);
+  const runtimeMutationInput = captureRuntimeMutationInput(
+    mutationFile,
+    sha256(mutationSource),
+  );
+  const bundle = Object.freeze({
+    runtimeMutationInput,
+    secretMutationFile: mutationFile,
+    runtimeFile: proofFile,
+    attestation: Object.freeze({
+      runtimeMutationFileSha256: sha256(mutationSource),
+      runtimeFileSha256: sha256(readFileSync(proofFile)),
+    }),
+  });
+  const exact = declarativeMutationInputEvidence(bundle, null, "secrets-set");
+  assert.equal(exact.currentSha256, exact.expectedSha256);
+
+  writeFileSync(proofFile, `${mutationSource}PROOF_ONLY=changed\n`, { mode: 0o600 });
+  chmodSync(proofFile, 0o600);
+  const proofOnlyDrift = declarativeMutationInputEvidence(bundle, null, "secrets-set");
+  assert.equal(proofOnlyDrift.currentSha256, proofOnlyDrift.expectedSha256);
+
+  writeFileSync(
+    mutationFile,
+    mutationSource.replace(rawHash(SUCCESSOR_MUTATION_NAMES[0]), rawHash("drift")),
+    { mode: 0o600 },
+  );
+  chmodSync(mutationFile, 0o600);
+  const mutationDrift = declarativeMutationInputEvidence(bundle, null, "secrets-set");
+  assert.equal(mutationDrift.currentSha256, null);
+  assert.notEqual(mutationDrift.currentSha256, mutationDrift.expectedSha256);
 });
 
 test("schema v2 preserves exact legacy receipts and requires amended recovery variants", async t => {
@@ -2534,6 +3981,45 @@ test("raw reducer mutation-input digest drift blocks secret and deploy command a
   }), /CLI invocation authority/u);
 });
 
+test("exported current declarative evaluator cannot authorize a legacy function deploy", () => {
+  const chain = [];
+  const plan = appendPlan(chain);
+  const secretIntent = appendIntent(chain, plan, "secrets-set", {
+    recordedAt: at(2_000), main: PRE_MAIN, finance: PRE_FINANCE,
+  });
+  appendMutationResult(chain, secretIntent, { recordedAt: at(3_000) });
+  appendIntent(chain, plan, "function-deploy", {
+    recordedAt: at(4_000),
+    main: INSTALLED_MAIN,
+    finance: INSTALLED_FINANCE,
+    functions: POST_SECRET_FUNCTIONS,
+  });
+  const hostile = {
+    action: "apply",
+    checkpoint: "before-mutation",
+    now: at(4_100),
+    mutation: "function-deploy",
+    main: INSTALLED_MAIN,
+    finance: INSTALLED_FINANCE,
+    functions: POST_SECRET_FUNCTIONS,
+    effectPayload: commandPayload("function-deploy"),
+  };
+  assertTransition(
+    transition(chain, hostile),
+    "authorize-cli-invocation",
+    "invoke-function-deploy",
+    "secrets-set+function-deploy",
+    "function-deploy",
+  );
+  assert.throws(
+    () => transition(chain, {
+      ...hostile,
+      evaluator: recoveryModule.evaluateMainFinanceRuntimeRecoveryV2State,
+    }),
+    /schema-3 secrets-set only/u,
+  );
+});
+
 test("raw reducer inventory rewrite and postflight sandwich drift reject completion and verify", () => {
   const rewritten = Object.freeze(INSTALLED_MAIN.map(row => Object.freeze({
     ...row,
@@ -3092,11 +4578,11 @@ test("initial and resume plans preserve callable clock and bundle inventories", 
   const resumeBody = source.slice(resumeStart, resumeEnd);
   assert.ok(
     initialBody.indexOf("assertRuntimeReadChainEligibility(\"fresh-plan\"")
-      < initialBody.indexOf("readPredecessorAdoption(input, release)"),
+      < initialBody.indexOf("readTerminalDivergedPredecessorAdoption(input, release)"),
   );
   assert.ok(
     initialBody.indexOf("postPredecessorReceiptIdentity")
-      > initialBody.indexOf("readPredecessorAdoption(input, release)"),
+      > initialBody.indexOf("readTerminalDivergedPredecessorAdoption(input, release)"),
   );
   assert.ok(
     initialBody.indexOf("postPredecessorReceiptIdentity")
@@ -3972,6 +5458,85 @@ test("direct CLI denies production before files and keeps help local", () => {
   });
 });
 
+test("direct current CLI rejects a persisted legacy plan before runtime, lease or mutation", t => {
+  const root = mkdtempSync(path.join(
+    realpathSync(tmpdir()),
+    "main-finance-v3-legacy-current-chain-",
+  ));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  chmodSync(root, 0o700);
+  const stateDirectory = path.join(root, "state");
+  const receiptDirectory = path.join(root, "receipts");
+  mkdirSync(stateDirectory, { mode: 0o700 });
+  mkdirSync(receiptDirectory, { mode: 0o700 });
+  const runtimeFile = path.join(stateDirectory, "runtime-proof.env");
+  const runtimeSentinel = "MUST_NOT_BE_READ=value\n";
+  writeFileSync(runtimeFile, runtimeSentinel, { mode: 0o600 });
+
+  const legacyCore = {
+    schemaVersion: 2,
+    sequence: 1,
+    previousReceiptSha256: null,
+    productionDenied: true,
+    kind: "release-plan",
+    environment: "staging",
+    recordedAt: at(1_000),
+    mutationScope: "secrets-set+function-deploy",
+  };
+  const legacyReceipt = {
+    ...legacyCore,
+    receiptSha256: sha256(canonicalJson(legacyCore)),
+  };
+  const receiptFile = path.join(receiptDirectory, "000001.json");
+  writeFileSync(receiptFile, `${canonicalJson(legacyReceipt)}\n`, { mode: 0o600 });
+
+  const marker = path.join(root, "tool-invoked");
+  const fakeTool = path.join(root, "fake-tool");
+  writeFileSync(
+    fakeTool,
+    `#!/bin/sh\n/usr/bin/touch '${marker}'\nexit 99\n`,
+    { mode: 0o700 },
+  );
+  chmodSync(fakeTool, 0o700);
+  const privateFiles = {};
+  for (const name of ["token", "provenance", "production", "target"]) {
+    const file = path.join(root, name);
+    writeFileSync(file, `${name}\n`, { mode: 0o600 });
+    privateFiles[name] = file;
+  }
+  const stateEntries = readdirSync(stateDirectory);
+  const receiptSource = readFileSync(receiptFile, "utf8");
+  const leaseFile = `${stateDirectory}.main-finance-runtime-recovery-v2-operation.lock`;
+  const result = spawnSync(process.execPath, [
+    OPERATOR_FILE,
+    "apply",
+    "--project-ref", MAIN_REF,
+    "--state-dir", stateDirectory,
+    "--receipt-dir", receiptDirectory,
+    "--access-token-file", privateFiles.token,
+    "--supabase-cli", fakeTool,
+    "--git-cli", fakeTool,
+    "--gh-cli", fakeTool,
+    "--release-provenance", privateFiles.provenance,
+    "--production-boundary", privateFiles.production,
+    "--target-config", privateFiles.target,
+    "--approval", "hostile-legacy-approval",
+  ], {
+    cwd: ROOT,
+    encoding: "utf8",
+    env: { LANG: "C", LC_ALL: "C", NO_COLOR: "1" },
+  });
+  assert.equal(result.status, 1);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /schema-3 secrets-only successor plan/u);
+  assert.equal(existsSync(leaseFile), false);
+  assert.equal(existsSync(marker), false);
+  assert.deepEqual(readdirSync(stateDirectory), stateEntries);
+  assert.equal(readFileSync(runtimeFile, "utf8"), runtimeSentinel);
+  assert.deepEqual(readdirSync(receiptDirectory), ["000001.json"]);
+  assert.equal(readFileSync(receiptFile, "utf8"), receiptSource);
+});
+
 test("predecessor adoption CLI flags are plan-only, all-or-none and mandatory for fresh state", t => {
   const parent = mkdtempSync(path.join(
     realpathSync(tmpdir()),
@@ -4563,7 +6128,7 @@ if (process.platform === "darwin") {
   });
 }
 
-test("release sources keep privacy/production exclusions and exact deploy CLI surface", () => {
+test("release sources keep privacy/production exclusions and deny successor function deploy authority", () => {
   const source = readFileSync(
     path.join(ROOT, "scripts/prepare-main-finance-runtime-recovery-v2.mjs"),
     "utf8",
@@ -4618,7 +6183,7 @@ test("release sources keep privacy/production exclusions and exact deploy CLI su
   assert.equal(
     (operations.match(/inspectReadyOperationSourceCi\(context, input, common, release\)/gu)
       ?? []).length,
-    7,
+    8,
   );
   assert.equal(
     (operations.match(/collectCompletionAuthority\(\{/gu) ?? []).length,

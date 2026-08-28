@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 2,
-  "kind": "main-finance-runtime-recovery-v2-postflight-contract",
+  "schemaVersion": 3,
+  "kind": "main-finance-runtime-recovery-v3-secrets-only-postflight-contract",
   "environment": "staging",
   "endpoint": "https://bljeoovhydhjhdzwplxh.supabase.co/functions/v1/finance-manage-access-v2",
   "method": "POST",
@@ -30,23 +30,23 @@
     "clockOrder": "D0 database_clock < verified attested_at < D1 database_clock",
     "stableBindings": [
       "source commit and tree",
-      "release manifest and deployment closure",
+      "release manifest and unchanged deployment closure",
       "catalog, descriptor and state hashes",
       "gate phase inventory and privacy inventory hashes",
       "complete sorted desired rows and checked_count",
       "privately branded exact D0 and D1 builder results"
     ],
     "fullHostedInventory": [
-      "managed Main secret digests equal the held owner-private bundle",
-      "every unrelated Main and Finance secret inventory row is unchanged",
-      "complete Main and Finance inventory SHA-256 values are identical across D0 and D1",
-      "the secret-set function transition is either unchanged or every existing row has version exactly plus one with all other keys and values unchanged",
-      "two complete post-secret inventory rounds select one exact stage baseline",
-      "the exact target function at deployment version 1 is the sole addition to that post-secret stage baseline",
-      "every unrelated function row and the full function inventory SHA-256 remain equal to that stage baseline across deploy, postflight and verify"
+      "the exact three source-bound Main values equal the successor private bundle",
+      "the two inherited generated values remain proof-only and are never re-set",
+      "all Main secret names and value digests outside the exact mutation set remain unchanged",
+      "only updated_at may differ for the exact seven named SUPABASE rows",
+      "every Finance secret row remains exactly unchanged",
+      "complete Main, Finance and Function inventory SHA-256 values are identical across D0 and D1",
+      "the complete 13-row Function inventory is either unchanged or every row has version exactly plus one with every other field unchanged"
     ],
     "functionInventoryPhases": {
-      "preSecret": "the fresh plan complete function inventory",
+      "importedBaseline": "the exact terminal 13-row ad707 inventory, including the already-present exact target",
       "requiredCanonicalRowKeys": [
         "id",
         "name",
@@ -60,26 +60,29 @@
         "updated_at"
       ],
       "rowIdentityRules": "id is a canonical UUID, name equals slug, ezbr_sha256 is lowercase SHA-256, entrypoint_path is an absolute file URL ending in .ts, timestamps are positive ordered safe integers, and every additional CLI field is preserved exactly",
-      "postSecretAllowedDispositions": [
+      "allowedDispositions": [
         "unchanged",
         "exact-all-existing-plus-one"
       ],
-      "postSecretStability": "two complete read rounds with identical canonical rows",
-      "stateUnsatisfiedBoundary": "preinstall secret state is resumable only with an unchanged function inventory; preinstall secrets plus any function version transition is diverged",
-      "deployBaseline": "the exact observed post-secret disposition and SHA-256 carried by the verified secret result or state-satisfied reconciliation",
-      "final": "target version 1 is the sole addition; every baseline row is otherwise byte-equivalent in canonical JSON"
+      "stability": "two complete read rounds select one exact disposition",
+      "divergence": "partial, mixed, plus two, missing, extra, or any non-version field drift is terminal",
+      "functionDeployAuthorized": false
     }
   },
   "authority": {
     "releaseCompleteReceiptAlone": false,
     "requiredOperatorMode": "verify",
-    "verification": "re-read the owner-private bundle, frozen local source and live GitHub authority, then perform a fresh authenticated D0/proof/D1 and full inventory comparison"
+    "verification": "re-read the owner-private bundle, frozen local source and live GitHub authority, then perform a fresh authenticated D0/proof/D1 and full inventory comparison",
+    "completionCause": "verified secrets-set result or state_satisfied read-only reconciliation",
+    "hostedMutationCount": 1,
+    "functionDeployCount": 0,
+    "automaticRetryAllowed": false
   },
   "requiredBindings": [
     "database_clock equals supplied snapshot database_clock",
     "checked_count equals supplied snapshot checked_count",
     "state_sha256 equals supplied snapshot state_sha256",
-    "attestation_proof verifies with the generated v2 operator secret"
+    "attestation_proof verifies with the inherited v2 operator secret"
   ],
   "receiptRedactions": [
     "attestation_proof",

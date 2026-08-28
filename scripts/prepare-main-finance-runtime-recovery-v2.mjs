@@ -78,11 +78,13 @@ const GH_XDG_CACHE_DIRECTORY = "gh-xdg-cache";
 const GH_XDG_DATA_DIRECTORY = "gh-xdg-data";
 const ACCESS_V2_DESCRIPTOR_FILE = "main-finance-access-v2-owner-descriptor.json";
 const PREINSTALL_INVENTORY_FILE = "preinstall-secret-inventory.json";
+const SECRET_MUTATION_ENV_FILE = "runtime-install.env";
+const RUNTIME_PROOF_FILE = "runtime-proof.env";
 const PROVENANCE_KIND = "main-finance-runtime-recovery-v2-release-provenance";
 const READY_STATUS = "READY_FOR_SOURCE_ATTESTATION";
 const NOT_READY_STATUS = "NOT_DEPLOY_READY_FROZEN_EVIDENCE_REQUIRED";
-const BASE_COMMIT_SHA = "adcf7b919d34e512ded6d526ee7321f795f8f887";
-const BASE_TREE_SHA = "f02055d03d63a1fc2ebdbb17aeed3bcb2aafd22a";
+const BASE_COMMIT_SHA = "a30dedf20e977d9794a8ac9e54abc48b076c9d45";
+const BASE_TREE_SHA = "92d7aa5df37a09049d4fdaeaa523d2cc02e85cbf";
 const PREDECESSOR_ADOPTION_PINS = Object.freeze({
   sourceCommitSha: "b87fe6a9212bdb6e43d8304be36c39074379a153",
   sourceTreeSha: "af4bb9b7fec37dd600c086184f101e2c3a094f7e",
@@ -103,26 +105,58 @@ const PREDECESSOR_ADOPTION_PINS = Object.freeze({
   provenanceFileSha256: "c8f0647c91691c068330aa8b41482ba8ecd08164504dd2172d154334621c88a7",
   provenanceDescriptorSha256: "5c6d31aef675f80187209e398eb18b8691a73315c595f5c498760de6b733719f",
 });
+const TERMINAL_DIVERGED_PREDECESSOR_PINS = Object.freeze({
+  sourceCommitSha: "a30dedf20e977d9794a8ac9e54abc48b076c9d45",
+  sourceTreeSha: "92d7aa5df37a09049d4fdaeaa523d2cc02e85cbf",
+  planReceiptSha256: "62407763c353d6963561c39dc2d04b572632e400b5cc758958d8b81eaad9b701",
+  secretIntentReceiptSha256: "838a88db296495c60bfaea378f8c71fb86468cf8b6aefe099ed6e05071d51c79",
+  secretResultReceiptSha256: "522ced178f2839948f30316d2ae73d9e257385ec1699d0b842218fa49451c677",
+  functionIntentReceiptSha256: "ddf741ca072b0bbe45bfa5a0098522facdf8e6b10ec407248195ac7b2faf899b",
+  functionUnknownReceiptSha256: "5dbfe3ad4cd84533888c3b73a77ada3864395fadc4ecd58d361bed7d5d8ea64c",
+  terminalReceiptSha256: "098731b6054f305cb4d211f5658122696400486947dfe31091e5abc937fada0e",
+  receiptChainSha256: "f4196cffb0ad9b6c8dc0d619085e2bf1f44790efb479bc429ed91d1e74e15834",
+  bundleAttestationSha256: "5f5af08774ad620dc5556fa2083371617db8042fa49055dfebf0844fbe2baddf",
+  runtimeFileSha256: "932d3fde5f7b98fce9606aebea1b335d41f85cec72afc47a873bf12f1c6e2217",
+  provenanceFileSha256: "34089b8041c72f3abcff3f954067ba7c093f66ba1045a51113ec4d81ccff8063",
+  provenanceDescriptorSha256: "7ceb2face8c325056b47fb595b801ee4860d27cc0d84816436c55380042972bf",
+  expectedSecretDigestSetSha256: "d7347afdada1acce8e0d44951be7d83fd0da7d984fcb56ae565f0e4deb2a331e",
+  generatedSecretDigestSetSha256:
+    PREDECESSOR_ADOPTION_PINS.generatedSecretDigestSetSha256,
+  preinstallMainInventorySha256: "66a2630aa9c4c17d9e1a894a9a43f201e40913dab20d0f08c161c48ebb0a7c60",
+  postSecretMainInventorySha256: "133ab45e43e8b5e0a5fa70be4ed4f978d40b27d955140becb9bc54a32d960ce2",
+  terminalMainInventorySha256: "b98949ec772990f98b26471ed4e6ff4356d289709b51fd707419ffdbb1570139",
+  financeInventorySha256: PREDECESSOR_ADOPTION_PINS.financeInventorySha256,
+  preinstallFunctionInventorySha256:
+    PREDECESSOR_ADOPTION_PINS.observedFunctionInventorySha256,
+  postSecretFunctionInventorySha256: "73c0f50b78516b1fc46dc7f155bf0f737b6967a2913561a6ddb4693d20fdf80b",
+  terminalFunctionInventorySha256: "ad7075e78470642d731f628e722efb2f498c31760148b362a6e51ce7225b17e1",
+  preinstallFunctionCount: 12,
+  terminalFunctionCount: 13,
+});
+const SUCCESSOR_METADATA_ONLY_SECRET_NAMES = Object.freeze([
+  "SUPABASE_ANON_KEY",
+  "SUPABASE_DB_URL",
+  "SUPABASE_JWKS",
+  "SUPABASE_PUBLISHABLE_KEYS",
+  "SUPABASE_SECRET_KEYS",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "SUPABASE_URL",
+]);
+const SUCCESSOR_SECRET_MUTATION_NAMES = Object.freeze([
+  "MAIN_FINANCE_ACCESS_V2_SOURCE_COMMIT_SHA",
+  "MAIN_FINANCE_ACCESS_V2_SOURCE_TREE_SHA",
+  "MAIN_FINANCE_ACCESS_V2_SOURCE_MANIFEST_SHA256",
+]);
 const EXPECTED_TRACKED_FILE_COUNT = 935;
 const EXPECTED_CHANGED_PATHS = Object.freeze([
   ["M", ".github/workflows/verify-finance-integration.yml"],
-  ["A", "scripts/main-finance-runtime-recovery-v2-snapshot.mjs"],
-  ["A", "scripts/manage-finance-access-v2.mjs"],
-  ["A", "scripts/prepare-main-finance-runtime-recovery-v2.mjs"],
-  ["A", "supabase/functions/finance-manage-access-v2/deno.json"],
-  ["A", "supabase/functions/finance-manage-access-v2/deno.lock"],
-  ["A", "supabase/functions/finance-manage-access-v2/index.ts"],
-  ["A", "supabase/releases/main-finance-runtime-recovery-v2/README.md"],
-  ["A", "supabase/releases/main-finance-runtime-recovery-v2/environment.contract.json"],
-  ["A", "supabase/releases/main-finance-runtime-recovery-v2/postflight.contract.json"],
-  ["A", "supabase/releases/main-finance-runtime-recovery-v2/preflight.sql"],
-  ["A", "supabase/releases/main-finance-runtime-recovery-v2/staging.manifest.json"],
+  ["M", "scripts/prepare-main-finance-runtime-recovery-v2.mjs"],
+  ["M", "supabase/releases/main-finance-runtime-recovery-v2/environment.contract.json"],
+  ["M", "supabase/releases/main-finance-runtime-recovery-v2/postflight.contract.json"],
+  ["M", "supabase/releases/main-finance-runtime-recovery-v2/README.md"],
+  ["M", "supabase/releases/main-finance-runtime-recovery-v2/staging.manifest.json"],
   ["M", "supabase/tests/finance_integration_ci.test.mjs"],
-  ["A", "supabase/tests/main_finance_runtime_recovery_release_v2.test.mjs"],
-  ["A", "supabase/tests/main_finance_runtime_secret_recovery_v2.test.mjs"],
-  ["A", "supabase/tests/manage_finance_access_v2.test.mjs"],
-  ["M", "supabase/tests/postgres-ci/static_guard.test.mjs"],
-  ["M", "supabase/tests/verify_local.sh"],
+  ["M", "supabase/tests/main_finance_runtime_recovery_release_v2.test.mjs"],
 ].map(([status, changedPath]) => Object.freeze({ status, path: changedPath })));
 const MEASUREMENT_GIT_STATUS = Object.freeze({
   "??": "A",
@@ -1054,8 +1088,9 @@ function readRelease() {
     "requiredSuccessfulSteps",
   ], "release manifest source CI");
   if (
-    manifest.schemaVersion !== 2
-    || manifest.kind !== "main-finance-runtime-recovery-v2-staging-release"
+    manifest.schemaVersion !== 3
+    || manifest.kind
+      !== "main-finance-runtime-recovery-v3-secrets-only-staging-release"
     || ![READY_STATUS, NOT_READY_STATUS].includes(manifest.releaseStatus)
     || manifest.environment !== "staging"
     || manifest.mainProjectRef !== MAIN_REF
@@ -1066,6 +1101,8 @@ function readRelease() {
     || manifest.nodeVersion !== "24.14.0"
     || manifest.edgeFunction?.name !== FUNCTION_NAME
     || manifest.edgeFunction.verifyJwt !== false
+    || manifest.edgeFunction.alreadyPresentInImportedBaseline !== true
+    || manifest.edgeFunction.deployAuthorized !== false
     || manifest.archiveFormat !== "main-finance-source-archive-v2-nul-framed"
     || manifest.plan?.ttlSeconds !== 240
     || manifest.plan.maximumSnapshotAgeSeconds !== 300
@@ -1083,10 +1120,31 @@ function readRelease() {
     || canonicalJson(manifest.mutations.allowedSecretFunctionVersionTransitions)
       !== canonicalJson(["unchanged", "exact-all-existing-plus-one"])
     || manifest.mutations.causalAttributionClaimed !== false
-    || manifest.mutations.exactFunctionDeployCount !== 1
+    || canonicalJson(manifest.mutations.exactSecretSetNames)
+      !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+    || manifest.mutations.proofOnlyGeneratedSecretCount !== 2
+    || manifest.mutations.rebuiltStableRuntimeCount !== 11
+    || canonicalJson(manifest.mutations.metadataOnlyUpdatedAtAllowlist)
+      !== canonicalJson(SUCCESSOR_METADATA_ONLY_SECRET_NAMES)
+    || manifest.mutations.exactHostedMutationCount !== 1
+    || manifest.mutations.exactFunctionDeployCount !== 0
+    || manifest.mutations.automaticRetryAllowed !== false
     || manifest.mutations.databaseWrites !== false
     || manifest.mutations.productionWrites !== false
   ) refuse("release manifest boundary differs");
+  exactKeys(manifest.edgeFunction, [
+    "name", "verifyJwt", "alreadyPresentInImportedBaseline", "deployAuthorized",
+  ], "release manifest Edge Function boundary");
+  exactKeys(manifest.mutations, [
+    "secretSetNamesSource", "exactSecretSetNames",
+    "proofOnlyGeneratedSecretCount", "rebuiltStableRuntimeCount",
+    "metadataOnlyUpdatedAtAllowlist", "predecessorAdoptionRequired",
+    "postSecretFunctionReadRounds", "requiredFunctionInventoryKeys",
+    "allowedSecretFunctionVersionTransitions", "causalAttributionClaimed",
+    "forbidPrivacyOverwrite", "exactHostedMutationCount",
+    "exactFunctionDeployCount", "automaticRetryAllowed", "databaseWrites",
+    "productionWrites",
+  ], "release manifest mutation boundary");
   exactKeys(manifest.sourceLineage, [
     "baseCommitSha", "baseTreeSha", "requiredSoleParentSha",
     "expectedTrackedFileCount", "changedPaths",
@@ -1148,8 +1206,8 @@ function readRelease() {
     "schemaVersion", "kind", "environment", "mainProjectRef",
     "financeProjectRef", "productionDenyProjectRefs", "generatedSecrets",
     "stableRuntimeConfig", "stableRuntimeValues", "requiredInheritedRuntime",
-    "forbiddenSecretMutations", "currentAuthorityRoot", "predecessorAdoption",
-    "operatorOutputPolicy",
+    "forbiddenSecretMutations", "secretMutation", "currentAuthorityRoot",
+    "predecessorAdoption", "operatorOutputPolicy",
   ], "environment contract");
   const expectedCurrentAuthorityRoot = Object.freeze({
     requiredActions: ["plan", "apply", "reconcile", "verify"],
@@ -1209,22 +1267,32 @@ function readRelease() {
   const adoption = environment.value.predecessorAdoption;
   exactKeys(adoption, [
     "requiredForFreshSuccessorPlan", "rootPolicy", "sourceCommitSha",
-    "sourceTreeSha", "planReceiptSha256", "intentReceiptSha256",
-    "unknownReceiptSha256", "terminalReceiptSha256",
-    "bundleAttestationSha256", "runtimeFileSha256",
+    "sourceTreeSha", "planReceiptSha256", "secretIntentReceiptSha256",
+    "secretResultReceiptSha256", "functionIntentReceiptSha256",
+    "functionUnknownReceiptSha256", "terminalReceiptSha256",
+    "receiptChainSha256", "bundleAttestationSha256", "runtimeFileSha256",
     "provenanceFileSha256", "provenanceDescriptorSha256",
     "expectedSecretDigestSetSha256", "generatedSecretDigestSetSha256",
-    "preinstallFunctionInventorySha256", "observedFunctionInventorySha256",
-    "observedFunctionCount", "installedMainInventorySha256",
-    "stableFinanceInventorySha256", "adoptGeneratedSecretNames",
+    "preinstallMainInventorySha256", "postSecretMainInventorySha256",
+    "terminalMainInventorySha256", "stableFinanceInventorySha256",
+    "preinstallFunctionInventorySha256", "postSecretFunctionInventorySha256",
+    "terminalFunctionInventorySha256", "preinstallFunctionCount",
+    "terminalFunctionCount", "adoptGeneratedSecretNames",
     "rebuildStableRuntimeConfig", "randomGenerationAllowed",
     "planOnlyFlagsAllOrNone", "validationBeforePlaintextRead",
     "finalPredecessorSandwichRequired",
   ], "predecessor adoption environment contract");
+  exactKeys(environment.value.secretMutation, [
+    "mutationNames", "proofOnlyGeneratedSecretNames",
+    "rebuiltStableRuntimeCount", "fullProofRuntimeCount",
+    "metadataOnlyUpdatedAtAllowlist", "stableInventoryReadRounds",
+    "allowedFunctionVersionTransitions", "functionDeployAllowed",
+    "causalAttributionClaimed",
+  ], "secrets-only mutation environment contract");
   if (
-    environment.value.schemaVersion !== 2
+    environment.value.schemaVersion !== 3
     || environment.value.kind
-      !== "main-finance-runtime-recovery-v2-environment-contract"
+      !== "main-finance-runtime-recovery-v3-secrets-only-environment-contract"
     || environment.value.environment !== "staging"
     || environment.value.mainProjectRef !== MAIN_REF
     || environment.value.financeProjectRef !== FINANCE_REF
@@ -1240,33 +1308,52 @@ function readRelease() {
       identityBinding: "realpath plus device inode mode and owner",
       storePathInReceipt: false,
     })
-    || adoption.sourceCommitSha !== PREDECESSOR_ADOPTION_PINS.sourceCommitSha
-    || adoption.sourceTreeSha !== PREDECESSOR_ADOPTION_PINS.sourceTreeSha
-    || adoption.planReceiptSha256 !== PREDECESSOR_ADOPTION_PINS.planReceiptSha256
-    || adoption.intentReceiptSha256 !== PREDECESSOR_ADOPTION_PINS.intentReceiptSha256
-    || adoption.unknownReceiptSha256 !== PREDECESSOR_ADOPTION_PINS.unknownReceiptSha256
+    || adoption.sourceCommitSha !== TERMINAL_DIVERGED_PREDECESSOR_PINS.sourceCommitSha
+    || adoption.sourceTreeSha !== TERMINAL_DIVERGED_PREDECESSOR_PINS.sourceTreeSha
+    || adoption.planReceiptSha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.planReceiptSha256
+    || adoption.secretIntentReceiptSha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.secretIntentReceiptSha256
+    || adoption.secretResultReceiptSha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.secretResultReceiptSha256
+    || adoption.functionIntentReceiptSha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.functionIntentReceiptSha256
+    || adoption.functionUnknownReceiptSha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.functionUnknownReceiptSha256
     || adoption.terminalReceiptSha256
-      !== PREDECESSOR_ADOPTION_PINS.terminalReceiptSha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalReceiptSha256
+    || adoption.receiptChainSha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.receiptChainSha256
     || adoption.bundleAttestationSha256
-      !== PREDECESSOR_ADOPTION_PINS.bundleAttestationSha256
-    || adoption.runtimeFileSha256 !== PREDECESSOR_ADOPTION_PINS.runtimeFileSha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.bundleAttestationSha256
+    || adoption.runtimeFileSha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.runtimeFileSha256
     || adoption.provenanceFileSha256
-      !== PREDECESSOR_ADOPTION_PINS.provenanceFileSha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.provenanceFileSha256
     || adoption.provenanceDescriptorSha256
-      !== PREDECESSOR_ADOPTION_PINS.provenanceDescriptorSha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.provenanceDescriptorSha256
     || adoption.expectedSecretDigestSetSha256
-      !== PREDECESSOR_ADOPTION_PINS.expectedSecretDigestSetSha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.expectedSecretDigestSetSha256
     || adoption.generatedSecretDigestSetSha256
-      !== PREDECESSOR_ADOPTION_PINS.generatedSecretDigestSetSha256
-    || adoption.preinstallFunctionInventorySha256
-      !== PREDECESSOR_ADOPTION_PINS.preinstallFunctionInventorySha256
-    || adoption.observedFunctionInventorySha256
-      !== PREDECESSOR_ADOPTION_PINS.observedFunctionInventorySha256
-    || adoption.observedFunctionCount !== PREDECESSOR_ADOPTION_PINS.observedFunctionCount
-    || adoption.installedMainInventorySha256
-      !== PREDECESSOR_ADOPTION_PINS.installedMainInventorySha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.generatedSecretDigestSetSha256
+    || adoption.preinstallMainInventorySha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.preinstallMainInventorySha256
+    || adoption.postSecretMainInventorySha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.postSecretMainInventorySha256
+    || adoption.terminalMainInventorySha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalMainInventorySha256
     || adoption.stableFinanceInventorySha256
-      !== PREDECESSOR_ADOPTION_PINS.financeInventorySha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.financeInventorySha256
+    || adoption.preinstallFunctionInventorySha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.preinstallFunctionInventorySha256
+    || adoption.postSecretFunctionInventorySha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.postSecretFunctionInventorySha256
+    || adoption.terminalFunctionInventorySha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalFunctionInventorySha256
+    || adoption.preinstallFunctionCount
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.preinstallFunctionCount
+    || adoption.terminalFunctionCount
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalFunctionCount
     || canonicalJson(adoption.adoptGeneratedSecretNames)
       !== canonicalJson(environment.value.generatedSecrets.map(item => item.name))
     || adoption.rebuildStableRuntimeConfig !== true
@@ -1276,7 +1363,50 @@ function readRelease() {
       "--prior-terminal-receipt-sha256",
     ])
     || adoption.finalPredecessorSandwichRequired !== true
+    || canonicalJson(environment.value.secretMutation.mutationNames)
+      !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+    || canonicalJson(environment.value.secretMutation.proofOnlyGeneratedSecretNames)
+      !== canonicalJson(environment.value.generatedSecrets.map(item => item.name))
+    || environment.value.secretMutation.rebuiltStableRuntimeCount !== 11
+    || environment.value.secretMutation.fullProofRuntimeCount !== 13
+    || canonicalJson(
+      environment.value.secretMutation.metadataOnlyUpdatedAtAllowlist,
+    ) !== canonicalJson(SUCCESSOR_METADATA_ONLY_SECRET_NAMES)
+    || environment.value.secretMutation.stableInventoryReadRounds !== 2
+    || canonicalJson(
+      environment.value.secretMutation.allowedFunctionVersionTransitions,
+    ) !== canonicalJson(["unchanged", "exact-all-existing-plus-one"])
+    || environment.value.secretMutation.functionDeployAllowed !== false
+    || environment.value.secretMutation.causalAttributionClaimed !== false
   ) refuse("predecessor adoption environment contract differs");
+  exactKeys(postflight.value, [
+    "schemaVersion", "kind", "environment", "endpoint", "method", "action",
+    "ambientAuthorizationAllowed", "expectedStatus", "expectedContentType",
+    "expectedResponseKeys", "expectedConstants", "minimumCheckedCount",
+    "snapshotSandwich", "authority", "requiredBindings", "receiptRedactions",
+  ], "secrets-only postflight contract");
+  if (
+    postflight.value.schemaVersion !== 3
+    || postflight.value.kind
+      !== "main-finance-runtime-recovery-v3-secrets-only-postflight-contract"
+    || postflight.value.environment !== "staging"
+    || postflight.value.endpoint
+      !== `https://${MAIN_REF}.supabase.co/functions/v1/${FUNCTION_NAME}`
+    || postflight.value.method !== "POST"
+    || postflight.value.action !== "attest"
+    || postflight.value.ambientAuthorizationAllowed !== false
+    || postflight.value.expectedStatus !== 200
+    || postflight.value.authority?.completionCause
+      !== "verified secrets-set result or state_satisfied read-only reconciliation"
+    || postflight.value.authority.hostedMutationCount !== 1
+    || postflight.value.authority.functionDeployCount !== 0
+    || postflight.value.authority.automaticRetryAllowed !== false
+    || postflight.value.snapshotSandwich?.functionInventoryPhases
+      ?.functionDeployAuthorized !== false
+    || canonicalJson(
+      postflight.value.snapshotSandwich.functionInventoryPhases.allowedDispositions,
+    ) !== canonicalJson(["unchanged", "exact-all-existing-plus-one"])
+  ) refuse("secrets-only postflight contract differs");
   if (
     manifest.preflightSql === null
     || typeof manifest.preflightSql !== "object"
@@ -2209,6 +2339,46 @@ function inventoryCore(inventory) {
     .sort((left, right) => left.name.localeCompare(right.name));
 }
 
+function semanticSecretInventorySha256(inventory) {
+  return sha256(canonicalJson(inventoryCore(inventory).map(row => ({
+    name: row.name,
+    value: row.value,
+  }))));
+}
+
+function inventoryWithoutNames(inventory, excludedNames) {
+  return new Map([...inventory].filter(([name]) => !excludedNames.includes(name)));
+}
+
+function metadataOnlyInventoryDelta(before, after) {
+  if (!inventoryHasExactNameSet(before, after)) {
+    refuse("metadata-only inventory delta row set differs");
+  }
+  const rows = [];
+  for (const [name, previous] of before) {
+    const current = after.get(name);
+    if (current.value !== previous.value) {
+      refuse("metadata-only inventory delta contains secret value drift");
+    }
+    if (current.updatedAt !== previous.updatedAt) {
+      if (!SUCCESSOR_METADATA_ONLY_SECRET_NAMES.includes(name)) {
+        refuse("secret metadata drift is outside the exact successor allow-list");
+      }
+      rows.push(Object.freeze({
+        name,
+        beforeUpdatedAt: previous.updatedAt,
+        afterUpdatedAt: current.updatedAt,
+      }));
+    }
+  }
+  rows.sort((left, right) => left.name.localeCompare(right.name));
+  return Object.freeze({
+    names: Object.freeze(rows.map(row => row.name)),
+    rows: Object.freeze(rows),
+    sha256: sha256(canonicalJson(rows)),
+  });
+}
+
 function cliBoundaryState(dependencies, mutation) {
   let homeDrift = false;
   let toolDrift = false;
@@ -2532,9 +2702,12 @@ function runtimeRows({ release, source, snapshot, operatorSecret, triggerSecret 
     ...release.environment.generatedSecrets.map(item => item.name),
     ...release.environment.stableRuntimeConfig,
   ];
+  const mutationNames = release.environment.schemaVersion === 3
+    ? SUCCESSOR_SECRET_MUTATION_NAMES
+    : Object.keys(values);
   if (
     canonicalJson(Object.keys(values)) !== canonicalJson(managedNames)
-    || Object.keys(values).some(name =>
+    || mutationNames.some(name =>
       release.environment.forbiddenSecretMutations.includes(name))
     || Object.hasOwn(values, "MAIN_FINANCE_PRIVACY_HMAC_KEY")
     || !GENERATED_SECRET.test(operatorSecret)
@@ -2543,6 +2716,33 @@ function runtimeRows({ release, source, snapshot, operatorSecret, triggerSecret 
   ) refuse("runtime installation allow-list differs");
   const sourceText = `${managedNames.map(name => `${name}=${values[name]}`).join("\n")}\n`;
   return Object.freeze({ values, names: Object.freeze(managedNames), source: sourceText });
+}
+
+function successorSecretMutationRows(runtime) {
+  const values = Object.freeze(Object.fromEntries(
+    SUCCESSOR_SECRET_MUTATION_NAMES.map(name => [name, runtime.values[name]]),
+  ));
+  if (
+    canonicalJson(Object.keys(values))
+      !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+  ) refuse("successor secret mutation allow-list differs");
+  const source = `${SUCCESSOR_SECRET_MUTATION_NAMES
+    .map(name => `${name}=${values[name]}`).join("\n")}\n`;
+  return Object.freeze({
+    values,
+    names: SUCCESSOR_SECRET_MUTATION_NAMES,
+    source,
+  });
+}
+
+function validSuccessorMutationSecretDigestMap(value) {
+  return value !== null
+    && typeof value === "object"
+    && !Array.isArray(value)
+    && canonicalJson(Object.keys(value).sort())
+      === canonicalJson([...SUCCESSOR_SECRET_MUTATION_NAMES].sort())
+    && SUCCESSOR_SECRET_MUTATION_NAMES.every(name =>
+      SHA256.test(value[name] ?? ""));
 }
 
 function writePrivateBytes(file, bytes) {
@@ -2837,8 +3037,9 @@ function mutationInputRecordsMatch(expected, current) {
 function assertMutationInputUnchanged(bundle, release, mutation) {
   if (mutation === "secrets-set") {
     return mutationInputRecordsMatch(bundle.runtimeMutationInput, captureRuntimeMutationInput(
-      bundle.runtimeFile,
-      bundle.attestation.runtimeFileSha256,
+      bundle.secretMutationFile ?? bundle.runtimeFile,
+      bundle.attestation.runtimeMutationFileSha256
+        ?? bundle.attestation.runtimeFileSha256,
     ));
   }
   if (mutation === "function-deploy") {
@@ -2973,8 +3174,11 @@ function createBundle({
     predecessorAdoption,
   });
   const runtime = runtimeRows({ release, source, snapshot, operatorSecret, triggerSecret });
-  const runtimeFile = path.join(stateDirectory, RUNTIME_ENV_FILE);
+  const secretMutation = successorSecretMutationRows(runtime);
+  const runtimeFile = path.join(stateDirectory, RUNTIME_PROOF_FILE);
   writePrivateFile(runtimeFile, runtime.source);
+  const secretMutationFile = path.join(stateDirectory, SECRET_MUTATION_ENV_FILE);
+  writePrivateFile(secretMutationFile, secretMutation.source);
   const preinstallInventory = Object.freeze({
     main: inventoryCore(inventories.main),
     finance: inventoryCore(inventories.finance),
@@ -3006,17 +3210,22 @@ function createBundle({
   const archive = buildArchive(release);
   const archiveFile = path.join(stateDirectory, SOURCE_ARCHIVE);
   writePrivateBytes(archiveFile, archive);
-  const workdir = createDeployWorkdir(stateDirectory, release);
-  const runtimeMutationInput = captureRuntimeMutationInput(runtimeFile, sha256(runtime.source));
-  const deployMutationInput = captureDeployMutationInput(workdir, release);
+  const runtimeMutationInput = captureRuntimeMutationInput(
+    secretMutationFile,
+    sha256(secretMutation.source),
+  );
   const expectedSecretDigests = Object.fromEntries(runtime.names.map(name => [
     name,
     sha256(runtime.values[name]),
   ]));
+  const mutationSecretDigests = Object.fromEntries(secretMutation.names.map(name => [
+    name,
+    sha256(secretMutation.values[name]),
+  ]));
   const recordedAt = now().toISOString();
   const core = {
-    schemaVersion: 2,
-    kind: "main-finance-runtime-recovery-v2-private-bundle",
+    schemaVersion: 3,
+    kind: "main-finance-runtime-recovery-v3-private-bundle",
     environment: "staging",
     mainProjectRef: MAIN_REF,
     financeProjectRef: FINANCE_REF,
@@ -3030,10 +3239,11 @@ function createBundle({
     sourceArchiveSha256: sha256(archive),
     sealedSupabaseCliFile,
     supabaseMutationInput,
-    runtimeFile: RUNTIME_ENV_FILE,
+    runtimeFile: RUNTIME_PROOF_FILE,
     runtimeFileSha256: sha256(runtime.source),
+    runtimeMutationFile: SECRET_MUTATION_ENV_FILE,
+    runtimeMutationFileSha256: sha256(secretMutation.source),
     runtimeMutationInput,
-    deployMutationInput,
     preinstallInventoryFile: PREINSTALL_INVENTORY_FILE,
     preinstallInventoryFileSha256: sha256(preinstallInventorySource),
     preinstallMainInventorySha256: inventories.mainInventorySha256,
@@ -3044,9 +3254,10 @@ function createBundle({
     operatorDescriptorSha256: operatorDescriptor.descriptor_sha256,
     productionBoundarySha256: accessBoundary.productionBoundarySha256,
     targetDescriptorSha256: accessBoundary.targetDescriptorSha256,
-    deployWorkdir: DEPLOY_WORKDIR,
     secretNames: runtime.names,
     expectedSecretDigests,
+    mutationSecretNames: secretMutation.names,
+    mutationSecretDigests,
     operatorSecretSha256: sha256(operatorSecret),
     triggerSecretSha256: sha256(triggerSecret),
     catalogSha256: snapshot.catalog_sha256,
@@ -3067,13 +3278,13 @@ function createBundle({
   );
   fsyncDirectory(stateDirectory);
   const commitCore = {
-    schemaVersion: 2,
-    kind: "main-finance-runtime-recovery-v2-durable-bundle-commit",
+    schemaVersion: 3,
+    kind: "main-finance-runtime-recovery-v3-durable-bundle-commit",
     recordedAt,
     bundleAttestationSha256: attestation.attestationSha256,
     sourceArchiveSha256: attestation.sourceArchiveSha256,
     runtimeFileSha256: attestation.runtimeFileSha256,
-    deployMutationInputSha256: sha256(canonicalJson(attestation.deployMutationInput)),
+    runtimeMutationInputSha256: sha256(canonicalJson(attestation.runtimeMutationInput)),
     supabaseMutationInputSha256: sha256(canonicalJson(attestation.supabaseMutationInput)),
   };
   const bundleCommit = Object.freeze({
@@ -3093,10 +3304,10 @@ function createBundle({
     preinstallInventories: preinstallInventory,
     operatorDescriptorFile,
     archiveFile,
-    workdir,
+    secretMutation,
+    secretMutationFile,
     supabaseMutationInput,
     runtimeMutationInput,
-    deployMutationInput,
   });
 }
 
@@ -3230,7 +3441,12 @@ function readRuntimeBundlePlaintextAfterAuthority({
 function assertBundleStateDirectoryBeforePlaintext(attestation, stateDirectory) {
   if (
     attestation.runtimeMutationInput?.path
-      !== path.join(stateDirectory, RUNTIME_ENV_FILE)
+      !== path.join(
+        stateDirectory,
+        attestation.schemaVersion === 3
+          ? SECRET_MUTATION_ENV_FILE
+          : RUNTIME_ENV_FILE,
+      )
     || attestation.supabaseMutationInput?.path
       !== path.join(
         stateDirectory,
@@ -3260,20 +3476,26 @@ function readBundle(
     16 * 1024,
   );
   const bundleCommit = readJsonSource(bundleCommitSource, "durable bundle commit");
+  const bundleCommitV3 = bundleCommit.schemaVersion === 3;
   exactKeys(bundleCommit, [
     "schemaVersion", "kind", "recordedAt", "bundleAttestationSha256",
-    "sourceArchiveSha256", "runtimeFileSha256", "deployMutationInputSha256",
+    "sourceArchiveSha256", "runtimeFileSha256",
+    bundleCommitV3 ? "runtimeMutationInputSha256" : "deployMutationInputSha256",
     "supabaseMutationInputSha256", "bundleCommitSha256",
   ], "durable bundle commit");
   const { bundleCommitSha256, ...bundleCommitCore } = bundleCommit;
   if (
-    bundleCommit.schemaVersion !== 2
-    || bundleCommit.kind !== "main-finance-runtime-recovery-v2-durable-bundle-commit"
+    ![2, 3].includes(bundleCommit.schemaVersion)
+    || bundleCommit.kind !== (bundleCommitV3
+      ? "main-finance-runtime-recovery-v3-durable-bundle-commit"
+      : "main-finance-runtime-recovery-v2-durable-bundle-commit")
     || !canonicalTimestamp(bundleCommit.recordedAt)
     || !SHA256.test(bundleCommit.bundleAttestationSha256 ?? "")
     || !SHA256.test(bundleCommit.sourceArchiveSha256 ?? "")
     || !SHA256.test(bundleCommit.runtimeFileSha256 ?? "")
-    || !SHA256.test(bundleCommit.deployMutationInputSha256 ?? "")
+    || !SHA256.test((bundleCommitV3
+      ? bundleCommit.runtimeMutationInputSha256
+      : bundleCommit.deployMutationInputSha256) ?? "")
     || !SHA256.test(bundleCommit.supabaseMutationInputSha256 ?? "")
     || !SHA256.test(bundleCommitSha256 ?? "")
     || bundleCommitSha256 !== sha256(canonicalJson(bundleCommitCore))
@@ -3285,22 +3507,30 @@ function readBundle(
     64 * 1024,
   );
   const attestation = readJsonSource(attestationSource, "bundle attestation");
-  const attestationKeys = [
+  const attestationV3 = attestation.schemaVersion === 3;
+  const commonAttestationKeys = [
     "schemaVersion", "kind", "environment", "mainProjectRef", "financeProjectRef",
     "productionDenied", "recordedAt", "sourceCommitSha", "sourceTreeSha",
     "releaseManifestSha256", "preflightSqlSha256", "sourceDeploymentSha256",
     "sourceArchiveSha256", "sealedSupabaseCliFile", "supabaseMutationInput",
-    "runtimeFile", "runtimeFileSha256",
-    "runtimeMutationInput", "deployMutationInput", "preinstallInventoryFile",
+    "runtimeFile", "runtimeFileSha256", "runtimeMutationInput",
+    "preinstallInventoryFile",
     "preinstallInventoryFileSha256", "preinstallMainInventorySha256",
     "preinstallFinanceInventorySha256", "preinstallFunctionInventorySha256",
     "operatorDescriptorFile", "operatorDescriptorFileSha256",
     "operatorDescriptorSha256", "productionBoundarySha256",
-    "targetDescriptorSha256", "deployWorkdir", "secretNames",
+    "targetDescriptorSha256", "secretNames",
     "expectedSecretDigests", "operatorSecretSha256", "triggerSecretSha256",
     "catalogSha256", "descriptorSha256", "stateSha256", "checkedCount",
     "gateInventorySha256", "privacyInventorySha256", "attestationSha256",
   ];
+  const attestationKeys = attestationV3
+    ? [
+      ...commonAttestationKeys,
+      "runtimeMutationFile", "runtimeMutationFileSha256",
+      "mutationSecretNames", "mutationSecretDigests",
+    ]
+    : [...commonAttestationKeys, "deployMutationInput", "deployWorkdir"];
   const amendedAttestation = validateBundleRecoveryVariant(
     attestation,
     legacyOperationalPredecessor,
@@ -3312,8 +3542,11 @@ function readBundle(
   );
   const { attestationSha256, ...core } = attestation;
   if (
-    attestation.schemaVersion !== 2
-    || attestation.kind !== "main-finance-runtime-recovery-v2-private-bundle"
+    ![2, 3].includes(attestation.schemaVersion)
+    || attestation.kind !== (attestationV3
+      ? "main-finance-runtime-recovery-v3-private-bundle"
+      : "main-finance-runtime-recovery-v2-private-bundle")
+    || bundleCommitV3 !== attestationV3
     || attestation.environment !== "staging"
     || attestation.mainProjectRef !== MAIN_REF
     || attestation.financeProjectRef !== FINANCE_REF
@@ -3336,16 +3569,19 @@ function readBundle(
     || bundleCommit.bundleAttestationSha256 !== attestation.attestationSha256
     || bundleCommit.sourceArchiveSha256 !== attestation.sourceArchiveSha256
     || bundleCommit.runtimeFileSha256 !== attestation.runtimeFileSha256
-    || bundleCommit.deployMutationInputSha256
-      !== sha256(canonicalJson(attestation.deployMutationInput))
+    || (attestationV3
+      ? bundleCommit.runtimeMutationInputSha256
+        !== sha256(canonicalJson(attestation.runtimeMutationInput))
+      : bundleCommit.deployMutationInputSha256
+        !== sha256(canonicalJson(attestation.deployMutationInput)))
     || bundleCommit.supabaseMutationInputSha256
       !== sha256(canonicalJson(attestation.supabaseMutationInput))
   ) refuse("durable bundle commit does not bind the private bundle");
   if (
-    attestation.runtimeFile !== RUNTIME_ENV_FILE
+    attestation.runtimeFile !== (attestationV3 ? RUNTIME_PROOF_FILE : RUNTIME_ENV_FILE)
     || attestation.runtimeMutationInput === null
     || typeof attestation.runtimeMutationInput !== "object"
-    || !Array.isArray(attestation.deployMutationInput)
+    || (!attestationV3 && !Array.isArray(attestation.deployMutationInput))
     || attestation.preinstallInventoryFile !== PREINSTALL_INVENTORY_FILE
     || !SHA256.test(attestation.preinstallInventoryFileSha256)
     || !SHA256.test(attestation.preinstallMainInventorySha256)
@@ -3356,8 +3592,17 @@ function readBundle(
     || !SHA256.test(attestation.operatorDescriptorSha256)
     || !SHA256.test(attestation.productionBoundarySha256)
     || !SHA256.test(attestation.targetDescriptorSha256)
-    || attestation.deployWorkdir !== DEPLOY_WORKDIR
+    || (!attestationV3 && attestation.deployWorkdir !== DEPLOY_WORKDIR)
   ) refuse("bundle attestation private file boundary differs");
+  if (attestationV3 && (
+    attestation.runtimeMutationFile !== SECRET_MUTATION_ENV_FILE
+    || !SHA256.test(attestation.runtimeMutationFileSha256 ?? "")
+    || canonicalJson(attestation.mutationSecretNames)
+      !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+    || !validSuccessorMutationSecretDigestMap(
+      attestation.mutationSecretDigests,
+    )
+  )) refuse("successor secret mutation bundle boundary differs");
   if (
     !Array.isArray(attestation.secretNames)
     || canonicalJson(attestation.secretNames) !== canonicalJson([
@@ -3429,7 +3674,12 @@ function readBundle(
       !== attestation.preinstallMainInventorySha256
     || sha256(canonicalJson(inventoryCore(preinstallFinance)))
       !== attestation.preinstallFinanceInventorySha256
-    || storedFunctionInventory.target !== null
+    || (attestationV3
+      ? (
+        functionTargetState(storedFunctionInventory) !== "exact"
+        || !isTerminalDivergedPredecessorAdoption(attestation.predecessorAdoption)
+      )
+      : storedFunctionInventory.target !== null)
     || storedFunctionInventory.sha256 !== attestation.preinstallFunctionInventorySha256
   ) refuse("preinstall secret inventory fingerprint differs");
   const preinstallInventories = Object.freeze({
@@ -3437,7 +3687,10 @@ function readBundle(
     finance: preinstallFinance,
     functions: preinstallFunctions,
   });
-  const runtimeFile = path.join(stateDirectory, RUNTIME_ENV_FILE);
+  const runtimeFile = path.join(
+    stateDirectory,
+    attestationV3 ? RUNTIME_PROOF_FILE : RUNTIME_ENV_FILE,
+  );
   assertBundleStateDirectoryBeforePlaintext(attestation, stateDirectory);
   const runtimeSource = readRuntimeBundlePlaintextAfterAuthority({
     attestation,
@@ -3461,6 +3714,25 @@ function readBundle(
     expectedGeneratedSecretDigestSetSha256:
       PREDECESSOR_ADOPTION_PINS.generatedSecretDigestSetSha256,
   });
+  if (attestationV3) {
+    const mutationSource = readPrivateFile(
+      path.join(stateDirectory, SECRET_MUTATION_ENV_FILE),
+      "successor secret mutation bundle",
+      16 * 1024,
+    );
+    const mutationValues = parseRuntimeSource(
+      mutationSource,
+      attestation.mutationSecretNames,
+    );
+    if (
+      sha256(mutationSource) !== attestation.runtimeMutationFileSha256
+      || Object.entries(mutationValues).some(([name, value]) =>
+        value !== values[name]
+        || sha256(value) !== attestation.mutationSecretDigests[name])
+      || attestation.mutationSecretNames.some(name =>
+        release.environment.generatedSecrets.some(item => item.name === name))
+    ) refuse("successor secret mutation plaintext boundary differs");
+  }
   const operatorDescriptorFile = path.join(stateDirectory, ACCESS_V2_DESCRIPTOR_FILE);
   const operatorDescriptorSource = readPrivateFile(
     operatorDescriptorFile,
@@ -3511,23 +3783,34 @@ function readBundle(
     || archiveBytes.length !== expectedArchive.length
     || !archiveBytes.equals(expectedArchive)
   ) refuse("source archive contract differs");
-  const workdir = path.join(stateDirectory, DEPLOY_WORKDIR);
-  for (const item of release.manifest.deploymentClosureFiles) {
-    const file = path.join(workdir, item.path);
-    if (!statSync(file).isFile() || sha256(readFileSync(file)) !== item.sha256) {
-      refuse(`deploy workdir closure differs: ${item.path}`);
+  const workdir = attestationV3 ? null : path.join(stateDirectory, DEPLOY_WORKDIR);
+  if (!attestationV3) {
+    for (const item of release.manifest.deploymentClosureFiles) {
+      const file = path.join(workdir, item.path);
+      if (!statSync(file).isFile() || sha256(readFileSync(file)) !== item.sha256) {
+        refuse(`deploy workdir closure differs: ${item.path}`);
+      }
     }
   }
+  const secretMutationFile = attestationV3
+    ? path.join(stateDirectory, SECRET_MUTATION_ENV_FILE)
+    : runtimeFile;
   const runtimeMutationInput = captureRuntimeMutationInput(
-    runtimeFile,
-    attestation.runtimeFileSha256,
+    secretMutationFile,
+    attestationV3
+      ? attestation.runtimeMutationFileSha256
+      : attestation.runtimeFileSha256,
   );
-  const deployMutationInput = captureDeployMutationInput(workdir, release);
+  const deployMutationInput = attestationV3
+    ? null
+    : captureDeployMutationInput(workdir, release);
   const supabaseFile = path.join(stateDirectory, attestation.sealedSupabaseCliFile);
   const supabaseMutationInput = captureSealedSupabaseCliMutationInput(supabaseFile);
   if (
     canonicalJson(runtimeMutationInput) !== canonicalJson(attestation.runtimeMutationInput)
-    || canonicalJson(deployMutationInput) !== canonicalJson(attestation.deployMutationInput)
+    || (!attestationV3
+      && canonicalJson(deployMutationInput)
+        !== canonicalJson(attestation.deployMutationInput))
     || canonicalJson(supabaseMutationInput)
       !== canonicalJson(attestation.supabaseMutationInput)
   ) refuse("sealed mutation input inventory differs");
@@ -3535,6 +3818,13 @@ function readBundle(
     attestation: Object.freeze(attestation),
     runtime: Object.freeze({ values, source: runtimeSource, names: attestation.secretNames }),
     runtimeFile,
+    secretMutationFile,
+    secretMutation: attestationV3 ? Object.freeze({
+      names: Object.freeze(attestation.mutationSecretNames),
+      values: Object.freeze(Object.fromEntries(
+        attestation.mutationSecretNames.map(name => [name, values[name]]),
+      )),
+    }) : null,
     preinstallInventoryFile,
     preinstallInventories,
     operatorDescriptorFile,
@@ -3853,6 +4143,254 @@ function readPredecessorAdoption(input, release) {
   });
 }
 
+function assertTerminalDivergedPredecessorBundleBeforePlaintext({
+  attestation,
+  preinstallInventories,
+  envelopeAttestation,
+  plan,
+  secretIntent,
+  secretResult,
+  functionIntent,
+  unknown,
+  terminal,
+  stateDirectory,
+}) {
+  const preinstallFunctions = normalizeFunctionInventoryRows(
+    preinstallInventories.functions,
+  );
+  const postSecretFunctions = normalizeFunctionInventoryRows(
+    expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
+      preinstallFunctions.rows,
+    ),
+  );
+  if (
+    attestation.attestationSha256 !== envelopeAttestation.attestationSha256
+    || attestation.schemaVersion !== 2
+    || attestation.kind !== "main-finance-runtime-recovery-v2-private-bundle"
+    || attestation.sourceCommitSha
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.sourceCommitSha
+    || attestation.sourceTreeSha
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.sourceTreeSha
+    || attestation.runtimeFileSha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.runtimeFileSha256
+    || attestation.runtimeMutationInput?.path
+      !== path.join(stateDirectory, RUNTIME_ENV_FILE)
+    || plan.bundleAttestationSha256 !== attestation.attestationSha256
+    || plan.operatorDescriptorFileSha256
+      !== attestation.operatorDescriptorFileSha256
+    || plan.mainInventorySha256
+      !== attestation.preinstallMainInventorySha256
+    || plan.financeInventorySha256
+      !== attestation.preinstallFinanceInventorySha256
+    || plan.functionInventorySha256
+      !== attestation.preinstallFunctionInventorySha256
+    || attestation.preinstallMainInventorySha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.preinstallMainInventorySha256
+    || attestation.preinstallFinanceInventorySha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.financeInventorySha256
+    || attestation.preinstallFunctionInventorySha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.preinstallFunctionInventorySha256
+    || preinstallFunctions.rows.length
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.preinstallFunctionCount
+    || postSecretFunctions.sha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.postSecretFunctionInventorySha256
+    || secretIntent.expectedSecretDigestSetSha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.expectedSecretDigestSetSha256
+    || secretIntent.expectedSecretDigestSetSha256
+      !== sha256(canonicalJson(attestation.expectedSecretDigests))
+    || secretResult.afterMainInventorySha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.postSecretMainInventorySha256
+    || secretResult.afterFunctionInventorySha256 !== postSecretFunctions.sha256
+    || secretResult.functionVersionTransitionDisposition
+      !== "exact-all-existing-plus-one"
+    || functionIntent.beforeMainInventorySha256
+      !== secretResult.afterMainInventorySha256
+    || functionIntent.beforeFinanceInventorySha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.financeInventorySha256
+    || functionIntent.beforeFunctionInventorySha256
+      !== secretResult.afterFunctionInventorySha256
+    || unknown.intentReceiptSha256 !== functionIntent.receiptSha256
+    || terminal.unresolvedReceiptSha256 !== unknown.receiptSha256
+    || terminal.outcome !== "diverged"
+    || terminal.mainInventorySha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalMainInventorySha256
+    || terminal.financeInventorySha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.financeInventorySha256
+    || terminal.functionInventorySha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalFunctionInventorySha256
+  ) refuse("terminal-diverged predecessor bundle authority differs before runtime read");
+}
+
+function readTerminalDivergedPredecessorAdoption(input, release) {
+  assertPairwiseDisjointDirectories([
+    { directory: input.stateDir, label: "new state directory" },
+    { directory: input.receiptDir, label: "new receipt directory" },
+    { directory: input.priorStateDir, label: "predecessor state directory" },
+    { directory: input.priorReceiptDir, label: "predecessor receipt directory" },
+  ]);
+  const priorStateDirectory = assertPrivateDirectory(
+    input.priorStateDir,
+    "terminal-diverged predecessor state directory",
+  );
+  const priorReceiptDirectory = assertPrivateDirectory(
+    input.priorReceiptDir,
+    "terminal-diverged predecessor receipt directory",
+  );
+  assertAbsolute(input.priorReleaseProvenance, "predecessor release provenance");
+  const predecessorRoot = path.dirname(priorStateDirectory);
+  if (
+    path.dirname(priorReceiptDirectory) !== predecessorRoot
+    || path.dirname(input.priorReleaseProvenance) !== predecessorRoot
+  ) refuse("terminal-diverged predecessor authority must share one exact root");
+  assertPrivateDirectory(predecessorRoot, "terminal-diverged predecessor root");
+  const identityRecord = item => {
+    const status = lstatSync(item);
+    return Object.freeze({
+      realPath: realpathSync(item),
+      device: String(status.dev),
+      inode: String(status.ino),
+      mode: status.mode & 0o777,
+      owner: typeof process.getuid === "function" ? status.uid : null,
+    });
+  };
+  const identity = Object.freeze({
+    root: identityRecord(predecessorRoot),
+    stateDirectory: identityRecord(priorStateDirectory),
+    receiptDirectory: identityRecord(priorReceiptDirectory),
+    provenanceFile: identityRecord(input.priorReleaseProvenance),
+  });
+  readReceiptBinding(priorStateDirectory, priorReceiptDirectory);
+  const chain = readReceiptChain(priorReceiptDirectory, {
+    readOnly: true,
+    variant: "terminal-diverged-predecessor",
+  });
+  const [plan, secretIntent, secretResult, functionIntent, unknown, terminal] = chain;
+  const pins = TERMINAL_DIVERGED_PREDECESSOR_PINS;
+  if (
+    chain.length !== 6
+    || sha256(canonicalJson(chain)) !== pins.receiptChainSha256
+    || plan?.kind !== "release-plan"
+    || plan.mutationScope !== "secrets-set+function-deploy"
+    || secretIntent?.kind !== "mutation-intent"
+    || secretIntent.mutation !== "secrets-set"
+    || secretResult?.kind !== "mutation-result"
+    || secretResult.mutation !== "secrets-set"
+    || secretResult.status !== "verified"
+    || functionIntent?.kind !== "mutation-intent"
+    || functionIntent.mutation !== "function-deploy"
+    || unknown?.kind !== "mutation-result"
+    || unknown.mutation !== "function-deploy"
+    || unknown.status !== "unknown"
+    || terminal?.kind !== "reconciliation"
+    || terminal.mutation !== "function-deploy"
+    || terminal.outcome !== "diverged"
+    || plan.sourceCommitSha !== pins.sourceCommitSha
+    || plan.sourceTreeSha !== pins.sourceTreeSha
+    || plan.receiptSha256 !== pins.planReceiptSha256
+    || secretIntent.receiptSha256 !== pins.secretIntentReceiptSha256
+    || secretResult.receiptSha256 !== pins.secretResultReceiptSha256
+    || functionIntent.receiptSha256 !== pins.functionIntentReceiptSha256
+    || unknown.receiptSha256 !== pins.functionUnknownReceiptSha256
+    || terminal.receiptSha256 !== pins.terminalReceiptSha256
+    || terminal.receiptSha256 !== input.priorTerminalReceiptSha256
+    || plan.bundleAttestationSha256 !== pins.bundleAttestationSha256
+  ) refuse("predecessor chain is not the exact a30 terminal divergence");
+  const provenance = readProvenance(input.priorReleaseProvenance);
+  if (
+    provenance.fileSha256 !== pins.provenanceFileSha256
+    || provenance.descriptorSha256 !== pins.provenanceDescriptorSha256
+    || provenance.expectedCommitSha !== pins.sourceCommitSha
+    || provenance.expectedTreeSha !== pins.sourceTreeSha
+  ) refuse("terminal-diverged predecessor provenance differs");
+  const envelope = readPriorBundleEnvelope(priorStateDirectory, plan, provenance);
+  const priorRelease = Object.freeze({
+    ...release,
+    manifestSha256: plan.releaseManifestSha256,
+  });
+  const priorSource = Object.freeze({
+    commit: provenance.expectedCommitSha,
+    tree: provenance.expectedTreeSha,
+  });
+  const bundle = readBundle(
+    priorStateDirectory,
+    priorRelease,
+    priorSource,
+    {
+      expectedAttestationSha256: plan.bundleAttestationSha256,
+      expectedPredecessorAdoption: plan.predecessorAdoption,
+      authorizeRuntimeRead: (attestation, preinstallInventories) =>
+        assertTerminalDivergedPredecessorBundleBeforePlaintext({
+          attestation,
+          preinstallInventories,
+          envelopeAttestation: envelope.attestation,
+          plan,
+          secretIntent,
+          secretResult,
+          functionIntent,
+          unknown,
+          terminal,
+          stateDirectory: priorStateDirectory,
+        }),
+    },
+  );
+  const generatedNames = release.environment.generatedSecrets.map(item => item.name);
+  const generatedSecretValues = Object.freeze(Object.fromEntries(
+    generatedNames.map(name => [name, bundle.runtime.values[name]]),
+  ));
+  const generatedSecretDigests = Object.freeze(Object.fromEntries(
+    generatedNames.map(name => [name, sha256(generatedSecretValues[name])]),
+  ));
+  if (
+    sha256(canonicalJson(generatedSecretDigests))
+      !== pins.generatedSecretDigestSetSha256
+  ) refuse("terminal-diverged predecessor generated-secret subset differs");
+  const summary = Object.freeze({
+    kind: "main-finance-runtime-recovery-v3-terminal-diverged-predecessor-adoption",
+    priorRootIdentitySha256: sha256(canonicalJson(identity)),
+    priorSourceCommitSha: provenance.expectedCommitSha,
+    priorSourceTreeSha: provenance.expectedTreeSha,
+    priorReleaseProvenanceFileSha256: provenance.fileSha256,
+    priorReleaseProvenanceDescriptorSha256: provenance.descriptorSha256,
+    priorPlanReceiptSha256: plan.receiptSha256,
+    priorSecretIntentReceiptSha256: secretIntent.receiptSha256,
+    priorSecretResultReceiptSha256: secretResult.receiptSha256,
+    priorFunctionIntentReceiptSha256: functionIntent.receiptSha256,
+    priorFunctionUnknownReceiptSha256: unknown.receiptSha256,
+    priorTerminalReceiptSha256: terminal.receiptSha256,
+    priorReceiptChainSha256: sha256(canonicalJson(chain)),
+    priorBundleAttestationSha256: bundle.attestation.attestationSha256,
+    priorRuntimeFileSha256: bundle.attestation.runtimeFileSha256,
+    generatedSecretNames: Object.freeze(generatedNames),
+    generatedSecretDigestSetSha256: sha256(canonicalJson(generatedSecretDigests)),
+    preinstallMainInventorySha256: pins.preinstallMainInventorySha256,
+    postSecretMainInventorySha256: pins.postSecretMainInventorySha256,
+    terminalMainInventorySha256: pins.terminalMainInventorySha256,
+    stableFinanceInventorySha256: pins.financeInventorySha256,
+    preinstallFunctionInventorySha256: pins.preinstallFunctionInventorySha256,
+    postSecretFunctionInventorySha256: pins.postSecretFunctionInventorySha256,
+    terminalFunctionInventorySha256: pins.terminalFunctionInventorySha256,
+    terminalFunctionCount: pins.terminalFunctionCount,
+    targetFunctionState: "exact-sole-addition",
+    metadataOnlySecretNames: SUCCESSOR_METADATA_ONLY_SECRET_NAMES,
+    stableReadRounds: 2,
+    functionDeployAlreadyObserved: true,
+    terminalOutcome: "diverged",
+    causalAttribution: false,
+  });
+  validatePredecessorAdoptionEvidence(summary);
+  return Object.freeze({
+    bundle,
+    generatedSecretValues,
+    generatedSecretDigests,
+    summary,
+    identity,
+    chain,
+    postSecretFunctionRows: expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
+      bundle.preinstallInventories.functions,
+    ),
+  });
+}
+
 function exactSuccessorPredecessorAdoption(predecessor) {
   const observedFunctions = normalizeFunctionInventoryRows(
     expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
@@ -3915,7 +4453,8 @@ function readReceiptChain(
   directory,
   { readOnly = false, variant = "current" } = {},
 ) {
-  if (!["current", "pinned-predecessor"].includes(variant)) {
+  if (!["current", "pinned-predecessor", "terminal-diverged-predecessor"]
+    .includes(variant)) {
     refuse("receipt chain schema variant differs");
   }
   assertPrivateDirectory(directory, "receipt directory");
@@ -3964,7 +4503,7 @@ function readReceiptChain(
       const receipt = readJsonSource(source, "receipt");
       const { receiptSha256, ...core } = receipt;
       if (
-        receipt.schemaVersion !== 2
+      ![2, 3].includes(receipt.schemaVersion)
         || receipt.sequence !== index + 1
         || receipt.previousReceiptSha256 !== previous
         || receipt.productionDenied !== true
@@ -4021,6 +4560,14 @@ function assertReceiptPayloadEnvelopeFree(fields) {
   }
 }
 
+function receiptSchemaVersion(fields, chain) {
+  const adoption = fields.kind === "release-plan"
+    ? fields.predecessorAdoption
+    : [...chain].reverse().find(item => item.kind === "release-plan")
+      ?.predecessorAdoption;
+  return isTerminalDivergedPredecessorAdoption(adoption) ? 3 : 2;
+}
+
 function appendReceipt(directory, chain, fields) {
   assertReceiptPayloadEnvelopeFree(fields);
   const sequence = chain.length + 1;
@@ -4037,7 +4584,7 @@ function appendReceipt(directory, chain, fields) {
   const normalizedClock = Math.max(requestedClock, previousClock + 1);
   const core = {
     ...fields,
-    schemaVersion: 2,
+    schemaVersion: receiptSchemaVersion(fields, chain),
     sequence,
     previousReceiptSha256: chain.at(-1)?.receiptSha256 ?? null,
     productionDenied: true,
@@ -4083,14 +4630,19 @@ function validateReceiptChangedPaths(value) {
   ) refuse("receipt changed-path order or cardinality differs");
 }
 
-function validateReceiptSourceEvidence(receipt, measurement = false) {
+function validateReceiptSourceEvidence(
+  receipt,
+  measurement = false,
+  expectedBaseCommitSha = BASE_COMMIT_SHA,
+  expectedBaseTreeSha = BASE_TREE_SHA,
+) {
   validateReceiptChangedPaths(receipt.changedPaths);
   if (
     !GIT_OID.test(receipt.sourceCommitSha ?? "")
     || !GIT_OID.test(receipt.sourceTreeSha ?? "")
     || !GIT_OID.test(receipt.sourceParentSha ?? "")
-    || receipt.baseTreeSha !== BASE_TREE_SHA
-    || (!measurement && receipt.sourceParentSha !== BASE_COMMIT_SHA)
+    || receipt.baseTreeSha !== expectedBaseTreeSha
+    || (!measurement && receipt.sourceParentSha !== expectedBaseCommitSha)
     || !SHA256.test(receipt.changedPathSetSha256 ?? "")
     || (!measurement && receipt.changedPathSetSha256 !== sha256(receipt.changedPaths
       .map(item => `${item.status}\0${item.path}\n`).join("")))
@@ -4197,12 +4749,18 @@ function assertRuntimeReadChainEligibility(action, chain, now = null) {
     );
     const completionCause = (
       tail?.kind === "mutation-result"
-      && tail.mutation === "function-deploy"
+      && (
+        tail.mutation === "function-deploy"
+        || (tail.schemaVersion === 3 && tail.mutation === "secrets-set")
+      )
       && tail.status === "verified"
     ) || (
       tail?.kind === "reconciliation"
-      && tail.mutation === "function-deploy"
-      && tail.outcome === "applied"
+      && (
+        (tail.mutation === "function-deploy" && tail.outcome === "applied")
+        || (tail.schemaVersion === 3 && tail.mutation === "secrets-set"
+          && tail.outcome === "state_satisfied")
+      )
     );
     if (!unresolved && !completionCause) {
       refuse("reconcile chain is not eligible for runtime read");
@@ -4252,6 +4810,69 @@ function validateFunctionVersionTransitionEvidence(value, label) {
 
 function validatePredecessorAdoptionEvidence(value) {
   if (value === null) refuse("predecessor adoption evidence is absent");
+  if (isTerminalDivergedPredecessorAdoption(value)) {
+    exactKeys(value, [
+      "kind", "priorRootIdentitySha256", "priorSourceCommitSha",
+      "priorSourceTreeSha", "priorReleaseProvenanceFileSha256",
+      "priorReleaseProvenanceDescriptorSha256", "priorPlanReceiptSha256",
+      "priorSecretIntentReceiptSha256", "priorSecretResultReceiptSha256",
+      "priorFunctionIntentReceiptSha256", "priorFunctionUnknownReceiptSha256",
+      "priorTerminalReceiptSha256", "priorReceiptChainSha256",
+      "priorBundleAttestationSha256", "priorRuntimeFileSha256",
+      "generatedSecretNames", "generatedSecretDigestSetSha256",
+      "preinstallMainInventorySha256", "postSecretMainInventorySha256",
+      "terminalMainInventorySha256", "stableFinanceInventorySha256",
+      "preinstallFunctionInventorySha256", "postSecretFunctionInventorySha256",
+      "terminalFunctionInventorySha256", "terminalFunctionCount",
+      "targetFunctionState", "metadataOnlySecretNames", "stableReadRounds",
+      "functionDeployAlreadyObserved", "terminalOutcome", "causalAttribution",
+    ], "terminal-diverged predecessor adoption evidence");
+    const pins = TERMINAL_DIVERGED_PREDECESSOR_PINS;
+    if (
+      value.priorSourceCommitSha !== pins.sourceCommitSha
+      || value.priorSourceTreeSha !== pins.sourceTreeSha
+      || value.priorReleaseProvenanceFileSha256 !== pins.provenanceFileSha256
+      || value.priorReleaseProvenanceDescriptorSha256
+        !== pins.provenanceDescriptorSha256
+      || value.priorPlanReceiptSha256 !== pins.planReceiptSha256
+      || value.priorSecretIntentReceiptSha256 !== pins.secretIntentReceiptSha256
+      || value.priorSecretResultReceiptSha256 !== pins.secretResultReceiptSha256
+      || value.priorFunctionIntentReceiptSha256
+        !== pins.functionIntentReceiptSha256
+      || value.priorFunctionUnknownReceiptSha256
+        !== pins.functionUnknownReceiptSha256
+      || value.priorTerminalReceiptSha256 !== pins.terminalReceiptSha256
+      || value.priorReceiptChainSha256 !== pins.receiptChainSha256
+      || value.priorBundleAttestationSha256 !== pins.bundleAttestationSha256
+      || value.priorRuntimeFileSha256 !== pins.runtimeFileSha256
+      || value.generatedSecretDigestSetSha256 !== pins.generatedSecretDigestSetSha256
+      || value.preinstallMainInventorySha256 !== pins.preinstallMainInventorySha256
+      || value.postSecretMainInventorySha256 !== pins.postSecretMainInventorySha256
+      || value.terminalMainInventorySha256 !== pins.terminalMainInventorySha256
+      || value.stableFinanceInventorySha256 !== pins.financeInventorySha256
+      || value.preinstallFunctionInventorySha256
+        !== pins.preinstallFunctionInventorySha256
+      || value.postSecretFunctionInventorySha256
+        !== pins.postSecretFunctionInventorySha256
+      || value.terminalFunctionInventorySha256
+        !== pins.terminalFunctionInventorySha256
+      || value.terminalFunctionCount !== pins.terminalFunctionCount
+      || value.targetFunctionState !== "exact-sole-addition"
+      || canonicalJson(value.generatedSecretNames) !== canonicalJson([
+        "MAIN_FINANCE_ACCESS_OPERATOR_SECRET_V2",
+        "MAIN_FINANCE_SYNC_TRIGGER_SECRET",
+      ])
+      || canonicalJson(value.metadataOnlySecretNames)
+        !== canonicalJson(SUCCESSOR_METADATA_ONLY_SECRET_NAMES)
+      || value.stableReadRounds !== 2
+      || value.functionDeployAlreadyObserved !== true
+      || value.terminalOutcome !== "diverged"
+      || value.causalAttribution !== false
+      || Object.entries(value).some(([key, item]) =>
+        key.toLowerCase().includes("sha256") && !SHA256.test(item ?? ""))
+    ) refuse("terminal-diverged predecessor adoption evidence differs");
+    return;
+  }
   exactKeys(value, [
     "kind", "priorRootIdentitySha256", "priorSourceCommitSha",
     "priorSourceTreeSha", "priorReleaseProvenanceFileSha256",
@@ -4319,6 +4940,21 @@ function assertSuccessorPredecessorBaselineHashes({
   label,
 }) {
   validatePredecessorAdoptionEvidence(predecessorAdoption);
+  if (isTerminalDivergedPredecessorAdoption(predecessorAdoption)) {
+    if (
+      mainInventorySha256
+        !== TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalMainInventorySha256
+      || financeInventorySha256
+        !== TERMINAL_DIVERGED_PREDECESSOR_PINS.financeInventorySha256
+      || functionInventorySha256
+        !== TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalFunctionInventorySha256
+      || functionInventorySha256
+        !== predecessorAdoption.terminalFunctionInventorySha256
+      || functionCount !== TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalFunctionCount
+      || functionCount !== predecessorAdoption.terminalFunctionCount
+    ) refuse(`${label} differs from the exact terminal-diverged predecessor subject`);
+    return;
+  }
   if (
     mainInventorySha256 !== PREDECESSOR_ADOPTION_PINS.installedMainInventorySha256
     || financeInventorySha256 !== PREDECESSOR_ADOPTION_PINS.financeInventorySha256
@@ -4369,7 +5005,8 @@ function validateReceiptSemantic(
   prior,
   { variant = "current" } = {},
 ) {
-  if (!["current", "pinned-predecessor"].includes(variant)) {
+  if (!["current", "pinned-predecessor", "terminal-diverged-predecessor"]
+    .includes(variant)) {
     refuse("receipt schema variant differs");
   }
   const common = [
@@ -4424,21 +5061,36 @@ function validateReceiptSemantic(
       "sourceProvenanceFileSha256", "sourceProvenanceDescriptorSha256",
       "releaseManifestSha256", "sourceDeploymentSha256", "bundleAttestationSha256",
       "sourceArchiveSha256", "supabaseArchiveSha256", "operatorDescriptorFileSha256",
-      "runtimeMutationInputSha256", "deployMutationInputSha256",
-      "runtimeCommandArgsSha256", "deployCommandArgsSha256",
+      "runtimeMutationInputSha256", "runtimeCommandArgsSha256",
       "productionBoundarySha256", "targetDescriptorSha256", "mainInventorySha256",
       "financeInventorySha256", "functionInventorySha256", "snapshot", "mutationScope",
       "resumeFromReceiptSha256", "hostedMutationCount", "productionTouched",
     ];
     const amended = Object.hasOwn(receipt, "functionVersionTransition")
       || Object.hasOwn(receipt, "predecessorAdoption");
+    const secretsOnlySuccessor = isTerminalDivergedPredecessorAdoption(
+      receipt.predecessorAdoption,
+    );
     if (
       (variant === "current" && !amended)
       || (variant === "pinned-predecessor" && amended)
     ) refuse("release plan schema variant differs");
     exact(amended
-      ? [...releasePlanKeys, "functionVersionTransition", "predecessorAdoption"]
-      : releasePlanKeys);
+      ? [
+        ...releasePlanKeys,
+        ...(!secretsOnlySuccessor
+          ? ["deployMutationInputSha256", "deployCommandArgsSha256"]
+          : [
+            "semanticMainInventorySha256", "mutationSecretNames",
+            "mutationSecretNameSetSha256", "mutationSecretDigestSetSha256",
+            "metadataOnlySecretNames", "metadataOnlySecretNameSetSha256",
+            "predecessorReceiptChainSha256",
+            "functionAllExistingPlusOneSha256", "plannedHostedMutationCount",
+            "functionDeployCount",
+          ]),
+        "functionVersionTransition", "predecessorAdoption",
+      ]
+      : [...releasePlanKeys, "deployMutationInputSha256", "deployCommandArgsSha256"]);
     if (amended) {
       validateFunctionVersionTransitionEvidence(
         receipt.functionVersionTransition,
@@ -4451,17 +5103,51 @@ function validateReceiptSemantic(
       ) refuse("release plan function transition baseline differs");
       assertSuccessorPredecessorBaselineHashes({
         predecessorAdoption: receipt.predecessorAdoption,
-        mainInventorySha256:
-          PREDECESSOR_ADOPTION_PINS.installedMainInventorySha256,
-        financeInventorySha256: PREDECESSOR_ADOPTION_PINS.financeInventorySha256,
+        mainInventorySha256: secretsOnlySuccessor
+          ? receipt.mainInventorySha256
+          : PREDECESSOR_ADOPTION_PINS.installedMainInventorySha256,
+        financeInventorySha256: secretsOnlySuccessor
+          ? receipt.financeInventorySha256
+          : PREDECESSOR_ADOPTION_PINS.financeInventorySha256,
         functionInventorySha256:
           receipt.functionVersionTransition.beforeFunctionInventorySha256,
         functionCount: receipt.functionVersionTransition.existingFunctionCount,
         label: "release plan successor baseline",
       });
     }
-    validateReceiptSourceEvidence(receipt);
+    validateReceiptSourceEvidence(
+      receipt,
+      false,
+      variant === "terminal-diverged-predecessor"
+        ? "adcf7b919d34e512ded6d526ee7321f795f8f887"
+        : BASE_COMMIT_SHA,
+      variant === "terminal-diverged-predecessor"
+        ? "f02055d03d63a1fc2ebdbb17aeed3bcb2aafd22a"
+        : BASE_TREE_SHA,
+    );
     validateSafeSnapshotEvidence(receipt.snapshot, "release plan snapshot");
+    if (secretsOnlySuccessor && (
+      receipt.schemaVersion !== 3
+      || receipt.mutationScope !== "secrets-set"
+      || receipt.resumeFromReceiptSha256 !== null
+      || !SHA256.test(receipt.semanticMainInventorySha256 ?? "")
+      || canonicalJson(receipt.mutationSecretNames)
+        !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+      || receipt.mutationSecretNameSetSha256
+        !== sha256(canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES))
+      || !SHA256.test(receipt.mutationSecretDigestSetSha256 ?? "")
+      || canonicalJson(receipt.metadataOnlySecretNames)
+        !== canonicalJson(SUCCESSOR_METADATA_ONLY_SECRET_NAMES)
+      || receipt.metadataOnlySecretNameSetSha256
+        !== sha256(canonicalJson(SUCCESSOR_METADATA_ONLY_SECRET_NAMES))
+      || receipt.predecessorReceiptChainSha256
+        !== TERMINAL_DIVERGED_PREDECESSOR_PINS.receiptChainSha256
+      || receipt.functionAllExistingPlusOneSha256
+        !== receipt.functionVersionTransition
+          .currentStageExactAllExistingPlusOneFunctionInventorySha256
+      || receipt.plannedHostedMutationCount !== 1
+      || receipt.functionDeployCount !== 0
+    )) refuse("secrets-only successor release plan evidence differs");
     if (
       receipt.status !== "pending" || !canonicalTimestamp(receipt.expiresAt)
       || Date.parse(receipt.expiresAt) <= Date.parse(receipt.recordedAt)
@@ -4481,17 +5167,21 @@ function validateReceiptSemantic(
         receipt.supabaseArchiveSha256,
         receipt.operatorDescriptorFileSha256,
         receipt.runtimeMutationInputSha256,
-        receipt.deployMutationInputSha256,
         receipt.runtimeCommandArgsSha256,
-        receipt.deployCommandArgsSha256,
+        ...(secretsOnlySuccessor ? [] : [
+          receipt.deployMutationInputSha256,
+          receipt.deployCommandArgsSha256,
+        ]),
         receipt.productionBoundarySha256,
         receipt.targetDescriptorSha256,
         receipt.mainInventorySha256,
         receipt.financeInventorySha256,
         receipt.functionInventorySha256,
       ].some(digest => !SHA256.test(digest ?? ""))
-      || !["secrets-set+function-deploy", "secrets-set", "function-deploy"]
-        .includes(receipt.mutationScope)
+      || (secretsOnlySuccessor
+        ? receipt.mutationScope !== "secrets-set"
+        : !["secrets-set+function-deploy", "secrets-set", "function-deploy"]
+          .includes(receipt.mutationScope))
       || (receipt.mutationScope.includes("secrets-set")
         && amended
         && receipt.functionVersionTransition.currentStageDisposition !== "unchanged")
@@ -4500,7 +5190,12 @@ function validateReceiptSemantic(
       || receipt.hostedMutationCount !== 0
     ) refuse("release plan receipt differs");
     const cause = prior.at(-1);
-    if (receipt.mutationScope === "secrets-set+function-deploy") {
+    if (secretsOnlySuccessor) {
+      if (
+        receipt.resumeFromReceiptSha256 !== null
+        || prior.some(item => item.kind !== "catalog-measurement")
+      ) refuse("secrets-only initial plan causal binding differs");
+    } else if (receipt.mutationScope === "secrets-set+function-deploy") {
       if (
         receipt.resumeFromReceiptSha256 !== null
         || prior.some(item => [
@@ -4519,6 +5214,9 @@ function validateReceiptSemantic(
     const amendedPlan = plan !== undefined
       && Object.hasOwn(plan, "predecessorAdoption")
       && Object.hasOwn(plan, "functionVersionTransition");
+    const secretsOnlyPlan = isTerminalDivergedPredecessorAdoption(
+      plan?.predecessorAdoption,
+    );
     const base = [
       "mutation", "status", "planReceiptSha256", "automaticRetryPerformed",
       "productionTouched",
@@ -4531,6 +5229,12 @@ function validateReceiptSemantic(
           "beforeFunctionInventorySha256", "unchangedFunctionInventorySha256",
           "exactAllExistingPlusOneFunctionInventorySha256",
           "requiredStableReadRounds", "predecessorAdoptionSha256",
+          ...(secretsOnlyPlan ? [
+            "semanticBeforeMainInventorySha256",
+            "mutationSecretNameSetSha256", "metadataOnlySecretNameSetSha256",
+            "predecessorReceiptChainSha256", "functionAllExistingPlusOneSha256",
+            "hostedMutationCount", "functionDeployCount",
+          ] : []),
         ] : []),
       ]);
     } else if (receipt.mutation === "function-deploy") {
@@ -4594,6 +5298,26 @@ function validateReceiptSemantic(
         || receipt.predecessorAdoptionSha256
           !== sha256(canonicalJson(plan.predecessorAdoption))
       )) refuse("amended secret mutation intent transition evidence differs");
+      if (secretsOnlyPlan && (
+        receipt.schemaVersion !== 3
+        || canonicalJson(receipt.secretNames)
+          !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+        || receipt.expectedSecretDigestSetSha256
+          !== plan.mutationSecretDigestSetSha256
+        || !SHA256.test(receipt.semanticBeforeMainInventorySha256 ?? "")
+        || receipt.mutationSecretNameSetSha256
+          !== plan.mutationSecretNameSetSha256
+        || receipt.metadataOnlySecretNameSetSha256
+          !== plan.metadataOnlySecretNameSetSha256
+        || receipt.predecessorReceiptChainSha256
+          !== plan.predecessorReceiptChainSha256
+        || receipt.functionAllExistingPlusOneSha256
+          !== receipt.exactAllExistingPlusOneFunctionInventorySha256
+        || receipt.functionAllExistingPlusOneSha256
+          !== plan.functionAllExistingPlusOneSha256
+        || receipt.hostedMutationCount !== 0
+        || receipt.functionDeployCount !== 0
+      )) refuse("secrets-only mutation intent evidence differs");
     } else if (
       !SHA256.test(receipt.beforeFunctionInventorySha256 ?? "")
       || !SHA256.test(receipt.sourceDeploymentSha256 ?? "")
@@ -4631,6 +5355,9 @@ function validateReceiptSemantic(
     const amendedPlan = plan !== undefined
       && Object.hasOwn(plan, "predecessorAdoption")
       && Object.hasOwn(plan, "functionVersionTransition");
+    const secretsOnlyPlan = isTerminalDivergedPredecessorAdoption(
+      plan?.predecessorAdoption,
+    );
     if (receipt.status === "unknown") exact([...base, "responseStatus"]);
     else if (receipt.mutation === "secrets-set" && receipt.status === "verified") {
       exact([
@@ -4639,6 +5366,13 @@ function validateReceiptSemantic(
           "afterFunctionInventorySha256", "functionVersionTransitionDisposition",
           "functionInventoryStableReadRounds", "predecessorAdoptionSha256",
           "observation", "state", "causalAttribution",
+          ...(secretsOnlyPlan ? [
+            "semanticAfterMainInventorySha256", "metadataOnlyDeltaNames",
+            "metadataOnlyDeltaSha256", "mutationSecretNames",
+            "mutationSecretNameSetSha256", "mutationSecretDigestSetSha256",
+            "predecessorReceiptChainSha256", "functionAllExistingPlusOneSha256",
+            "hostedMutationCount", "functionDeployCount",
+          ] : []),
         ] : []),
       ]);
     } else if (receipt.mutation === "function-deploy" && receipt.status === "verified") {
@@ -4647,6 +5381,9 @@ function validateReceiptSemantic(
         "hostedD0ResponseSha256",
       ]);
     } else refuse("mutation result status differs");
+    if (secretsOnlyPlan && receipt.schemaVersion !== 3) {
+      refuse("secrets-only mutation result schema differs");
+    }
     if (
       !intent || intent.mutation !== receipt.mutation
       || intent.sequence !== receipt.sequence - 1
@@ -4687,6 +5424,37 @@ function validateReceiptSemantic(
         || receipt.causalAttribution !== false
       )
     ) refuse("amended secret mutation result transition evidence differs");
+    if (
+      secretsOnlyPlan
+      && receipt.mutation === "secrets-set"
+      && receipt.status === "verified"
+      && (
+        receipt.schemaVersion !== 3
+        || !["unchanged", "exact-all-existing-plus-one"]
+          .includes(receipt.functionVersionTransitionDisposition)
+        || receipt.functionAllExistingPlusOneSha256
+          !== intent.exactAllExistingPlusOneFunctionInventorySha256
+        || !SHA256.test(receipt.semanticAfterMainInventorySha256 ?? "")
+        || !Array.isArray(receipt.metadataOnlyDeltaNames)
+        || receipt.metadataOnlyDeltaNames.some(name =>
+          !SUCCESSOR_METADATA_ONLY_SECRET_NAMES.includes(name))
+        || new Set(receipt.metadataOnlyDeltaNames).size
+          !== receipt.metadataOnlyDeltaNames.length
+        || canonicalJson([...receipt.metadataOnlyDeltaNames].sort())
+          !== canonicalJson(receipt.metadataOnlyDeltaNames)
+        || !SHA256.test(receipt.metadataOnlyDeltaSha256 ?? "")
+        || canonicalJson(receipt.mutationSecretNames)
+          !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+        || receipt.mutationSecretNameSetSha256
+          !== intent.mutationSecretNameSetSha256
+        || receipt.mutationSecretDigestSetSha256
+          !== plan.mutationSecretDigestSetSha256
+        || receipt.predecessorReceiptChainSha256
+          !== plan.predecessorReceiptChainSha256
+        || receipt.hostedMutationCount !== 1
+        || receipt.functionDeployCount !== 0
+      )
+    ) refuse("secrets-only mutation result evidence differs");
     return;
   }
   if (receipt.kind === "reconciliation") {
@@ -4705,6 +5473,10 @@ function validateReceiptSemantic(
       && unresolvedPlan !== undefined
       && Object.hasOwn(unresolvedPlan, "predecessorAdoption")
       && Object.hasOwn(unresolvedPlan, "functionVersionTransition");
+    const secretsOnlyReconciliation = amendedSecretReconciliation
+      && isTerminalDivergedPredecessorAdoption(
+        unresolvedPlan.predecessorAdoption,
+      );
     exact([
       "mutation", "outcome", "unresolvedReceiptSha256", "mainInventorySha256",
       "financeInventorySha256", "functionInventorySha256", "hostedProofSha256",
@@ -4715,6 +5487,13 @@ function validateReceiptSemantic(
         "functionVersionTransitionDisposition", "inventoryReadRounds",
         "stableObservation",
         "predecessorAdoptionSha256",
+        ...(secretsOnlyReconciliation ? [
+          "semanticMainInventorySha256", "metadataOnlyDeltaNames",
+          "metadataOnlyDeltaSha256", "mutationSecretNames",
+          "mutationSecretNameSetSha256", "mutationSecretDigestSetSha256",
+          "predecessorReceiptChainSha256",
+          "functionAllExistingPlusOneSha256", "functionDeployCount",
+        ] : []),
       ] : []),
     ]);
     if (
@@ -4762,6 +5541,11 @@ function validateReceiptSemantic(
         || receipt.causalAttribution !== false
         || !["unchanged", "exact-all-existing-plus-one", "diverged"]
           .includes(receipt.functionVersionTransitionDisposition)
+        || (secretsOnlyReconciliation && receipt.outcome === "diverged"
+          && receipt.functionVersionTransitionDisposition !== "diverged")
+        || (secretsOnlyReconciliation && satisfied
+          && !["unchanged", "exact-all-existing-plus-one"]
+            .includes(receipt.functionVersionTransitionDisposition))
         || receipt.inventoryReadRounds !== unresolvedIntent?.requiredStableReadRounds
         || typeof receipt.stableObservation !== "boolean"
         || (receipt.outcome !== "diverged" && receipt.stableObservation !== true)
@@ -4780,9 +5564,53 @@ function validateReceiptSemantic(
           !== unresolvedIntent?.predecessorAdoptionSha256
       ) refuse("amended secret reconciliation observation evidence differs");
     }
+    if (secretsOnlyReconciliation && (
+      receipt.schemaVersion !== 3
+      || !SHA256.test(receipt.semanticMainInventorySha256 ?? "")
+      || !(receipt.metadataOnlyDeltaNames === null
+        || Array.isArray(receipt.metadataOnlyDeltaNames))
+      || (Array.isArray(receipt.metadataOnlyDeltaNames)
+        && (
+          canonicalJson([...receipt.metadataOnlyDeltaNames].sort())
+            !== canonicalJson(receipt.metadataOnlyDeltaNames)
+          || new Set(receipt.metadataOnlyDeltaNames).size
+            !== receipt.metadataOnlyDeltaNames.length
+          || receipt.metadataOnlyDeltaNames.some(name =>
+            !SUCCESSOR_METADATA_ONLY_SECRET_NAMES.includes(name))
+        ))
+      || !(receipt.metadataOnlyDeltaSha256 === null
+        || SHA256.test(receipt.metadataOnlyDeltaSha256 ?? ""))
+      || (receipt.outcome === "diverged"
+        ? !(
+          receipt.metadataOnlyDeltaNames === null
+          && receipt.metadataOnlyDeltaSha256 === null
+        )
+        : !(
+          Array.isArray(receipt.metadataOnlyDeltaNames)
+          && SHA256.test(receipt.metadataOnlyDeltaSha256 ?? "")
+        ))
+      || canonicalJson(receipt.mutationSecretNames)
+        !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+      || receipt.mutationSecretNameSetSha256
+        !== unresolvedPlan.mutationSecretNameSetSha256
+      || receipt.mutationSecretDigestSetSha256
+        !== unresolvedPlan.mutationSecretDigestSetSha256
+      || receipt.predecessorReceiptChainSha256
+        !== unresolvedPlan.predecessorReceiptChainSha256
+      || receipt.functionAllExistingPlusOneSha256
+        !== unresolvedIntent?.exactAllExistingPlusOneFunctionInventorySha256
+      || receipt.functionAllExistingPlusOneSha256
+        !== unresolvedPlan.functionAllExistingPlusOneSha256
+      || receipt.functionDeployCount !== 0
+    )) refuse("secrets-only reconciliation evidence differs");
     return;
   }
   if (receipt.kind === "release-complete") {
+    const cause = prior.at(-1);
+    const plan = [...prior].reverse().find(item => item.kind === "release-plan");
+    const secretsOnlyPlan = isTerminalDivergedPredecessorAdoption(
+      plan?.predecessorAdoption,
+    );
     exact([
       "status", "mainProjectRef", "financeProjectRef", "sourceCommitSha",
       "sourceTreeSha", "sourceParentSha", "baseTreeSha", "changedPaths",
@@ -4800,9 +5628,15 @@ function validateReceiptSemantic(
       "d1MainInventorySha256", "d1FinanceInventorySha256",
       "d1FunctionInventorySha256",
       "automaticRetryPerformed", "productionTouched",
+      ...(secretsOnlyPlan ? [
+        "completionCauseReceiptSha256", "semanticMainInventorySha256",
+        "metadataOnlyDeltaNames", "metadataOnlyDeltaSha256",
+        "mutationSecretNames", "mutationSecretNameSetSha256",
+        "mutationSecretDigestSetSha256", "predecessorReceiptChainSha256",
+        "functionAllExistingPlusOneSha256", "hostedMutationCount",
+        "functionDeployCount",
+      ] : []),
     ]);
-    const cause = prior.at(-1);
-    const plan = [...prior].reverse().find(item => item.kind === "release-plan");
     validateReceiptSourceEvidence(receipt);
     validateSafeSnapshotEvidence(receipt.d0, "release completion D0");
     validateSafeSnapshotEvidence(receipt.d1, "release completion D1");
@@ -4822,10 +5656,19 @@ function validateReceiptSemantic(
       receipt.status !== "verified" || !cause || receipt.sourceCiConclusion !== "success"
       || !plan
       || !(
-        (cause.kind === "mutation-result" && cause.mutation === "function-deploy"
-          && cause.status === "verified")
-        || (cause.kind === "reconciliation" && cause.mutation === "function-deploy"
-          && cause.outcome === "applied")
+        secretsOnlyPlan
+          ? (
+            (cause.kind === "mutation-result" && cause.mutation === "secrets-set"
+              && cause.status === "verified")
+            || (cause.kind === "reconciliation" && cause.mutation === "secrets-set"
+              && cause.outcome === "state_satisfied")
+          )
+          : (
+            (cause.kind === "mutation-result" && cause.mutation === "function-deploy"
+              && cause.status === "verified")
+            || (cause.kind === "reconciliation" && cause.mutation === "function-deploy"
+              && cause.outcome === "applied")
+          )
       )
       || receipt.mainProjectRef !== MAIN_REF || receipt.financeProjectRef !== FINANCE_REF
       || receipt.workflowPath !== ".github/workflows/verify-finance-integration.yml"
@@ -4844,7 +5687,7 @@ function validateReceiptSemantic(
         receipt.productionBoundarySha256,
         receipt.targetDescriptorSha256,
         receipt.functionInventorySha256,
-        receipt.causalHostedProofSha256,
+        ...(secretsOnlyPlan ? [] : [receipt.causalHostedProofSha256]),
         receipt.d0MainInventorySha256,
         receipt.d0FinanceInventorySha256,
         receipt.d0FunctionInventorySha256,
@@ -4873,10 +5716,42 @@ function validateReceiptSemantic(
       || receipt.d0MainInventorySha256 !== receipt.d1MainInventorySha256
       || receipt.d0FinanceInventorySha256 !== receipt.d1FinanceInventorySha256
       || receipt.d0FunctionInventorySha256 !== receipt.d1FunctionInventorySha256
-      || cause.hostedProofSha256 !== receipt.causalHostedProofSha256
-      || receipt.hostedProof.proofSha256 === receipt.causalHostedProofSha256
-      || cause.hostedD0ResponseSha256 === receipt.d0.responseSha256
-      || cause.functionInventorySha256 !== receipt.functionInventorySha256
+      || (secretsOnlyPlan
+        ? (
+          receipt.schemaVersion !== 3
+          || receipt.causalHostedProofSha256 !== null
+          || receipt.completionCauseReceiptSha256 !== cause.receiptSha256
+          || (cause.kind === "mutation-result"
+            ? cause.afterFunctionInventorySha256
+            : cause.functionInventorySha256) !== receipt.functionInventorySha256
+          || !SHA256.test(receipt.semanticMainInventorySha256 ?? "")
+          || !Array.isArray(receipt.metadataOnlyDeltaNames)
+          || canonicalJson([...receipt.metadataOnlyDeltaNames].sort())
+            !== canonicalJson(receipt.metadataOnlyDeltaNames)
+          || new Set(receipt.metadataOnlyDeltaNames).size
+            !== receipt.metadataOnlyDeltaNames.length
+          || receipt.metadataOnlyDeltaNames.some(name =>
+            !SUCCESSOR_METADATA_ONLY_SECRET_NAMES.includes(name))
+          || !SHA256.test(receipt.metadataOnlyDeltaSha256 ?? "")
+          || canonicalJson(receipt.mutationSecretNames)
+            !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+          || receipt.mutationSecretNameSetSha256
+            !== sha256(canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES))
+          || receipt.mutationSecretDigestSetSha256
+            !== plan.mutationSecretDigestSetSha256
+          || receipt.predecessorReceiptChainSha256
+            !== plan.predecessorReceiptChainSha256
+          || receipt.functionAllExistingPlusOneSha256
+            !== plan.functionAllExistingPlusOneSha256
+          || receipt.hostedMutationCount !== 1
+          || receipt.functionDeployCount !== 0
+        )
+        : (
+          cause.hostedProofSha256 !== receipt.causalHostedProofSha256
+          || receipt.hostedProof.proofSha256 === receipt.causalHostedProofSha256
+          || cause.hostedD0ResponseSha256 === receipt.d0.responseSha256
+          || cause.functionInventorySha256 !== receipt.functionInventorySha256
+        ))
       || receipt.sourceCommitSha !== plan.sourceCommitSha
       || receipt.sourceTreeSha !== plan.sourceTreeSha
       || receipt.sourceParentSha !== plan.sourceParentSha
@@ -4907,6 +5782,7 @@ function validateReceiptSemantic(
       || receipt.d0.privacyInventorySha256 !== plan.snapshot.privacyInventorySha256
       || receipt.d0.checkedCount !== plan.snapshot.checkedCount
       || receipt.automaticRetryPerformed !== false
+      || receipt.productionTouched !== false
     ) refuse("release completion causal binding differs");
     return;
   }
@@ -4945,15 +5821,80 @@ function latestPlan(chain) {
   return plan;
 }
 
+function assertCurrentReleaseSecretsOnlyPlan(plan) {
+  if (
+    plan?.schemaVersion !== 3
+    || plan.kind !== "release-plan"
+    || plan.mutationScope !== "secrets-set"
+    || plan.resumeFromReceiptSha256 !== null
+    || !isTerminalDivergedPredecessorAdoption(plan.predecessorAdoption)
+    || canonicalJson(plan.mutationSecretNames)
+      !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+    || canonicalJson(plan.metadataOnlySecretNames)
+      !== canonicalJson(SUCCESSOR_METADATA_ONLY_SECRET_NAMES)
+    || plan.plannedHostedMutationCount !== 1
+    || plan.functionDeployCount !== 0
+    || Object.hasOwn(plan, "deployMutationInputSha256")
+    || Object.hasOwn(plan, "deployCommandArgsSha256")
+  ) refuse("current release accepts only the schema-3 secrets-only successor plan");
+  return plan;
+}
+
+function assertCurrentReleaseSecretsOnlyBundle(attestation, plan) {
+  if (
+    attestation?.schemaVersion !== 3
+    || attestation.kind !== "main-finance-runtime-recovery-v3-private-bundle"
+    || !isTerminalDivergedPredecessorAdoption(attestation.predecessorAdoption)
+    || canonicalJson(attestation.predecessorAdoption)
+      !== canonicalJson(plan.predecessorAdoption)
+    || attestation.runtimeFile !== RUNTIME_PROOF_FILE
+    || attestation.runtimeMutationFile !== SECRET_MUTATION_ENV_FILE
+    || canonicalJson(attestation.mutationSecretNames)
+      !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+    || !validSuccessorMutationSecretDigestMap(
+      attestation.mutationSecretDigests,
+    )
+    || Object.hasOwn(attestation, "deployMutationInput")
+    || Object.hasOwn(attestation, "deployWorkdir")
+  ) refuse("current release accepts only the schema-3 secrets-only private bundle");
+  return attestation;
+}
+
+function assertCurrentReleasePlanBeforeLease(receiptDirectory) {
+  assertPrivateDirectory(receiptDirectory, "current receipt directory");
+  const entries = readdirSync(receiptDirectory).sort();
+  if (entries.some(name => !RECEIPT_PATTERN.test(name))) {
+    refuse("current action receipt directory is not finalized before operation lease");
+  }
+  for (const name of [...entries].reverse()) {
+    const source = readPrivateFile(
+      path.join(receiptDirectory, name),
+      "pre-lease release plan receipt",
+      256 * 1024,
+    );
+    const receipt = readJsonSource(source, "pre-lease release plan receipt");
+    if (receipt.kind !== "release-plan") continue;
+    const { receiptSha256, ...core } = receipt;
+    if (
+      !SHA256.test(receiptSha256 ?? "")
+      || receiptSha256 !== sha256(canonicalJson(core))
+      || source !== `${canonicalJson(receipt)}\n`
+    ) refuse("pre-lease release plan self-hash differs");
+    return assertCurrentReleaseSecretsOnlyPlan(receipt);
+  }
+  refuse("a current release plan receipt is required before operation lease");
+}
+
 function postSecretFunctionBaselineFromChain(
   preinstallRows,
   chain,
   plan = latestPlan(chain),
 ) {
   const stageBaseline = normalizeFunctionInventoryRows(
-    functionVersionTransitionBaselineRows(
+    scopedFunctionVersionTransitionRows(
       preinstallRows,
       plan.functionVersionTransition.currentStageDisposition,
+      plan.predecessorAdoption,
     ),
   );
   if (
@@ -4973,7 +5914,11 @@ function postSecretFunctionBaselineFromChain(
     refuse("post-secret function transition disposition is absent or differs");
   }
   const baseline = normalizeFunctionInventoryRows(
-    functionVersionTransitionBaselineRows(stageBaseline.rows, disposition),
+    scopedFunctionVersionTransitionRows(
+      stageBaseline.rows,
+      disposition,
+      plan.predecessorAdoption,
+    ),
   );
   const observedSha256 = evidence.kind === "mutation-result"
     ? evidence.afterFunctionInventorySha256
@@ -5027,6 +5972,9 @@ function assertPlanEnvelopeBeforePlaintext(
   stateDirectory,
 ) {
   assertPlanAttestationBinding(plan, attestation, release, source, provenance);
+  const secretsOnlySuccessor = isTerminalDivergedPredecessorAdoption(
+    attestation.predecessorAdoption,
+  );
   assertSuccessorPredecessorBaselineHashes({
     predecessorAdoption: attestation.predecessorAdoption,
     mainInventorySha256: attestation.preinstallMainInventorySha256,
@@ -5049,17 +5997,32 @@ function assertPlanEnvelopeBeforePlaintext(
       !== attestation.operatorDescriptorFileSha256
     || plan.runtimeMutationInputSha256
       !== sha256(canonicalJson(attestation.runtimeMutationInput))
-    || plan.deployMutationInputSha256
-      !== sha256(canonicalJson(attestation.deployMutationInput))
+    || (!secretsOnlySuccessor
+      && plan.deployMutationInputSha256
+        !== sha256(canonicalJson(attestation.deployMutationInput)))
     || plan.runtimeCommandArgsSha256 !== sha256(canonicalJson([
       "secrets", "set", "--project-ref", MAIN_REF,
-      "--env-file", path.join(stateDirectory, RUNTIME_ENV_FILE), "--yes",
+      "--env-file", path.join(
+        stateDirectory,
+        secretsOnlySuccessor ? SECRET_MUTATION_ENV_FILE : RUNTIME_ENV_FILE,
+      ), "--yes",
     ]))
-    || plan.deployCommandArgsSha256 !== sha256(canonicalJson([
+    || (!secretsOnlySuccessor
+      && plan.deployCommandArgsSha256 !== sha256(canonicalJson([
       "functions", "deploy", FUNCTION_NAME, "--project-ref", MAIN_REF,
       "--no-verify-jwt", "--use-api", "--workdir",
       path.join(stateDirectory, DEPLOY_WORKDIR), "--yes",
-    ]))
+    ])))
+    || (secretsOnlySuccessor && (
+      plan.schemaVersion !== 3
+      || plan.mutationScope !== "secrets-set"
+      || plan.mutationSecretNameSetSha256
+        !== sha256(canonicalJson(attestation.mutationSecretNames))
+      || plan.mutationSecretDigestSetSha256
+        !== sha256(canonicalJson(attestation.mutationSecretDigests))
+      || plan.functionDeployCount !== 0
+      || plan.plannedHostedMutationCount !== 1
+    ))
     || plan.productionBoundarySha256 !== attestation.productionBoundarySha256
     || plan.targetDescriptorSha256 !== attestation.targetDescriptorSha256
     || attestation.productionBoundarySha256
@@ -5186,6 +6149,81 @@ function inventoryMatchesInstall(
       || !current
       || previous.value !== current.value
       || previous.updatedAt !== current.updatedAt
+    ) return false;
+  }
+  return true;
+}
+
+function inventoryHasExactNameSet(before, after) {
+  return canonicalJson([...before.keys()].sort())
+    === canonicalJson([...after.keys()].sort());
+}
+
+function inventoryMatchesMetadataOnlyDrift(before, after, allowedNames) {
+  if (
+    canonicalJson([...allowedNames].sort())
+      !== canonicalJson([...SUCCESSOR_METADATA_ONLY_SECRET_NAMES].sort())
+    || !inventoryHasExactNameSet(before, after)
+  ) return false;
+  for (const [name, previous] of before) {
+    const current = after.get(name);
+    if (
+      current === undefined
+      || current.value !== previous.value
+      || (!allowedNames.includes(name) && current.updatedAt !== previous.updatedAt)
+    ) return false;
+  }
+  return true;
+}
+
+function inventoryMatchesSuccessorInstall(
+  before,
+  after,
+  expectedDigests,
+  mutationNames,
+) {
+  if (
+    canonicalJson([...mutationNames].sort()) !== canonicalJson([
+      "MAIN_FINANCE_ACCESS_V2_SOURCE_COMMIT_SHA",
+      "MAIN_FINANCE_ACCESS_V2_SOURCE_MANIFEST_SHA256",
+      "MAIN_FINANCE_ACCESS_V2_SOURCE_TREE_SHA",
+    ])
+    || !inventoryHasExactNameSet(before, after)
+  ) return false;
+  for (const [name, previous] of before) {
+    const current = after.get(name);
+    if (current === undefined) return false;
+    if (mutationNames.includes(name)) {
+      if (current.value !== expectedDigests[name]) return false;
+      continue;
+    }
+    if (current.value !== previous.value) return false;
+    if (
+      !SUCCESSOR_METADATA_ONLY_SECRET_NAMES.includes(name)
+      && current.updatedAt !== previous.updatedAt
+    ) return false;
+  }
+  return true;
+}
+
+function inventoryMatchesFullInstallWithMetadataDrift(
+  before,
+  after,
+  expectedDigests,
+  managedNames,
+) {
+  if (!inventoryHasExactNameSet(before, after)) return false;
+  for (const [name, previous] of before) {
+    const current = after.get(name);
+    if (current === undefined) return false;
+    if (managedNames.includes(name)) {
+      if (current.value !== expectedDigests[name]) return false;
+      continue;
+    }
+    if (current.value !== previous.value) return false;
+    if (
+      !SUCCESSOR_METADATA_ONLY_SECRET_NAMES.includes(name)
+      && current.updatedAt !== previous.updatedAt
     ) return false;
   }
   return true;
@@ -5349,6 +6387,98 @@ async function postflightSandwich(
   });
 }
 
+async function postflightSecretsOnlySuccessorSandwich(
+  dependencies,
+  release,
+  source,
+  bundle,
+  exactFunctionRows,
+) {
+  if (!isTerminalDivergedPredecessorAdoption(
+    bundle.attestation.predecessorAdoption,
+  )) refuse("secrets-only postflight bundle variant differs");
+  const expectedFunctions = normalizeFunctionInventoryRows(exactFunctionRows);
+  const functions0 = fetchFunctionInventory(dependencies);
+  if (!functionInventoryMatchesPostSecretBaseline(
+    functions0,
+    expectedFunctions.rows,
+  )) return null;
+  const inventories0 = fetchSecretInventories(dependencies);
+  const installed = inventories => inventoryMatchesSuccessorInstall(
+    bundle.preinstallInventories.main,
+    inventories.main,
+    bundle.attestation.mutationSecretDigests,
+    bundle.attestation.mutationSecretNames,
+  ) && inventoryIsUnchanged(
+    bundle.preinstallInventories.finance,
+    inventories.finance,
+  );
+  if (!installed(inventories0)) return null;
+  const d0 = await buildCurrentSnapshot(
+    dependencies,
+    release,
+    source,
+    inventories0,
+    "recovery",
+  );
+  const proof = await hostedAttest({
+    snapshot: d0,
+    operatorSecret: bundle.runtime.values.MAIN_FINANCE_ACCESS_OPERATOR_SECRET_V2,
+    fetchImpl: dependencies.fetchImpl,
+    now: dependencies.now,
+  });
+  if (!proof) return null;
+  const inventories1 = fetchSecretInventories(dependencies);
+  const d1 = await buildCurrentSnapshot(
+    dependencies,
+    release,
+    source,
+    inventories1,
+    "recovery",
+  );
+  const functions1 = fetchFunctionInventory(dependencies);
+  if (
+    !validateSandwich(d0, proof, d1)
+    || !snapshotMatchesBundle(d0, bundle)
+    || !snapshotMatchesBundle(d1, bundle)
+    || !installed(inventories1)
+    || inventories0.mainInventorySha256 !== inventories1.mainInventorySha256
+    || inventories0.financeInventorySha256 !== inventories1.financeInventorySha256
+    || !functionInventoryMatchesPostSecretBaseline(
+      functions1,
+      expectedFunctions.rows,
+    )
+    || canonicalJson(functions0.rows) !== canonicalJson(functions1.rows)
+  ) return null;
+  const unrelatedBefore = inventoryWithoutNames(
+    bundle.preinstallInventories.main,
+    bundle.attestation.mutationSecretNames,
+  );
+  const unrelatedAfter = inventoryWithoutNames(
+    inventories1.main,
+    bundle.attestation.mutationSecretNames,
+  );
+  const metadataDelta = metadataOnlyInventoryDelta(
+    unrelatedBefore,
+    unrelatedAfter,
+  );
+  return Object.freeze({
+    d0,
+    proof,
+    d1,
+    d0MainInventorySha256: inventories0.mainInventorySha256,
+    d0FinanceInventorySha256: inventories0.financeInventorySha256,
+    d0FunctionInventorySha256: functions0.sha256,
+    d1MainInventorySha256: inventories1.mainInventorySha256,
+    d1FinanceInventorySha256: inventories1.financeInventorySha256,
+    d1FunctionInventorySha256: functions1.sha256,
+    semanticMainInventorySha256: semanticSecretInventorySha256(inventories1.main),
+    metadataDelta,
+    inventories: inventories1,
+    functionInventory: functions1,
+  });
+}
+
 function exactNow(now) {
   const value = now();
   if (
@@ -5391,6 +6521,64 @@ function expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
     ...row,
     version: row.version + 1,
   })));
+}
+
+function expectedAllExistingPlusOneFunctionRows(beforeRows) {
+  const before = normalizeFunctionInventoryRows(beforeRows);
+  if (before.rows.some(row => row.version >= Number.MAX_SAFE_INTEGER)) {
+    refuse("function version cannot be incremented safely");
+  }
+  return Object.freeze(before.rows.map(row => Object.freeze({
+    ...row,
+    version: row.version + 1,
+  })));
+}
+
+function classifyAllExistingFunctionVersionTransition({ beforeRows, afterRows }) {
+  const before = normalizeFunctionInventoryRows(beforeRows);
+  const after = normalizeFunctionInventoryRows(afterRows);
+  if (before.rows.length !== after.rows.length) return "diverged";
+  if (canonicalJson(after.rows) === canonicalJson(before.rows)) return "unchanged";
+  const expected = normalizeFunctionInventoryRows(
+    expectedAllExistingPlusOneFunctionRows(before.rows),
+  );
+  return canonicalJson(after.rows) === canonicalJson(expected.rows)
+    ? "exact-all-existing-plus-one"
+    : "diverged";
+}
+
+function isTerminalDivergedPredecessorAdoption(value) {
+  return value?.kind
+    === "main-finance-runtime-recovery-v3-terminal-diverged-predecessor-adoption";
+}
+
+function classifyScopedFunctionVersionTransition({
+  beforeRows,
+  afterRows,
+  predecessorAdoption,
+}) {
+  return isTerminalDivergedPredecessorAdoption(predecessorAdoption)
+    ? classifyAllExistingFunctionVersionTransition({ beforeRows, afterRows })
+    : classifyMainFinanceRuntimeRecoveryV2FunctionVersionTransition({
+      beforeRows,
+      afterRows,
+    });
+}
+
+function scopedFunctionVersionTransitionRows(
+  beforeRows,
+  disposition,
+  predecessorAdoption,
+) {
+  if (!isTerminalDivergedPredecessorAdoption(predecessorAdoption)) {
+    return functionVersionTransitionBaselineRows(beforeRows, disposition);
+  }
+  const before = normalizeFunctionInventoryRows(beforeRows);
+  if (disposition === "unchanged") return before.rows;
+  if (disposition !== "exact-all-existing-plus-one") {
+    refuse("successor function transition disposition differs");
+  }
+  return expectedAllExistingPlusOneFunctionRows(before.rows);
 }
 
 function classifyMainFinanceRuntimeRecoveryV2FunctionVersionTransition({
@@ -5596,7 +6784,7 @@ function validateDeclarativeReceiptChain(chain) {
     );
     const { receiptSha256, ...core } = receipt;
     if (
-      receipt.schemaVersion !== 2
+        ![2, 3].includes(receipt.schemaVersion)
       || receipt.sequence !== validated.length + 1
       || receipt.previousReceiptSha256 !== previous
       || receipt.productionDenied !== true
@@ -5641,9 +6829,11 @@ function declarativeInventory(rows, label) {
 
 function classifyDeclarativeSecretState(evidence) {
   if (evidence === null) return "not-required";
+  const successor = Object.hasOwn(evidence, "metadataOnlyNames");
   assertPlainDeclarativeRecord(evidence, [
     "preinstallMain", "preinstallFinance", "currentMain", "currentFinance",
     "expectedDigests", "secretNames",
+    ...(successor ? ["metadataOnlyNames"] : []),
   ], "secret evidence");
   const preinstallMain = declarativeInventory(
     evidence.preinstallMain,
@@ -5674,16 +6864,35 @@ function classifyDeclarativeSecretState(evidence) {
     || canonicalJson(Object.keys(evidence.expectedDigests).sort())
       !== canonicalJson([...evidence.secretNames].sort())
   ) refuse("declarative expected secret evidence differs");
+  if (successor && canonicalJson(evidence.metadataOnlyNames)
+    !== canonicalJson(SUCCESSOR_METADATA_ONLY_SECRET_NAMES)) {
+    refuse("declarative successor metadata-only allow-list differs");
+  }
+  const preinstallMainObserved = successor
+    ? inventoryMatchesMetadataOnlyDrift(
+      preinstallMain,
+      currentMain,
+      evidence.metadataOnlyNames,
+    )
+    : inventoryIsUnchanged(preinstallMain, currentMain);
   if (
-    inventoryIsUnchanged(preinstallMain, currentMain)
+    preinstallMainObserved
     && inventoryIsUnchanged(preinstallFinance, currentFinance)
   ) return "preinstall";
-  return inventoryMatchesInstall(
-    preinstallMain,
-    currentMain,
-    evidence.expectedDigests,
-    evidence.secretNames,
-  ) && inventoryIsUnchanged(preinstallFinance, currentFinance)
+  const installed = successor
+    ? inventoryMatchesSuccessorInstall(
+      preinstallMain,
+      currentMain,
+      evidence.expectedDigests,
+      evidence.secretNames,
+    )
+    : inventoryMatchesInstall(
+      preinstallMain,
+      currentMain,
+      evidence.expectedDigests,
+      evidence.secretNames,
+    );
+  return installed && inventoryIsUnchanged(preinstallFinance, currentFinance)
     ? "installed" : "diverged";
 }
 
@@ -5692,22 +6901,39 @@ function declarativeFunctionStageBaselineRows(evidence, chain) {
   return plan === null
     || !Object.hasOwn(plan, "functionVersionTransition")
     ? evidence.preinstallRows
-    : functionVersionTransitionBaselineRows(
+    : scopedFunctionVersionTransitionRows(
       evidence.preinstallRows,
       plan.functionVersionTransition.currentStageDisposition,
+      plan.predecessorAdoption,
     );
 }
 
 function classifyDeclarativeFunctionState(evidence, chain) {
   if (evidence === null) return "not-required";
+  const successorEvidence = Object.hasOwn(evidence, "successorBaseline");
   assertPlainDeclarativeRecord(
     evidence,
-    ["preinstallRows", "currentRows"],
+    ["preinstallRows", "currentRows", ...(successorEvidence
+      ? ["successorBaseline"] : [])],
     "function evidence",
   );
   const current = normalizeFunctionInventoryRows(evidence.currentRows);
   const plan = declarativeLatestPlan(chain);
   const stageBaselineRows = declarativeFunctionStageBaselineRows(evidence, chain);
+  if (
+    successorEvidence && evidence.successorBaseline !== true
+  ) refuse("declarative successor function marker differs");
+  if (
+    successorEvidence
+    || isTerminalDivergedPredecessorAdoption(plan?.predecessorAdoption)
+  ) {
+    const transition = classifyAllExistingFunctionVersionTransition({
+      beforeRows: stageBaselineRows,
+      afterRows: current.rows,
+    });
+    return ["unchanged", "exact-all-existing-plus-one"].includes(transition)
+      ? "absent" : "diverged";
+  }
   if (current.target === null) {
     const transition = classifyMainFinanceRuntimeRecoveryV2FunctionVersionTransition({
       beforeRows: stageBaselineRows,
@@ -5866,16 +7092,27 @@ function assertDeclarativeBundleBaselineBinding(input) {
     || preinstallFunctions.sha256
       !== input.bundle.preinstallFunctionInventorySha256
   ) refuse("declarative bundle baseline binding differs");
+  const successor = Object.hasOwn(
+    input.bundle,
+    "mutationSecretNameSetSha256",
+  );
   if (
-    input.bundle.preinstallMainInventorySha256
-      !== PREDECESSOR_ADOPTION_PINS.installedMainInventorySha256
-    || input.bundle.preinstallFinanceInventorySha256
-      !== PREDECESSOR_ADOPTION_PINS.financeInventorySha256
-    || input.bundle.preinstallFunctionInventorySha256
-      !== PREDECESSOR_ADOPTION_PINS.observedFunctionInventorySha256
-    || preinstallFunctions.rows.length
-      !== PREDECESSOR_ADOPTION_PINS.observedFunctionCount
+    input.bundle.preinstallMainInventorySha256 !== (successor
+      ? TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalMainInventorySha256
+      : PREDECESSOR_ADOPTION_PINS.installedMainInventorySha256)
+    || input.bundle.preinstallFinanceInventorySha256 !== (successor
+      ? TERMINAL_DIVERGED_PREDECESSOR_PINS.financeInventorySha256
+      : PREDECESSOR_ADOPTION_PINS.financeInventorySha256)
+    || input.bundle.preinstallFunctionInventorySha256 !== (successor
+      ? TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalFunctionInventorySha256
+      : PREDECESSOR_ADOPTION_PINS.observedFunctionInventorySha256)
+    || preinstallFunctions.rows.length !== (successor
+      ? TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalFunctionCount
+      : PREDECESSOR_ADOPTION_PINS.observedFunctionCount)
   ) refuse("declarative successor bundle baseline differs");
+  if (successor && functionTargetState(preinstallFunctions) !== "exact") {
+    refuse("declarative successor target baseline differs");
+  }
 }
 
 function authorizeDeclarativeEffectPayload({
@@ -5901,7 +7138,7 @@ function authorizeDeclarativeEffectPayload({
     ) refuse("declarative receipt candidate clock differs");
     const core = {
       ...input.effectPayload,
-      schemaVersion: 2,
+      schemaVersion: receiptSchemaVersion(input.effectPayload, chain),
       sequence: chain.length + 1,
       previousReceiptSha256: chainTailSha256,
       productionDenied: true,
@@ -5935,6 +7172,9 @@ function authorizeDeclarativeEffectPayload({
         && receipt.outcome !== reconciliationOutcome)
     ) refuse("declarative receipt effect payload differs");
     if (effect === "append-release-plan") {
+      const secretsOnlySuccessor = isTerminalDivergedPredecessorAdoption(
+        receipt.predecessorAdoption,
+      );
       const current = declarativeCurrentInventoryHashes(input);
       const preinstallFunctions = normalizeFunctionInventoryRows(
         input.functionEvidence.preinstallRows,
@@ -5943,19 +7183,24 @@ function authorizeDeclarativeEffectPayload({
         input.functionEvidence.currentRows,
       );
       const preinstallPlusOneFunctions = normalizeFunctionInventoryRows(
-        expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
-          preinstallFunctions.rows,
-        ),
+        secretsOnlySuccessor
+          ? expectedAllExistingPlusOneFunctionRows(preinstallFunctions.rows)
+          : expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
+            preinstallFunctions.rows,
+          ),
       );
       const currentStagePlusOneFunctions = normalizeFunctionInventoryRows(
-        expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
-          currentFunctions.rows,
-        ),
+        secretsOnlySuccessor
+          ? expectedAllExistingPlusOneFunctionRows(currentFunctions.rows)
+          : expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
+            currentFunctions.rows,
+          ),
       );
       const currentStageDisposition =
-        classifyMainFinanceRuntimeRecoveryV2FunctionVersionTransition({
+        classifyScopedFunctionVersionTransition({
           beforeRows: preinstallFunctions.rows,
           afterRows: currentFunctions.rows,
+          predecessorAdoption: receipt.predecessorAdoption,
         });
       if (
         Date.parse(receipt.snapshot.databaseClock) > Date.parse(input.now)
@@ -5990,12 +7235,21 @@ function authorizeDeclarativeEffectPayload({
           !== input.bundle.operatorDescriptorFileSha256
         || receipt.runtimeMutationInputSha256
           !== input.bundle.runtimeMutationInputSha256
-        || receipt.deployMutationInputSha256
-          !== input.bundle.deployMutationInputSha256
+        || (!secretsOnlySuccessor
+          && receipt.deployMutationInputSha256
+            !== input.bundle.deployMutationInputSha256)
         || receipt.runtimeCommandArgsSha256
           !== input.bundle.runtimeCommandArgsSha256
-        || receipt.deployCommandArgsSha256
-          !== input.bundle.deployCommandArgsSha256
+        || (!secretsOnlySuccessor
+          && receipt.deployCommandArgsSha256
+            !== input.bundle.deployCommandArgsSha256)
+        || (secretsOnlySuccessor
+          && (
+            receipt.mutationSecretNameSetSha256
+              !== input.bundle.mutationSecretNameSetSha256
+            || receipt.mutationSecretDigestSetSha256
+              !== input.bundle.mutationSecretDigestSetSha256
+          ))
         || receipt.productionBoundarySha256
           !== input.bundle.productionBoundarySha256
         || receipt.targetDescriptorSha256 !== input.bundle.targetDescriptorSha256
@@ -6043,6 +7297,35 @@ function authorizeDeclarativeEffectPayload({
         input.functionEvidence,
         chain,
       );
+      const effectSecretsOnly = isTerminalDivergedPredecessorAdoption(
+        effectPlan?.predecessorAdoption,
+      );
+      const effectCurrentMain = effectSecretsOnly
+        ? declarativeInventory(
+          input.secretEvidence.currentMain,
+          "successor effect current Main",
+        )
+        : null;
+      let effectMetadataDelta = null;
+      if (effectSecretsOnly) {
+        try {
+          effectMetadataDelta = metadataOnlyInventoryDelta(
+            inventoryWithoutNames(
+              declarativeInventory(
+                input.secretEvidence.preinstallMain,
+                "successor effect preinstall Main",
+              ),
+              SUCCESSOR_SECRET_MUTATION_NAMES,
+            ),
+            inventoryWithoutNames(
+              effectCurrentMain,
+              SUCCESSOR_SECRET_MUTATION_NAMES,
+            ),
+          );
+        } catch {
+          effectMetadataDelta = null;
+        }
+      }
       if (
         (effect === "append-mutation-intent"
           && (receipt.beforeMainInventorySha256 !== current.main
@@ -6068,7 +7351,21 @@ function authorizeDeclarativeEffectPayload({
                 || receipt.requiredStableReadRounds
                   !== effectPlan.functionVersionTransition.stableReadRounds
                 || receipt.predecessorAdoptionSha256
-                  !== input.bundle.predecessorAdoptionSha256))))
+                  !== input.bundle.predecessorAdoptionSha256
+                || (effectSecretsOnly && (
+                  receipt.semanticBeforeMainInventorySha256
+                    !== semanticSecretInventorySha256(effectCurrentMain)
+                  || receipt.mutationSecretNameSetSha256
+                    !== input.bundle.mutationSecretNameSetSha256
+                  || receipt.metadataOnlySecretNameSetSha256
+                    !== sha256(canonicalJson(SUCCESSOR_METADATA_ONLY_SECRET_NAMES))
+                  || receipt.predecessorReceiptChainSha256
+                    !== effectPlan.predecessorReceiptChainSha256
+                  || receipt.functionAllExistingPlusOneSha256
+                    !== effectPlan.functionAllExistingPlusOneSha256
+                  || receipt.hostedMutationCount !== 0
+                  || receipt.functionDeployCount !== 0
+                ))))))
         || (effect === "append-verified-mutation-result"
           && receipt.mutation === "secrets-set"
           && (receipt.afterMainInventorySha256 !== current.main
@@ -6077,14 +7374,35 @@ function authorizeDeclarativeEffectPayload({
             || receipt.predecessorAdoptionSha256
               !== input.bundle.predecessorAdoptionSha256
             || receipt.functionVersionTransitionDisposition
-              !== classifyMainFinanceRuntimeRecoveryV2FunctionVersionTransition({
+              !== classifyScopedFunctionVersionTransition({
                 beforeRows: stageBaselineRows,
                 afterRows: input.functionEvidence.currentRows,
+                predecessorAdoption: effectPlan?.predecessorAdoption,
               })
             || receipt.functionInventoryStableReadRounds !== 2
             || receipt.observation !== "installed_observed"
             || receipt.state !== "state_satisfied"
-            || receipt.causalAttribution !== false))
+            || receipt.causalAttribution !== false
+            || (effectSecretsOnly && (
+              effectMetadataDelta === null
+              || receipt.semanticAfterMainInventorySha256
+                !== semanticSecretInventorySha256(effectCurrentMain)
+              || canonicalJson(receipt.metadataOnlyDeltaNames)
+                !== canonicalJson(effectMetadataDelta.names)
+              || receipt.metadataOnlyDeltaSha256 !== effectMetadataDelta.sha256
+              || canonicalJson(receipt.mutationSecretNames)
+                !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+              || receipt.mutationSecretNameSetSha256
+                !== input.bundle.mutationSecretNameSetSha256
+              || receipt.mutationSecretDigestSetSha256
+                !== input.bundle.mutationSecretDigestSetSha256
+              || receipt.predecessorReceiptChainSha256
+                !== effectPlan.predecessorReceiptChainSha256
+              || receipt.functionAllExistingPlusOneSha256
+                !== effectPlan.functionAllExistingPlusOneSha256
+              || receipt.hostedMutationCount !== 1
+              || receipt.functionDeployCount !== 0
+            ))))
         || (effect === "append-verified-mutation-result"
           && receipt.mutation === "function-deploy"
           && (postflightEvidence === null
@@ -6125,12 +7443,15 @@ function authorizeDeclarativeEffectPayload({
               || (reconciliationOutcome === "state_unsatisfied"
                 && receipt.functionVersionTransitionDisposition !== "unchanged")
               || receipt.functionVersionTransitionDisposition
-                !== (receipt.stableObservation
-                  ? classifyMainFinanceRuntimeRecoveryV2FunctionVersionTransition({
-                    beforeRows: stageBaselineRows,
-                    afterRows: input.functionEvidence.currentRows,
-                  })
-                  : "diverged")
+                !== (effectSecretsOnly && reconciliationOutcome === "diverged"
+                  ? "diverged"
+                  : (receipt.stableObservation
+                    ? classifyScopedFunctionVersionTransition({
+                      beforeRows: stageBaselineRows,
+                      afterRows: input.functionEvidence.currentRows,
+                      predecessorAdoption: effectPlan?.predecessorAdoption,
+                    })
+                    : "diverged"))
               || receipt.observation !== (
                 reconciliationOutcome === "state_satisfied"
                   ? "installed_observed"
@@ -6138,6 +7459,27 @@ function authorizeDeclarativeEffectPayload({
                     ? "baseline_observed" : "diverged")
               )
               || receipt.state !== reconciliationOutcome
+              || (effectSecretsOnly && (
+                receipt.semanticMainInventorySha256
+                  !== semanticSecretInventorySha256(effectCurrentMain)
+                || canonicalJson(receipt.metadataOnlyDeltaNames)
+                  !== canonicalJson(reconciliationOutcome === "diverged"
+                    ? null : effectMetadataDelta?.names ?? null)
+                || receipt.metadataOnlyDeltaSha256
+                  !== (reconciliationOutcome === "diverged"
+                    ? null : effectMetadataDelta?.sha256 ?? null)
+                || canonicalJson(receipt.mutationSecretNames)
+                  !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+                || receipt.mutationSecretNameSetSha256
+                  !== input.bundle.mutationSecretNameSetSha256
+                || receipt.mutationSecretDigestSetSha256
+                  !== input.bundle.mutationSecretDigestSetSha256
+                || receipt.predecessorReceiptChainSha256
+                  !== effectPlan.predecessorReceiptChainSha256
+                || receipt.functionAllExistingPlusOneSha256
+                  !== effectPlan.functionAllExistingPlusOneSha256
+                || receipt.functionDeployCount !== 0
+              ))
             ))))
         || (effect === "append-release-complete"
           && (postflightEvidence === null
@@ -6154,7 +7496,27 @@ function authorizeDeclarativeEffectPayload({
             || canonicalJson(receipt.hostedProof)
               !== canonicalJson(postflightEvidence.proof)
             || canonicalJson(receipt.d1)
-              !== canonicalJson(postflightEvidence.d1)))
+              !== canonicalJson(postflightEvidence.d1)
+            || (effectSecretsOnly && (
+              effectMetadataDelta === null
+              || receipt.semanticMainInventorySha256
+                !== semanticSecretInventorySha256(effectCurrentMain)
+              || canonicalJson(receipt.metadataOnlyDeltaNames)
+                !== canonicalJson(effectMetadataDelta.names)
+              || receipt.metadataOnlyDeltaSha256 !== effectMetadataDelta.sha256
+              || canonicalJson(receipt.mutationSecretNames)
+                !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+              || receipt.mutationSecretNameSetSha256
+                !== input.bundle.mutationSecretNameSetSha256
+              || receipt.mutationSecretDigestSetSha256
+                !== input.bundle.mutationSecretDigestSetSha256
+              || receipt.predecessorReceiptChainSha256
+                !== effectPlan.predecessorReceiptChainSha256
+              || receipt.functionAllExistingPlusOneSha256
+                !== effectPlan.functionAllExistingPlusOneSha256
+              || receipt.hostedMutationCount !== 1
+              || receipt.functionDeployCount !== 0
+            ))))
       ) refuse("declarative receipt raw evidence binding differs");
     }
     return Object.freeze({
@@ -6164,6 +7526,12 @@ function authorizeDeclarativeEffectPayload({
     });
   }
   if (effect.startsWith("invoke-")) {
+    if (
+      input.release?.schemaVersion === 3
+      && (nextMutation !== "secrets-set"
+        || input.release.authorizedMutation !== "secrets-set"
+        || input.release.functionDeployAuthorized !== false)
+    ) refuse("current declarative mutation authority is secrets-set only");
     assertPlainDeclarativeRecord(input.effectPayload, [
       "kind", "mutation", "projectRef", "sourceDeploymentSha256",
       "mutationInputSha256", "argsSha256",
@@ -6199,9 +7567,19 @@ function authorizeDeclarativeEffectPayload({
 }
 
 function validateDeclarativeSourceAuthority(input, plan = null) {
+  const currentRelease = input.release?.schemaVersion === 3;
+  const secretsOnlySuccessor = currentRelease && Object.hasOwn(
+    input.bundle ?? {},
+    "mutationSecretNameSetSha256",
+  );
   assertPlainDeclarativeRecord(
     input.release,
-    ["manifestSha256", "sourceDeploymentSha256", "futureClockSkewSeconds"],
+    [
+      "manifestSha256", "sourceDeploymentSha256", "futureClockSkewSeconds",
+      ...(currentRelease
+        ? ["schemaVersion", "authorizedMutation", "functionDeployAuthorized"]
+        : []),
+    ],
     "release binding",
   );
   assertPlainDeclarativeRecord(input.source, [
@@ -6224,9 +7602,12 @@ function validateDeclarativeSourceAuthority(input, plan = null) {
       "gateInventorySha256", "privacyInventorySha256", "checkedCount",
       "preinstallMainInventorySha256", "preinstallFinanceInventorySha256",
       "preinstallFunctionInventorySha256", "runtimeMutationInputSha256",
-      "deployMutationInputSha256", "productionBoundarySha256",
+      ...(secretsOnlySuccessor
+        ? ["mutationSecretNameSetSha256", "mutationSecretDigestSetSha256"]
+        : ["deployMutationInputSha256", "deployCommandArgsSha256"]),
+      "productionBoundarySha256",
       "targetDescriptorSha256", "runtimeCommandArgsSha256",
-      "deployCommandArgsSha256", "sourceArchiveSha256",
+      "sourceArchiveSha256",
       "operatorDescriptorFileSha256", "predecessorAdoptionSha256",
     ],
     "bundle binding",
@@ -6235,6 +7616,11 @@ function validateDeclarativeSourceAuthority(input, plan = null) {
   if (
     input.source.changedPathSetSha256 !== sha256(input.source.changedPaths
       .map(item => `${item.status}\0${item.path}\n`).join(""))
+    || (currentRelease && (
+      input.release.authorizedMutation !== "secrets-set"
+      || input.release.functionDeployAuthorized !== false
+      || !secretsOnlySuccessor
+    ))
     || !SHA256.test(input.release.manifestSha256 ?? "")
     || !SHA256.test(input.release.sourceDeploymentSha256 ?? "")
     || input.release.futureClockSkewSeconds !== 30
@@ -6271,11 +7657,14 @@ function validateDeclarativeSourceAuthority(input, plan = null) {
       input.bundle.preinstallFinanceInventorySha256,
       input.bundle.preinstallFunctionInventorySha256,
       input.bundle.runtimeMutationInputSha256,
-      input.bundle.deployMutationInputSha256,
+      ...(secretsOnlySuccessor ? [
+        input.bundle.mutationSecretNameSetSha256,
+        input.bundle.mutationSecretDigestSetSha256,
+      ] : [input.bundle.deployMutationInputSha256]),
       input.bundle.productionBoundarySha256,
       input.bundle.targetDescriptorSha256,
       input.bundle.runtimeCommandArgsSha256,
-      input.bundle.deployCommandArgsSha256,
+      ...(secretsOnlySuccessor ? [] : [input.bundle.deployCommandArgsSha256]),
       input.bundle.sourceArchiveSha256,
       input.bundle.operatorDescriptorFileSha256,
       input.bundle.predecessorAdoptionSha256,
@@ -6317,9 +7706,19 @@ function validateDeclarativeSourceAuthority(input, plan = null) {
         !== input.bundle.operatorDescriptorFileSha256
       || plan.runtimeMutationInputSha256
         !== input.bundle.runtimeMutationInputSha256
-      || plan.deployMutationInputSha256 !== input.bundle.deployMutationInputSha256
+      || (!secretsOnlySuccessor
+        && plan.deployMutationInputSha256
+          !== input.bundle.deployMutationInputSha256)
       || plan.runtimeCommandArgsSha256 !== input.bundle.runtimeCommandArgsSha256
-      || plan.deployCommandArgsSha256 !== input.bundle.deployCommandArgsSha256
+      || (!secretsOnlySuccessor
+        && plan.deployCommandArgsSha256 !== input.bundle.deployCommandArgsSha256)
+      || (secretsOnlySuccessor
+        && (
+          plan.mutationSecretNameSetSha256
+            !== input.bundle.mutationSecretNameSetSha256
+          || plan.mutationSecretDigestSetSha256
+            !== input.bundle.mutationSecretDigestSetSha256
+        ))
       || plan.productionBoundarySha256 !== input.bundle.productionBoundarySha256
       || plan.targetDescriptorSha256 !== input.bundle.targetDescriptorSha256
       || plan.snapshot.catalogSha256 !== input.bundle.catalogSha256
@@ -6335,27 +7734,45 @@ function validateDeclarativeSourceAuthority(input, plan = null) {
         !== input.bundle.predecessorAdoptionSha256
       || plan.functionVersionTransition.beforeFunctionInventorySha256
         !== input.bundle.preinstallFunctionInventorySha256
-      || plan.predecessorAdoption.observedFunctionInventorySha256
-        !== input.bundle.preinstallFunctionInventorySha256
-      || plan.predecessorAdoption.observedFunctionCount
-        !== plan.functionVersionTransition.existingFunctionCount
+      || (secretsOnlySuccessor
+        ? plan.predecessorAdoption.terminalFunctionInventorySha256
+            !== input.bundle.preinstallFunctionInventorySha256
+        : plan.predecessorAdoption.observedFunctionInventorySha256
+            !== input.bundle.preinstallFunctionInventorySha256)
+      || (secretsOnlySuccessor
+        ? plan.predecessorAdoption.terminalFunctionCount
+            !== plan.functionVersionTransition.existingFunctionCount
+        : plan.predecessorAdoption.observedFunctionCount
+            !== plan.functionVersionTransition.existingFunctionCount)
       || plan.functionVersionTransition.currentStageFunctionInventorySha256
         !== plan.functionInventorySha256
       || plan.functionVersionTransition.exactAllExistingPlusOneFunctionInventorySha256
         !== normalizeFunctionInventoryRows(
-          expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
-            input.functionEvidence.preinstallRows,
-          ),
+          secretsOnlySuccessor
+            ? expectedAllExistingPlusOneFunctionRows(
+              input.functionEvidence.preinstallRows,
+            )
+            : expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
+              input.functionEvidence.preinstallRows,
+            ),
         ).sha256
       || plan.functionVersionTransition
         .currentStageExactAllExistingPlusOneFunctionInventorySha256
         !== normalizeFunctionInventoryRows(
-          expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
-            functionVersionTransitionBaselineRows(
-              input.functionEvidence.preinstallRows,
-              plan.functionVersionTransition.currentStageDisposition,
+          secretsOnlySuccessor
+            ? expectedAllExistingPlusOneFunctionRows(
+              scopedFunctionVersionTransitionRows(
+                input.functionEvidence.preinstallRows,
+                plan.functionVersionTransition.currentStageDisposition,
+                plan.predecessorAdoption,
+              ),
+            )
+            : expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
+              functionVersionTransitionBaselineRows(
+                input.functionEvidence.preinstallRows,
+                plan.functionVersionTransition.currentStageDisposition,
+              ),
             ),
-          ),
         ).sha256
       || plan.functionVersionTransition.existingFunctionCount
         !== normalizeFunctionInventoryRows(
@@ -6421,9 +7838,17 @@ function assertDeclarativeIntentBeforeEvidence(input, intent) {
       !== sha256(canonicalJson(inventoryCore(currentFinance)))
   ) refuse("declarative mutation intent inventory binding differs");
   if (intent.mutation === "secrets-set") {
+    const secretsOnlySuccessor = Object.hasOwn(
+      input.bundle,
+      "mutationSecretNameSetSha256",
+    );
     const currentFunctionSha256 = currentFunction.sha256;
     const plusOne = normalizeFunctionInventoryRows(
-      expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(currentFunction.rows),
+      secretsOnlySuccessor
+        ? expectedAllExistingPlusOneFunctionRows(currentFunction.rows)
+        : expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
+          currentFunction.rows,
+        ),
     );
     if (
       intent.expectedSecretDigestSetSha256
@@ -6502,15 +7927,21 @@ function assertDeclarativeReconciliationIntentBinding(
 ) {
   if (intent.mutation === "secrets-set") {
     const planAdoptionSha256 = sha256(canonicalJson(plan.predecessorAdoption));
-    const stageBaselineRows = functionVersionTransitionBaselineRows(
+    const secretsOnlySuccessor = isTerminalDivergedPredecessorAdoption(
+      plan.predecessorAdoption,
+    );
+    const stageBaselineRows = scopedFunctionVersionTransitionRows(
       input.functionEvidence.preinstallRows,
       plan.functionVersionTransition.currentStageDisposition,
+      plan.predecessorAdoption,
     );
     const stageBaseline = normalizeFunctionInventoryRows(stageBaselineRows);
     const stagePlusOne = normalizeFunctionInventoryRows(
-      expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
-        stageBaseline.rows,
-      ),
+      secretsOnlySuccessor
+        ? expectedAllExistingPlusOneFunctionRows(stageBaseline.rows)
+        : expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
+          stageBaseline.rows,
+        ),
     );
     if (
       intent.beforeMainInventorySha256 !== plan.mainInventorySha256
@@ -6586,7 +8017,7 @@ function declarativeCanRecordIntent(chain, plan, mutation) {
   return intent?.planReceiptSha256 === plan.receiptSha256;
 }
 
-export function evaluateMainFinanceRuntimeRecoveryV2State(input) {
+function evaluateMainFinanceRuntimeRecoveryV2StateLegacyCore(input) {
   assertDeclarativeValueTree(input);
   assertPlainDeclarativeRecord(input, [
     "action", "checkpoint", "operationBinding", "chain", "release", "source",
@@ -6609,6 +8040,13 @@ export function evaluateMainFinanceRuntimeRecoveryV2State(input) {
     || !canonicalTimestamp(input.now)
     || !(input.approval === null || typeof input.approval === "string")
   ) refuse("declarative transition input differs");
+  const secretsOnlySuccessor = input.release?.schemaVersion === 3 && Object.hasOwn(
+    input.bundle ?? {},
+    "mutationSecretNameSetSha256",
+  );
+  if (secretsOnlySuccessor && input.mutation === "function-deploy") {
+    refuse("secrets-only successor cannot authorize function deploy");
+  }
   assertPlainDeclarativeRecord(
     input.operationBinding,
     ["expectedSha256", "currentSha256"],
@@ -6650,12 +8088,13 @@ export function evaluateMainFinanceRuntimeRecoveryV2State(input) {
     input.action === "reconcile"
     && input.mutation === "secrets-set"
     && secretState === "preinstall"
-    && classifyMainFinanceRuntimeRecoveryV2FunctionVersionTransition({
+    && classifyScopedFunctionVersionTransition({
       beforeRows: declarativeFunctionStageBaselineRows(
         input.functionEvidence,
         chain,
       ),
       afterRows: input.functionEvidence.currentRows,
+      predecessorAdoption: declarativeLatestPlan(chain)?.predecessorAdoption,
     }) !== "unchanged"
   ) functionState = "diverged";
   const mutationInputState = classifyDeclarativeMutationInput(
@@ -6755,8 +8194,8 @@ export function evaluateMainFinanceRuntimeRecoveryV2State(input) {
     const cause = operational.at(-1) ?? null;
     let scope = null;
     if (cause === null && secretState === "preinstall") {
-      scope = "secrets-set+function-deploy";
-    } else if (cause !== null) {
+      scope = secretsOnlySuccessor ? "secrets-set" : "secrets-set+function-deploy";
+    } else if (cause !== null && !secretsOnlySuccessor) {
       scope = resumeScopeForCause(cause, input.now);
       if (scope === "secrets-set" && secretState !== "preinstall") scope = null;
       if (scope === "function-deploy" && secretState !== "installed") scope = null;
@@ -6858,10 +8297,14 @@ export function evaluateMainFinanceRuntimeRecoveryV2State(input) {
       return decision(
         "secrets-verified",
         "append-verified-mutation-result",
-        plan.mutationScope === "secrets-set+function-deploy"
-          ? plan.mutationScope : "function-deploy",
-        plan.mutationScope === "secrets-set+function-deploy"
-          ? "function-deploy" : null,
+        secretsOnlySuccessor
+          ? null
+          : (plan.mutationScope === "secrets-set+function-deploy"
+            ? plan.mutationScope : "function-deploy"),
+        secretsOnlySuccessor
+          ? null
+          : (plan.mutationScope === "secrets-set+function-deploy"
+            ? "function-deploy" : null),
       );
     }
     if (
@@ -6946,11 +8389,38 @@ export function evaluateMainFinanceRuntimeRecoveryV2State(input) {
         refuse("declarative secret reconciliation postflight differs");
       }
       if (secretState === "preinstall") {
-        const current = declarativeCurrentInventoryHashes(input);
-        if (
-          current.main !== unresolvedIntent.beforeMainInventorySha256
-          || current.finance !== unresolvedIntent.beforeFinanceInventorySha256
-        ) refuse("declarative secret not-applied inventory binding differs");
+        if (secretsOnlySuccessor) {
+          const preinstallMain = declarativeInventory(
+            input.secretEvidence.preinstallMain,
+            "reconcile successor preinstall Main",
+          );
+          const currentMain = declarativeInventory(
+            input.secretEvidence.currentMain,
+            "reconcile successor current Main",
+          );
+          const preinstallFinance = declarativeInventory(
+            input.secretEvidence.preinstallFinance,
+            "reconcile successor preinstall Finance",
+          );
+          const currentFinance = declarativeInventory(
+            input.secretEvidence.currentFinance,
+            "reconcile successor current Finance",
+          );
+          if (
+            !inventoryMatchesMetadataOnlyDrift(
+              preinstallMain,
+              currentMain,
+              SUCCESSOR_METADATA_ONLY_SECRET_NAMES,
+            )
+            || !inventoryIsUnchanged(preinstallFinance, currentFinance)
+          ) refuse("declarative successor not-applied inventory binding differs");
+        } else {
+          const current = declarativeCurrentInventoryHashes(input);
+          if (
+            current.main !== unresolvedIntent.beforeMainInventorySha256
+            || current.finance !== unresolvedIntent.beforeFinanceInventorySha256
+          ) refuse("declarative secret not-applied inventory binding differs");
+        }
       }
     } else if (postflightEvidence !== null) {
       if (functionState !== "exact-sole-addition") {
@@ -6986,11 +8456,16 @@ export function evaluateMainFinanceRuntimeRecoveryV2State(input) {
     return decision(
       "reconcile-" + outcome.replace("_", "-"),
       "append-reconciliation",
-      outcome === "state_satisfied" && mutation === "secrets-set"
-        ? "function-deploy"
+      secretsOnlySuccessor
+        ? null
+        : (outcome === "state_satisfied" && mutation === "secrets-set"
+          ? "function-deploy"
+          : (["not_applied", "state_unsatisfied"].includes(outcome)
+            ? mutation : null)),
+      secretsOnlySuccessor
+        ? null
         : (["not_applied", "state_unsatisfied"].includes(outcome)
           ? mutation : null),
-      ["not_applied", "state_unsatisfied"].includes(outcome) ? mutation : null,
       outcome,
     );
   }
@@ -7002,18 +8477,22 @@ export function evaluateMainFinanceRuntimeRecoveryV2State(input) {
       || input.mutationOutcome !== "none"
       || input.mutationInputEvidence !== null
       || secretState !== "installed"
-      || functionState !== "exact-sole-addition"
+      || functionState !== (secretsOnlySuccessor
+        ? "absent" : "exact-sole-addition")
       || postflightEvidence === null
       || !(
         (
           cause?.kind === "mutation-result"
-          && cause.mutation === "function-deploy"
+          && cause.mutation === (secretsOnlySuccessor
+            ? "secrets-set" : "function-deploy")
           && cause.status === "verified"
         )
         || (
           cause?.kind === "reconciliation"
-          && cause.mutation === "function-deploy"
-          && cause.outcome === "applied"
+          && cause.mutation === (secretsOnlySuccessor
+            ? "secrets-set" : "function-deploy")
+          && cause.outcome === (secretsOnlySuccessor
+            ? "state_satisfied" : "applied")
         )
       )
     ) refuse("declarative completion authority differs");
@@ -7021,10 +8500,17 @@ export function evaluateMainFinanceRuntimeRecoveryV2State(input) {
       input,
       postflightEvidence,
     );
+    const causeFunctionInventorySha256 = secretsOnlySuccessor
+      ? (cause.kind === "mutation-result"
+        ? cause.afterFunctionInventorySha256
+        : cause.functionInventorySha256)
+      : cause.functionInventorySha256;
     if (
-      cause.functionInventorySha256 !== current.functions
-      || cause.hostedProofSha256 === postflightEvidence.proof.proofSha256
-      || cause.hostedD0ResponseSha256 === postflightEvidence.d0.responseSha256
+      causeFunctionInventorySha256 !== current.functions
+      || (!secretsOnlySuccessor
+        && cause.hostedProofSha256 === postflightEvidence.proof.proofSha256)
+      || (!secretsOnlySuccessor
+        && cause.hostedD0ResponseSha256 === postflightEvidence.d0.responseSha256)
       || plan.snapshot.catalogSha256 !== postflightEvidence.d0.catalogSha256
       || plan.snapshot.descriptorSha256 !== postflightEvidence.d0.descriptorSha256
       || plan.snapshot.stateSha256 !== postflightEvidence.d0.stateSha256
@@ -7045,7 +8531,8 @@ export function evaluateMainFinanceRuntimeRecoveryV2State(input) {
     || input.mutationInputEvidence !== null
     || chain.at(-1)?.kind !== "release-complete"
     || secretState !== "installed"
-    || functionState !== "exact-sole-addition"
+    || functionState !== (secretsOnlySuccessor
+      ? "absent" : "exact-sole-addition")
     || postflightEvidence === null
   ) refuse("declarative verification evidence differs");
   const complete = chain.at(-1);
@@ -7067,17 +8554,75 @@ export function evaluateMainFinanceRuntimeRecoveryV2State(input) {
   return decision("verification-evidence-consistent", "none");
 }
 
+export function evaluateMainFinanceRuntimeRecoveryV2State(input) {
+  assertDeclarativeValueTree(input);
+  if (input?.action !== "measure" && (
+    input?.release?.schemaVersion !== 3
+    || input.release.authorizedMutation !== "secrets-set"
+    || input.release.functionDeployAuthorized !== false
+    || !Object.hasOwn(input.bundle ?? {}, "mutationSecretNameSetSha256")
+    || input.mutation === "function-deploy"
+    || input.effectPayload?.mutation === "function-deploy"
+    || input.chain?.some(receipt =>
+      receipt.mutation === "function-deploy"
+      || receipt.mutationScope?.split("+").includes("function-deploy"))
+  )) {
+    refuse("current declarative authority is schema-3 secrets-set only");
+  }
+  return evaluateMainFinanceRuntimeRecoveryV2StateLegacyCore(input);
+}
+
 function declarativeReadyBindings(context, release, ci, bundle) {
   const currentReceiptBinding = readReceiptBinding(
     context.stateDirectory,
     context.receiptDirectory,
   );
+  const successor = isTerminalDivergedPredecessorAdoption(
+    bundle.attestation.predecessorAdoption,
+  );
+  const bundleBinding = {
+    attestationSha256: bundle.attestation.attestationSha256,
+    catalogSha256: bundle.attestation.catalogSha256,
+    descriptorSha256: bundle.attestation.descriptorSha256,
+    stateSha256: bundle.attestation.stateSha256,
+    gateInventorySha256: bundle.attestation.gateInventorySha256,
+    privacyInventorySha256: bundle.attestation.privacyInventorySha256,
+    checkedCount: bundle.attestation.checkedCount,
+    preinstallMainInventorySha256:
+      bundle.attestation.preinstallMainInventorySha256,
+    preinstallFinanceInventorySha256:
+      bundle.attestation.preinstallFinanceInventorySha256,
+    preinstallFunctionInventorySha256:
+      bundle.attestation.preinstallFunctionInventorySha256,
+    runtimeMutationInputSha256: sha256(canonicalJson(bundle.runtimeMutationInput)),
+    productionBoundarySha256: bundle.attestation.productionBoundarySha256,
+    targetDescriptorSha256: bundle.attestation.targetDescriptorSha256,
+    runtimeCommandArgsSha256: sha256(canonicalJson(secretArguments(bundle))),
+    sourceArchiveSha256: bundle.attestation.sourceArchiveSha256,
+    operatorDescriptorFileSha256: bundle.attestation.operatorDescriptorFileSha256,
+    predecessorAdoptionSha256:
+      sha256(canonicalJson(bundle.attestation.predecessorAdoption)),
+    ...(successor ? {
+      mutationSecretNameSetSha256: sha256(canonicalJson(
+        bundle.attestation.mutationSecretNames,
+      )),
+      mutationSecretDigestSetSha256: sha256(canonicalJson(
+        bundle.attestation.mutationSecretDigests,
+      )),
+    } : {
+      deployMutationInputSha256: sha256(canonicalJson(bundle.deployMutationInput)),
+      deployCommandArgsSha256: sha256(canonicalJson(deploymentArguments(bundle))),
+    }),
+  };
   return Object.freeze({
     operationBinding: Object.freeze({
       expectedSha256: context.receiptBinding.bindingSha256,
       currentSha256: currentReceiptBinding.bindingSha256,
     }),
     release: Object.freeze({
+      schemaVersion: 3,
+      authorizedMutation: "secrets-set",
+      functionDeployAuthorized: false,
       manifestSha256: release.manifestSha256,
       sourceDeploymentSha256: release.manifest.deploymentClosureSetSha256,
       futureClockSkewSeconds: release.manifest.plan.futureClockSkewSeconds,
@@ -7109,43 +8654,29 @@ function declarativeReadyBindings(context, release, ci, bundle) {
       headSha: ci.headSha,
       conclusion: ci.conclusion,
     }),
-    bundle: Object.freeze({
-      attestationSha256: bundle.attestation.attestationSha256,
-      catalogSha256: bundle.attestation.catalogSha256,
-      descriptorSha256: bundle.attestation.descriptorSha256,
-      stateSha256: bundle.attestation.stateSha256,
-      gateInventorySha256: bundle.attestation.gateInventorySha256,
-      privacyInventorySha256: bundle.attestation.privacyInventorySha256,
-      checkedCount: bundle.attestation.checkedCount,
-      preinstallMainInventorySha256:
-        bundle.attestation.preinstallMainInventorySha256,
-      preinstallFinanceInventorySha256:
-        bundle.attestation.preinstallFinanceInventorySha256,
-      preinstallFunctionInventorySha256:
-        bundle.attestation.preinstallFunctionInventorySha256,
-      runtimeMutationInputSha256: sha256(canonicalJson(bundle.runtimeMutationInput)),
-      deployMutationInputSha256: sha256(canonicalJson(bundle.deployMutationInput)),
-      productionBoundarySha256: bundle.attestation.productionBoundarySha256,
-      targetDescriptorSha256: bundle.attestation.targetDescriptorSha256,
-      runtimeCommandArgsSha256: sha256(canonicalJson(secretArguments(bundle))),
-      deployCommandArgsSha256: sha256(canonicalJson(deploymentArguments(bundle))),
-      sourceArchiveSha256: bundle.attestation.sourceArchiveSha256,
-      operatorDescriptorFileSha256: bundle.attestation.operatorDescriptorFileSha256,
-      predecessorAdoptionSha256:
-        sha256(canonicalJson(bundle.attestation.predecessorAdoption)),
-    }),
+    bundle: Object.freeze(bundleBinding),
   });
 }
 
 function declarativeSecretEvidence(bundle, inventories) {
   if (bundle === null || inventories === null) return null;
+  const successor = isTerminalDivergedPredecessorAdoption(
+    bundle.attestation.predecessorAdoption,
+  );
   return Object.freeze({
     preinstallMain: Object.freeze(inventoryCore(bundle.preinstallInventories.main)),
     preinstallFinance: Object.freeze(inventoryCore(bundle.preinstallInventories.finance)),
     currentMain: Object.freeze(inventoryCore(inventories.main)),
     currentFinance: Object.freeze(inventoryCore(inventories.finance)),
-    expectedDigests: bundle.attestation.expectedSecretDigests,
-    secretNames: bundle.attestation.secretNames,
+    expectedDigests: successor
+      ? bundle.attestation.mutationSecretDigests
+      : bundle.attestation.expectedSecretDigests,
+    secretNames: successor
+      ? bundle.attestation.mutationSecretNames
+      : bundle.attestation.secretNames,
+    ...(successor
+      ? { metadataOnlyNames: SUCCESSOR_METADATA_ONLY_SECRET_NAMES }
+      : {}),
   });
 }
 
@@ -7154,6 +8685,9 @@ function declarativeFunctionEvidence(bundle, inventory) {
   return Object.freeze({
     preinstallRows: bundle.preinstallInventories.functions,
     currentRows: inventory.rows,
+    ...(isTerminalDivergedPredecessorAdoption(
+      bundle.attestation.predecessorAdoption,
+    ) ? { successorBaseline: true } : {}),
   });
 }
 
@@ -7187,8 +8721,9 @@ function declarativeMutationInputEvidence(bundle, release, mutation) {
     if (mutation === "secrets-set") {
       expected = bundle.runtimeMutationInput;
       current = captureRuntimeMutationInput(
-        bundle.runtimeFile,
-        bundle.attestation.runtimeFileSha256,
+        bundle.secretMutationFile ?? bundle.runtimeFile,
+        bundle.attestation.runtimeMutationFileSha256
+          ?? bundle.attestation.runtimeFileSha256,
       );
     } else if (mutation === "function-deploy") {
       expected = bundle.deployMutationInput;
@@ -7290,7 +8825,7 @@ function appendAuthorizedReceipt(
   }
   const core = {
     ...fields,
-    schemaVersion: 2,
+    schemaVersion: receiptSchemaVersion(fields, chain),
     sequence: chain.length + 1,
     previousReceiptSha256: chain.at(-1)?.receiptSha256 ?? null,
     productionDenied: true,
@@ -7573,6 +9108,61 @@ function completeReceiptFields({
   });
 }
 
+function completeSecretsOnlySuccessorReceiptFields({
+  release,
+  source,
+  provenance,
+  ci,
+  bundle,
+  sandwich,
+  cause,
+  now,
+  chain,
+}) {
+  if (
+    cause?.mutation !== "secrets-set"
+    || !(
+      (cause.kind === "mutation-result" && cause.status === "verified")
+      || (cause.kind === "reconciliation" && cause.outcome === "state_satisfied")
+    )
+  ) refuse("secrets-only completion cause differs");
+  const base = completeReceiptFields({
+    release,
+    source,
+    provenance,
+    ci,
+    bundle,
+    functionInventory: sandwich.functionInventory,
+    sandwich,
+    causalHostedProofSha256: null,
+    now,
+    chain,
+  });
+  return Object.freeze({
+    ...base,
+    completionCauseReceiptSha256: cause.receiptSha256,
+    semanticMainInventorySha256: sandwich.semanticMainInventorySha256,
+    metadataOnlyDeltaNames: sandwich.metadataDelta.names,
+    metadataOnlyDeltaSha256: sandwich.metadataDelta.sha256,
+    mutationSecretNames: bundle.attestation.mutationSecretNames,
+    mutationSecretNameSetSha256: sha256(canonicalJson(
+      bundle.attestation.mutationSecretNames,
+    )),
+    mutationSecretDigestSetSha256: sha256(canonicalJson(
+      bundle.attestation.mutationSecretDigests,
+    )),
+    predecessorReceiptChainSha256:
+      bundle.attestation.predecessorAdoption.priorReceiptChainSha256,
+    functionAllExistingPlusOneSha256: normalizeFunctionInventoryRows(
+      expectedAllExistingPlusOneFunctionRows(
+        bundle.preinstallInventories.functions,
+      ),
+    ).sha256,
+    hostedMutationCount: 1,
+    functionDeployCount: 0,
+  });
+}
+
 function secretArguments(bundle) {
   return [
     "secrets",
@@ -7580,7 +9170,7 @@ function secretArguments(bundle) {
     "--project-ref",
     MAIN_REF,
     "--env-file",
-    bundle.runtimeFile,
+    bundle.secretMutationFile ?? bundle.runtimeFile,
     "--yes",
   ];
 }
@@ -7625,20 +9215,26 @@ function releasePlanReceiptFields({
     functionCount: bundle.preinstallInventories.functions.length,
     label: "release plan durable bundle baseline",
   });
+  const successor = isTerminalDivergedPredecessorAdoption(predecessorAdoption);
   const plusOneFunctions = normalizeFunctionInventoryRows(
-    expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
-      bundle.preinstallInventories.functions,
-    ),
+    successor
+      ? expectedAllExistingPlusOneFunctionRows(bundle.preinstallInventories.functions)
+      : expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
+        bundle.preinstallInventories.functions,
+      ),
   );
   const currentStagePlusOneFunctions = normalizeFunctionInventoryRows(
-    expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
-      functionInventory.rows,
-    ),
+    successor
+      ? expectedAllExistingPlusOneFunctionRows(functionInventory.rows)
+      : expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
+        functionInventory.rows,
+      ),
   );
   const currentStageDisposition =
-    classifyMainFinanceRuntimeRecoveryV2FunctionVersionTransition({
+    classifyScopedFunctionVersionTransition({
       beforeRows: bundle.preinstallInventories.functions,
       afterRows: functionInventory.rows,
+      predecessorAdoption,
     });
   if (!["unchanged", "exact-all-existing-plus-one"].includes(currentStageDisposition)) {
     refuse("release plan function stage baseline differs");
@@ -7647,7 +9243,7 @@ function releasePlanReceiptFields({
     mutationScope.includes("secrets-set")
     && currentStageDisposition !== "unchanged"
   ) refuse("secret-bearing plan requires the unchanged function stage baseline");
-  return Object.freeze({
+  const common = {
     kind: "release-plan",
     status: "pending",
     environment: "staging",
@@ -7676,9 +9272,7 @@ function releasePlanReceiptFields({
     supabaseArchiveSha256: context.source.supabaseArchiveSha256,
     operatorDescriptorFileSha256: bundle.attestation.operatorDescriptorFileSha256,
     runtimeMutationInputSha256: sha256(canonicalJson(bundle.runtimeMutationInput)),
-    deployMutationInputSha256: sha256(canonicalJson(bundle.deployMutationInput)),
     runtimeCommandArgsSha256: sha256(canonicalJson(secretArguments(bundle))),
-    deployCommandArgsSha256: sha256(canonicalJson(deploymentArguments(bundle))),
     productionBoundarySha256: bundle.attestation.productionBoundarySha256,
     targetDescriptorSha256: bundle.attestation.targetDescriptorSha256,
     mainInventorySha256: inventories.mainInventorySha256,
@@ -7708,6 +9302,32 @@ function releasePlanReceiptFields({
     resumeFromReceiptSha256,
     hostedMutationCount: 0,
     productionTouched: false,
+  };
+  if (!successor) {
+    return Object.freeze({
+      ...common,
+      deployMutationInputSha256: sha256(canonicalJson(bundle.deployMutationInput)),
+      deployCommandArgsSha256: sha256(canonicalJson(deploymentArguments(bundle))),
+    });
+  }
+  return Object.freeze({
+    ...common,
+    semanticMainInventorySha256: semanticSecretInventorySha256(inventories.main),
+    mutationSecretNames: bundle.attestation.mutationSecretNames,
+    mutationSecretNameSetSha256: sha256(canonicalJson(
+      bundle.attestation.mutationSecretNames,
+    )),
+    mutationSecretDigestSetSha256: sha256(canonicalJson(
+      bundle.attestation.mutationSecretDigests,
+    )),
+    metadataOnlySecretNames: SUCCESSOR_METADATA_ONLY_SECRET_NAMES,
+    metadataOnlySecretNameSetSha256: sha256(canonicalJson(
+      SUCCESSOR_METADATA_ONLY_SECRET_NAMES,
+    )),
+    predecessorReceiptChainSha256: predecessorAdoption.priorReceiptChainSha256,
+    functionAllExistingPlusOneSha256: plusOneFunctions.sha256,
+    plannedHostedMutationCount: 1,
+    functionDeployCount: 0,
   });
 }
 
@@ -7966,7 +9586,7 @@ async function operatePlan(input, common, release) {
   assertRuntimeReadChainEligibility("fresh-plan", preflightChain);
   const predecessor = input.priorStateDir === null
     ? null
-    : readPredecessorAdoption(input, release);
+    : readTerminalDivergedPredecessorAdoption(input, release);
   const postPredecessorReceiptIdentity = receiptDirectoryIdentity(input.receiptDir);
   const postPredecessorChain = readReceiptChain(input.receiptDir, { readOnly: true });
   assertFreshReceiptAuthorityUnchanged({
@@ -8002,15 +9622,18 @@ async function operatePlan(input, common, release) {
     || !inventoryIsUnchanged(inventories0.finance, inventories.finance)
     || canonicalJson(functionInventory0.rows) !== canonicalJson(functionInventory.rows)
   ) refuse("fresh plan inventories are not stable across two read rounds");
-  if (functionInventory.target !== null) {
-    refuse("target v2 function already exists; reconcile its ownership before planning");
-  }
+  if (
+    inventories.mainInventorySha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalMainInventorySha256
+    || inventories.financeInventorySha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.financeInventorySha256
+    || functionInventory.sha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalFunctionInventorySha256
+  ) refuse("fresh plan inventories differ from the exact terminal-diverged baseline");
   let predecessorAdoption = null;
   if (predecessor !== null) {
     const priorBundle = predecessor.bundle;
-    const expectedPredecessorAdoption =
-      exactSuccessorPredecessorAdoption(predecessor);
-    const priorInstalled = inventoryMatchesInstall(
+    const priorInstalled = inventoryMatchesFullInstallWithMetadataDrift(
       priorBundle.preinstallInventories.main,
       inventories.main,
       priorBundle.attestation.expectedSecretDigests,
@@ -8019,19 +9642,17 @@ async function operatePlan(input, common, release) {
       priorBundle.preinstallInventories.finance,
       inventories.finance,
     );
-    const priorFunctionDisposition =
-      classifyMainFinanceRuntimeRecoveryV2FunctionVersionTransition({
-        beforeRows: priorBundle.preinstallInventories.functions,
-        afterRows: functionInventory.rows,
-      });
     if (
       !priorInstalled
-      || priorFunctionDisposition !== "exact-all-existing-plus-one"
-      || functionInventory.sha256 !== predecessor.terminalFunctionInventorySha256
+      || !functionInventoryMatchesSoleAddition(
+        functionInventory,
+        predecessor.postSecretFunctionRows,
+      )
+      || functionTargetState(functionInventory) !== "exact"
     ) {
-      refuse("predecessor hosted state is not the exact installed-secret plus-one transition");
+      refuse("predecessor hosted state is not the exact stable terminal-diverged subject");
     }
-    predecessorAdoption = expectedPredecessorAdoption;
+    predecessorAdoption = predecessor.summary;
   }
   const snapshot = await buildCurrentSnapshot(
     context.dependencies,
@@ -8055,7 +9676,10 @@ async function operatePlan(input, common, release) {
     now: common.now,
   });
   if (predecessor !== null) {
-    const predecessorAfterCopy = readPredecessorAdoption(input, release);
+    const predecessorAfterCopy = readTerminalDivergedPredecessorAdoption(
+      input,
+      release,
+    );
     if (
       canonicalJson(predecessorAfterCopy.summary)
         !== canonicalJson(predecessor.summary)
@@ -8089,7 +9713,7 @@ async function operatePlan(input, common, release) {
     snapshot,
     recordedAt,
     expiresAt: new Date(expiry).toISOString(),
-    mutationScope: "secrets-set+function-deploy",
+    mutationScope: "secrets-set",
     resumeFromReceiptSha256: null,
     predecessorAdoption,
   });
@@ -8104,7 +9728,7 @@ async function operatePlan(input, common, release) {
     functionInventory,
     effectPayload: planFields,
   });
-  if (planAuthority.nextScope !== "secrets-set+function-deploy") {
+  if (planAuthority.nextScope !== "secrets-set") {
     refuse("initial declarative plan scope differs");
   }
   const written = appendAuthorizedReceipt(
@@ -8130,6 +9754,9 @@ async function operatePlan(input, common, release) {
 }
 
 async function operateResumePlan(input, common, release) {
+  if (release.environment.schemaVersion === 3) {
+    refuse("secrets-only successor never issues a resume or retry plan");
+  }
   if (input.priorStateDir === null) {
     refuse("adopted successor resume requires its exact predecessor flags");
   }
@@ -8477,7 +10104,12 @@ async function operateApply(input, common, release) {
     refuse("unknown or divergent mutation must be reconciled before apply");
   }
   const plan = latestPlan(context.chain);
+  assertCurrentReleaseSecretsOnlyPlan(plan);
+  const secretsOnlySuccessor = isTerminalDivergedPredecessorAdoption(
+    plan.predecessorAdoption,
+  );
   let postSecretFunctionDisposition = null;
+  let verifiedSecretResult = null;
   if (context.chain.at(-1)?.receiptSha256 !== plan.receiptSha256) {
     refuse("apply requires a fresh owner-approved plan as the latest receipt");
   }
@@ -8490,24 +10122,34 @@ async function operateApply(input, common, release) {
     {
       expectedAttestationSha256: plan.bundleAttestationSha256,
       expectedPredecessorAdoption: plan.predecessorAdoption,
-      authorizeRuntimeRead: attestation => assertPlanEnvelopeCurrentBeforePlaintext(
-        plan,
-        attestation,
-        release,
-        context.source,
-        context.provenance,
-        context.ci,
-        context.accessBoundary,
-        context.stateDirectory,
-        input.approval,
-        now,
-      ),
+      authorizeRuntimeRead: attestation => {
+        assertCurrentReleaseSecretsOnlyBundle(attestation, plan);
+        return assertPlanEnvelopeCurrentBeforePlaintext(
+          plan,
+          attestation,
+          release,
+          context.source,
+          context.provenance,
+          context.ci,
+          context.accessBoundary,
+          context.stateDirectory,
+          input.approval,
+          now,
+        );
+      },
     },
   );
   let postSecretFunctionBaselineRows = functionVersionTransitionBaselineRows(
     bundle.preinstallInventories.functions,
     plan.functionVersionTransition.currentStageDisposition,
   );
+  if (secretsOnlySuccessor) {
+    postSecretFunctionBaselineRows = scopedFunctionVersionTransitionRows(
+      bundle.preinstallInventories.functions,
+      plan.functionVersionTransition.currentStageDisposition,
+      plan.predecessorAdoption,
+    );
+  }
   assertPlanCurrent(
     plan,
     bundle,
@@ -8553,6 +10195,17 @@ async function operateApply(input, common, release) {
     bundle.attestation.expectedSecretDigests,
     bundle.attestation.secretNames,
   ) && inventoryIsUnchanged(bundle.preinstallInventories.finance, freshInventories.finance);
+  const freshSuccessorInstalledState = secretsOnlySuccessor
+    && inventoryMatchesSuccessorInstall(
+      bundle.preinstallInventories.main,
+      freshInventories.main,
+      bundle.attestation.mutationSecretDigests,
+      bundle.attestation.mutationSecretNames,
+    )
+    && inventoryIsUnchanged(
+      bundle.preinstallInventories.finance,
+      freshInventories.finance,
+    );
   if (
     (plan.mutationScope === "function-deploy" && !freshInstalledState)
     || (plan.mutationScope !== "function-deploy" && !freshPreinstallState)
@@ -8598,7 +10251,11 @@ async function operateApply(input, common, release) {
     plan.mutationScope !== "function-deploy"
     && !mutationVerified(context.chain, plan, "secrets-set")
   ) {
-    if (freshFunction.target !== null) refuse("target function appeared before secret installation");
+    if (
+      secretsOnlySuccessor
+        ? functionTargetState(freshFunction) !== "exact"
+        : freshFunction.target !== null
+    ) refuse("target function baseline differs before secret installation");
     if (!mutationInputIsUnchanged(bundle, release, "secrets-set")) {
       refuse("runtime secret env changed before mutation intent");
     }
@@ -8619,16 +10276,38 @@ async function operateApply(input, common, release) {
       unchangedFunctionInventorySha256: freshFunction.sha256,
       exactAllExistingPlusOneFunctionInventorySha256:
         normalizeFunctionInventoryRows(
-          expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
-            freshFunction.rows,
-          ),
+          secretsOnlySuccessor
+            ? expectedAllExistingPlusOneFunctionRows(freshFunction.rows)
+            : expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
+              freshFunction.rows,
+            ),
         ).sha256,
       requiredStableReadRounds: 2,
       predecessorAdoptionSha256: sha256(canonicalJson(plan.predecessorAdoption)),
       expectedSecretDigestSetSha256: sha256(canonicalJson(
-        bundle.attestation.expectedSecretDigests,
+        secretsOnlySuccessor
+          ? bundle.attestation.mutationSecretDigests
+          : bundle.attestation.expectedSecretDigests,
       )),
-      secretNames: bundle.attestation.secretNames,
+      secretNames: secretsOnlySuccessor
+        ? bundle.attestation.mutationSecretNames
+        : bundle.attestation.secretNames,
+      ...(secretsOnlySuccessor ? {
+        semanticBeforeMainInventorySha256:
+          semanticSecretInventorySha256(freshInventories.main),
+        mutationSecretNameSetSha256: sha256(canonicalJson(
+          bundle.attestation.mutationSecretNames,
+        )),
+        metadataOnlySecretNameSetSha256: sha256(canonicalJson(
+          SUCCESSOR_METADATA_ONLY_SECRET_NAMES,
+        )),
+        predecessorReceiptChainSha256:
+          plan.predecessorAdoption.priorReceiptChainSha256,
+        functionAllExistingPlusOneSha256:
+          plan.functionAllExistingPlusOneSha256,
+        hostedMutationCount: 0,
+        functionDeployCount: 0,
+      } : {}),
       automaticRetryPerformed: false,
       productionTouched: false,
     });
@@ -8776,17 +10455,26 @@ async function operateApply(input, common, release) {
       refuse(`secret installation outcome is unknown; reconcile receipt ${unknown.receipt.receiptSha256}`);
     }
     postSecretFunctionDisposition =
-      classifyMainFinanceRuntimeRecoveryV2FunctionVersionTransition({
+      classifyScopedFunctionVersionTransition({
         beforeRows: freshFunction.rows,
         afterRows: afterFunction.rows,
+        predecessorAdoption: plan.predecessorAdoption,
       });
-    if (
-      !inventoryMatchesInstall(
+    const successorInstalled = secretsOnlySuccessor
+      ? inventoryMatchesSuccessorInstall(
+        freshInventories.main,
+        after.main,
+        bundle.attestation.mutationSecretDigests,
+        bundle.attestation.mutationSecretNames,
+      )
+      : inventoryMatchesInstall(
         freshInventories.main,
         after.main,
         bundle.attestation.expectedSecretDigests,
         bundle.attestation.secretNames,
-      )
+      );
+    if (
+      !successorInstalled
       || !inventoryIsUnchanged(freshInventories.finance, after.finance)
       || !inventoryIsUnchanged(after0.main, after.main)
       || !inventoryIsUnchanged(after0.finance, after.finance)
@@ -8807,6 +10495,18 @@ async function operateApply(input, common, release) {
       const unknown = appendUnknownResult(authority, context, "secrets-set", intent);
       refuse(`secret installation diverged; reconcile receipt ${unknown.receipt.receiptSha256}`);
     }
+    const metadataDelta = secretsOnlySuccessor
+      ? metadataOnlyInventoryDelta(
+        inventoryWithoutNames(
+          freshInventories.main,
+          bundle.attestation.mutationSecretNames,
+        ),
+        inventoryWithoutNames(
+          after.main,
+          bundle.attestation.mutationSecretNames,
+        ),
+      )
+      : null;
     postSecretFunctionBaselineRows = afterFunction.rows;
     const secretResultRecordedAt = nextReceiptTimestamp(
       context.chain,
@@ -8828,6 +10528,25 @@ async function operateApply(input, common, release) {
       observation: "installed_observed",
       state: "state_satisfied",
       causalAttribution: false,
+      ...(secretsOnlySuccessor ? {
+        semanticAfterMainInventorySha256:
+          semanticSecretInventorySha256(after.main),
+        metadataOnlyDeltaNames: metadataDelta.names,
+        metadataOnlyDeltaSha256: metadataDelta.sha256,
+        mutationSecretNames: bundle.attestation.mutationSecretNames,
+        mutationSecretNameSetSha256: sha256(canonicalJson(
+          bundle.attestation.mutationSecretNames,
+        )),
+        mutationSecretDigestSetSha256: sha256(canonicalJson(
+          bundle.attestation.mutationSecretDigests,
+        )),
+        predecessorReceiptChainSha256:
+          plan.predecessorAdoption.priorReceiptChainSha256,
+        functionAllExistingPlusOneSha256:
+          intent.receipt.exactAllExistingPlusOneFunctionInventorySha256,
+        hostedMutationCount: 1,
+        functionDeployCount: 0,
+      } : {}),
       reconcileRequired: false,
       automaticRetryPerformed: false,
       productionTouched: false,
@@ -8847,7 +10566,7 @@ async function operateApply(input, common, release) {
       functionInventory: afterFunction,
       effectPayload: secretResultFields,
     });
-    appendAuthorizedReceipt(
+    verifiedSecretResult = appendAuthorizedReceipt(
       secretResultAuthority,
       "append-verified-mutation-result",
       context.receiptDirectory,
@@ -8857,14 +10576,82 @@ async function operateApply(input, common, release) {
   }
 
   if (plan.mutationScope === "secrets-set") {
+    if (!secretsOnlySuccessor) {
+      return Object.freeze({
+        ok: true,
+        mode: "apply",
+        status: "resume-stage-verified",
+        mutationScope: "secrets-set",
+        nextRequiredAction: "create a fresh resume plan for function-deploy",
+        heldBundleReused: true,
+        hostedMutationCount: 1,
+        productionTouched: false,
+      });
+    }
+    const cause = verifiedSecretResult?.receipt ?? context.chain.at(-1);
+    if (
+      cause?.kind !== "mutation-result"
+      || cause.mutation !== "secrets-set"
+      || cause.status !== "verified"
+    ) refuse("secrets-only apply completion cause differs");
+    let completionSandwich = null;
+    try {
+      completionSandwich = await postflightSecretsOnlySuccessorSandwich(
+        context.dependencies,
+        release,
+        context.source,
+        bundle,
+        postSecretFunctionBaselineRows,
+      );
+      currentCi = inspectReadyOperationSourceCi(context, input, common, release);
+    } catch {
+      completionSandwich = null;
+    }
+    if (
+      completionSandwich === null
+      || !sourceCiMatchesPlan(currentCi, plan)
+    ) refuse("secrets-only completion requires fresh D0/proof/D1 and unchanged CI");
+    const completionFields = completeSecretsOnlySuccessorReceiptFields({
+      release,
+      source: context.source,
+      provenance: context.provenance,
+      ci: currentCi,
+      bundle,
+      sandwich: completionSandwich,
+      cause,
+      now: common.now,
+      chain: context.chain,
+    });
+    const completionAuthority = evaluateOperationalState({
+      action: "complete",
+      checkpoint: "before-completion",
+      context,
+      release,
+      bundle,
+      ci: currentCi,
+      approval: null,
+      now: completionFields.recordedAt,
+      inventories: completionSandwich.inventories,
+      functionInventory: completionSandwich.functionInventory,
+      postflight: completionSandwich,
+      effectPayload: completionFields,
+    });
+    const completed = appendAuthorizedReceipt(
+      completionAuthority,
+      "append-release-complete",
+      context.receiptDirectory,
+      context.chain,
+      completionFields,
+    );
     return Object.freeze({
       ok: true,
       mode: "apply",
-      status: "resume-stage-verified",
+      status: "verified",
       mutationScope: "secrets-set",
-      nextRequiredAction: "create a fresh resume plan for function-deploy",
-      heldBundleReused: true,
+      releaseReceiptFile: completed.file,
+      releaseReceiptSha256: completed.receipt.receiptSha256,
       hostedMutationCount: 1,
+      functionDeployCount: 0,
       productionTouched: false,
     });
   }
@@ -9232,6 +11019,318 @@ async function operateApply(input, common, release) {
   });
 }
 
+function secretsOnlySuccessorFunctionRowsForCause(bundle, cause) {
+  if (
+    cause?.mutation !== "secrets-set"
+    || !["unchanged", "exact-all-existing-plus-one"]
+      .includes(cause.functionVersionTransitionDisposition)
+  ) refuse("secrets-only successor completion function cause differs");
+  const rows = scopedFunctionVersionTransitionRows(
+    bundle.preinstallInventories.functions,
+    cause.functionVersionTransitionDisposition,
+    bundle.attestation.predecessorAdoption,
+  );
+  const inventory = normalizeFunctionInventoryRows(rows);
+  const observedSha256 = cause.kind === "mutation-result"
+    ? cause.afterFunctionInventorySha256
+    : cause.functionInventorySha256;
+  if (inventory.sha256 !== observedSha256) {
+    refuse("secrets-only successor completion function inventory differs");
+  }
+  return inventory.rows;
+}
+
+async function finalizeSecretsOnlySuccessorState({
+  context,
+  input,
+  common,
+  release,
+  bundle,
+  plan,
+  cause,
+  mode,
+}) {
+  const functionRows = secretsOnlySuccessorFunctionRowsForCause(bundle, cause);
+  const sandwich = await postflightSecretsOnlySuccessorSandwich(
+    context.dependencies,
+    release,
+    context.source,
+    bundle,
+    functionRows,
+  ).catch(() => null);
+  if (sandwich === null) {
+    refuse("fresh secrets-only successor D0/proof/D1 completion failed");
+  }
+  const currentCi = inspectReadyOperationSourceCi(
+    context,
+    input,
+    common,
+    release,
+  );
+  if (!sourceCiMatchesPlan(currentCi, plan)) {
+    refuse("secrets-only successor completion source CI changed");
+  }
+  const completionFields = completeSecretsOnlySuccessorReceiptFields({
+    release,
+    source: context.source,
+    provenance: context.provenance,
+    ci: currentCi,
+    bundle,
+    sandwich,
+    cause,
+    now: common.now,
+    chain: context.chain,
+  });
+  const completionAuthority = evaluateOperationalState({
+    action: "complete",
+    checkpoint: "before-completion",
+    context,
+    release,
+    bundle,
+    ci: currentCi,
+    approval: null,
+    now: completionFields.recordedAt,
+    inventories: sandwich.inventories,
+    functionInventory: sandwich.functionInventory,
+    postflight: sandwich,
+    effectPayload: completionFields,
+  });
+  const completed = appendAuthorizedReceipt(
+    completionAuthority,
+    "append-release-complete",
+    context.receiptDirectory,
+    context.chain,
+    completionFields,
+  );
+  return Object.freeze({
+    ok: true,
+    mode,
+    mutation: "secrets-set",
+    outcome: "state_satisfied",
+    releaseReceiptFile: completed.file,
+    releaseReceiptSha256: completed.receipt.receiptSha256,
+    hostedMutationCount: 0,
+    cumulativeHostedMutationCount: 1,
+    functionDeployCount: 0,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  });
+}
+
+async function operateSecretsOnlySuccessorReconcile({
+  context,
+  input,
+  common,
+  release,
+  bundle,
+  plan,
+}) {
+  if (
+    plan.schemaVersion !== 3
+    || plan.mutationScope !== "secrets-set"
+    || !isTerminalDivergedPredecessorAdoption(plan.predecessorAdoption)
+  ) refuse("secrets-only successor reconciliation plan differs");
+  const unresolved = unresolvedReceipt(context.chain);
+  const terminal = context.chain.at(-1);
+  const finalizeCause = !unresolved && (
+    (terminal?.kind === "mutation-result"
+      && terminal.mutation === "secrets-set"
+      && terminal.status === "verified")
+    || (terminal?.kind === "reconciliation"
+      && terminal.mutation === "secrets-set"
+      && terminal.outcome === "state_satisfied")
+  ) ? terminal : null;
+  if (finalizeCause !== null) {
+    return finalizeSecretsOnlySuccessorState({
+      context,
+      input,
+      common,
+      release,
+      bundle,
+      plan,
+      cause: finalizeCause,
+      mode: "reconcile",
+    });
+  }
+  if (unresolved === null || unresolved.mutation !== "secrets-set") {
+    refuse("secrets-only successor has no reconcilable secret intent");
+  }
+  const inventories0 = fetchSecretInventories(context.dependencies, "recovery");
+  const functions0 = fetchFunctionInventory(context.dependencies);
+  const inventories1 = fetchSecretInventories(context.dependencies, "recovery");
+  const functions1 = fetchFunctionInventory(context.dependencies);
+  const stableReadRounds = inventories0.mainInventorySha256
+      === inventories1.mainInventorySha256
+    && inventories0.financeInventorySha256
+      === inventories1.financeInventorySha256
+    && functions0.sha256 === functions1.sha256
+    && canonicalJson(functions0.rows) === canonicalJson(functions1.rows);
+  const installed = inventories => inventoryMatchesSuccessorInstall(
+    bundle.preinstallInventories.main,
+    inventories.main,
+    bundle.attestation.mutationSecretDigests,
+    bundle.attestation.mutationSecretNames,
+  ) && inventoryIsUnchanged(
+    bundle.preinstallInventories.finance,
+    inventories.finance,
+  );
+  const preinstall = inventories => inventoryMatchesMetadataOnlyDrift(
+    bundle.preinstallInventories.main,
+    inventories.main,
+    SUCCESSOR_METADATA_ONLY_SECRET_NAMES,
+  ) && inventoryIsUnchanged(
+    bundle.preinstallInventories.finance,
+    inventories.finance,
+  );
+  const stageRows = scopedFunctionVersionTransitionRows(
+    bundle.preinstallInventories.functions,
+    plan.functionVersionTransition.currentStageDisposition,
+    plan.predecessorAdoption,
+  );
+  const functionDisposition = stableReadRounds
+    ? classifyAllExistingFunctionVersionTransition({
+      beforeRows: stageRows,
+      afterRows: functions1.rows,
+    })
+    : "diverged";
+  const installedObserved = stableReadRounds
+    && installed(inventories0)
+    && installed(inventories1)
+    && ["unchanged", "exact-all-existing-plus-one"]
+      .includes(functionDisposition);
+  const baselineObserved = stableReadRounds
+    && preinstall(inventories0)
+    && preinstall(inventories1)
+    && functionDisposition === "unchanged";
+  const outcome = installedObserved
+    ? "state_satisfied"
+    : (baselineObserved ? "state_unsatisfied" : "diverged");
+  let metadataDelta = null;
+  try {
+    metadataDelta = metadataOnlyInventoryDelta(
+      inventoryWithoutNames(
+        bundle.preinstallInventories.main,
+        bundle.attestation.mutationSecretNames,
+      ),
+      inventoryWithoutNames(
+        inventories1.main,
+        bundle.attestation.mutationSecretNames,
+      ),
+    );
+  } catch {
+    metadataDelta = null;
+  }
+  if (outcome !== "diverged" && metadataDelta === null) {
+    refuse("secrets-only successor reconciliation metadata evidence differs");
+  }
+  const recordedAt = nextReceiptTimestamp(context.chain, common.now);
+  const reconciliationFields = Object.freeze({
+    kind: "reconciliation",
+    mutation: "secrets-set",
+    outcome,
+    environment: "staging",
+    recordedAt,
+    unresolvedReceiptSha256: unresolved.receiptSha256,
+    mainInventorySha256: inventories1.mainInventorySha256,
+    financeInventorySha256: inventories1.financeInventorySha256,
+    functionInventorySha256: functions1.sha256,
+    hostedProofSha256: null,
+    hostedD0ResponseSha256: null,
+    observation: outcome === "state_satisfied"
+      ? "installed_observed"
+      : (outcome === "state_unsatisfied" ? "baseline_observed" : "diverged"),
+    state: outcome,
+    causalAttribution: false,
+    functionVersionTransitionDisposition: outcome === "diverged"
+      ? "diverged" : functionDisposition,
+    inventoryReadRounds: 2,
+    stableObservation: stableReadRounds,
+    predecessorAdoptionSha256: sha256(canonicalJson(plan.predecessorAdoption)),
+    semanticMainInventorySha256: semanticSecretInventorySha256(inventories1.main),
+    metadataOnlyDeltaNames: outcome === "diverged"
+      ? null : metadataDelta?.names ?? null,
+    metadataOnlyDeltaSha256: outcome === "diverged"
+      ? null : metadataDelta?.sha256 ?? null,
+    mutationSecretNames: bundle.attestation.mutationSecretNames,
+    mutationSecretNameSetSha256:
+      plan.mutationSecretNameSetSha256,
+    mutationSecretDigestSetSha256:
+      plan.mutationSecretDigestSetSha256,
+    predecessorReceiptChainSha256: plan.predecessorReceiptChainSha256,
+    functionAllExistingPlusOneSha256: plan.functionAllExistingPlusOneSha256,
+    hostedMutationCount: 0,
+    functionDeployCount: 0,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  });
+  const observationEvidence = Object.freeze({
+    inventoryReadRounds: 2,
+    stableObservation: stableReadRounds,
+    firstMainInventorySha256: inventories0.mainInventorySha256,
+    firstFinanceInventorySha256: inventories0.financeInventorySha256,
+    firstFunctionInventorySha256: functions0.sha256,
+    secondMainInventorySha256: inventories1.mainInventorySha256,
+    secondFinanceInventorySha256: inventories1.financeInventorySha256,
+    secondFunctionInventorySha256: functions1.sha256,
+  });
+  const authority = evaluateOperationalState({
+    action: "reconcile",
+    checkpoint: "after-mutation",
+    context,
+    release,
+    bundle,
+    approval: null,
+    now: recordedAt,
+    mutation: "secrets-set",
+    mutationOutcome: "none",
+    inventories: inventories1,
+    functionInventory: functions1,
+    mutationInputEvidence: null,
+    observationEvidence,
+    postflight: null,
+    effectPayload: reconciliationFields,
+  });
+  if (authority.reconciliationOutcome !== outcome) {
+    refuse("secrets-only successor reconciliation authority differs");
+  }
+  const reconciled = appendAuthorizedReceipt(
+    authority,
+    "append-reconciliation",
+    context.receiptDirectory,
+    context.chain,
+    reconciliationFields,
+  );
+  if (outcome === "state_satisfied") {
+    return finalizeSecretsOnlySuccessorState({
+      context,
+      input,
+      common,
+      release,
+      bundle,
+      plan,
+      cause: reconciled.receipt,
+      mode: "reconcile",
+    });
+  }
+  return Object.freeze({
+    ok: false,
+    mode: "reconcile",
+    mutation: "secrets-set",
+    outcome,
+    terminal: true,
+    reconciliationReceiptFile: reconciled.file,
+    reconciliationReceiptSha256: reconciled.receipt.receiptSha256,
+    releaseReceiptFile: null,
+    releaseReceiptSha256: null,
+    finalizationRequired: false,
+    hostedMutationCount: 0,
+    cumulativeHostedMutationCount: 1,
+    functionDeployCount: 0,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  });
+}
+
 async function operateReconcile(input, common, release) {
   const context = initializeReadyOperation(input, common, release, false);
   if (context.chain.some(receipt => receipt.kind === "release-complete")) {
@@ -9239,6 +11338,7 @@ async function operateReconcile(input, common, release) {
   }
   assertRuntimeReadChainEligibility("reconcile", context.chain);
   const plan = latestPlan(context.chain);
+  assertCurrentReleaseSecretsOnlyPlan(plan);
   const bundle = readBundle(
     context.stateDirectory,
     release,
@@ -9246,16 +11346,19 @@ async function operateReconcile(input, common, release) {
     {
       expectedAttestationSha256: plan.bundleAttestationSha256,
       expectedPredecessorAdoption: plan.predecessorAdoption,
-      authorizeRuntimeRead: attestation => assertPlanEnvelopeBeforePlaintext(
-        plan,
-        attestation,
-        release,
-        context.source,
-        context.provenance,
-        context.ci,
-        context.accessBoundary,
-        context.stateDirectory,
-      ),
+      authorizeRuntimeRead: attestation => {
+        assertCurrentReleaseSecretsOnlyBundle(attestation, plan);
+        return assertPlanEnvelopeBeforePlaintext(
+          plan,
+          attestation,
+          release,
+          context.source,
+          context.provenance,
+          context.ci,
+          context.accessBoundary,
+          context.stateDirectory,
+        );
+      },
     },
   );
   const chainPostSecretFunctionBaseline = postSecretFunctionBaselineFromChain(
@@ -9287,6 +11390,16 @@ async function operateReconcile(input, common, release) {
     || plan.snapshot.checkedCount !== bundle.attestation.checkedCount
     || !sourceCiMatchesPlan(context.ci, plan)
   ) refuse("reconciliation source, CI, plan or owner boundary differs");
+  if (isTerminalDivergedPredecessorAdoption(plan.predecessorAdoption)) {
+    return operateSecretsOnlySuccessorReconcile({
+      context,
+      input,
+      common,
+      release,
+      bundle,
+      plan,
+    });
+  }
   const unresolved = unresolvedReceipt(context.chain);
   const terminal = context.chain.at(-1);
   const finalizeCause = !unresolved && (
@@ -9597,6 +11710,7 @@ async function operateVerify(input, common, release) {
   }
   assertRuntimeReadChainEligibility("verify", context.chain);
   const plan = latestPlan(context.chain);
+  assertCurrentReleaseSecretsOnlyPlan(plan);
   const bundle = readBundle(
     context.stateDirectory,
     release,
@@ -9604,22 +11718,28 @@ async function operateVerify(input, common, release) {
     {
       expectedAttestationSha256: plan.bundleAttestationSha256,
       expectedPredecessorAdoption: plan.predecessorAdoption,
-      authorizeRuntimeRead: attestation => assertPlanEnvelopeBeforePlaintext(
-        plan,
-        attestation,
-        release,
-        context.source,
-        context.provenance,
-        context.ci,
-        context.accessBoundary,
-        context.stateDirectory,
-      ),
+      authorizeRuntimeRead: attestation => {
+        assertCurrentReleaseSecretsOnlyBundle(attestation, plan);
+        return assertPlanEnvelopeBeforePlaintext(
+          plan,
+          attestation,
+          release,
+          context.source,
+          context.provenance,
+          context.ci,
+          context.accessBoundary,
+          context.stateDirectory,
+        );
+      },
     },
   );
   const postSecretFunctionBaseline = postSecretFunctionBaselineFromChain(
     bundle.preinstallInventories.functions,
     context.chain,
     plan,
+  );
+  const secretsOnlySuccessor = isTerminalDivergedPredecessorAdoption(
+    plan.predecessorAdoption,
   );
   if (
     plan.bundleAttestationSha256 !== bundle.attestation.attestationSha256
@@ -9650,30 +11770,90 @@ async function operateVerify(input, common, release) {
   ) refuse("terminal completion is not bound to the current frozen source and bundle");
   const inventories = fetchSecretInventories(context.dependencies, "recovery");
   const functionInventory = fetchFunctionInventory(context.dependencies);
+  const completionCause = secretsOnlySuccessor
+    ? context.chain.find(receipt =>
+      receipt.receiptSha256 === complete.completionCauseReceiptSha256) ?? null
+    : null;
+  const successorFunctionRows = secretsOnlySuccessor
+    ? secretsOnlySuccessorFunctionRowsForCause(bundle, completionCause)
+    : null;
+  let successorMetadataDelta = null;
+  if (secretsOnlySuccessor) {
+    successorMetadataDelta = metadataOnlyInventoryDelta(
+      inventoryWithoutNames(
+        bundle.preinstallInventories.main,
+        bundle.attestation.mutationSecretNames,
+      ),
+      inventoryWithoutNames(
+        inventories.main,
+        bundle.attestation.mutationSecretNames,
+      ),
+    );
+  }
   if (
-    !inventoryMatchesInstall(
-      bundle.preinstallInventories.main,
-      inventories.main,
-      bundle.attestation.expectedSecretDigests,
-      bundle.attestation.secretNames,
-    )
+    !(secretsOnlySuccessor
+      ? inventoryMatchesSuccessorInstall(
+        bundle.preinstallInventories.main,
+        inventories.main,
+        bundle.attestation.mutationSecretDigests,
+        bundle.attestation.mutationSecretNames,
+      )
+      : inventoryMatchesInstall(
+        bundle.preinstallInventories.main,
+        inventories.main,
+        bundle.attestation.expectedSecretDigests,
+        bundle.attestation.secretNames,
+      ))
     || !inventoryIsUnchanged(bundle.preinstallInventories.finance, inventories.finance)
-    || !functionInventoryMatchesSoleAddition(
-      functionInventory,
-      postSecretFunctionBaseline.rows,
-    )
+    || !(secretsOnlySuccessor
+      ? functionInventoryMatchesPostSecretBaseline(
+        functionInventory,
+        successorFunctionRows,
+      )
+      : functionInventoryMatchesSoleAddition(
+        functionInventory,
+        postSecretFunctionBaseline.rows,
+      ))
     || complete.d1MainInventorySha256 !== inventories.mainInventorySha256
     || complete.d1FinanceInventorySha256 !== inventories.financeInventorySha256
     || complete.functionInventorySha256 !== functionInventory.sha256
     || complete.d1FunctionInventorySha256 !== functionInventory.sha256
+    || (secretsOnlySuccessor && (
+      complete.schemaVersion !== 3
+      || semanticSecretInventorySha256(inventories.main)
+        !== complete.semanticMainInventorySha256
+      || canonicalJson(successorMetadataDelta.names)
+        !== canonicalJson(complete.metadataOnlyDeltaNames)
+      || successorMetadataDelta.sha256 !== complete.metadataOnlyDeltaSha256
+      || canonicalJson(complete.mutationSecretNames)
+        !== canonicalJson(bundle.attestation.mutationSecretNames)
+      || complete.mutationSecretNameSetSha256
+        !== plan.mutationSecretNameSetSha256
+      || complete.mutationSecretDigestSetSha256
+        !== plan.mutationSecretDigestSetSha256
+      || complete.predecessorReceiptChainSha256
+        !== plan.predecessorReceiptChainSha256
+      || complete.functionAllExistingPlusOneSha256
+        !== plan.functionAllExistingPlusOneSha256
+      || complete.hostedMutationCount !== 1
+      || complete.functionDeployCount !== 0
+    ))
   ) refuse("terminal completion hosted inventory has drifted");
-  const sandwich = await postflightSandwich(
-    context.dependencies,
-    release,
-    context.source,
-    bundle,
-    postSecretFunctionBaseline.rows,
-  ).catch(() => null);
+  const sandwich = await (secretsOnlySuccessor
+    ? postflightSecretsOnlySuccessorSandwich(
+      context.dependencies,
+      release,
+      context.source,
+      bundle,
+      successorFunctionRows,
+    )
+    : postflightSandwich(
+      context.dependencies,
+      release,
+      context.source,
+      bundle,
+      postSecretFunctionBaseline.rows,
+    )).catch(() => null);
   if (!sandwich) refuse("fresh authoritative D0/proof/D1 verification failed");
   const finalCi = inspectReadyOperationSourceCi(context, input, common, release);
   if (
@@ -9766,6 +11946,9 @@ async function operateMainFinanceRuntimeRecoveryV2() {
   }
   assertCurrentRecoveryRoot(input);
   assertPredecessorPlanPathBoundary(input);
+  if (input.action !== "plan") {
+    assertCurrentReleasePlanBeforeLease(input.receiptDir);
+  }
   const operationLease = acquireOperationLease(
     input.stateDir,
     common.now,

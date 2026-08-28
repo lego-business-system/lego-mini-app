@@ -123,11 +123,11 @@ test("Finance integration CI is immutable and runs the complete verifier", () =>
   );
   assert.match(
     workflow,
-    /base_commit="adcf7b919d34e512ded6d526ee7321f795f8f887"/,
+    /base_commit="a30dedf20e977d9794a8ac9e54abc48b076c9d45"/,
   );
   assert.match(
     workflow,
-    /base_tree="f02055d03d63a1fc2ebdbb17aeed3bcb2aafd22a"/,
+    /base_tree="92d7aa5df37a09049d4fdaeaa523d2cc02e85cbf"/,
   );
   assert.match(
     workflow,
@@ -162,24 +162,14 @@ test("Finance integration CI is immutable and runs the complete verifier", () =>
     /^\s+'([AM])\\t([^']+)'(?:\s*\\)?(?:\s*\|\s*LC_ALL=C sort\)\")?\s*$/gm,
   )].map((match) => `${match[1]}\t${match[2]}`);
   assert.deepEqual(expectedChanges, [
-    "A\tscripts/main-finance-runtime-recovery-v2-snapshot.mjs",
-    "A\tscripts/manage-finance-access-v2.mjs",
-    "A\tscripts/prepare-main-finance-runtime-recovery-v2.mjs",
-    "A\tsupabase/functions/finance-manage-access-v2/deno.json",
-    "A\tsupabase/functions/finance-manage-access-v2/deno.lock",
-    "A\tsupabase/functions/finance-manage-access-v2/index.ts",
-    "A\tsupabase/releases/main-finance-runtime-recovery-v2/README.md",
-    "A\tsupabase/releases/main-finance-runtime-recovery-v2/environment.contract.json",
-    "A\tsupabase/releases/main-finance-runtime-recovery-v2/postflight.contract.json",
-    "A\tsupabase/releases/main-finance-runtime-recovery-v2/preflight.sql",
-    "A\tsupabase/releases/main-finance-runtime-recovery-v2/staging.manifest.json",
-    "A\tsupabase/tests/main_finance_runtime_recovery_release_v2.test.mjs",
-    "A\tsupabase/tests/main_finance_runtime_secret_recovery_v2.test.mjs",
-    "A\tsupabase/tests/manage_finance_access_v2.test.mjs",
     "M\t.github/workflows/verify-finance-integration.yml",
+    "M\tscripts/prepare-main-finance-runtime-recovery-v2.mjs",
+    "M\tsupabase/releases/main-finance-runtime-recovery-v2/README.md",
+    "M\tsupabase/releases/main-finance-runtime-recovery-v2/environment.contract.json",
+    "M\tsupabase/releases/main-finance-runtime-recovery-v2/postflight.contract.json",
+    "M\tsupabase/releases/main-finance-runtime-recovery-v2/staging.manifest.json",
     "M\tsupabase/tests/finance_integration_ci.test.mjs",
-    "M\tsupabase/tests/postgres-ci/static_guard.test.mjs",
-    "M\tsupabase/tests/verify_local.sh",
+    "M\tsupabase/tests/main_finance_runtime_recovery_release_v2.test.mjs",
   ]);
   assert.doesNotMatch(
     workflow,
@@ -426,14 +416,14 @@ test("runtime recovery raw authority matrices are portable and effect authority 
     Math.max(0, match.index - "function ".length),
     match.index,
   ).endsWith("function ")).map(match => match[1]);
-  assert.equal(operationalCalls.length, 15);
+  assert.equal(operationalCalls.length, 18);
   assert.deepEqual(
     operationalCalls.map(body => body.match(/action:\s*"([^"]+)"/u)?.[1])
       .reduce((counts, action) => ({
         ...counts,
         [action]: (counts[action] ?? 0) + 1,
       }), {}),
-    { plan: 2, apply: 8, complete: 3, reconcile: 1, verify: 1 },
+    { apply: 8, plan: 2, complete: 5, reconcile: 2, verify: 1 },
   );
   for (const body of operationalCalls) {
     if (/action:\s*"verify"/u.test(body)) {
@@ -710,7 +700,19 @@ test("runtime recovery raw authority matrices are portable and effect authority 
   );
   assert.equal(
     runtimeRecoveryManifest.sourceCi.workflowBlobSha,
-    "aad069ba4d133440f9eb06c0db8b82c21566f99a",
+    "220ee4c940cfd03e178dbee1fb6f25dc5de0845e",
+  );
+  assert.equal(
+    runtimeRecoveryManifest.sourceLineage.baseCommitSha,
+    "a30dedf20e977d9794a8ac9e54abc48b076c9d45",
+  );
+  assert.equal(
+    runtimeRecoveryManifest.sourceLineage.baseTreeSha,
+    "92d7aa5df37a09049d4fdaeaa523d2cc02e85cbf",
+  );
+  assert.equal(
+    runtimeRecoveryManifest.sourceLineage.requiredSoleParentSha,
+    "a30dedf20e977d9794a8ac9e54abc48b076c9d45",
   );
   assert.match(
     runtimeRecoveryOperator,
