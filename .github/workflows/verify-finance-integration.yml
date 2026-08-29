@@ -80,8 +80,8 @@ jobs:
           test ! -e scripts/manage-finance-subject-rotation-v2.mjs
 
           if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF}" == "refs/heads/agent/main-finance-staging-runtime-recovery-v2" ]]; then
-            base_commit="a30dedf20e977d9794a8ac9e54abc48b076c9d45"
-            base_tree="92d7aa5df37a09049d4fdaeaa523d2cc02e85cbf"
+            base_commit="42c647aaeb3a6cededb49f073ac001678dcb3582"
+            base_tree="dd05940dbc3f06e8577a6406c6e64e470049c818"
             test "${GITHUB_SHA}" = "$(GIT_NO_REPLACE_OBJECTS=1 git rev-parse HEAD)"
             test "$(GIT_NO_REPLACE_OBJECTS=1 git cat-file -t "${base_commit}")" = "commit"
             base_commit_object="$(GIT_NO_REPLACE_OBJECTS=1 git cat-file -p "${base_commit}")"
@@ -108,13 +108,18 @@ jobs:
             test "$(GIT_NO_REPLACE_OBJECTS=1 git cat-file -t "${head_tree}")" = "tree"
             expected_changes="$(printf '%b\n' \
               'M\t.github/workflows/verify-finance-integration.yml' \
+              'M\tscripts/main-finance-runtime-recovery-v2-snapshot.mjs' \
+              'M\tscripts/manage-finance-access-v2.mjs' \
               'M\tscripts/prepare-main-finance-runtime-recovery-v2.mjs' \
+              'M\tsupabase/functions/finance-manage-access-v2/index.ts' \
               'M\tsupabase/releases/main-finance-runtime-recovery-v2/README.md' \
               'M\tsupabase/releases/main-finance-runtime-recovery-v2/environment.contract.json' \
               'M\tsupabase/releases/main-finance-runtime-recovery-v2/postflight.contract.json' \
               'M\tsupabase/releases/main-finance-runtime-recovery-v2/staging.manifest.json' \
               'M\tsupabase/tests/finance_integration_ci.test.mjs' \
-              'M\tsupabase/tests/main_finance_runtime_recovery_release_v2.test.mjs' | LC_ALL=C sort)"
+              'M\tsupabase/tests/main_finance_runtime_recovery_release_v2.test.mjs' \
+              'M\tsupabase/tests/main_finance_runtime_secret_recovery_v2.test.mjs' \
+              'M\tsupabase/tests/manage_finance_access_v2.test.mjs' | LC_ALL=C sort)"
             actual_changes="$(GIT_NO_REPLACE_OBJECTS=1 git diff-tree --no-renames --no-commit-id --name-status -r "${base_tree}" "${head_tree}" | LC_ALL=C sort)"
             test "${actual_changes}" = "${expected_changes}"
           fi

@@ -136,8 +136,8 @@ export function readMainFinanceRuntimeRecoveryV2SnapshotContract() {
   const manifestSource = readFileSync(MANIFEST_FILE, "utf8");
   const manifest = readJson(manifestSource, "release manifest");
   if (
-    manifest.schemaVersion !== 2 ||
-    manifest.kind !== "main-finance-runtime-recovery-v2-staging-release" ||
+    manifest.schemaVersion !== 4 ||
+    manifest.kind !== "main-finance-runtime-recovery-v4-target-redeploy-staging-release" ||
     manifest.releaseStatus !== READY_STATUS ||
     manifest.environment !== "staging" ||
     manifest.mainProjectRef !== MAIN_FINANCE_RUNTIME_RECOVERY_V2_MAIN_REF ||

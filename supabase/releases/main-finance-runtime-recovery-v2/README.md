@@ -7,18 +7,35 @@
 the exact database catalog SHA-256 together with the tracked release bytes,
 deployment closure, workflow blob, changed-path set and tracked-file count.
 The pre-commit `measure` path is therefore closed.
-The same-SHA workflow guard is part of the exact eight-path successor delta: it
-requires sole parent `a30dedf20e977d9794a8ac9e54abc48b076c9d45`, base tree
-`92d7aa5df37a09049d4fdaeaa523d2cc02e85cbf` and those eight paths only.
+The same-SHA workflow guard is part of the exact 13-path schema-4 successor
+delta: it
+requires sole parent `42c647aaeb3a6cededb49f073ac001678dcb3582`, base tree
+`dd05940dbc3f06e8577a6406c6e64e470049c818` and these paths only:
+
+- `.github/workflows/verify-finance-integration.yml`;
+- `scripts/main-finance-runtime-recovery-v2-snapshot.mjs`;
+- `scripts/manage-finance-access-v2.mjs`;
+- `scripts/prepare-main-finance-runtime-recovery-v2.mjs`;
+- `supabase/functions/finance-manage-access-v2/index.ts`;
+- `supabase/releases/main-finance-runtime-recovery-v2/environment.contract.json`;
+- `supabase/releases/main-finance-runtime-recovery-v2/postflight.contract.json`;
+- `supabase/releases/main-finance-runtime-recovery-v2/README.md`;
+- `supabase/releases/main-finance-runtime-recovery-v2/staging.manifest.json`;
+- `supabase/tests/finance_integration_ci.test.mjs`;
+- `supabase/tests/main_finance_runtime_recovery_release_v2.test.mjs`;
+- `supabase/tests/main_finance_runtime_secret_recovery_v2.test.mjs`;
+- `supabase/tests/manage_finance_access_v2.test.mjs`.
 
 READY is not mutation approval. Before `plan` can proceed, the exact tracked state
 must become the sole direct-child commit, a canonical owner-private provenance
 file must bind that commit/tree to the remote branch and a successful same-SHA
 GitHub Actions run, and the reviewed staging target must pass again. `apply`
 then additionally requires the exact owner approval token bound to that fresh
-plan. The only authorized hosted mutation is one exact three-name `secrets set`;
-no Function deploy, retry or resume plan exists in schema 3. The successor
-Finance verifier and authoritative live staging result
+plan. Schema 4 authorizes exactly two separately planned and approved hosted
+mutations: one exact four-name `secrets set`, followed by one exact target-only
+replacement deploy of `finance-manage-access-v2`. Each stage requires a fresh
+plan and a fresh owner approval. Neither stage may be retried automatically.
+The successor Finance verifier and authoritative live staging result
 remain downstream release gates; production remains outside this release.
 
 The reviewed privileged-channel exact-token mechanism for the access
@@ -38,44 +55,59 @@ external evidence; neither its path nor its mutable live values enter Git.
 - Main staging: `bljeoovhydhjhdzwplxh`;
 - Finance staging: `makgsbjduobcphuqzaoq`;
 - production deny: `soxtekhspohkddpdidvp`, `koibxwgtihwajocxfetb`;
-- `finance-manage-access-v2` is already the exact sole target addition in the
-  imported 13-row Function baseline; deploy authority is absent;
+- `finance-manage-access-v2` is already present in the immutable predecessor's
+  13-row Function baseline; exactly one replacement deploy of this target is
+  authorized, while all twelve non-target rows must remain exact;
+- its ingress accepts only the exact public `/functions/v1/finance-manage-access-v2`
+  and Supabase runtime-internal `/finance-manage-access-v2` paths; query,
+  fragment, trailing-path and other-function variants fail closed;
 - no migration, database write, `config push`, prune, all-functions deploy or
   production operation.
 
-This secrets-only successor does not generate replacement random values. A fresh
-successor plan adopts exactly the two generated values already sealed by the
-exact pinned terminal predecessor bundle: the v2 operator secret and sync
+This schema-4 successor does not generate replacement random values. Its first
+fresh successor plan adopts exactly the two generated values already sealed by the
+exact pinned partial-secret predecessor bundle: the v2 operator secret and sync
 trigger secret. It rebuilds all eleven stable runtime values from the fresh
-successor commit, tree, manifest and snapshot. Full predecessor receipt-chain,
+successor deployment closure, commit, tree, manifest and snapshot. Full
+predecessor receipt-chain,
 provenance, durable-bundle and owner-private device/inode validation completes
 before either plaintext value is read; a second complete predecessor check
 must remain identical after the new durable bundle is written. The old root is
-read-only and remains terminal. Its terminal 13-row Function inventory must be
-the exact target-v1 sole addition to the deterministic 12-row, all-existing
-`version + 1` projection of the private predecessor bundle before adoption is
-accepted. The operator never reads the
+read-only and contains exactly three immutable receipts: plan, secret intent
+and verified/state-satisfied secret effect. Its chain hash is
+`ae7bfa301eb6ae13f10d59b5c010c3950fc7da72d8531b3a1be5b2d4d6b3204c`.
+It has no completion receipt, is never completed by this successor and is never
+used as deploy authority. Its successful source-CI receipt, provenance,
+attestation, bundle commit, archive, runtime and hosted-inventory pins are all
+validated before adoption. The operator never reads the
 privacy key value locally, never prints it and never includes
 `MAIN_FINANCE_PRIVACY_HMAC_KEY` in `secrets set`. Secret inventory evidence is
 digest-only. The mutation file contains only
+`MAIN_FINANCE_ACCESS_V2_SOURCE_DEPLOYMENT_SHA256`,
 `MAIN_FINANCE_ACCESS_V2_SOURCE_COMMIT_SHA`,
 `MAIN_FINANCE_ACCESS_V2_SOURCE_TREE_SHA` and
 `MAIN_FINANCE_ACCESS_V2_SOURCE_MANIFEST_SHA256`. The two inherited generated
-values and the remaining eight rebuilt stable values exist only in the private
+values and the remaining seven rebuilt stable values exist only in the private
 13-row proof bundle and are never sent to `secrets set`.
 
-Main inventory names and value digests must remain exact outside those three
+Main inventory names and value digests must remain exact outside those four
 source-bound rows. Only `updated_at` may differ, and only for the ordered exact
 allowlist `SUPABASE_ANON_KEY`, `SUPABASE_DB_URL`, `SUPABASE_JWKS`,
 `SUPABASE_PUBLISHABLE_KEYS`, `SUPABASE_SECRET_KEYS`,
 `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_URL`. Finance is exact. Two complete
 read rounds must be byte-identical before any state is accepted. Before any
 successor runtime plaintext is read, the durable
-successor bundle preinstall baseline is bound exactly to predecessor-terminal
+successor bundle preinstall baseline is bound exactly to predecessor preinstall
 Main `b98949ec772990f98b26471ed4e6ff4356d289709b51fd707419ffdbb1570139`,
-stable Finance `89e6947c4e347081737ec51c198fabfea43a39e9d30a6a851e23ad7435a77c9e`
-and the 13-row Function inventory
-`ad7075e78470642d731f628e722efb2f498c31760148b362a6e51ce7225b17e1`.
+installed raw Main
+`3cb8a92d36e5ef9ced75e21200339d9538d54ecce4de50703cf99ddb0cadfa37`,
+installed semantic Main
+`6ca2371545e0ec957e05ae64adf6cadf1dfda3f4618833b755bd783371d8352d`,
+stable Finance `89e6947c4e347081737ec51c198fabfea43a39e9d30a6a851e23ad7435a77c9e`,
+preinstall 13-row Function
+`ad7075e78470642d731f628e722efb2f498c31760148b362a6e51ce7225b17e1`
+and installed 13-row Function
+`0efefe20bb441b2f5ce1eafd9fe401e47f4cea793c9e6fa834cc6fbc87afd936`.
 That immutable bundle preinstall subject is distinct from stage-specific
 current plan inventories after the successor `secrets-set` operation. For
 pinned Supabase CLI 2.109.1, both operators request secret and
@@ -106,41 +138,82 @@ they accept no process, filesystem, network, tool or callback authority.
    closure, live same-SHA GitHub CI and branch ref, reviewed staging target,
    phase-specific secret/function inventories and canonical database snapshot.
    It creates one owner-private held bundle and a plan valid for at most four
-   minutes. A fresh plan requires all four predecessor flags below and binds the
-   exact pinned operational predecessor into both the durable bundle and plan.
-   These flags are plan-only and all-or-none. A schema-3 plan is fresh and has
-   exactly the `secrets-set` scope; it cannot be resumed or retried.
+   minutes. The initial fresh plan requires all five predecessor flags below and
+   binds the exact pinned incomplete predecessor into both the durable bundle
+   and plan. These flags are plan-only and all-or-none. Schema 4 requires two
+   fresh plans in strict order: first exact four-name `secrets-set`, then exact
+   target-only `function-deploy`. The second plan is issued only from verified
+   or read-only reconciled secret-stage evidence; neither plan is a retry.
 3. `apply` accepts the exact owner approval bound to Main ref, source commit,
    source tree, GitHub run ID, both provenance hashes and plan-receipt SHA. It
    requires that fresh scoped plan to be the latest receipt.
-   The single mutation has a persisted intent first, then immediate TTL, live
-   CI, full inventory and exact three-name local-input rechecks. It performs one
-   `secrets set` and never calls `functions deploy`. An accepted verified result
-   is followed immediately by a fresh D0/proof/D1 and `release-complete`.
+   Each of the two stages has its own persisted intent, immediate TTL, live CI,
+   full inventory and local-input rechecks. The first owner approval authorizes
+   exactly one four-name `secrets set`. The second, independently reviewed
+   owner approval authorizes exactly one replacement deploy of
+   `finance-manage-access-v2`. A verified deploy result requires its own fresh
+   D0/proof/D1 sandwich. Release completion then requires a second, distinct
+   fresh D0/proof/D1 sandwich before `release-complete`.
 4. `reconcile` never retries a mutation. It performs two complete read rounds.
-   For an uncertain secret set it records observation, not causality:
-   `installed_observed` / `state_satisfied` or `baseline_observed` /
-   `state_unsatisfied`, always with `causalAttribution=false`; unstable or other
-   state is `diverged`. `state_satisfied` is attested and finalized read-only.
-   Both `state_unsatisfied` and `diverged` are terminal NO-GO for this successor:
-   there is no automatic retry, fresh resume plan or Function deployment.
+   For an uncertain secret set or target deploy it records observation, not
+   causality: `installed_observed` / `state_satisfied` or
+   `baseline_observed` / `state_unsatisfied`, always with
+   `causalAttribution=false`; unstable or other state is `diverged`.
+   `state_satisfied` advances only through the same required fresh downstream
+   plan or completion proof, read-only. `state_unsatisfied` and `diverged` are
+   terminal NO-GO for this exact successor. No mutation is automatically
+   retried and no owner approval is reused.
 5. `verify` is the authoritative read-only consumer of a terminal completion.
    It re-reads the private bundle and frozen source, revalidates live GitHub
    authority and full hosted inventories, and obtains a new authenticated
    D0/proof/D1 sandwich. A `release-complete` JSON/hash chain by itself is
    persisted evidence, not deploy or GO authority.
 
-The secret-set boundary has its own function-inventory phase contract. Two
-complete post-call reads must be identical. Relative to the plan baseline, the
-only accepted dispositions are `unchanged` or
-`exact-all-existing-plus-one`: same function count and slugs, every version
-either unchanged as a complete inventory or increased by exactly one for every
-existing row, and every other key/value unchanged. Mixed, partial, `+2`,
-missing/extra-row and non-version drift are terminally divergent. The observed
-disposition and full inventory SHA-256 become the completion baseline.
-D0/proof/D1, completion and later verify all use that exact complete baseline.
-The target is already present and exact at version 1 in the imported baseline;
-under the all-existing-plus-one disposition it is therefore version 2.
+`hostedMutationCount` and `functionDeployCount` are cumulative counts of
+mutation invocation attempts proved by the receipt-chain prefix, not counts of
+successful effects and not action-local counters. An `unknown` receipt with
+`invocationAttempted=true` increments the corresponding count; `not_invoked`
+and `invocation_unproven` do not. The exact progression is: initial plan and
+secret intent `0/0`; attempted secret result or reconciliation `1/0`; deploy
+plan, deploy intent and any pre-invocation terminal `1/0`; attempted deploy
+result or reconciliation and release completion `2/1`. A later receipt may
+never erase or decrement an earlier proved attempt.
+
+The two mutation boundaries share one exact full-inventory contract. Two
+complete read rounds must be identical at every plan and result boundary. The
+secret stage may change only the four ordered source-bound Main rows:
+deployment, commit, tree and manifest. Its Function inventory may remain
+unchanged or show the exact platform-wide all-existing-rows version `+1`
+transition already proved for a secrets update; every row and non-version field
+must otherwise remain exact. The deploy stage may replace only
+`finance-manage-access-v2`. Relative to the chain-bound deploy-plan target row,
+its version must increase by exactly one and its replacement source fields must
+match the successor deployment closure. No caller supplies or predicts an
+absolute target version. Every non-target row and every additional field remain
+exact. Unchanged target after a claimed deploy, any non-target change, target
+`+2`, missing/extra rows, wrong closure or mixed inventory is terminally
+divergent. The verified target-only disposition becomes the completion
+baseline used by the distinct completion D0/proof/D1 and later `verify`.
+
+Target source identity is proved independently of the Function inventory row.
+After the replacement, the operator reads the Management API body endpoint
+`/v1/projects/<MAIN_REF>/functions/finance-manage-access-v2/body` twice. Each
+bounded multipart response must contain exactly four authored file parts and
+one metadata part, with no duplicate or extra part. The four paths are
+`functions/_shared/main-edge-runtime.ts`,
+`functions/_shared/main-finance-protocol.mjs`,
+`functions/finance-manage-access-v2/deno.json` and
+`functions/finance-manage-access-v2/index.ts`; every byte digest and their
+ordered aggregate must equal the manifest-pinned hosted closure. Metadata has
+exactly `deployment_id`, `deno2_entrypoint_path`, `module_count`,
+`compressed_size` and `original_size`; deployment ID binds the Main project,
+target UUID and target version, entrypoint and module count are exact, and both
+size fields are positive bounded transport observations. The two semantic
+rounds must be identical. `hostedSourceClosureSha256` is source authority;
+`hostedSourceMetadataSha256` records the stable observed deployment envelope.
+Multipart file MIME labels, optional HTTP `Content-Length` and the two size
+values are transport sanity evidence, not an alternative source identity: the
+exact path-and-byte closure remains authoritative.
 
 Every function row must contain canonical `id`, `name`, `slug`,
 `ezbr_sha256`, `entrypoint_path`, `status`, `verify_jwt`, `version`,
@@ -149,19 +222,21 @@ validated, `name` must equal `slug`, and every additional or future CLI field
 is retained and compared exactly. A missing mandatory field, duplicate ID,
 changed extra field or version that cannot be safely incremented is divergent.
 `state_unsatisfied` is terminal even when both secret inventories and the
-function inventory remain at the unchanged plan baseline. Preinstall secrets
-combined with a `+1` function transition are `diverged`, never relabelled as a
-safe retry state.
+function inventory remain at the unchanged plan baseline. Any function change
+before the separately approved deploy stage other than the exact all-existing
+version `+1` transition is `diverged`, never relabelled as a safe retry state.
 
-The recovery approval is one exact colon-delimited line:
+The predecessor-adoption inputs and recovery approval are exact.
 
-The fresh successor `plan` additionally requires these four plan-only inputs:
+The initial fresh successor `plan` additionally requires these five plan-only
+inputs:
 
 ```text
 --prior-state-dir <exact owner-private predecessor state directory>
 --prior-receipt-dir <exact owner-private predecessor receipt directory>
 --prior-release-provenance <exact owner-private predecessor provenance file>
---prior-terminal-receipt-sha256 098731b6054f305cb4d211f5658122696400486947dfe31091e5abc937fada0e
+--prior-source-ci-receipt <exact owner-private predecessor source-CI receipt>
+--prior-effect-receipt-sha256 1953ea7f1cb30b7a4de01f0cd8722e3798471f2ab864267c6853fa42298f6703
 ```
 
 Every non-measure action (`plan`, `apply`, `reconcile`, `verify`) uses one new
@@ -176,8 +251,9 @@ real owner-private non-symlink `0700` directory. `--release-provenance`,
 each is owner-private `0600`, non-symlink and has exactly one hard link.
 Splitting these five authority paths across parents or nesting them is refused.
 
-The predecessor state directory, receipt directory and provenance file share a
-separate real, owner-private `0700` predecessor root outside the repository.
+The predecessor state directory, receipt directory, provenance file and
+source-CI receipt share a separate real, owner-private `0700` predecessor root
+outside the repository.
 The current and predecessor roots must be distinct and non-nested in both
 directions. The READY manifest is checked first; then the current-root topology
 and, for plan-only adoption, the predecessor-root topology are checked before
@@ -188,6 +264,10 @@ hashes do.
 ```text
 MAIN_FINANCE_RUNTIME_RECOVERY_V2_APPROVED=DEPLOY:<MAIN_REF>:<SOURCE_COMMIT>:<SOURCE_TREE>:<GITHUB_RUN_ID>:<PROVENANCE_FILE_SHA256>:<PROVENANCE_DESCRIPTOR_SHA256>:<PLAN_RECEIPT_SHA256>
 ```
+
+The same grammar is used twice, but the first and second tokens bind different
+fresh plan-receipt hashes and stage scopes. A secret-stage token cannot
+authorize the target deploy.
 
 `PROVENANCE_FILE_SHA256` hashes the exact canonical UTF-8 JSON file bytes,
 including its single terminal newline. `PROVENANCE_DESCRIPTOR_SHA256` hashes
@@ -257,6 +337,11 @@ Reconcile replaces the three identity/actor flags with
 `--unknown-receipt-file <matching append-only 0600 unknown receipt>`. The
 identity, event, OCC version, actor and original plan are derived from those
 two artifacts and cannot be supplied independently.
+
+Access preparation consumes raw schema-4 release authority from the verified
+recovery chain. For a target mutation, the expected Function version is derived
+only from the chain-bound current target row and the exact target-only `+1`
+replacement rule. There is no caller-supplied absolute target-version literal.
 
 For status/grant/revoke, prepare takes evidence in the strict order
 `F0 -> S0 -> D0 -> signed Edge attest -> S1 -> D1 -> F1`. The attestation
@@ -346,19 +431,34 @@ Production refs remain compiled deny targets in all modes.
 
 ## Unknown outcomes and terminal reconciliation
 
-No failed, interrupted or malformed CLI result is retried automatically. An
-intent with no verified result, a non-success result, a post-call local-input
-change or Supabase CLI home drift produces `unknown` and stops. Reconciliation
-is read-only. Access reconciliation accepts an `unknown` receipt only when its
+No failed, interrupted or malformed mutation-capable Supabase CLI result is
+retried automatically. An intent with no verified result, a non-success result,
+a post-call local-input change or Supabase CLI home drift produces `unknown` and
+stops. Reconciliation is read-only. Access reconciliation accepts an `unknown`
+receipt only when its
 deterministic append-only `0600` intent file still exists and its canonical
 bytes, inode/type/mode, file/content hashes, request/descriptor/plan/token-hash
 bindings and causal timestamps all match. A self-rehashed receipt with a
 missing, substituted or pre-plan intent has no authority.
 
-Schema 3 has no resume scope. A verified secret result or a read-only
-`state_satisfied` reconciliation may proceed only to fresh D0/proof/D1 and
-completion. `state_unsatisfied` and `diverged` terminate the chain. Generated
-secrets are never regenerated or rewritten. Unexpected
+The sole transport exception is pre-receipt live source-CI attestation. Each
+exact read-only GitHub `GET` may use at most three identical attempts with the
+same endpoint, headers and isolated environment. The sealed GitHub XDG boundary
+is checked before and after every attempt. Only an invoked non-success result or
+a non-authority runner exception is eligible for another attempt. A local
+authority refusal, config or XDG drift, `cliInvoked: false`, an oversized or
+malformed successful response, and any valid response with the wrong semantics
+are terminal without retry. This exception writes no receipt, invokes no
+Supabase command, authorizes no hosted change and does not retry a mutation.
+
+Schema 4 has no retry scope. A verified or read-only reconciled secret result
+may proceed only through a new function-deploy plan and a new owner approval.
+A verified or read-only reconciled deploy result may proceed only through its
+required deploy-result sandwich and a distinct completion sandwich.
+`state_unsatisfied` and `diverged` terminate the chain. Generated secrets are
+never regenerated or rewritten. The immutable predecessor root remains exactly
+its original three-receipt plan/intent/effect chain and is never given a
+completion receipt. Unexpected
 Supabase CLI home contents are retained as evidence; a later reconciled session
 uses a new append-only owner-private recovery home and never cleans the old one.
 
@@ -371,7 +471,9 @@ entitlement cardinality, table/function ACLs, migrations and detailed ordered
 column, constraint, index, trigger and empty-policy catalogs. READY mode requires
 the measured catalog hash to equal the manifest pin.
 
-Postflight order is strict:
+Postflight order is strict and occurs twice after the target-only deploy: once
+for the deploy result and once again, with distinct fresh snapshots and proof,
+for completion.
 
 1. full secret and function inventory plus canonical D0;
 2. signed Edge `attest`, including a 13-digit millisecond timestamp and verified
@@ -379,8 +481,13 @@ Postflight order is strict:
 3. full secret and function inventory plus canonical D1;
 4. require `D0 clock < proof clock < D1 clock`, stable descriptor/state/catalog,
    byte-identical complete Main/Finance secret inventory fingerprints, exact
-   held-bundle secret digests and the exact selected 13-row Function
-   disposition, unchanged or all-existing-plus-one.
+   held-bundle 13-row secret digests and the exact 13-row Function disposition:
+   only `finance-manage-access-v2` replaced, relative version exactly `+1`, all
+   non-target rows exact.
+
+The deploy-result D0, proof and D1 cannot be reused as the completion D0, proof
+or D1. Completion revalidates live source-CI authority, all inventories and the
+same target-only successor state before a release-complete receipt is written.
 
 Both snapshots and the verified proof are privately branded by the builder;
 caller-fabricated D0, D1 or proof objects are rejected. The raw

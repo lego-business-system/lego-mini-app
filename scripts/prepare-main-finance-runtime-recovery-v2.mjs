@@ -46,8 +46,32 @@ const PRODUCTION_REFS = Object.freeze([
   "koibxwgtihwajocxfetb",
 ]);
 const FUNCTION_NAME = "finance-manage-access-v2";
+const SCHEMA4_SOURCE_CI_POSTGRES_IMAGE =
+  "postgres:17.10-bookworm@sha256:17b6c778de50f4bb9a878c36e736110fbcd9b7020377d6fdfdf20f7c0347e40a";
+const REFUSAL_PREFIX = "Main Finance runtime recovery v2 refused: ";
+const MAX_READ_ONLY_GITHUB_API_ATTEMPTS = 3;
 const FIRST_FUNCTION_DEPLOYMENT_VERSION = 1;
 const FUNCTION_URL = `https://${MAIN_REF}.supabase.co/functions/v1/${FUNCTION_NAME}`;
+const SCHEMA4_HOSTED_SOURCE_CLOSURE = Object.freeze([
+  Object.freeze({
+    path: "functions/_shared/main-edge-runtime.ts",
+    sha256: "6a773e3dfbd49c862da6a5aee43d42293dfc6fd7903cc17d8832b7ee803b6f88",
+  }),
+  Object.freeze({
+    path: "functions/_shared/main-finance-protocol.mjs",
+    sha256: "c900c5a46592f383523a82ba11d6100674eff2bb19faf5c2880f5078ba50dccc",
+  }),
+  Object.freeze({
+    path: "functions/finance-manage-access-v2/deno.json",
+    sha256: "095f401d35d83336a1e96bdad40e777b0ebf4dc5e713f8dc587418dfa01d55f8",
+  }),
+  Object.freeze({
+    path: "functions/finance-manage-access-v2/index.ts",
+    sha256: "630af2595cacff892a64b28927734d5b96a0f305e833665ee46ef33e978c8740",
+  }),
+]);
+const SCHEMA4_HOSTED_SOURCE_CLOSURE_SHA256 =
+  "b3b4177ac01f44a2bb27e8ed81f98fcf00dcddbc0e6a3e4f897eab5d903c11c9";
 const RECEIPT_PATTERN = /^([0-9]{6})\.json$/u;
 const RECEIPT_PENDING_PATTERN = /^([0-9]{6})\.json\.pending$/u;
 const RECEIPT_INVALID_PENDING_PATTERN =
@@ -133,6 +157,74 @@ const TERMINAL_DIVERGED_PREDECESSOR_PINS = Object.freeze({
   preinstallFunctionCount: 12,
   terminalFunctionCount: 13,
 });
+const PARTIAL_SECRET_PREDECESSOR_PINS = Object.freeze({
+  sourceCommitSha: "42c647aaeb3a6cededb49f073ac001678dcb3582",
+  sourceTreeSha: "dd05940dbc3f06e8577a6406c6e64e470049c818",
+  sourceDeploymentSha256:
+    "3026624ad0888173170a87565f856b75a6afb19697a573f6cfee2a85234f5689",
+  releaseManifestSha256:
+    "746294fa1fe9fa3969bbbfff129bf9715b9d99ca2f2e52981d2e3bcef87c761e",
+  planReceiptSha256:
+    "8807cf1582e2fe2c2fc4995c829af0b4021b05354ab06ba35b4aebe3c48aff30",
+  planReceiptFileSha256:
+    "6207dbf97358c5e185ad78cb74f02abc68d698e8a441b43fafe3102898ef3dfb",
+  secretIntentReceiptSha256:
+    "ce085b04a7144b30653ad9240007cfe711b717f76dad0565d900940285093788",
+  secretIntentReceiptFileSha256:
+    "0b3c513c0081c90a38771ea2a7912175f4e9d5470345ad091e1b338e1938a8d0",
+  secretResultReceiptSha256:
+    "1953ea7f1cb30b7a4de01f0cd8722e3798471f2ab864267c6853fa42298f6703",
+  secretResultReceiptFileSha256:
+    "29f049fd4496993b69c13539b1064aee772306dbffd47e536d816af271738d46",
+  receiptChainSha256:
+    "ae7bfa301eb6ae13f10d59b5c010c3950fc7da72d8531b3a1be5b2d4d6b3204c",
+  sourceCiReceiptSha256:
+    "908e67fdb896c0d266735204c528af2736d326ba894ef9d84dc564db09ec99c5",
+  sourceCiReceiptFileSha256:
+    "17fe6a4e3dd6f90a0b2a39add14ba8ddf1c899f52ad0c0faf2c65af25dcbdc6f",
+  sourceCiRunId: 33212271479,
+  sourceCiJobId: 98988013415,
+  sourceCiWorkflowBlobSha: "220ee4c940cfd03e178dbee1fb6f25dc5de0845e",
+  provenanceFileSha256:
+    "c6b3c07d31ab7417fcccb227dd1771c8aa40fcfa398901f732106c528c51b4d2",
+  provenanceDescriptorSha256:
+    "8e38b0628a21a111eac77bfa095a9f01fa2e442b27c2316d82a74d94915498a9",
+  bundleAttestationSha256:
+    "8c16e24f4f789a8390a4bca81289dcdda5dab80d4562f764cb7594f808c08d37",
+  bundleAttestationFileSha256:
+    "e0bb3658c6274b2b1d53e9a0d8489d91dad9c65999ef3239ccf14de0e99c9d52",
+  bundleCommitSha256:
+    "2d77219c6ca50ea2ef0ff02b8e8284ff5546d8083e95c4d4f78161c6a336cd9a",
+  bundleCommitFileSha256:
+    "375e3159053a7389dde89cce99f38ec9283e67dd81f0963e9d902b48774e448f",
+  runtimeFileSha256:
+    "1e060af0f76c2078a83ac754cd9317cb4d67188b7c18d7d4ab68341cb8b9b8ca",
+  sourceArchiveSha256:
+    "5203d2ba5c0846ecd1765eaddc1d1fc3b34c249a16bd62c8a1709c2ef487f717",
+  mutationSecretNameSetSha256:
+    "68d37a7abfb3e4ba6217865c21baf175e1597415f9fc42b275cbd3c742220f93",
+  mutationSecretDigestSetSha256:
+    "1ff26377a99d7d7d765ea6e7ff92c128ce367e26e0efe95dbb4ea87c324ad922",
+  generatedSecretDigestSetSha256:
+    PREDECESSOR_ADOPTION_PINS.generatedSecretDigestSetSha256,
+  preinstallMainInventorySha256:
+    TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalMainInventorySha256,
+  installedMainInventorySha256:
+    "3cb8a92d36e5ef9ced75e21200339d9538d54ecce4de50703cf99ddb0cadfa37",
+  installedSemanticMainInventorySha256:
+    "6ca2371545e0ec957e05ae64adf6cadf1dfda3f4618833b755bd783371d8352d",
+  financeInventorySha256: PREDECESSOR_ADOPTION_PINS.financeInventorySha256,
+  preinstallFunctionInventorySha256:
+    TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalFunctionInventorySha256,
+  installedFunctionInventorySha256:
+    "0efefe20bb441b2f5ce1eafd9fe401e47f4cea793c9e6fa834cc6fbc87afd936",
+  functionCount: 13,
+});
+const SCHEMA3_SECRET_MUTATION_NAMES = Object.freeze([
+  "MAIN_FINANCE_ACCESS_V2_SOURCE_COMMIT_SHA",
+  "MAIN_FINANCE_ACCESS_V2_SOURCE_TREE_SHA",
+  "MAIN_FINANCE_ACCESS_V2_SOURCE_MANIFEST_SHA256",
+]);
 const SUCCESSOR_METADATA_ONLY_SECRET_NAMES = Object.freeze([
   "SUPABASE_ANON_KEY",
   "SUPABASE_DB_URL",
@@ -143,20 +235,41 @@ const SUCCESSOR_METADATA_ONLY_SECRET_NAMES = Object.freeze([
   "SUPABASE_URL",
 ]);
 const SUCCESSOR_SECRET_MUTATION_NAMES = Object.freeze([
+  "MAIN_FINANCE_ACCESS_V2_SOURCE_DEPLOYMENT_SHA256",
   "MAIN_FINANCE_ACCESS_V2_SOURCE_COMMIT_SHA",
   "MAIN_FINANCE_ACCESS_V2_SOURCE_TREE_SHA",
   "MAIN_FINANCE_ACCESS_V2_SOURCE_MANIFEST_SHA256",
 ]);
+const SCHEMA4_RELEASE_KIND =
+  "main-finance-runtime-recovery-v4-target-redeploy-staging-release";
+const SCHEMA4_BUNDLE_KIND =
+  "main-finance-runtime-recovery-v4-private-bundle";
+const SCHEMA4_BUNDLE_COMMIT_KIND =
+  "main-finance-runtime-recovery-v4-durable-bundle-commit";
+const SCHEMA4_TARGET_TRANSITION = "exact-target-replacement-plus-one";
+const SCHEMA4_PLAN_SCOPES = Object.freeze(["secrets-set", "function-deploy"]);
+const SCHEMA4_ALLOWED_TARGET_MUTATIONS = Object.freeze(new Set([
+  "version",
+  "updated_at",
+  "ezbr_sha256",
+  "entrypoint_path",
+  "import_map_path",
+]));
 const EXPECTED_TRACKED_FILE_COUNT = 935;
 const EXPECTED_CHANGED_PATHS = Object.freeze([
   ["M", ".github/workflows/verify-finance-integration.yml"],
+  ["M", "scripts/main-finance-runtime-recovery-v2-snapshot.mjs"],
+  ["M", "scripts/manage-finance-access-v2.mjs"],
   ["M", "scripts/prepare-main-finance-runtime-recovery-v2.mjs"],
+  ["M", "supabase/functions/finance-manage-access-v2/index.ts"],
   ["M", "supabase/releases/main-finance-runtime-recovery-v2/environment.contract.json"],
   ["M", "supabase/releases/main-finance-runtime-recovery-v2/postflight.contract.json"],
   ["M", "supabase/releases/main-finance-runtime-recovery-v2/README.md"],
   ["M", "supabase/releases/main-finance-runtime-recovery-v2/staging.manifest.json"],
   ["M", "supabase/tests/finance_integration_ci.test.mjs"],
   ["M", "supabase/tests/main_finance_runtime_recovery_release_v2.test.mjs"],
+  ["M", "supabase/tests/main_finance_runtime_secret_recovery_v2.test.mjs"],
+  ["M", "supabase/tests/manage_finance_access_v2.test.mjs"],
 ].map(([status, changedPath]) => Object.freeze({ status, path: changedPath })));
 const MEASUREMENT_GIT_STATUS = Object.freeze({
   "??": "A",
@@ -224,7 +337,7 @@ const GATES = Object.freeze([
 ]);
 
 function refuse(message) {
-  throw new Error(`Main Finance runtime recovery v2 refused: ${message}`);
+  throw new Error(`${REFUSAL_PREFIX}${message}`);
 }
 
 export function sha256(value) {
@@ -246,6 +359,23 @@ function exactKeys(value, expected, label) {
     || canonicalJson(Object.keys(value).sort())
       !== canonicalJson([...expected].sort())
   ) refuse(`${label} keys differ`);
+}
+
+function deepFreeze(value) {
+  if (value === null || typeof value !== "object" || Object.isFrozen(value)) {
+    return value;
+  }
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
+}
+
+function canonicalClone(value) {
+  return deepFreeze(JSON.parse(canonicalJson(value)));
+}
+
+function isPartialSecretPredecessorAdoption(value) {
+  return value?.kind
+    === "main-finance-runtime-recovery-v4-partial-secret-predecessor-adoption";
 }
 
 function sortedChangedPaths(value) {
@@ -294,13 +424,15 @@ function parseArguments(argv) {
     gitCli: null,
     ghCli: null,
     releaseProvenance: null,
+    sourceCiReceipt: null,
     productionBoundary: null,
     targetConfig: null,
     approval: null,
     priorStateDir: null,
     priorReceiptDir: null,
     priorReleaseProvenance: null,
-    priorTerminalReceiptSha256: null,
+    priorSourceCiReceipt: null,
+    priorEffectReceiptSha256: null,
   };
   const map = Object.freeze({
     "--project-ref": "projectRef",
@@ -311,13 +443,15 @@ function parseArguments(argv) {
     "--git-cli": "gitCli",
     "--gh-cli": "ghCli",
     "--release-provenance": "releaseProvenance",
+    "--source-ci-receipt": "sourceCiReceipt",
     "--production-boundary": "productionBoundary",
     "--target-config": "targetConfig",
     "--approval": "approval",
     "--prior-state-dir": "priorStateDir",
     "--prior-receipt-dir": "priorReceiptDir",
     "--prior-release-provenance": "priorReleaseProvenance",
-    "--prior-terminal-receipt-sha256": "priorTerminalReceiptSha256",
+    "--prior-source-ci-receipt": "priorSourceCiReceipt",
+    "--prior-effect-receipt-sha256": "priorEffectReceiptSha256",
   });
   const seen = new Set();
   for (let index = 0; index < rest.length; index += 1) {
@@ -347,6 +481,12 @@ function parseArguments(argv) {
   if (action !== "measure" && !input.releaseProvenance) {
     refuse("--release-provenance is required");
   }
+  if (action === "measure" && input.sourceCiReceipt) {
+    refuse("--source-ci-receipt is forbidden by measure");
+  }
+  if (action !== "measure" && !input.sourceCiReceipt) {
+    refuse("--source-ci-receipt is required");
+  }
   if (action === "measure" && input.ghCli) {
     refuse("--gh-cli is forbidden by measure");
   }
@@ -364,15 +504,16 @@ function parseArguments(argv) {
     input.priorStateDir,
     input.priorReceiptDir,
     input.priorReleaseProvenance,
-    input.priorTerminalReceiptSha256,
+    input.priorSourceCiReceipt,
+    input.priorEffectReceiptSha256,
   ];
   if (priorValues.some(value => value !== null)) {
     if (action !== "plan") refuse("predecessor adoption flags are accepted only by plan");
     if (priorValues.some(value => value === null)) {
       refuse("predecessor adoption flags are all-or-none");
     }
-    if (!SHA256.test(input.priorTerminalReceiptSha256)) {
-      refuse("--prior-terminal-receipt-sha256 differs");
+    if (!SHA256.test(input.priorEffectReceiptSha256)) {
+      refuse("--prior-effect-receipt-sha256 differs");
     }
   }
   return Object.freeze(input);
@@ -420,6 +561,7 @@ function assertCurrentRecoveryRoot(input) {
     [input.stateDir, "current state directory"],
     [input.receiptDir, "current receipt directory"],
     [input.releaseProvenance, "current release provenance"],
+    [input.sourceCiReceipt, "current source-CI receipt"],
     [input.productionBoundary, "current production boundary"],
     [input.targetConfig, "current target config"],
   ]) assertAbsolute(item, label);
@@ -428,6 +570,7 @@ function assertCurrentRecoveryRoot(input) {
   if (
     path.dirname(input.receiptDir) !== currentRoot
     || path.dirname(input.releaseProvenance) !== currentRoot
+    || path.dirname(input.sourceCiReceipt) !== currentRoot
     || path.dirname(input.productionBoundary) !== currentRoot
     || path.dirname(input.targetConfig) !== currentRoot
   ) {
@@ -450,6 +593,7 @@ function assertCurrentRecoveryRoot(input) {
     refuse("current state directory must exist before this operation lease");
   }
   assertPrivateFileMetadata(input.releaseProvenance, "current release provenance");
+  assertPrivateFileMetadata(input.sourceCiReceipt, "current source-CI receipt");
   assertPrivateFileMetadata(input.productionBoundary, "current production boundary");
   assertPrivateFileMetadata(input.targetConfig, "current target config");
   return currentRoot;
@@ -463,6 +607,7 @@ function assertPredecessorPlanPathBoundary(input) {
     [input.priorStateDir, "predecessor state directory"],
     [input.priorReceiptDir, "predecessor receipt directory"],
     [input.priorReleaseProvenance, "predecessor release provenance"],
+    [input.priorSourceCiReceipt, "predecessor source-CI receipt"],
     [input.releaseProvenance, "current release provenance"],
   ]) assertAbsolute(item, label);
   const predecessorRoot = path.dirname(input.priorStateDir);
@@ -470,6 +615,7 @@ function assertPredecessorPlanPathBoundary(input) {
   if (
     path.dirname(input.priorReceiptDir) !== predecessorRoot
     || path.dirname(input.priorReleaseProvenance) !== predecessorRoot
+    || path.dirname(input.priorSourceCiReceipt) !== predecessorRoot
   ) refuse("predecessor state, receipts and provenance must share one exact root");
   assertPrivateDirectory(predecessorRoot, "predecessor root");
   const currentRelativeToPredecessor = path.relative(predecessorRoot, currentRoot);
@@ -1088,9 +1234,8 @@ function readRelease() {
     "requiredSuccessfulSteps",
   ], "release manifest source CI");
   if (
-    manifest.schemaVersion !== 3
-    || manifest.kind
-      !== "main-finance-runtime-recovery-v3-secrets-only-staging-release"
+    manifest.schemaVersion !== 4
+    || manifest.kind !== SCHEMA4_RELEASE_KIND
     || ![READY_STATUS, NOT_READY_STATUS].includes(manifest.releaseStatus)
     || manifest.environment !== "staging"
     || manifest.mainProjectRef !== MAIN_REF
@@ -1102,7 +1247,7 @@ function readRelease() {
     || manifest.edgeFunction?.name !== FUNCTION_NAME
     || manifest.edgeFunction.verifyJwt !== false
     || manifest.edgeFunction.alreadyPresentInImportedBaseline !== true
-    || manifest.edgeFunction.deployAuthorized !== false
+    || manifest.edgeFunction.deployAuthorized !== true
     || manifest.archiveFormat !== "main-finance-source-archive-v2-nul-framed"
     || manifest.plan?.ttlSeconds !== 240
     || manifest.plan.maximumSnapshotAgeSeconds !== 300
@@ -1126,8 +1271,14 @@ function readRelease() {
     || manifest.mutations.rebuiltStableRuntimeCount !== 11
     || canonicalJson(manifest.mutations.metadataOnlyUpdatedAtAllowlist)
       !== canonicalJson(SUCCESSOR_METADATA_ONLY_SECRET_NAMES)
-    || manifest.mutations.exactHostedMutationCount !== 1
-    || manifest.mutations.exactFunctionDeployCount !== 0
+    || manifest.mutations.targetDeployTransition !== SCHEMA4_TARGET_TRANSITION
+    || manifest.mutations.targetDeployFunction !== FUNCTION_NAME
+    || manifest.mutations.exactHostedMutationCount !== 2
+    || manifest.mutations.exactFunctionDeployCount !== 1
+    || manifest.mutations.freshPlanCount !== 2
+    || manifest.mutations.ownerApprovalCount !== 2
+    || manifest.mutations.deployResultSandwichRequired !== true
+    || manifest.mutations.completionSandwichDistinct !== true
     || manifest.mutations.automaticRetryAllowed !== false
     || manifest.mutations.databaseWrites !== false
     || manifest.mutations.productionWrites !== false
@@ -1141,8 +1292,11 @@ function readRelease() {
     "metadataOnlyUpdatedAtAllowlist", "predecessorAdoptionRequired",
     "postSecretFunctionReadRounds", "requiredFunctionInventoryKeys",
     "allowedSecretFunctionVersionTransitions", "causalAttributionClaimed",
+    "targetDeployTransition", "targetDeployFunction",
     "forbidPrivacyOverwrite", "exactHostedMutationCount",
-    "exactFunctionDeployCount", "automaticRetryAllowed", "databaseWrites",
+    "exactFunctionDeployCount", "freshPlanCount", "ownerApprovalCount",
+    "deployResultSandwichRequired", "completionSandwichDistinct",
+    "automaticRetryAllowed", "databaseWrites",
     "productionWrites",
   ], "release manifest mutation boundary");
   exactKeys(manifest.sourceLineage, [
@@ -1166,9 +1320,12 @@ function readRelease() {
   ];
   const toolNames = ["git", "node", "supabaseCli", "gh"];
   if (
-    manifest.sourceLineage?.baseCommitSha !== BASE_COMMIT_SHA
-    || manifest.sourceLineage.baseTreeSha !== BASE_TREE_SHA
-    || manifest.sourceLineage.requiredSoleParentSha !== BASE_COMMIT_SHA
+    manifest.sourceLineage?.baseCommitSha
+      !== PARTIAL_SECRET_PREDECESSOR_PINS.sourceCommitSha
+    || manifest.sourceLineage.baseTreeSha
+      !== PARTIAL_SECRET_PREDECESSOR_PINS.sourceTreeSha
+    || manifest.sourceLineage.requiredSoleParentSha
+      !== PARTIAL_SECRET_PREDECESSOR_PINS.sourceCommitSha
     || manifest.sourceLineage.expectedTrackedFileCount !== EXPECTED_TRACKED_FILE_COUNT
     || canonicalJson(manifest.sourceLineage.changedPaths)
       !== canonicalJson(EXPECTED_CHANGED_PATHS)
@@ -1245,6 +1402,14 @@ function readRelease() {
         symlinksAllowed: false,
       },
       {
+        argument: "--source-ci-receipt",
+        mode: "0600",
+        ownerRequired: true,
+        regularFileRequired: true,
+        singleLinkRequired: true,
+        symlinksAllowed: false,
+      },
+      {
         argument: "--production-boundary",
         mode: "0600",
         ownerRequired: true,
@@ -1267,17 +1432,20 @@ function readRelease() {
   const adoption = environment.value.predecessorAdoption;
   exactKeys(adoption, [
     "requiredForFreshSuccessorPlan", "rootPolicy", "sourceCommitSha",
-    "sourceTreeSha", "planReceiptSha256", "secretIntentReceiptSha256",
-    "secretResultReceiptSha256", "functionIntentReceiptSha256",
-    "functionUnknownReceiptSha256", "terminalReceiptSha256",
-    "receiptChainSha256", "bundleAttestationSha256", "runtimeFileSha256",
+    "sourceTreeSha", "sourceDeploymentSha256", "releaseManifestSha256",
+    "planReceiptSha256", "planReceiptFileSha256",
+    "secretIntentReceiptSha256", "secretIntentReceiptFileSha256",
+    "effectReceiptSha256", "effectReceiptFileSha256", "receiptChainSha256",
+    "sourceCiReceiptSha256", "sourceCiReceiptFileSha256", "sourceCiRunId",
+    "sourceCiJobId", "bundleAttestationSha256", "bundleAttestationFileSha256",
+    "bundleCommitSha256", "bundleCommitFileSha256", "runtimeFileSha256",
     "provenanceFileSha256", "provenanceDescriptorSha256",
-    "expectedSecretDigestSetSha256", "generatedSecretDigestSetSha256",
-    "preinstallMainInventorySha256", "postSecretMainInventorySha256",
-    "terminalMainInventorySha256", "stableFinanceInventorySha256",
-    "preinstallFunctionInventorySha256", "postSecretFunctionInventorySha256",
-    "terminalFunctionInventorySha256", "preinstallFunctionCount",
-    "terminalFunctionCount", "adoptGeneratedSecretNames",
+    "sourceArchiveSha256", "mutationSecretNameSetSha256",
+    "mutationSecretDigestSetSha256", "generatedSecretDigestSetSha256",
+    "preinstallMainInventorySha256", "installedMainInventorySha256",
+    "installedSemanticMainInventorySha256", "stableFinanceInventorySha256",
+    "preinstallFunctionInventorySha256", "installedFunctionInventorySha256",
+    "functionCount", "adoptGeneratedSecretNames",
     "rebuildStableRuntimeConfig", "randomGenerationAllowed",
     "planOnlyFlagsAllOrNone", "validationBeforePlaintextRead",
     "finalPredecessorSandwichRequired",
@@ -1287,12 +1455,13 @@ function readRelease() {
     "rebuiltStableRuntimeCount", "fullProofRuntimeCount",
     "metadataOnlyUpdatedAtAllowlist", "stableInventoryReadRounds",
     "allowedFunctionVersionTransitions", "functionDeployAllowed",
-    "causalAttributionClaimed",
-  ], "secrets-only mutation environment contract");
+    "functionDeployTarget", "functionDeployTransition", "freshPlanCount",
+    "ownerApprovalCount", "causalAttributionClaimed",
+  ], "schema-4 mutation environment contract");
   if (
-    environment.value.schemaVersion !== 3
+    environment.value.schemaVersion !== 4
     || environment.value.kind
-      !== "main-finance-runtime-recovery-v3-secrets-only-environment-contract"
+      !== "main-finance-runtime-recovery-v4-target-redeploy-environment-contract"
     || environment.value.environment !== "staging"
     || environment.value.mainProjectRef !== MAIN_REF
     || environment.value.financeProjectRef !== FINANCE_REF
@@ -1308,59 +1477,44 @@ function readRelease() {
       identityBinding: "realpath plus device inode mode and owner",
       storePathInReceipt: false,
     })
-    || adoption.sourceCommitSha !== TERMINAL_DIVERGED_PREDECESSOR_PINS.sourceCommitSha
-    || adoption.sourceTreeSha !== TERMINAL_DIVERGED_PREDECESSOR_PINS.sourceTreeSha
-    || adoption.planReceiptSha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.planReceiptSha256
-    || adoption.secretIntentReceiptSha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.secretIntentReceiptSha256
-    || adoption.secretResultReceiptSha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.secretResultReceiptSha256
-    || adoption.functionIntentReceiptSha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.functionIntentReceiptSha256
-    || adoption.functionUnknownReceiptSha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.functionUnknownReceiptSha256
-    || adoption.terminalReceiptSha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalReceiptSha256
-    || adoption.receiptChainSha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.receiptChainSha256
-    || adoption.bundleAttestationSha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.bundleAttestationSha256
-    || adoption.runtimeFileSha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.runtimeFileSha256
-    || adoption.provenanceFileSha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.provenanceFileSha256
-    || adoption.provenanceDescriptorSha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.provenanceDescriptorSha256
-    || adoption.expectedSecretDigestSetSha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.expectedSecretDigestSetSha256
-    || adoption.generatedSecretDigestSetSha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.generatedSecretDigestSetSha256
-    || adoption.preinstallMainInventorySha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.preinstallMainInventorySha256
-    || adoption.postSecretMainInventorySha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.postSecretMainInventorySha256
-    || adoption.terminalMainInventorySha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalMainInventorySha256
+    || [
+      "sourceCommitSha", "sourceTreeSha", "sourceDeploymentSha256",
+      "releaseManifestSha256", "planReceiptSha256", "planReceiptFileSha256",
+      "secretIntentReceiptSha256", "secretIntentReceiptFileSha256",
+      "receiptChainSha256",
+      "sourceCiReceiptSha256", "sourceCiReceiptFileSha256", "sourceCiRunId",
+      "sourceCiJobId", "provenanceFileSha256", "provenanceDescriptorSha256",
+      "bundleAttestationSha256", "bundleAttestationFileSha256",
+      "bundleCommitSha256", "bundleCommitFileSha256", "runtimeFileSha256",
+      "sourceArchiveSha256", "mutationSecretNameSetSha256",
+      "mutationSecretDigestSetSha256", "generatedSecretDigestSetSha256",
+      "preinstallMainInventorySha256", "installedMainInventorySha256",
+      "installedSemanticMainInventorySha256", "preinstallFunctionInventorySha256",
+      "installedFunctionInventorySha256", "functionCount",
+    ].some(key => canonicalJson(adoption[key])
+      !== canonicalJson(PARTIAL_SECRET_PREDECESSOR_PINS[key]))
+    || adoption.effectReceiptSha256
+      !== PARTIAL_SECRET_PREDECESSOR_PINS.secretResultReceiptSha256
+    || adoption.effectReceiptFileSha256
+      !== PARTIAL_SECRET_PREDECESSOR_PINS.secretResultReceiptFileSha256
     || adoption.stableFinanceInventorySha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.financeInventorySha256
-    || adoption.preinstallFunctionInventorySha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.preinstallFunctionInventorySha256
-    || adoption.postSecretFunctionInventorySha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.postSecretFunctionInventorySha256
-    || adoption.terminalFunctionInventorySha256
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalFunctionInventorySha256
-    || adoption.preinstallFunctionCount
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.preinstallFunctionCount
-    || adoption.terminalFunctionCount
-      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.terminalFunctionCount
+      !== PARTIAL_SECRET_PREDECESSOR_PINS.financeInventorySha256
     || canonicalJson(adoption.adoptGeneratedSecretNames)
       !== canonicalJson(environment.value.generatedSecrets.map(item => item.name))
     || adoption.rebuildStableRuntimeConfig !== true
     || adoption.randomGenerationAllowed !== false
     || canonicalJson(adoption.planOnlyFlagsAllOrNone) !== canonicalJson([
       "--prior-state-dir", "--prior-receipt-dir", "--prior-release-provenance",
-      "--prior-terminal-receipt-sha256",
+      "--prior-source-ci-receipt", "--prior-effect-receipt-sha256",
+    ])
+    || canonicalJson(adoption.validationBeforePlaintextRead) !== canonicalJson([
+      "exact immutable predecessor root and device/inode identity",
+      "canonical exact three-receipt plan, intent and effect chain with exact raw hashes, self-hashes, links and ae7bfa chain hash",
+      "exact successful source-CI receipt raw/self hashes, run/job authority, provenance and bundle attestation/commit raw/self pins",
+      "exact source archive, deployment, release manifest, runtime, mutation-name and mutation-digest pins",
+      "exact predecessor preinstall and installed raw/semantic Main, stable Finance and 13-row Function inventory frames",
+      "the predecessor has no release-complete receipt and is never completed or mutated by this successor",
+      "two generated values are read only after the complete immutable predecessor authority passes",
     ])
     || adoption.finalPredecessorSandwichRequired !== true
     || canonicalJson(environment.value.secretMutation.mutationNames)
@@ -1375,8 +1529,15 @@ function readRelease() {
     || environment.value.secretMutation.stableInventoryReadRounds !== 2
     || canonicalJson(
       environment.value.secretMutation.allowedFunctionVersionTransitions,
-    ) !== canonicalJson(["unchanged", "exact-all-existing-plus-one"])
-    || environment.value.secretMutation.functionDeployAllowed !== false
+    ) !== canonicalJson([
+      "unchanged", "exact-all-existing-plus-one", SCHEMA4_TARGET_TRANSITION,
+    ])
+    || environment.value.secretMutation.functionDeployAllowed !== true
+    || environment.value.secretMutation.functionDeployTarget !== FUNCTION_NAME
+    || environment.value.secretMutation.functionDeployTransition
+      !== SCHEMA4_TARGET_TRANSITION
+    || environment.value.secretMutation.freshPlanCount !== 2
+    || environment.value.secretMutation.ownerApprovalCount !== 2
     || environment.value.secretMutation.causalAttributionClaimed !== false
   ) refuse("predecessor adoption environment contract differs");
   exactKeys(postflight.value, [
@@ -1384,11 +1545,21 @@ function readRelease() {
     "ambientAuthorizationAllowed", "expectedStatus", "expectedContentType",
     "expectedResponseKeys", "expectedConstants", "minimumCheckedCount",
     "snapshotSandwich", "authority", "requiredBindings", "receiptRedactions",
-  ], "secrets-only postflight contract");
+  ], "schema-4 postflight contract");
+  exactKeys(postflight.value.authority, [
+    "completionCause", "hostedMutationCount", "functionDeployCount",
+    "freshPlanCount", "ownerApprovalCount", "deployResultSandwichRequired",
+    "completionSandwichDistinct", "automaticRetryAllowed",
+  ], "schema-4 postflight authority");
+  exactKeys(postflight.value.snapshotSandwich.functionInventoryPhases, [
+    "importedBaseline", "requiredCanonicalRowKeys", "rowIdentityRules",
+    "allowedDispositions", "stability", "replacement", "divergence",
+    "functionDeployAuthorized", "functionDeployTarget",
+  ], "schema-4 postflight Function authority");
   if (
-    postflight.value.schemaVersion !== 3
+    postflight.value.schemaVersion !== 4
     || postflight.value.kind
-      !== "main-finance-runtime-recovery-v3-secrets-only-postflight-contract"
+      !== "main-finance-runtime-recovery-v4-target-redeploy-postflight-contract"
     || postflight.value.environment !== "staging"
     || postflight.value.endpoint
       !== `https://${MAIN_REF}.supabase.co/functions/v1/${FUNCTION_NAME}`
@@ -1397,16 +1568,22 @@ function readRelease() {
     || postflight.value.ambientAuthorizationAllowed !== false
     || postflight.value.expectedStatus !== 200
     || postflight.value.authority?.completionCause
-      !== "verified secrets-set result or state_satisfied read-only reconciliation"
-    || postflight.value.authority.hostedMutationCount !== 1
-    || postflight.value.authority.functionDeployCount !== 0
+      !== "verified exact four-name secrets-set stage followed by verified exact target-only function-deploy stage; unknown secrets may resolve only by read-only state_satisfied reconciliation and unknown deploy may resolve only by read-only applied reconciliation; neither retries"
+    || postflight.value.authority.hostedMutationCount !== 2
+    || postflight.value.authority.functionDeployCount !== 1
+    || postflight.value.authority.freshPlanCount !== 2
+    || postflight.value.authority.ownerApprovalCount !== 2
+    || postflight.value.authority.deployResultSandwichRequired !== true
+    || postflight.value.authority.completionSandwichDistinct !== true
     || postflight.value.authority.automaticRetryAllowed !== false
     || postflight.value.snapshotSandwich?.functionInventoryPhases
-      ?.functionDeployAuthorized !== false
+      ?.functionDeployAuthorized !== true
+    || postflight.value.snapshotSandwich.functionInventoryPhases
+      .functionDeployTarget !== FUNCTION_NAME
     || canonicalJson(
       postflight.value.snapshotSandwich.functionInventoryPhases.allowedDispositions,
-    ) !== canonicalJson(["unchanged", "exact-all-existing-plus-one"])
-  ) refuse("secrets-only postflight contract differs");
+    ) !== canonicalJson([SCHEMA4_TARGET_TRANSITION])
+  ) refuse("schema-4 postflight contract differs");
   if (
     manifest.preflightSql === null
     || typeof manifest.preflightSql !== "object"
@@ -1683,22 +1860,47 @@ function assertGhConfigBoundary() {
 }
 
 function defaultRunProcess(executable, args, environment) {
-  const workingDirectory = typeof environment?.SUPABASE_HOME === "string"
-    ? assertSealedEmptyDirectory(environment.SUPABASE_HOME, "Supabase CLI home")
-    : REPOSITORY_ROOT;
-  const result = spawnSync(executable, args, {
-    cwd: workingDirectory,
-    encoding: "utf8",
-    env: environment,
-    timeout: 45_000,
-    maxBuffer: 4 * 1024 * 1024,
-    windowsHide: true,
-  });
+  let workingDirectory;
+  try {
+    workingDirectory = typeof environment?.SUPABASE_HOME === "string"
+      ? assertSealedEmptyDirectory(environment.SUPABASE_HOME, "Supabase CLI home")
+      : REPOSITORY_ROOT;
+  } catch {
+    return Object.freeze({
+      status: null,
+      signal: null,
+      error: null,
+      stdout: "",
+      cliInvoked: false,
+      outcome: "pre_spawn_refused",
+    });
+  }
+  let result;
+  try {
+    result = spawnSync(executable, args, {
+      cwd: workingDirectory,
+      encoding: "utf8",
+      env: environment,
+      timeout: 45_000,
+      maxBuffer: 4 * 1024 * 1024,
+      windowsHide: true,
+    });
+  } catch {
+    return Object.freeze({
+      status: null,
+      signal: null,
+      error: null,
+      stdout: "",
+      cliInvoked: false,
+      outcome: "pre_spawn_refused",
+    });
+  }
   return Object.freeze({
     status: result.status,
     signal: result.signal,
     error: result.error ?? null,
     stdout: result.stdout ?? "",
+    cliInvoked: true,
   });
 }
 
@@ -1904,14 +2106,14 @@ function inspectSource({
     treeHeaders.length !== 1
     || treeHeaders[0] !== `tree ${tree}`
     || parentHeaders.length !== 1
-    || parentHeaders[0] !== `parent ${BASE_COMMIT_SHA}`
-    || release.manifest.sourceLineage.baseCommitSha !== BASE_COMMIT_SHA
-    || release.manifest.sourceLineage.baseTreeSha !== BASE_TREE_SHA
-    || release.manifest.sourceLineage.requiredSoleParentSha !== BASE_COMMIT_SHA
+    || parentHeaders[0]
+      !== `parent ${release.manifest.sourceLineage.requiredSoleParentSha}`
+    || release.manifest.sourceLineage.baseCommitSha
+      !== release.manifest.sourceLineage.requiredSoleParentSha
   ) refuse("source is not the exact direct-child recovery successor");
   const changedOutput = invoke([
     "diff-tree", "--no-commit-id", "--name-status", "-r", "-z",
-    BASE_TREE_SHA, tree,
+    release.manifest.sourceLineage.baseTreeSha, tree,
   ]);
   const changedRecords = changedOutput.split("\0");
   if (changedRecords.at(-1) !== "") refuse("source changed-path output differs");
@@ -1987,8 +2189,8 @@ function inspectSource({
   return Object.freeze({
     commit,
     tree,
-    parent: BASE_COMMIT_SHA,
-    baseTree: BASE_TREE_SHA,
+    parent: release.manifest.sourceLineage.requiredSoleParentSha,
+    baseTree: release.manifest.sourceLineage.baseTreeSha,
     changedPaths: Object.freeze(changedPaths),
     changedPathSetSha256,
     trackedFileCount: tracked.length,
@@ -2155,6 +2357,64 @@ function manifestPathRelative() {
   return "supabase/releases/main-finance-runtime-recovery-v2/staging.manifest.json";
 }
 
+function invokeReadOnlyGitHubApi({
+  gh,
+  endpoint,
+  label,
+  ghEnvironment,
+  ghLocalState,
+  runGh,
+}) {
+  const args = Object.freeze([
+    "api",
+    "--method", "GET",
+    "-H", "Accept: application/vnd.github+json",
+    "-H", "X-GitHub-Api-Version: 2022-11-28",
+    endpoint,
+  ]);
+  for (let attempt = 1; attempt <= MAX_READ_ONLY_GITHUB_API_ATTEMPTS; attempt += 1) {
+    assertGhLocalStateUnchanged(ghLocalState);
+    let result;
+    let runnerException = false;
+    try {
+      result = runGh(gh, args, ghEnvironment);
+    } catch (error) {
+      if (
+        typeof error?.message === "string"
+        && error.message.startsWith(REFUSAL_PREFIX)
+      ) throw error;
+      runnerException = true;
+    } finally {
+      assertGhLocalStateUnchanged(ghLocalState);
+    }
+    if (runnerException) {
+      if (attempt < MAX_READ_ONLY_GITHUB_API_ATTEMPTS) continue;
+      refuse(`${label} live GitHub query failed; output withheld`);
+    }
+    if (result?.cliInvoked !== true) {
+      refuse(`${label} live GitHub query failed; output withheld`);
+    }
+    if (!successful(result)) {
+      if (attempt < MAX_READ_ONLY_GITHUB_API_ATTEMPTS) continue;
+      refuse(`${label} live GitHub query failed; output withheld`);
+    }
+    if (Buffer.byteLength(result.stdout, "utf8") > 2 * 1024 * 1024) {
+      refuse(`${label} live GitHub query failed; output withheld`);
+    }
+    let value;
+    try {
+      value = JSON.parse(result.stdout);
+    } catch {
+      refuse(`${label} live GitHub JSON differs`);
+    }
+    return Object.freeze({
+      value,
+      sha256: sha256(canonicalJson(value)),
+    });
+  }
+  refuse(`${label} live GitHub query failed; output withheld`);
+}
+
 function inspectSourceCi({
   provenance,
   source,
@@ -2197,30 +2457,13 @@ function inspectSourceCi({
     ghEnvironment,
   );
   const invokeApi = (endpoint, label) => {
-    let result;
-    try {
-      result = guardedRunGh(gh, [
-        "api",
-        "--method", "GET",
-        "-H", "Accept: application/vnd.github+json",
-        "-H", "X-GitHub-Api-Version: 2022-11-28",
-        endpoint,
-      ], ghEnvironment);
-    } catch {
-      refuse(`${label} live GitHub query failed; output withheld`);
-    }
-    if (!successful(result) || Buffer.byteLength(result.stdout, "utf8") > 2 * 1024 * 1024) {
-      refuse(`${label} live GitHub query failed; output withheld`);
-    }
-    let value;
-    try {
-      value = JSON.parse(result.stdout);
-    } catch {
-      refuse(`${label} live GitHub JSON differs`);
-    }
-    return Object.freeze({
-      value,
-      sha256: sha256(canonicalJson(value)),
+    return invokeReadOnlyGitHubApi({
+      gh,
+      endpoint,
+      label,
+      ghEnvironment,
+      ghLocalState,
+      runGh,
     });
   };
   const branch = invokeApi(
@@ -2346,6 +2589,56 @@ function semanticSecretInventorySha256(inventory) {
   }))));
 }
 
+function normalizeReceiptSecretInventoryRows(rows, label) {
+  if (!Array.isArray(rows)) refuse(`${label} is not an array`);
+  const inventory = new Map();
+  for (const row of rows) {
+    exactKeys(row, ["name", "value", "updatedAt"], `${label} row`);
+    if (
+      typeof row.name !== "string"
+      || !SECRET_NAME.test(row.name)
+      || typeof row.value !== "string"
+      || !SHA256.test(row.value)
+      || !canonicalTimestamp(row.updatedAt)
+      || inventory.has(row.name)
+    ) refuse(`${label} row differs`);
+    inventory.set(row.name, Object.freeze({ ...row }));
+  }
+  const normalizedRows = inventoryCore(inventory);
+  if (canonicalJson(rows) !== canonicalJson(normalizedRows)) {
+    refuse(`${label} order differs`);
+  }
+  return Object.freeze({
+    inventory,
+    rows: Object.freeze(normalizedRows),
+    sha256: sha256(canonicalJson(normalizedRows)),
+    semanticSha256: semanticSecretInventorySha256(inventory),
+  });
+}
+
+function expectedInstalledSemanticMainInventorySha256(
+  before,
+  mutationSecretDigests,
+  mutationSecretNames,
+) {
+  if (!validSuccessorMutationSecretDigestMap(
+    mutationSecretDigests,
+    mutationSecretNames,
+  )) refuse("schema-4 expected semantic secret digest map differs");
+  const installed = new Map(inventoryCore(before).map(row => [
+    row.name,
+    Object.freeze({
+      ...row,
+      value: mutationSecretNames.includes(row.name)
+        ? mutationSecretDigests[row.name] : row.value,
+    }),
+  ]));
+  if (!inventoryHasExactNameSet(before, installed)) {
+    refuse("schema-4 expected semantic secret row set differs");
+  }
+  return semanticSecretInventorySha256(installed);
+}
+
 function inventoryWithoutNames(inventory, excludedNames) {
   return new Map([...inventory].filter(([name]) => !excludedNames.includes(name)));
 }
@@ -2420,8 +2713,18 @@ function invokeCli(dependencies, args, { mutation = false } = {}) {
       dependencies.cliEnvironment,
     );
   } catch {
-    return null;
+    return Object.freeze({
+      status: null,
+      signal: null,
+      error: null,
+      stdout: "",
+      outcome: "pre_spawn_refused",
+      homeDrift: false,
+      toolDrift: false,
+      cliInvoked: false,
+    });
   }
+  if (result?.cliInvoked === false) return result;
   const after = cliBoundaryState(dependencies, mutation);
   if (after.homeDrift || after.toolDrift) {
     return Object.freeze({
@@ -2435,7 +2738,8 @@ function invokeCli(dependencies, args, { mutation = false } = {}) {
       cliInvoked: true,
     });
   }
-  return result;
+  if (result === null || typeof result !== "object") return result;
+  return Object.freeze({ ...result, cliInvoked: true });
 }
 
 function fetchSecretInventories(dependencies, phase = "recovery") {
@@ -2604,6 +2908,11 @@ function normalizeFunctionInventoryRows(rows) {
       || !Number.isSafeInteger(row.updated_at)
       || row.updated_at < row.created_at
     ) refuse("function inventory timestamps differ");
+    if (
+      Object.hasOwn(row, "import_map_path")
+      && (typeof row.import_map_path !== "string"
+        || !/^file:\/\/\/[^\0\r\n]+\.json$/u.test(row.import_map_path))
+    ) refuse("function inventory import map path differs");
     normalized.push(JSON.parse(canonicalJson(row)));
   }
   normalized.sort((left, right) =>
@@ -2614,6 +2923,68 @@ function normalizeFunctionInventoryRows(rows) {
     rows: Object.freeze(normalized),
     sha256: sha256(canonicalJson(normalized)),
     target: targetRows[0] ?? null,
+  });
+}
+
+function classifyExactTargetReplacement({ beforeRows, afterRows }) {
+  const before = normalizeFunctionInventoryRows(beforeRows);
+  const after = normalizeFunctionInventoryRows(afterRows);
+  if (
+    before.rows.length !== after.rows.length
+    || before.target === null
+    || after.target === null
+    || before.target.id !== after.target.id
+  ) return null;
+  const beforeById = new Map(before.rows.map(row => [row.id, row]));
+  for (const row of after.rows) {
+    const prior = beforeById.get(row.id);
+    if (!prior || prior.slug !== row.slug) return null;
+    if (row.id !== before.target.id && canonicalJson(row) !== canonicalJson(prior)) {
+      return null;
+    }
+  }
+  const beforeTarget = before.target;
+  const afterTarget = after.target;
+  const beforeKeys = Object.keys(beforeTarget).sort();
+  const afterKeys = Object.keys(afterTarget).sort();
+  if (canonicalJson(beforeKeys) !== canonicalJson(afterKeys)) return null;
+  for (const key of beforeKeys) {
+    if (
+      !SCHEMA4_ALLOWED_TARGET_MUTATIONS.has(key)
+      && canonicalJson(beforeTarget[key]) !== canonicalJson(afterTarget[key])
+    ) return null;
+  }
+  const expectedEntrypoint =
+    `file:///tmp/user_fn_${MAIN_REF}_${beforeTarget.id}_${afterTarget.version}`
+    + `/source/supabase/functions/${FUNCTION_NAME}/index.ts`;
+  const expectedImportMap =
+    `file:///tmp/user_fn_${MAIN_REF}_${beforeTarget.id}_${afterTarget.version}`
+    + `/source/supabase/functions/${FUNCTION_NAME}/deno.json`;
+  if (
+    beforeTarget.name !== FUNCTION_NAME
+    || beforeTarget.slug !== FUNCTION_NAME
+    || afterTarget.name !== FUNCTION_NAME
+    || afterTarget.slug !== FUNCTION_NAME
+    || beforeTarget.verify_jwt !== false
+    || afterTarget.verify_jwt !== false
+    || !["ACTIVE", "active"].includes(beforeTarget.status)
+    || afterTarget.status !== beforeTarget.status
+    || afterTarget.version !== beforeTarget.version + 1
+    || afterTarget.updated_at <= beforeTarget.updated_at
+    || afterTarget.ezbr_sha256 === beforeTarget.ezbr_sha256
+    || afterTarget.entrypoint_path !== expectedEntrypoint
+    || !Object.hasOwn(beforeTarget, "import_map_path")
+    || !Object.hasOwn(afterTarget, "import_map_path")
+    || typeof beforeTarget.import_map_path !== "string"
+    || afterTarget.import_map_path !== expectedImportMap
+  ) return null;
+  return deepFreeze({
+    disposition: SCHEMA4_TARGET_TRANSITION,
+    beforeFunctionInventorySha256: before.sha256,
+    afterFunctionInventorySha256: after.sha256,
+    functionCount: after.rows.length,
+    beforeTargetFunctionRow: canonicalClone(beforeTarget),
+    afterTargetFunctionRow: canonicalClone(afterTarget),
   });
 }
 
@@ -2702,9 +3073,11 @@ function runtimeRows({ release, source, snapshot, operatorSecret, triggerSecret 
     ...release.environment.generatedSecrets.map(item => item.name),
     ...release.environment.stableRuntimeConfig,
   ];
-  const mutationNames = release.environment.schemaVersion === 3
+  const mutationNames = release.environment.schemaVersion === 4
     ? SUCCESSOR_SECRET_MUTATION_NAMES
-    : Object.keys(values);
+    : (release.environment.schemaVersion === 3
+      ? SCHEMA3_SECRET_MUTATION_NAMES
+      : Object.keys(values));
   if (
     canonicalJson(Object.keys(values)) !== canonicalJson(managedNames)
     || mutationNames.some(name =>
@@ -2718,31 +3091,50 @@ function runtimeRows({ release, source, snapshot, operatorSecret, triggerSecret 
   return Object.freeze({ values, names: Object.freeze(managedNames), source: sourceText });
 }
 
-function successorSecretMutationRows(runtime) {
+function successorSecretMutationRows(runtime, names = SUCCESSOR_SECRET_MUTATION_NAMES) {
   const values = Object.freeze(Object.fromEntries(
-    SUCCESSOR_SECRET_MUTATION_NAMES.map(name => [name, runtime.values[name]]),
+    names.map(name => [name, runtime.values[name]]),
   ));
   if (
     canonicalJson(Object.keys(values))
-      !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+      !== canonicalJson(names)
   ) refuse("successor secret mutation allow-list differs");
-  const source = `${SUCCESSOR_SECRET_MUTATION_NAMES
+  const source = `${names
     .map(name => `${name}=${values[name]}`).join("\n")}\n`;
   return Object.freeze({
     values,
-    names: SUCCESSOR_SECRET_MUTATION_NAMES,
+    names,
     source,
   });
 }
 
-function validSuccessorMutationSecretDigestMap(value) {
+function validSuccessorMutationSecretDigestMap(
+  value,
+  names = SUCCESSOR_SECRET_MUTATION_NAMES,
+) {
   return value !== null
     && typeof value === "object"
     && !Array.isArray(value)
     && canonicalJson(Object.keys(value).sort())
-      === canonicalJson([...SUCCESSOR_SECRET_MUTATION_NAMES].sort())
-    && SUCCESSOR_SECRET_MUTATION_NAMES.every(name =>
+      === canonicalJson([...names].sort())
+    && names.every(name =>
       SHA256.test(value[name] ?? ""));
+}
+
+function expectedSchema4MutationSecretDigests({
+  sourceDeploymentSha256,
+  sourceCommitSha,
+  sourceTreeSha,
+  releaseManifestSha256,
+}) {
+  return Object.freeze({
+    MAIN_FINANCE_ACCESS_V2_SOURCE_DEPLOYMENT_SHA256:
+      sha256(sourceDeploymentSha256),
+    MAIN_FINANCE_ACCESS_V2_SOURCE_COMMIT_SHA: sha256(sourceCommitSha),
+    MAIN_FINANCE_ACCESS_V2_SOURCE_TREE_SHA: sha256(sourceTreeSha),
+    MAIN_FINANCE_ACCESS_V2_SOURCE_MANIFEST_SHA256:
+      sha256(releaseManifestSha256),
+  });
 }
 
 function writePrivateBytes(file, bytes) {
@@ -2906,6 +3298,160 @@ function buildArchive(release) {
     chunks.push(Buffer.from("\0", "utf8"));
   }
   return Buffer.concat(chunks);
+}
+
+function expectedSchema4HostedSourceClosure(release) {
+  const manifestRows = new Map(
+    release.manifest.deploymentClosureFiles.map(item => [item.path, item.sha256]),
+  );
+  for (const item of SCHEMA4_HOSTED_SOURCE_CLOSURE) {
+    const sourceItem = Object.freeze({
+      ...item,
+      path: `supabase/${item.path}`,
+    });
+    if (
+      manifestRows.get(sourceItem.path) !== item.sha256
+      || sha256(readFrozenClosureBytes(sourceItem)) !== item.sha256
+    ) refuse(`schema-4 hosted source closure pin differs: ${item.path}`);
+  }
+  if (
+    sha256(canonicalJson(SCHEMA4_HOSTED_SOURCE_CLOSURE))
+      !== SCHEMA4_HOSTED_SOURCE_CLOSURE_SHA256
+  ) refuse("schema-4 hosted source closure aggregate pin differs");
+  return SCHEMA4_HOSTED_SOURCE_CLOSURE;
+}
+
+async function boundedResponseBytes(response, maximumBytes, label) {
+  if (!response?.body || typeof response.body.getReader !== "function") {
+    refuse(`${label} response body differs`);
+  }
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maximumBytes) {
+      await reader.cancel().catch(() => undefined);
+      refuse(`${label} response exceeded the byte limit`);
+    }
+    chunks.push(Buffer.from(value.buffer, value.byteOffset, value.byteLength));
+  }
+  return Buffer.concat(chunks);
+}
+
+async function readSchema4HostedSourceClosure(context, release, targetRow) {
+  validateSchema4TargetRow(targetRow, "schema-4 hosted source target row");
+  const expected = expectedSchema4HostedSourceClosure(release);
+  let response;
+  try {
+    response = await context.dependencies.fetchImpl(
+      `https://api.supabase.com/v1/projects/${MAIN_REF}/functions/${FUNCTION_NAME}/body`,
+      {
+        method: "GET",
+        headers: Object.freeze({
+          authorization: `Bearer ${context.dependencies.accessToken}`,
+          accept: "multipart/form-data",
+        }),
+        redirect: "error",
+        signal: AbortSignal.timeout(30_000),
+      },
+    );
+  } catch {
+    refuse("schema-4 hosted source request failed; details withheld");
+  }
+  const contentType = response.headers?.get?.("content-type") ?? "";
+  const contentLength = response.headers?.get?.("content-length");
+  if (
+    response.status !== 200
+    || !/^multipart\/form-data;\s*boundary=(?:"[^"\r\n]{1,200}"|[^\s;\r\n]{1,200})$/iu
+      .test(contentType)
+    || (contentLength !== null
+      && (!DECIMAL.test(contentLength) || Number(contentLength) > 4 * 1024 * 1024))
+  ) refuse("schema-4 hosted source response envelope differs");
+  const body = await boundedResponseBytes(
+    response,
+    4 * 1024 * 1024,
+    "schema-4 hosted source",
+  );
+  let form;
+  try {
+    form = await new Response(body, {
+      status: 200,
+      headers: { "content-type": contentType },
+    }).formData();
+  } catch {
+    refuse("schema-4 hosted source multipart body differs");
+  }
+  const fileRows = [];
+  let metadata = null;
+  let partCount = 0;
+  for (const [name, value] of form.entries()) {
+    partCount += 1;
+    if (name === "metadata" && typeof value === "string" && metadata === null) {
+      try {
+        rejectDuplicateJsonKeys(value, "schema-4 hosted source metadata");
+        metadata = JSON.parse(value);
+      } catch {
+        refuse("schema-4 hosted source metadata JSON differs");
+      }
+      continue;
+    }
+    if (
+      name !== "file"
+      || value === null
+      || typeof value !== "object"
+      || typeof value.name !== "string"
+      || typeof value.arrayBuffer !== "function"
+      || value.size > 1024 * 1024
+    ) refuse("schema-4 hosted source multipart part differs");
+    const bytes = Buffer.from(await value.arrayBuffer());
+    fileRows.push(Object.freeze({ path: value.name, sha256: sha256(bytes) }));
+  }
+  fileRows.sort((left, right) => left.path.localeCompare(right.path));
+  exactKeys(metadata, [
+    "compressed_size", "deno2_entrypoint_path", "deployment_id",
+    "module_count", "original_size",
+  ], "schema-4 hosted source metadata");
+  if (
+    partCount !== 5
+    || canonicalJson(fileRows) !== canonicalJson(expected)
+    || metadata.deployment_id !== `${MAIN_REF}_${targetRow.id}_${targetRow.version}`
+    || metadata.deno2_entrypoint_path
+      !== `functions/${FUNCTION_NAME}/index.ts`
+    || metadata.module_count !== 4
+    || !Number.isSafeInteger(metadata.compressed_size)
+    || metadata.compressed_size <= 0
+    || metadata.compressed_size > 4 * 1024 * 1024
+    || !Number.isSafeInteger(metadata.original_size)
+    || metadata.original_size <= 0
+    || metadata.original_size > 64 * 1024 * 1024
+  ) refuse("schema-4 hosted source closure or deployment metadata differs");
+  const aggregateSha256 = sha256(canonicalJson(fileRows));
+  if (aggregateSha256 !== SCHEMA4_HOSTED_SOURCE_CLOSURE_SHA256) {
+    refuse("schema-4 hosted source closure aggregate differs");
+  }
+  return Object.freeze({
+    hostedSourceClosureSha256: aggregateSha256,
+    hostedSourceMetadataSha256: sha256(canonicalJson(metadata)),
+  });
+}
+
+async function attestSchema4HostedSourceClosure(context, release, targetRow) {
+  const rounds = [];
+  for (let round = 0; round < 2; round += 1) {
+    rounds.push(await readSchema4HostedSourceClosure(context, release, targetRow));
+  }
+  if (
+    rounds.length !== 2
+    || canonicalJson(rounds[0]) !== canonicalJson(rounds[1])
+  ) refuse("schema-4 hosted source download is not stable across two rounds");
+  return Object.freeze({
+    hostedSourceClosureSha256: rounds[1].hostedSourceClosureSha256,
+    hostedSourceMetadataSha256: rounds[1].hostedSourceMetadataSha256,
+    hostedSourceClosureReadRounds: 2,
+  });
 }
 
 function fsyncRegularFile(file) {
@@ -3146,6 +3692,7 @@ function createBundle({
   predecessorAdoption = null,
   now,
 }) {
+  const schema4 = release.manifest.schemaVersion === 4;
   if (predecessorAdoption === null) {
     refuse("current successor bundle predecessor adoption is absent");
   }
@@ -3174,7 +3721,10 @@ function createBundle({
     predecessorAdoption,
   });
   const runtime = runtimeRows({ release, source, snapshot, operatorSecret, triggerSecret });
-  const secretMutation = successorSecretMutationRows(runtime);
+  const secretMutation = successorSecretMutationRows(
+    runtime,
+    schema4 ? SUCCESSOR_SECRET_MUTATION_NAMES : SCHEMA3_SECRET_MUTATION_NAMES,
+  );
   const runtimeFile = path.join(stateDirectory, RUNTIME_PROOF_FILE);
   writePrivateFile(runtimeFile, runtime.source);
   const secretMutationFile = path.join(stateDirectory, SECRET_MUTATION_ENV_FILE);
@@ -3182,6 +3732,11 @@ function createBundle({
   const preinstallInventory = Object.freeze({
     main: inventoryCore(inventories.main),
     finance: inventoryCore(inventories.finance),
+    functions: functionInventory.rows,
+  });
+  const preinstallInventories = Object.freeze({
+    main: inventories.main,
+    finance: inventories.finance,
     functions: functionInventory.rows,
   });
   const preinstallInventorySource = `${canonicalJson(preinstallInventory)}\n`;
@@ -3210,6 +3765,10 @@ function createBundle({
   const archive = buildArchive(release);
   const archiveFile = path.join(stateDirectory, SOURCE_ARCHIVE);
   writePrivateBytes(archiveFile, archive);
+  const workdir = schema4 ? createDeployWorkdir(stateDirectory, release) : null;
+  const deployMutationInput = schema4
+    ? captureDeployMutationInput(workdir, release)
+    : null;
   const runtimeMutationInput = captureRuntimeMutationInput(
     secretMutationFile,
     sha256(secretMutation.source),
@@ -3224,8 +3783,8 @@ function createBundle({
   ]));
   const recordedAt = now().toISOString();
   const core = {
-    schemaVersion: 3,
-    kind: "main-finance-runtime-recovery-v3-private-bundle",
+    schemaVersion: schema4 ? 4 : 3,
+    kind: schema4 ? SCHEMA4_BUNDLE_KIND : "main-finance-runtime-recovery-v3-private-bundle",
     environment: "staging",
     mainProjectRef: MAIN_REF,
     financeProjectRef: FINANCE_REF,
@@ -3244,6 +3803,10 @@ function createBundle({
     runtimeMutationFile: SECRET_MUTATION_ENV_FILE,
     runtimeMutationFileSha256: sha256(secretMutation.source),
     runtimeMutationInput,
+    ...(schema4 ? {
+      deployMutationInput,
+      deployWorkdir: DEPLOY_WORKDIR,
+    } : {}),
     preinstallInventoryFile: PREINSTALL_INVENTORY_FILE,
     preinstallInventoryFileSha256: sha256(preinstallInventorySource),
     preinstallMainInventorySha256: inventories.mainInventorySha256,
@@ -3278,13 +3841,18 @@ function createBundle({
   );
   fsyncDirectory(stateDirectory);
   const commitCore = {
-    schemaVersion: 3,
-    kind: "main-finance-runtime-recovery-v3-durable-bundle-commit",
+    schemaVersion: schema4 ? 4 : 3,
+    kind: schema4
+      ? SCHEMA4_BUNDLE_COMMIT_KIND
+      : "main-finance-runtime-recovery-v3-durable-bundle-commit",
     recordedAt,
     bundleAttestationSha256: attestation.attestationSha256,
     sourceArchiveSha256: attestation.sourceArchiveSha256,
     runtimeFileSha256: attestation.runtimeFileSha256,
     runtimeMutationInputSha256: sha256(canonicalJson(attestation.runtimeMutationInput)),
+    ...(schema4 ? {
+      deployMutationInputSha256: sha256(canonicalJson(attestation.deployMutationInput)),
+    } : {}),
     supabaseMutationInputSha256: sha256(canonicalJson(attestation.supabaseMutationInput)),
   };
   const bundleCommit = Object.freeze({
@@ -3301,13 +3869,15 @@ function createBundle({
     runtime: Object.freeze(runtime),
     runtimeFile,
     preinstallInventoryFile,
-    preinstallInventories: preinstallInventory,
+    preinstallInventories,
     operatorDescriptorFile,
     archiveFile,
     secretMutation,
     secretMutationFile,
     supabaseMutationInput,
     runtimeMutationInput,
+    workdir,
+    deployMutationInput,
   });
 }
 
@@ -3443,7 +4013,7 @@ function assertBundleStateDirectoryBeforePlaintext(attestation, stateDirectory) 
     attestation.runtimeMutationInput?.path
       !== path.join(
         stateDirectory,
-        attestation.schemaVersion === 3
+        [3, 4].includes(attestation.schemaVersion)
           ? SECRET_MUTATION_ENV_FILE
           : RUNTIME_ENV_FILE,
       )
@@ -3466,6 +4036,7 @@ function readBundle(
     expectedPredecessorAdoption = undefined,
     authorizeRuntimeRead = null,
     orphanedAdoptionAuthority = false,
+    pinnedSourceArchiveSha256 = null,
     readPrivateFileImpl = readPrivateFile,
   } = {},
 ) {
@@ -3477,25 +4048,31 @@ function readBundle(
   );
   const bundleCommit = readJsonSource(bundleCommitSource, "durable bundle commit");
   const bundleCommitV3 = bundleCommit.schemaVersion === 3;
+  const bundleCommitV4 = bundleCommit.schemaVersion === 4;
+  const bundleCommitScopedSecrets = bundleCommitV3 || bundleCommitV4;
   exactKeys(bundleCommit, [
     "schemaVersion", "kind", "recordedAt", "bundleAttestationSha256",
     "sourceArchiveSha256", "runtimeFileSha256",
-    bundleCommitV3 ? "runtimeMutationInputSha256" : "deployMutationInputSha256",
+    ...(bundleCommitScopedSecrets ? ["runtimeMutationInputSha256"] : []),
+    ...(!bundleCommitV3 ? ["deployMutationInputSha256"] : []),
     "supabaseMutationInputSha256", "bundleCommitSha256",
   ], "durable bundle commit");
   const { bundleCommitSha256, ...bundleCommitCore } = bundleCommit;
   if (
-    ![2, 3].includes(bundleCommit.schemaVersion)
-    || bundleCommit.kind !== (bundleCommitV3
-      ? "main-finance-runtime-recovery-v3-durable-bundle-commit"
-      : "main-finance-runtime-recovery-v2-durable-bundle-commit")
+    ![2, 3, 4].includes(bundleCommit.schemaVersion)
+    || bundleCommit.kind !== (bundleCommitV4
+      ? SCHEMA4_BUNDLE_COMMIT_KIND
+      : (bundleCommitV3
+        ? "main-finance-runtime-recovery-v3-durable-bundle-commit"
+        : "main-finance-runtime-recovery-v2-durable-bundle-commit"))
     || !canonicalTimestamp(bundleCommit.recordedAt)
     || !SHA256.test(bundleCommit.bundleAttestationSha256 ?? "")
     || !SHA256.test(bundleCommit.sourceArchiveSha256 ?? "")
     || !SHA256.test(bundleCommit.runtimeFileSha256 ?? "")
-    || !SHA256.test((bundleCommitV3
-      ? bundleCommit.runtimeMutationInputSha256
-      : bundleCommit.deployMutationInputSha256) ?? "")
+    || (bundleCommitScopedSecrets
+      && !SHA256.test(bundleCommit.runtimeMutationInputSha256 ?? ""))
+    || (!bundleCommitV3
+      && !SHA256.test(bundleCommit.deployMutationInputSha256 ?? ""))
     || !SHA256.test(bundleCommit.supabaseMutationInputSha256 ?? "")
     || !SHA256.test(bundleCommitSha256 ?? "")
     || bundleCommitSha256 !== sha256(canonicalJson(bundleCommitCore))
@@ -3508,6 +4085,8 @@ function readBundle(
   );
   const attestation = readJsonSource(attestationSource, "bundle attestation");
   const attestationV3 = attestation.schemaVersion === 3;
+  const attestationV4 = attestation.schemaVersion === 4;
+  const attestationScopedSecrets = attestationV3 || attestationV4;
   const commonAttestationKeys = [
     "schemaVersion", "kind", "environment", "mainProjectRef", "financeProjectRef",
     "productionDenied", "recordedAt", "sourceCommitSha", "sourceTreeSha",
@@ -3524,11 +4103,12 @@ function readBundle(
     "catalogSha256", "descriptorSha256", "stateSha256", "checkedCount",
     "gateInventorySha256", "privacyInventorySha256", "attestationSha256",
   ];
-  const attestationKeys = attestationV3
+  const attestationKeys = attestationScopedSecrets
     ? [
       ...commonAttestationKeys,
       "runtimeMutationFile", "runtimeMutationFileSha256",
       "mutationSecretNames", "mutationSecretDigests",
+      ...(attestationV4 ? ["deployMutationInput", "deployWorkdir"] : []),
     ]
     : [...commonAttestationKeys, "deployMutationInput", "deployWorkdir"];
   const amendedAttestation = validateBundleRecoveryVariant(
@@ -3542,11 +4122,13 @@ function readBundle(
   );
   const { attestationSha256, ...core } = attestation;
   if (
-    ![2, 3].includes(attestation.schemaVersion)
-    || attestation.kind !== (attestationV3
-      ? "main-finance-runtime-recovery-v3-private-bundle"
-      : "main-finance-runtime-recovery-v2-private-bundle")
-    || bundleCommitV3 !== attestationV3
+    ![2, 3, 4].includes(attestation.schemaVersion)
+    || attestation.kind !== (attestationV4
+      ? SCHEMA4_BUNDLE_KIND
+      : (attestationV3
+        ? "main-finance-runtime-recovery-v3-private-bundle"
+        : "main-finance-runtime-recovery-v2-private-bundle"))
+    || bundleCommit.schemaVersion !== attestation.schemaVersion
     || attestation.environment !== "staging"
     || attestation.mainProjectRef !== MAIN_REF
     || attestation.financeProjectRef !== FINANCE_REF
@@ -3569,16 +4151,19 @@ function readBundle(
     || bundleCommit.bundleAttestationSha256 !== attestation.attestationSha256
     || bundleCommit.sourceArchiveSha256 !== attestation.sourceArchiveSha256
     || bundleCommit.runtimeFileSha256 !== attestation.runtimeFileSha256
-    || (attestationV3
-      ? bundleCommit.runtimeMutationInputSha256
-        !== sha256(canonicalJson(attestation.runtimeMutationInput))
-      : bundleCommit.deployMutationInputSha256
+    || (attestationScopedSecrets
+      && bundleCommit.runtimeMutationInputSha256
+        !== sha256(canonicalJson(attestation.runtimeMutationInput)))
+    || (!attestationV3
+      && bundleCommit.deployMutationInputSha256
         !== sha256(canonicalJson(attestation.deployMutationInput)))
     || bundleCommit.supabaseMutationInputSha256
       !== sha256(canonicalJson(attestation.supabaseMutationInput))
   ) refuse("durable bundle commit does not bind the private bundle");
   if (
-    attestation.runtimeFile !== (attestationV3 ? RUNTIME_PROOF_FILE : RUNTIME_ENV_FILE)
+    attestation.runtimeFile !== (
+      attestationScopedSecrets ? RUNTIME_PROOF_FILE : RUNTIME_ENV_FILE
+    )
     || attestation.runtimeMutationInput === null
     || typeof attestation.runtimeMutationInput !== "object"
     || (!attestationV3 && !Array.isArray(attestation.deployMutationInput))
@@ -3594,13 +4179,16 @@ function readBundle(
     || !SHA256.test(attestation.targetDescriptorSha256)
     || (!attestationV3 && attestation.deployWorkdir !== DEPLOY_WORKDIR)
   ) refuse("bundle attestation private file boundary differs");
-  if (attestationV3 && (
+  if (attestationScopedSecrets && (
     attestation.runtimeMutationFile !== SECRET_MUTATION_ENV_FILE
     || !SHA256.test(attestation.runtimeMutationFileSha256 ?? "")
     || canonicalJson(attestation.mutationSecretNames)
-      !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+      !== canonicalJson(attestationV4
+        ? SUCCESSOR_SECRET_MUTATION_NAMES
+        : SCHEMA3_SECRET_MUTATION_NAMES)
     || !validSuccessorMutationSecretDigestMap(
       attestation.mutationSecretDigests,
+      attestationV4 ? SUCCESSOR_SECRET_MUTATION_NAMES : SCHEMA3_SECRET_MUTATION_NAMES,
     )
   )) refuse("successor secret mutation bundle boundary differs");
   if (
@@ -3674,12 +4262,17 @@ function readBundle(
       !== attestation.preinstallMainInventorySha256
     || sha256(canonicalJson(inventoryCore(preinstallFinance)))
       !== attestation.preinstallFinanceInventorySha256
-    || (attestationV3
+    || (attestationV4
+      ? (
+        storedFunctionInventory.target === null
+        || !isPartialSecretPredecessorAdoption(attestation.predecessorAdoption)
+      )
+      : (attestationV3
       ? (
         functionTargetState(storedFunctionInventory) !== "exact"
         || !isTerminalDivergedPredecessorAdoption(attestation.predecessorAdoption)
       )
-      : storedFunctionInventory.target !== null)
+      : storedFunctionInventory.target !== null))
     || storedFunctionInventory.sha256 !== attestation.preinstallFunctionInventorySha256
   ) refuse("preinstall secret inventory fingerprint differs");
   const preinstallInventories = Object.freeze({
@@ -3689,7 +4282,7 @@ function readBundle(
   });
   const runtimeFile = path.join(
     stateDirectory,
-    attestationV3 ? RUNTIME_PROOF_FILE : RUNTIME_ENV_FILE,
+    attestationScopedSecrets ? RUNTIME_PROOF_FILE : RUNTIME_ENV_FILE,
   );
   assertBundleStateDirectoryBeforePlaintext(attestation, stateDirectory);
   const runtimeSource = readRuntimeBundlePlaintextAfterAuthority({
@@ -3714,7 +4307,7 @@ function readBundle(
     expectedGeneratedSecretDigestSetSha256:
       PREDECESSOR_ADOPTION_PINS.generatedSecretDigestSetSha256,
   });
-  if (attestationV3) {
+  if (attestationScopedSecrets) {
     const mutationSource = readPrivateFile(
       path.join(stateDirectory, SECRET_MUTATION_ENV_FILE),
       "successor secret mutation bundle",
@@ -3780,8 +4373,15 @@ function readBundle(
     || archiveStatus.nlink !== 1
     || (archiveStatus.mode & 0o777) !== 0o600
     || sha256(archiveBytes) !== attestation.sourceArchiveSha256
-    || archiveBytes.length !== expectedArchive.length
-    || !archiveBytes.equals(expectedArchive)
+    || (pinnedSourceArchiveSha256 === null
+      ? (
+        archiveBytes.length !== expectedArchive.length
+        || !archiveBytes.equals(expectedArchive)
+      )
+      : (
+        !SHA256.test(pinnedSourceArchiveSha256)
+        || attestation.sourceArchiveSha256 !== pinnedSourceArchiveSha256
+      ))
   ) refuse("source archive contract differs");
   const workdir = attestationV3 ? null : path.join(stateDirectory, DEPLOY_WORKDIR);
   if (!attestationV3) {
@@ -3792,12 +4392,12 @@ function readBundle(
       }
     }
   }
-  const secretMutationFile = attestationV3
+  const secretMutationFile = attestationScopedSecrets
     ? path.join(stateDirectory, SECRET_MUTATION_ENV_FILE)
     : runtimeFile;
   const runtimeMutationInput = captureRuntimeMutationInput(
     secretMutationFile,
-    attestationV3
+    attestationScopedSecrets
       ? attestation.runtimeMutationFileSha256
       : attestation.runtimeFileSha256,
   );
@@ -3819,7 +4419,7 @@ function readBundle(
     runtime: Object.freeze({ values, source: runtimeSource, names: attestation.secretNames }),
     runtimeFile,
     secretMutationFile,
-    secretMutation: attestationV3 ? Object.freeze({
+    secretMutation: attestationScopedSecrets ? Object.freeze({
       names: Object.freeze(attestation.mutationSecretNames),
       values: Object.freeze(Object.fromEntries(
         attestation.mutationSecretNames.map(name => [name, values[name]]),
@@ -4391,6 +4991,344 @@ function readTerminalDivergedPredecessorAdoption(input, release) {
   });
 }
 
+function readPartialSecretPredecessorAdoption(input, release, liveObservation) {
+  assertPairwiseDisjointDirectories([
+    { directory: input.stateDir, label: "new state directory" },
+    { directory: input.receiptDir, label: "new receipt directory" },
+    { directory: input.priorStateDir, label: "partial predecessor state directory" },
+    { directory: input.priorReceiptDir, label: "partial predecessor receipt directory" },
+  ]);
+  const stateDirectory = assertPrivateDirectory(
+    input.priorStateDir,
+    "partial predecessor state directory",
+  );
+  const receiptDirectory = assertPrivateDirectory(
+    input.priorReceiptDir,
+    "partial predecessor receipt directory",
+  );
+  assertPrivateFileMetadata(
+    input.priorReleaseProvenance,
+    "partial predecessor release provenance",
+  );
+  assertPrivateFileMetadata(
+    input.priorSourceCiReceipt,
+    "partial predecessor source-CI receipt",
+  );
+  const predecessorRoot = path.dirname(stateDirectory);
+  if (
+    path.dirname(receiptDirectory) !== predecessorRoot
+    || path.dirname(input.priorReleaseProvenance) !== predecessorRoot
+    || path.dirname(input.priorSourceCiReceipt) !== predecessorRoot
+  ) refuse("partial predecessor authority must share one exact root");
+  assertPrivateDirectory(predecessorRoot, "partial predecessor root");
+  const predecessorLeaseFile = operationLeaseFile(stateDirectory);
+  if (existsSync(predecessorLeaseFile)) {
+    refuse("partial predecessor operation lease is present");
+  }
+  const identityRecord = item => {
+    const status = lstatSync(item);
+    return Object.freeze({
+      realPath: realpathSync(item),
+      device: String(status.dev),
+      inode: String(status.ino),
+      mode: status.mode & 0o777,
+      owner: typeof process.getuid === "function" ? status.uid : null,
+    });
+  };
+  const identity = Object.freeze({
+    root: identityRecord(predecessorRoot),
+    stateDirectory: identityRecord(stateDirectory),
+    receiptDirectory: identityRecord(receiptDirectory),
+    provenanceFile: identityRecord(input.priorReleaseProvenance),
+    sourceCiReceiptFile: identityRecord(input.priorSourceCiReceipt),
+  });
+  readReceiptBinding(stateDirectory, receiptDirectory);
+  const pins = PARTIAL_SECRET_PREDECESSOR_PINS;
+  const receiptSources = [1, 2, 3].map(sequence => readPrivateFile(
+    path.join(receiptDirectory, `${String(sequence).padStart(6, "0")}.json`),
+    `partial predecessor receipt ${sequence}`,
+    256 * 1024,
+  ));
+  const chain = readReceiptChain(receiptDirectory, {
+    readOnly: true,
+    variant: "partial-secret-predecessor",
+  });
+  const [plan, secretIntent, effect] = chain;
+  if (
+    chain.length !== 3
+    || sha256(canonicalJson(chain)) !== pins.receiptChainSha256
+    || receiptSources[0] !== `${canonicalJson(plan)}\n`
+    || receiptSources[1] !== `${canonicalJson(secretIntent)}\n`
+    || receiptSources[2] !== `${canonicalJson(effect)}\n`
+    || sha256(receiptSources[0]) !== pins.planReceiptFileSha256
+    || sha256(receiptSources[1]) !== pins.secretIntentReceiptFileSha256
+    || sha256(receiptSources[2]) !== pins.secretResultReceiptFileSha256
+    || plan?.schemaVersion !== 3
+    || plan.kind !== "release-plan"
+    || plan.mutationScope !== "secrets-set"
+    || plan.receiptSha256 !== pins.planReceiptSha256
+    || plan.sourceCommitSha !== pins.sourceCommitSha
+    || plan.sourceTreeSha !== pins.sourceTreeSha
+    || plan.sourceDeploymentSha256 !== pins.sourceDeploymentSha256
+    || plan.releaseManifestSha256 !== pins.releaseManifestSha256
+    || plan.predecessorReceiptChainSha256
+      !== TERMINAL_DIVERGED_PREDECESSOR_PINS.receiptChainSha256
+    || secretIntent?.kind !== "mutation-intent"
+    || secretIntent.mutation !== "secrets-set"
+    || secretIntent.receiptSha256 !== pins.secretIntentReceiptSha256
+    || secretIntent.planReceiptSha256 !== plan.receiptSha256
+    || effect?.kind !== "mutation-result"
+    || effect.mutation !== "secrets-set"
+    || effect.status !== "verified"
+    || effect.receiptSha256 !== pins.secretResultReceiptSha256
+    || effect.intentReceiptSha256 !== secretIntent.receiptSha256
+    || effect.afterMainInventorySha256 !== pins.installedMainInventorySha256
+    || effect.semanticAfterMainInventorySha256
+      !== pins.installedSemanticMainInventorySha256
+    || effect.afterFinanceInventorySha256 !== pins.financeInventorySha256
+    || effect.afterFunctionInventorySha256 !== pins.installedFunctionInventorySha256
+    || effect.functionVersionTransitionDisposition
+      !== "exact-all-existing-plus-one"
+    || effect.hostedMutationCount !== 1
+    || effect.functionDeployCount !== 0
+    || chain.some(item => item.kind === "release-complete")
+    || input.priorEffectReceiptSha256 !== effect.receiptSha256
+  ) refuse("partial predecessor receipt chain differs");
+  const sourceCi = readPartialSecretPredecessorSourceCiReceipt(
+    input.priorSourceCiReceipt,
+  );
+  if (
+    sourceCi.receiptSha256 !== pins.sourceCiReceiptSha256
+    || sourceCi.fileSha256 !== pins.sourceCiReceiptFileSha256
+    || sourceCi.runId !== pins.sourceCiRunId
+    || sourceCi.verifyJobId !== pins.sourceCiJobId
+    || sourceCi.workflowBlob !== pins.sourceCiWorkflowBlobSha
+    || sourceCi.sourceCommit !== pins.sourceCommitSha
+    || sourceCi.sourceTree !== pins.sourceTreeSha
+    || String(sourceCi.runId) !== plan.sourceCiRunId
+  ) refuse("partial predecessor source-CI authority differs");
+  const provenanceSource = readPrivateFile(
+    input.priorReleaseProvenance,
+    "partial predecessor release provenance",
+    64 * 1024,
+  );
+  const provenance = validateMainFinanceRuntimeRecoveryV2ProvenanceSource(
+    provenanceSource,
+  );
+  if (
+    provenance.fileSha256 !== pins.provenanceFileSha256
+    || provenance.descriptorSha256 !== pins.provenanceDescriptorSha256
+    || provenance.expectedCommitSha !== pins.sourceCommitSha
+    || provenance.expectedTreeSha !== pins.sourceTreeSha
+    || provenance.githubRunId !== String(pins.sourceCiRunId)
+    || plan.sourceProvenanceFileSha256 !== provenance.fileSha256
+    || plan.sourceProvenanceDescriptorSha256 !== provenance.descriptorSha256
+  ) refuse("partial predecessor provenance differs");
+  const attestationSource = readPrivateFile(
+    path.join(stateDirectory, BUNDLE_ATTESTATION_FILE),
+    "partial predecessor bundle attestation",
+    64 * 1024,
+  );
+  const commitSource = readPrivateFile(
+    path.join(stateDirectory, BUNDLE_COMMIT_FILE),
+    "partial predecessor durable bundle commit",
+    16 * 1024,
+  );
+  const envelopeAttestation = readJsonSource(
+    attestationSource,
+    "partial predecessor bundle attestation",
+  );
+  const envelopeCommit = readJsonSource(
+    commitSource,
+    "partial predecessor durable bundle commit",
+  );
+  if (
+    sha256(attestationSource) !== pins.bundleAttestationFileSha256
+    || envelopeAttestation.attestationSha256 !== pins.bundleAttestationSha256
+    || sha256(commitSource) !== pins.bundleCommitFileSha256
+    || envelopeCommit.bundleCommitSha256 !== pins.bundleCommitSha256
+    || envelopeCommit.bundleAttestationSha256 !== envelopeAttestation.attestationSha256
+    || plan.bundleAttestationSha256 !== envelopeAttestation.attestationSha256
+  ) refuse("partial predecessor private bundle envelope differs");
+  const priorRelease = Object.freeze({
+    ...release,
+    manifest: Object.freeze({
+      ...release.manifest,
+      schemaVersion: 3,
+      deploymentClosureSetSha256: pins.sourceDeploymentSha256,
+    }),
+    manifestSha256: pins.releaseManifestSha256,
+  });
+  const priorSource = Object.freeze({
+    commit: pins.sourceCommitSha,
+    tree: pins.sourceTreeSha,
+  });
+  const bundle = readBundle(
+    stateDirectory,
+    priorRelease,
+    priorSource,
+    {
+      expectedAttestationSha256: pins.bundleAttestationSha256,
+      expectedPredecessorAdoption: plan.predecessorAdoption,
+      pinnedSourceArchiveSha256: pins.sourceArchiveSha256,
+      authorizeRuntimeRead: (attestation, preinstallInventories) => {
+        const functions = normalizeFunctionInventoryRows(preinstallInventories.functions);
+        const installedFunctions = normalizeFunctionInventoryRows(
+          expectedAllExistingPlusOneFunctionRows(functions.rows),
+        );
+        if (
+          liveObservation === null
+          || typeof liveObservation !== "object"
+          || liveObservation.first === liveObservation.second
+          || liveObservation.first?.inventories === liveObservation.second?.inventories
+          || liveObservation.first?.functions === liveObservation.second?.functions
+          || !(liveObservation.first?.inventories?.main instanceof Map)
+          || !(liveObservation.first?.inventories?.finance instanceof Map)
+          || !(liveObservation.second?.inventories?.main instanceof Map)
+          || !(liveObservation.second?.inventories?.finance instanceof Map)
+          || !Array.isArray(liveObservation.first?.functions?.rows)
+          || !Array.isArray(liveObservation.second?.functions?.rows)
+          || !inventoryIsUnchanged(
+            liveObservation.first?.inventories?.main,
+            liveObservation.second?.inventories?.main,
+          )
+          || !inventoryIsUnchanged(
+            liveObservation.first?.inventories?.finance,
+            liveObservation.second?.inventories?.finance,
+          )
+          || canonicalJson(liveObservation.first?.functions?.rows)
+            !== canonicalJson(liveObservation.second?.functions?.rows)
+          || liveObservation.second.inventories.mainInventorySha256
+            !== pins.installedMainInventorySha256
+          || semanticSecretInventorySha256(liveObservation.second.inventories.main)
+            !== pins.installedSemanticMainInventorySha256
+          || liveObservation.second.inventories.financeInventorySha256
+            !== pins.financeInventorySha256
+          || liveObservation.second.functions.sha256
+            !== pins.installedFunctionInventorySha256
+          || !inventoryMatchesSuccessorInstall(
+            preinstallInventories.main,
+            liveObservation.second.inventories.main,
+            attestation.mutationSecretDigests,
+            attestation.mutationSecretNames,
+          )
+          || !inventoryIsUnchanged(
+            preinstallInventories.finance,
+            liveObservation.second.inventories.finance,
+          )
+          || canonicalJson(liveObservation.second.functions.rows)
+            !== canonicalJson(installedFunctions.rows)
+        ) refuse("partial predecessor live A/B authority differs before plaintext read");
+        if (
+          attestation.attestationSha256 !== pins.bundleAttestationSha256
+          || attestation.runtimeFileSha256 !== pins.runtimeFileSha256
+          || attestation.sourceArchiveSha256 !== pins.sourceArchiveSha256
+          || attestation.preinstallMainInventorySha256
+            !== pins.preinstallMainInventorySha256
+          || attestation.preinstallFinanceInventorySha256
+            !== pins.financeInventorySha256
+          || attestation.preinstallFunctionInventorySha256
+            !== pins.preinstallFunctionInventorySha256
+          || sha256(canonicalJson(attestation.mutationSecretNames))
+            !== pins.mutationSecretNameSetSha256
+          || sha256(canonicalJson(attestation.mutationSecretDigests))
+            !== pins.mutationSecretDigestSetSha256
+          || installedFunctions.sha256 !== pins.installedFunctionInventorySha256
+          || effect.afterFunctionInventorySha256 !== installedFunctions.sha256
+          || secretIntent.expectedSecretDigestSetSha256
+            !== pins.mutationSecretDigestSetSha256
+        ) refuse("partial predecessor authority differs before runtime plaintext read");
+      },
+    },
+  );
+  const generatedNames = release.environment.generatedSecrets.map(item => item.name);
+  const generatedSecretValues = Object.freeze(Object.fromEntries(
+    generatedNames.map(name => [name, bundle.runtime.values[name]]),
+  ));
+  const generatedSecretDigests = Object.freeze(Object.fromEntries(
+    generatedNames.map(name => [name, sha256(generatedSecretValues[name])]),
+  ));
+  if (
+    sha256(canonicalJson(generatedSecretDigests))
+      !== pins.generatedSecretDigestSetSha256
+  ) refuse("partial predecessor generated-secret subset differs");
+  if (
+    existsSync(predecessorLeaseFile)
+    || canonicalJson(identity) !== canonicalJson(Object.freeze({
+      root: identityRecord(predecessorRoot),
+      stateDirectory: identityRecord(stateDirectory),
+      receiptDirectory: identityRecord(receiptDirectory),
+      provenanceFile: identityRecord(input.priorReleaseProvenance),
+      sourceCiReceiptFile: identityRecord(input.priorSourceCiReceipt),
+    }))
+    || receiptSources.some((source, index) => source !== readPrivateFile(
+      path.join(receiptDirectory, `${String(index + 1).padStart(6, "0")}.json`),
+      `partial predecessor receipt ${index + 1} recheck`,
+      256 * 1024,
+    ))
+  ) refuse("partial predecessor authority changed during plaintext adoption");
+  const summary = Object.freeze({
+    kind: "main-finance-runtime-recovery-v4-partial-secret-predecessor-adoption",
+    priorRootIdentitySha256: sha256(canonicalJson(identity)),
+    priorSourceCommitSha: pins.sourceCommitSha,
+    priorSourceTreeSha: pins.sourceTreeSha,
+    priorSourceDeploymentSha256: pins.sourceDeploymentSha256,
+    priorReleaseManifestSha256: pins.releaseManifestSha256,
+    priorSourceCiReceiptSha256: sourceCi.receiptSha256,
+    priorSourceCiReceiptFileSha256: sourceCi.fileSha256,
+    priorSourceCiRunId: String(sourceCi.runId),
+    priorSourceCiJobId: String(sourceCi.verifyJobId),
+    priorReleaseProvenanceFileSha256: provenance.fileSha256,
+    priorReleaseProvenanceDescriptorSha256: provenance.descriptorSha256,
+    priorPlanReceiptSha256: plan.receiptSha256,
+    priorPlanReceiptFileSha256: sha256(receiptSources[0]),
+    priorSecretIntentReceiptSha256: secretIntent.receiptSha256,
+    priorSecretIntentReceiptFileSha256: sha256(receiptSources[1]),
+    priorEffectReceiptSha256: effect.receiptSha256,
+    priorEffectReceiptFileSha256: sha256(receiptSources[2]),
+    priorReceiptChainSha256: sha256(canonicalJson(chain)),
+    priorBundleAttestationSha256: bundle.attestation.attestationSha256,
+    priorBundleAttestationFileSha256: sha256(attestationSource),
+    priorBundleCommitSha256: envelopeCommit.bundleCommitSha256,
+    priorBundleCommitFileSha256: sha256(commitSource),
+    priorRuntimeFileSha256: bundle.attestation.runtimeFileSha256,
+    priorSourceArchiveSha256: bundle.attestation.sourceArchiveSha256,
+    priorMutationSecretNameSetSha256:
+      sha256(canonicalJson(bundle.attestation.mutationSecretNames)),
+    priorMutationSecretDigestSetSha256:
+      sha256(canonicalJson(bundle.attestation.mutationSecretDigests)),
+    generatedSecretNames: Object.freeze(generatedNames),
+    generatedSecretDigestSetSha256: sha256(canonicalJson(generatedSecretDigests)),
+    preinstallMainInventorySha256: pins.preinstallMainInventorySha256,
+    installedMainInventorySha256: pins.installedMainInventorySha256,
+    installedSemanticMainInventorySha256: pins.installedSemanticMainInventorySha256,
+    stableFinanceInventorySha256: pins.financeInventorySha256,
+    preinstallFunctionInventorySha256: pins.preinstallFunctionInventorySha256,
+    installedFunctionInventorySha256: pins.installedFunctionInventorySha256,
+    installedFunctionCount: pins.functionCount,
+    functionVersionTransitionDisposition: "exact-all-existing-plus-one",
+    metadataOnlySecretNames: SUCCESSOR_METADATA_ONLY_SECRET_NAMES,
+    stableReadRounds: 2,
+    secretState: "state_satisfied",
+    hostedMutationCount: 1,
+    functionDeployCount: 0,
+    releaseCompleteObserved: false,
+    causalAttribution: false,
+  });
+  validatePredecessorAdoptionEvidence(summary);
+  return Object.freeze({
+    bundle,
+    generatedSecretValues,
+    generatedSecretDigests,
+    summary,
+    identity,
+    chain,
+    installedFunctionRows: expectedAllExistingPlusOneFunctionRows(
+      bundle.preinstallInventories.functions,
+    ),
+  });
+}
+
 function exactSuccessorPredecessorAdoption(predecessor) {
   const observedFunctions = normalizeFunctionInventoryRows(
     expectedMainFinanceRuntimeRecoveryV2PostSecretFunctionRows(
@@ -4453,7 +5391,8 @@ function readReceiptChain(
   directory,
   { readOnly = false, variant = "current" } = {},
 ) {
-  if (!["current", "pinned-predecessor", "terminal-diverged-predecessor"]
+  if (!["current", "pinned-predecessor", "terminal-diverged-predecessor",
+    "partial-secret-predecessor"]
     .includes(variant)) {
     refuse("receipt chain schema variant differs");
   }
@@ -4503,7 +5442,7 @@ function readReceiptChain(
       const receipt = readJsonSource(source, "receipt");
       const { receiptSha256, ...core } = receipt;
       if (
-      ![2, 3].includes(receipt.schemaVersion)
+      ![2, 3, 4].includes(receipt.schemaVersion)
         || receipt.sequence !== index + 1
         || receipt.previousReceiptSha256 !== previous
         || receipt.productionDenied !== true
@@ -4565,6 +5504,7 @@ function receiptSchemaVersion(fields, chain) {
     ? fields.predecessorAdoption
     : [...chain].reverse().find(item => item.kind === "release-plan")
       ?.predecessorAdoption;
+  if (isPartialSecretPredecessorAdoption(adoption)) return 4;
   return isTerminalDivergedPredecessorAdoption(adoption) ? 3 : 2;
 }
 
@@ -4810,6 +5750,100 @@ function validateFunctionVersionTransitionEvidence(value, label) {
 
 function validatePredecessorAdoptionEvidence(value) {
   if (value === null) refuse("predecessor adoption evidence is absent");
+  if (isPartialSecretPredecessorAdoption(value)) {
+    exactKeys(value, [
+      "kind", "priorRootIdentitySha256", "priorSourceCommitSha",
+      "priorSourceTreeSha", "priorSourceDeploymentSha256",
+      "priorReleaseManifestSha256", "priorSourceCiReceiptSha256",
+      "priorSourceCiReceiptFileSha256", "priorSourceCiRunId",
+      "priorSourceCiJobId", "priorReleaseProvenanceFileSha256",
+      "priorReleaseProvenanceDescriptorSha256", "priorPlanReceiptSha256",
+      "priorPlanReceiptFileSha256", "priorSecretIntentReceiptSha256",
+      "priorSecretIntentReceiptFileSha256", "priorEffectReceiptSha256",
+      "priorEffectReceiptFileSha256", "priorReceiptChainSha256",
+      "priorBundleAttestationSha256", "priorBundleAttestationFileSha256",
+      "priorBundleCommitSha256", "priorBundleCommitFileSha256",
+      "priorRuntimeFileSha256", "priorSourceArchiveSha256",
+      "priorMutationSecretNameSetSha256",
+      "priorMutationSecretDigestSetSha256", "generatedSecretNames",
+      "generatedSecretDigestSetSha256", "preinstallMainInventorySha256",
+      "installedMainInventorySha256", "installedSemanticMainInventorySha256",
+      "stableFinanceInventorySha256", "preinstallFunctionInventorySha256",
+      "installedFunctionInventorySha256", "installedFunctionCount",
+      "functionVersionTransitionDisposition", "metadataOnlySecretNames",
+      "stableReadRounds", "secretState", "hostedMutationCount",
+      "functionDeployCount", "releaseCompleteObserved", "causalAttribution",
+    ], "partial-secret predecessor adoption evidence");
+    const pins = PARTIAL_SECRET_PREDECESSOR_PINS;
+    if (
+      value.kind
+        !== "main-finance-runtime-recovery-v4-partial-secret-predecessor-adoption"
+      || !SHA256.test(value.priorRootIdentitySha256 ?? "")
+      || value.priorSourceCommitSha !== pins.sourceCommitSha
+      || value.priorSourceTreeSha !== pins.sourceTreeSha
+      || value.priorSourceDeploymentSha256 !== pins.sourceDeploymentSha256
+      || value.priorReleaseManifestSha256 !== pins.releaseManifestSha256
+      || value.priorSourceCiReceiptSha256 !== pins.sourceCiReceiptSha256
+      || value.priorSourceCiReceiptFileSha256
+        !== pins.sourceCiReceiptFileSha256
+      || value.priorSourceCiRunId !== String(pins.sourceCiRunId)
+      || value.priorSourceCiJobId !== String(pins.sourceCiJobId)
+      || value.priorReleaseProvenanceFileSha256 !== pins.provenanceFileSha256
+      || value.priorReleaseProvenanceDescriptorSha256
+        !== pins.provenanceDescriptorSha256
+      || value.priorPlanReceiptSha256 !== pins.planReceiptSha256
+      || value.priorPlanReceiptFileSha256 !== pins.planReceiptFileSha256
+      || value.priorSecretIntentReceiptSha256 !== pins.secretIntentReceiptSha256
+      || value.priorSecretIntentReceiptFileSha256
+        !== pins.secretIntentReceiptFileSha256
+      || value.priorEffectReceiptSha256 !== pins.secretResultReceiptSha256
+      || value.priorEffectReceiptFileSha256
+        !== pins.secretResultReceiptFileSha256
+      || value.priorReceiptChainSha256 !== pins.receiptChainSha256
+      || value.priorBundleAttestationSha256 !== pins.bundleAttestationSha256
+      || value.priorBundleAttestationFileSha256
+        !== pins.bundleAttestationFileSha256
+      || value.priorBundleCommitSha256 !== pins.bundleCommitSha256
+      || value.priorBundleCommitFileSha256 !== pins.bundleCommitFileSha256
+      || value.priorRuntimeFileSha256 !== pins.runtimeFileSha256
+      || value.priorSourceArchiveSha256 !== pins.sourceArchiveSha256
+      || value.priorMutationSecretNameSetSha256
+        !== pins.mutationSecretNameSetSha256
+      || value.priorMutationSecretDigestSetSha256
+        !== pins.mutationSecretDigestSetSha256
+      || value.generatedSecretDigestSetSha256
+        !== pins.generatedSecretDigestSetSha256
+      || value.preinstallMainInventorySha256
+        !== pins.preinstallMainInventorySha256
+      || value.installedMainInventorySha256
+        !== pins.installedMainInventorySha256
+      || value.installedSemanticMainInventorySha256
+        !== pins.installedSemanticMainInventorySha256
+      || value.stableFinanceInventorySha256 !== pins.financeInventorySha256
+      || value.preinstallFunctionInventorySha256
+        !== pins.preinstallFunctionInventorySha256
+      || value.installedFunctionInventorySha256
+        !== pins.installedFunctionInventorySha256
+      || value.installedFunctionCount !== pins.functionCount
+      || value.functionVersionTransitionDisposition
+        !== "exact-all-existing-plus-one"
+      || canonicalJson(value.generatedSecretNames) !== canonicalJson([
+        "MAIN_FINANCE_ACCESS_OPERATOR_SECRET_V2",
+        "MAIN_FINANCE_SYNC_TRIGGER_SECRET",
+      ])
+      || canonicalJson(value.metadataOnlySecretNames)
+        !== canonicalJson(SUCCESSOR_METADATA_ONLY_SECRET_NAMES)
+      || value.stableReadRounds !== 2
+      || value.secretState !== "state_satisfied"
+      || value.hostedMutationCount !== 1
+      || value.functionDeployCount !== 0
+      || value.releaseCompleteObserved !== false
+      || value.causalAttribution !== false
+      || Object.entries(value).some(([key, item]) =>
+        key.toLowerCase().includes("sha256") && !SHA256.test(item ?? ""))
+    ) refuse("partial-secret predecessor adoption evidence differs");
+    return;
+  }
   if (isTerminalDivergedPredecessorAdoption(value)) {
     exactKeys(value, [
       "kind", "priorRootIdentitySha256", "priorSourceCommitSha",
@@ -4940,6 +5974,19 @@ function assertSuccessorPredecessorBaselineHashes({
   label,
 }) {
   validatePredecessorAdoptionEvidence(predecessorAdoption);
+  if (isPartialSecretPredecessorAdoption(predecessorAdoption)) {
+    if (
+      mainInventorySha256 !== PARTIAL_SECRET_PREDECESSOR_PINS.installedMainInventorySha256
+      || financeInventorySha256 !== PARTIAL_SECRET_PREDECESSOR_PINS.financeInventorySha256
+      || functionInventorySha256
+        !== PARTIAL_SECRET_PREDECESSOR_PINS.installedFunctionInventorySha256
+      || functionInventorySha256
+        !== predecessorAdoption.installedFunctionInventorySha256
+      || functionCount !== PARTIAL_SECRET_PREDECESSOR_PINS.functionCount
+      || functionCount !== predecessorAdoption.installedFunctionCount
+    ) refuse(`${label} differs from the exact partial-secret predecessor subject`);
+    return;
+  }
   if (isTerminalDivergedPredecessorAdoption(predecessorAdoption)) {
     if (
       mainInventorySha256
@@ -5000,12 +6047,941 @@ function assertSuccessorPredecessorBaselineBinding(
   });
 }
 
+function schema4PlanForReceipt(prior, receipt) {
+  if (receipt.kind === "release-plan") return receipt;
+  const plan = [...prior].reverse().find(item => item.kind === "release-plan");
+  if (!plan || plan.schemaVersion !== 4) refuse("schema-4 current plan is absent");
+  return plan;
+}
+
+function validateSchema4TargetRow(row, label) {
+  const normalized = normalizeFunctionInventoryRows([row]);
+  if (normalized.target === null || normalized.rows.length !== 1) {
+    refuse(`${label} differs`);
+  }
+  return normalized.target;
+}
+
+function schema4StableSnapshotVector(value) {
+  return Object.freeze({
+    descriptorSha256: value.descriptorSha256 ?? value.descriptor_sha256,
+    stateSha256: value.stateSha256 ?? value.state_sha256,
+    catalogSha256: value.catalogSha256 ?? value.catalog_sha256,
+    gateInventorySha256:
+      value.gateInventorySha256 ?? value.gate_inventory_sha256,
+    privacyInventorySha256:
+      value.privacyInventorySha256 ?? value.privacy_secret_inventory_sha256,
+    checkedCount: value.checkedCount ?? value.checked_count,
+  });
+}
+
+function schema4HostedBookendsMatch(firstSource, first, secondSource, second) {
+  return canonicalJson(firstSource) === canonicalJson(secondSource)
+    && firstSource.hostedSourceClosureReadRounds === 2
+    && secondSource.hostedSourceClosureReadRounds === 2
+    && first.d1MainInventorySha256 === second.d0MainInventorySha256
+    && second.d0MainInventorySha256 === second.d1MainInventorySha256
+    && first.d1FinanceInventorySha256 === second.d0FinanceInventorySha256
+    && second.d0FinanceInventorySha256 === second.d1FinanceInventorySha256
+    && first.d1FunctionInventorySha256 === second.d0FunctionInventorySha256
+    && second.d0FunctionInventorySha256 === second.d1FunctionInventorySha256
+    && canonicalJson(schema4StableSnapshotVector(first.d1))
+      === canonicalJson(schema4StableSnapshotVector(second.d0))
+    && canonicalJson(schema4StableSnapshotVector(second.d0))
+      === canonicalJson(schema4StableSnapshotVector(second.d1))
+    && canonicalJson(inventoryCore(first.inventories.main))
+      === canonicalJson(inventoryCore(second.inventories.main))
+    && canonicalJson(inventoryCore(first.inventories.finance))
+      === canonicalJson(inventoryCore(second.inventories.finance))
+    && canonicalJson(first.functionInventory.rows)
+      === canonicalJson(second.functionInventory.rows)
+    && Date.parse(second.d0.database_clock) > Date.parse(first.d1.database_clock);
+}
+
+function validateSchema4SandwichEvidence(receipt, label) {
+  for (const key of ["d0", "d1"]) {
+    validateSafeSnapshotEvidence(receipt[key], `${label} ${key.toUpperCase()}`);
+  }
+  exactKeys(receipt.hostedProof, [
+    "responseSha256", "proofSha256", "attestedAt", "checkedCount",
+    "mismatchCount", "stateSha256",
+  ], `${label} hosted proof`);
+  if (
+    !canonicalTimestamp(receipt.hostedProof.attestedAt)
+    || !SHA256.test(receipt.hostedProof.responseSha256 ?? "")
+    || !SHA256.test(receipt.hostedProof.proofSha256 ?? "")
+    || !SHA256.test(receipt.hostedProof.stateSha256 ?? "")
+    || receipt.hostedProof.checkedCount !== receipt.d0.checkedCount
+    || receipt.hostedProof.mismatchCount !== 0
+    || receipt.hostedProof.stateSha256 !== receipt.d0.stateSha256
+    || Date.parse(receipt.d0.databaseClock) >= Date.parse(receipt.hostedProof.attestedAt)
+    || Date.parse(receipt.hostedProof.attestedAt) >= Date.parse(receipt.d1.databaseClock)
+  ) refuse(`${label} hosted sandwich differs`);
+  if (
+    canonicalJson(schema4StableSnapshotVector(receipt.d0))
+      !== canonicalJson(schema4StableSnapshotVector(receipt.d1))
+    || receipt.d0.responseSha256 === receipt.d1.responseSha256
+    || !SHA256.test(receipt.d0MainInventorySha256 ?? "")
+    || !SHA256.test(receipt.d0FinanceInventorySha256 ?? "")
+    || !SHA256.test(receipt.d0FunctionInventorySha256 ?? "")
+    || receipt.d0MainInventorySha256 !== receipt.d1MainInventorySha256
+    || receipt.d0FinanceInventorySha256 !== receipt.d1FinanceInventorySha256
+    || receipt.d0FunctionInventorySha256 !== receipt.d1FunctionInventorySha256
+    || Date.parse(receipt.recordedAt) <= Date.parse(receipt.d1.databaseClock)
+  ) refuse(`${label} stable hosted inventory differs`);
+}
+
+function validateSchema4ReceiptSemantic(receipt, prior) {
+  const common = [
+    "schemaVersion", "sequence", "previousReceiptSha256", "productionDenied",
+    "kind", "environment", "recordedAt", "receiptSha256",
+  ];
+  const exact = keys => exactKeys(
+    receipt,
+    [...common, ...keys],
+    `schema-4 ${receipt.kind} receipt`,
+  );
+  if (
+    receipt.schemaVersion !== 4
+    || receipt.environment !== "staging"
+    || receipt.productionDenied !== true
+    || receipt.productionTouched !== false
+    || prior.some(item => item.kind === "release-complete")
+  ) refuse("schema-4 receipt envelope differs");
+  if (prior.some(item => item.schemaVersion !== 4)) {
+    refuse("schema-4 chain cannot mix receipt schemas");
+  }
+  if (receipt.kind === "release-plan") {
+    exact([
+      "status", "expiresAt", "mainProjectRef", "financeProjectRef",
+      "sourceCommitSha", "sourceTreeSha", "sourceParentSha", "baseTreeSha",
+      "changedPaths", "changedPathSetSha256", "trackedFileCount",
+      "workflowBlobSha", "sourceCiRunId", "sourceCiRunApiSha256",
+      "sourceCiJobsApiSha256", "sourceCiBranchApiSha256",
+      "sourceCiReceiptSha256", "sourceCiReceiptFileSha256",
+      "sourceProvenanceFileSha256", "sourceProvenanceDescriptorSha256",
+      "releaseManifestSha256", "sourceDeploymentSha256",
+      "bundleAttestationSha256", "sourceArchiveSha256", "supabaseArchiveSha256",
+      "operatorDescriptorFileSha256", "operatorDescriptorSha256",
+      "expectedHostedSourceClosureSha256",
+      "runtimeMutationInputSha256", "runtimeCommandArgsSha256",
+      "deployMutationInputSha256", "deployCommandArgsSha256",
+      "productionBoundarySha256", "targetDescriptorSha256",
+      "mainInventorySha256", "semanticMainInventorySha256",
+      "financeInventorySha256", "functionInventorySha256",
+      "mainInventoryRows", "functionInventoryRows", "targetFunctionRow",
+      "predecessorMainInventoryRows",
+      "mutationSecretDigests", "expectedPostSecretSemanticMainInventorySha256",
+      "snapshot", "mutationScope", "resumeFromReceiptSha256",
+      "freshPlanOrdinal", "ownerApprovalOrdinal", "mutationSecretNames",
+      "mutationSecretNameSetSha256", "mutationSecretDigestSetSha256",
+      "metadataOnlySecretNames", "metadataOnlySecretNameSetSha256",
+      "predecessorReceiptChainSha256", "predecessorAdoption",
+      "targetTransitionDisposition", "plannedHostedMutationCount",
+      "hostedMutationCount", "functionDeployCount", "automaticRetryPerformed",
+      "productionTouched",
+    ]);
+    validateReceiptSourceEvidence(
+      receipt,
+      false,
+      PARTIAL_SECRET_PREDECESSOR_PINS.sourceCommitSha,
+      PARTIAL_SECRET_PREDECESSOR_PINS.sourceTreeSha,
+    );
+    validateSafeSnapshotEvidence(receipt.snapshot, "schema-4 release plan snapshot");
+    validatePredecessorAdoptionEvidence(receipt.predecessorAdoption);
+    validateSchema4TargetRow(receipt.targetFunctionRow, "schema-4 plan target row");
+    const planFunctions = normalizeFunctionInventoryRows(receipt.functionInventoryRows);
+    const planMain = normalizeReceiptSecretInventoryRows(
+      receipt.mainInventoryRows,
+      "schema-4 plan Main inventory",
+    );
+    const predecessorMain = normalizeReceiptSecretInventoryRows(
+      receipt.predecessorMainInventoryRows,
+      "schema-4 predecessor Main inventory",
+    );
+    const expectedPostSecretSemanticMainInventorySha256 =
+      expectedInstalledSemanticMainInventorySha256(
+        predecessorMain.inventory,
+        receipt.mutationSecretDigests,
+        receipt.mutationSecretNames,
+      );
+    if (
+      receipt.status !== "pending"
+      || !canonicalTimestamp(receipt.expiresAt)
+      || Date.parse(receipt.expiresAt) <= Date.parse(receipt.recordedAt)
+      || Date.parse(receipt.expiresAt) - Date.parse(receipt.recordedAt) > 240_000
+      || Date.parse(receipt.snapshot.databaseClock)
+        > Date.parse(receipt.recordedAt) + 30_000
+      || Date.parse(receipt.expiresAt)
+        > Date.parse(receipt.snapshot.databaseClock) + 300_000
+      || receipt.mainProjectRef !== MAIN_REF
+      || receipt.financeProjectRef !== FINANCE_REF
+      || !SCHEMA4_PLAN_SCOPES.includes(receipt.mutationScope)
+      || receipt.freshPlanOrdinal !== (receipt.mutationScope === "secrets-set" ? 1 : 2)
+      || receipt.ownerApprovalOrdinal !== receipt.freshPlanOrdinal
+      || canonicalJson(receipt.mutationSecretNames)
+        !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+      || receipt.mutationSecretNameSetSha256
+        !== sha256(canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES))
+      || !validSuccessorMutationSecretDigestMap(
+        receipt.mutationSecretDigests,
+        SUCCESSOR_SECRET_MUTATION_NAMES,
+      )
+      || canonicalJson(receipt.mutationSecretDigests)
+        !== canonicalJson(expectedSchema4MutationSecretDigests(receipt))
+      || receipt.mutationSecretDigestSetSha256
+        !== sha256(canonicalJson(receipt.mutationSecretDigests))
+      || receipt.expectedPostSecretSemanticMainInventorySha256
+        !== expectedPostSecretSemanticMainInventorySha256
+      || receipt.expectedHostedSourceClosureSha256
+        !== SCHEMA4_HOSTED_SOURCE_CLOSURE_SHA256
+      || !SHA256.test(receipt.mutationSecretDigestSetSha256 ?? "")
+      || canonicalJson(receipt.metadataOnlySecretNames)
+        !== canonicalJson(SUCCESSOR_METADATA_ONLY_SECRET_NAMES)
+      || receipt.metadataOnlySecretNameSetSha256
+        !== sha256(canonicalJson(SUCCESSOR_METADATA_ONLY_SECRET_NAMES))
+      || receipt.predecessorReceiptChainSha256
+        !== PARTIAL_SECRET_PREDECESSOR_PINS.receiptChainSha256
+      || !isPartialSecretPredecessorAdoption(receipt.predecessorAdoption)
+      || receipt.targetTransitionDisposition !== SCHEMA4_TARGET_TRANSITION
+      || receipt.plannedHostedMutationCount !== 1
+      || receipt.hostedMutationCount !== (receipt.mutationScope === "secrets-set" ? 0 : 1)
+      || receipt.functionDeployCount !== 0
+      || receipt.automaticRetryPerformed !== false
+      || planMain.sha256 !== receipt.mainInventorySha256
+      || planMain.semanticSha256 !== receipt.semanticMainInventorySha256
+      || planFunctions.sha256 !== receipt.functionInventorySha256
+      || canonicalJson(planFunctions.target)
+        !== canonicalJson(receipt.targetFunctionRow)
+      || [
+        receipt.sourceCiRunApiSha256, receipt.sourceCiJobsApiSha256,
+        receipt.sourceCiBranchApiSha256, receipt.sourceCiReceiptSha256,
+        receipt.sourceCiReceiptFileSha256, receipt.sourceProvenanceFileSha256,
+        receipt.sourceProvenanceDescriptorSha256, receipt.releaseManifestSha256,
+        receipt.sourceDeploymentSha256, receipt.bundleAttestationSha256,
+        receipt.sourceArchiveSha256, receipt.supabaseArchiveSha256,
+        receipt.operatorDescriptorFileSha256, receipt.operatorDescriptorSha256,
+        receipt.runtimeMutationInputSha256, receipt.runtimeCommandArgsSha256,
+        receipt.deployMutationInputSha256, receipt.deployCommandArgsSha256,
+        receipt.productionBoundarySha256, receipt.targetDescriptorSha256,
+        receipt.mainInventorySha256, receipt.semanticMainInventorySha256,
+        receipt.financeInventorySha256, receipt.functionInventorySha256,
+      ].some(value => !SHA256.test(value ?? ""))
+    ) refuse("schema-4 release plan evidence differs");
+    const earlierPlans = prior.filter(item => item.kind === "release-plan");
+    if (receipt.mutationScope === "secrets-set") {
+      if (
+        receipt.resumeFromReceiptSha256 !== null
+        || earlierPlans.length !== 0
+        || prior.length !== 0
+        || receipt.mainInventorySha256
+          !== PARTIAL_SECRET_PREDECESSOR_PINS.installedMainInventorySha256
+        || receipt.semanticMainInventorySha256
+          !== PARTIAL_SECRET_PREDECESSOR_PINS.installedSemanticMainInventorySha256
+        || predecessorMain.sha256 !== receipt.mainInventorySha256
+        || predecessorMain.semanticSha256 !== receipt.semanticMainInventorySha256
+        || receipt.financeInventorySha256
+          !== PARTIAL_SECRET_PREDECESSOR_PINS.financeInventorySha256
+        || receipt.functionInventorySha256
+          !== PARTIAL_SECRET_PREDECESSOR_PINS.installedFunctionInventorySha256
+      ) refuse("schema-4 initial plan baseline differs");
+    } else {
+      const initialPlan = earlierPlans[0];
+      const cause = prior.at(-1);
+      const eligibleCause = (
+        cause?.kind === "mutation-result"
+        && cause.mutation === "secrets-set"
+        && cause.status === "verified"
+      ) || (
+        cause?.kind === "reconciliation"
+        && cause.mutation === "secrets-set"
+        && cause.outcome === "state_satisfied"
+      );
+      if (
+        earlierPlans.length !== 1
+        || initialPlan?.mutationScope !== "secrets-set"
+        || !eligibleCause
+        || receipt.resumeFromReceiptSha256 !== cause.receiptSha256
+        || receipt.bundleAttestationSha256 !== initialPlan.bundleAttestationSha256
+        || canonicalJson(receipt.predecessorAdoption)
+          !== canonicalJson(initialPlan.predecessorAdoption)
+        || receipt.mainInventorySha256 !== (cause.afterMainInventorySha256
+          ?? cause.mainInventorySha256)
+        || receipt.semanticMainInventorySha256 !== (
+          cause.semanticAfterMainInventorySha256
+          ?? cause.semanticMainInventorySha256
+        )
+        || receipt.financeInventorySha256 !== (cause.afterFinanceInventorySha256
+          ?? cause.financeInventorySha256)
+        || receipt.functionInventorySha256 !== (cause.afterFunctionInventorySha256
+          ?? cause.functionInventorySha256)
+        || canonicalJson(receipt.functionInventoryRows)
+          !== canonicalJson(cause.afterFunctionInventoryRows)
+        || canonicalJson(receipt.mainInventoryRows)
+          !== canonicalJson(cause.afterMainInventoryRows)
+      ) refuse("schema-4 resume deploy plan binding differs");
+      for (const key of [
+        "sourceCommitSha", "sourceTreeSha", "sourceParentSha", "baseTreeSha",
+        "changedPaths", "changedPathSetSha256", "trackedFileCount",
+        "workflowBlobSha", "sourceCiRunId", "sourceCiRunApiSha256",
+        "sourceCiJobsApiSha256", "sourceCiBranchApiSha256",
+        "sourceCiReceiptSha256", "sourceCiReceiptFileSha256",
+        "sourceProvenanceFileSha256", "sourceProvenanceDescriptorSha256",
+        "releaseManifestSha256", "sourceDeploymentSha256",
+        "sourceArchiveSha256", "supabaseArchiveSha256",
+        "operatorDescriptorFileSha256", "operatorDescriptorSha256",
+        "expectedHostedSourceClosureSha256",
+        "runtimeMutationInputSha256", "runtimeCommandArgsSha256",
+        "deployMutationInputSha256", "deployCommandArgsSha256",
+        "productionBoundarySha256", "targetDescriptorSha256",
+        "mutationSecretNames", "mutationSecretNameSetSha256",
+        "mutationSecretDigestSetSha256", "mutationSecretDigests",
+        "predecessorMainInventoryRows",
+        "expectedPostSecretSemanticMainInventorySha256", "metadataOnlySecretNames",
+        "metadataOnlySecretNameSetSha256", "predecessorReceiptChainSha256",
+        "targetTransitionDisposition", "plannedHostedMutationCount",
+        "automaticRetryPerformed",
+      ]) {
+        if (canonicalJson(receipt[key]) !== canonicalJson(initialPlan[key])) {
+          refuse(`schema-4 resume plan ${key} binding differs`);
+        }
+      }
+    }
+    return;
+  }
+  if (receipt.kind === "mutation-intent") {
+    const plan = schema4PlanForReceipt(prior, receipt);
+    const base = [
+      "mutation", "status", "planReceiptSha256", "beforeMainInventorySha256",
+      "beforeMainInventoryRows",
+      "semanticBeforeMainInventorySha256", "beforeFinanceInventorySha256",
+      "beforeFunctionInventorySha256", "beforeTargetFunctionRow",
+      "expectedPostSecretSemanticMainInventorySha256",
+      "expectedHostedSourceClosureSha256",
+      "sourceDeploymentSha256", "mutationInputSha256", "commandArgsSha256",
+      "hostedMutationCount", "functionDeployCount", "automaticRetryPerformed",
+      "productionTouched",
+    ];
+    exact(receipt.mutation === "secrets-set" ? [
+      ...base, "beforeFunctionInventoryRows",
+      "expectedSecretDigestSetSha256", "secretNames",
+      "mutationSecretNameSetSha256", "metadataOnlySecretNameSetSha256",
+      "predecessorReceiptChainSha256", "allowedPostSecretFunctionDispositions",
+    ] : [...base, "beforeFunctionInventoryRows", "targetTransitionDisposition"]);
+    validateSchema4TargetRow(receipt.beforeTargetFunctionRow, "schema-4 intent target row");
+    const intentFunctions = normalizeFunctionInventoryRows(
+      receipt.beforeFunctionInventoryRows,
+    );
+    const previousSameMutation = prior.some(item =>
+      item.sequence > plan.sequence
+      && item.mutation === receipt.mutation
+      && ["mutation-intent", "mutation-result", "reconciliation"].includes(item.kind));
+    if (
+      receipt.status !== "pending"
+      || !SCHEMA4_PLAN_SCOPES.includes(receipt.mutation)
+      || plan.mutationScope !== receipt.mutation
+      || receipt.planReceiptSha256 !== plan.receiptSha256
+      || prior.at(-1)?.receiptSha256 !== plan.receiptSha256
+      || Date.parse(receipt.recordedAt) >= Date.parse(plan.expiresAt)
+      || previousSameMutation
+      || receipt.beforeMainInventorySha256 !== plan.mainInventorySha256
+      || canonicalJson(receipt.beforeMainInventoryRows)
+        !== canonicalJson(plan.mainInventoryRows)
+      || receipt.semanticBeforeMainInventorySha256 !== plan.semanticMainInventorySha256
+      || receipt.beforeFinanceInventorySha256 !== plan.financeInventorySha256
+      || receipt.beforeFunctionInventorySha256 !== plan.functionInventorySha256
+      || receipt.expectedPostSecretSemanticMainInventorySha256
+        !== plan.expectedPostSecretSemanticMainInventorySha256
+      || receipt.expectedHostedSourceClosureSha256
+        !== plan.expectedHostedSourceClosureSha256
+      || intentFunctions.sha256 !== receipt.beforeFunctionInventorySha256
+      || canonicalJson(intentFunctions.rows)
+        !== canonicalJson(plan.functionInventoryRows)
+      || canonicalJson(receipt.beforeTargetFunctionRow)
+        !== canonicalJson(plan.targetFunctionRow)
+      || receipt.sourceDeploymentSha256 !== plan.sourceDeploymentSha256
+      || receipt.mutationInputSha256 !== (receipt.mutation === "secrets-set"
+        ? plan.runtimeMutationInputSha256 : plan.deployMutationInputSha256)
+      || receipt.commandArgsSha256 !== (receipt.mutation === "secrets-set"
+        ? plan.runtimeCommandArgsSha256 : plan.deployCommandArgsSha256)
+      || receipt.hostedMutationCount !== (receipt.mutation === "secrets-set" ? 0 : 1)
+      || receipt.functionDeployCount !== 0
+      || receipt.automaticRetryPerformed !== false
+    ) refuse("schema-4 mutation intent evidence differs");
+    if (receipt.mutation === "secrets-set" && (
+      canonicalJson(receipt.secretNames) !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+      || receipt.expectedSecretDigestSetSha256 !== plan.mutationSecretDigestSetSha256
+      || receipt.mutationSecretNameSetSha256 !== plan.mutationSecretNameSetSha256
+      || receipt.metadataOnlySecretNameSetSha256 !== plan.metadataOnlySecretNameSetSha256
+      || receipt.predecessorReceiptChainSha256 !== plan.predecessorReceiptChainSha256
+      || canonicalJson(receipt.allowedPostSecretFunctionDispositions)
+        !== canonicalJson(["unchanged", "exact-all-existing-plus-one"])
+    )) refuse("schema-4 exact-four secret intent differs");
+    if (
+      receipt.mutation === "function-deploy"
+      && (
+        receipt.targetTransitionDisposition !== SCHEMA4_TARGET_TRANSITION
+        || normalizeFunctionInventoryRows(receipt.beforeFunctionInventoryRows).sha256
+          !== receipt.beforeFunctionInventorySha256
+        || canonicalJson(
+          normalizeFunctionInventoryRows(receipt.beforeFunctionInventoryRows).target,
+        ) !== canonicalJson(receipt.beforeTargetFunctionRow)
+      )
+    ) refuse("schema-4 target deploy intent differs");
+    return;
+  }
+  if (receipt.kind === "mutation-result") {
+    const intent = prior.at(-1);
+    if (
+      intent?.kind !== "mutation-intent"
+      || intent.mutation !== receipt.mutation
+      || receipt.intentReceiptSha256 !== intent.receiptSha256
+      || receipt.automaticRetryPerformed !== false
+    ) refuse("schema-4 mutation result cause differs");
+    if (receipt.status === "not_invoked") {
+      exact([
+        "mutation", "status", "intentReceiptSha256", "reasonCode",
+        "invocationAttempted", "reconcileRequired", "hostedMutationCount",
+        "functionDeployCount", "automaticRetryPerformed", "productionTouched",
+      ]);
+      if (
+        !SCHEMA4_PLAN_SCOPES.includes(receipt.mutation)
+        || receipt.reasonCode !== "pre-invocation-authority-refused"
+        || receipt.invocationAttempted !== false
+        || receipt.reconcileRequired !== false
+        || receipt.hostedMutationCount !== (receipt.mutation === "secrets-set" ? 0 : 1)
+        || receipt.functionDeployCount !== 0
+        || receipt.automaticRetryPerformed !== false
+      ) refuse("schema-4 not-invoked terminal result differs");
+      return;
+    }
+    if (receipt.status === "invocation_unproven") {
+      exact([
+        "mutation", "status", "intentReceiptSha256", "reasonCode",
+        "invocationAttempted", "reconcileRequired", "hostedMutationCount",
+        "functionDeployCount", "automaticRetryPerformed", "productionTouched",
+      ]);
+      if (
+        !SCHEMA4_PLAN_SCOPES.includes(receipt.mutation)
+        || receipt.reasonCode !== "pending-intent-crash-boundary"
+        || receipt.invocationAttempted !== "unproven"
+        || receipt.reconcileRequired !== false
+        || receipt.hostedMutationCount !== (receipt.mutation === "secrets-set" ? 0 : 1)
+        || receipt.functionDeployCount !== 0
+        || receipt.automaticRetryPerformed !== false
+      ) refuse("schema-4 unproven invocation terminal result differs");
+      return;
+    }
+    if (receipt.status === "unknown") {
+      exact([
+        "mutation", "status", "intentReceiptSha256", "responseStatus",
+        "invocationAttempted", "reconcileRequired", "automaticRetryPerformed",
+        "hostedMutationCount", "functionDeployCount", "productionTouched",
+      ]);
+      if (
+        !SCHEMA4_PLAN_SCOPES.includes(receipt.mutation)
+        || !(receipt.responseStatus === null
+          || (Number.isSafeInteger(receipt.responseStatus)
+            && receipt.responseStatus >= 100 && receipt.responseStatus <= 599))
+        || receipt.invocationAttempted !== true
+        || receipt.reconcileRequired !== true
+        || receipt.hostedMutationCount !== (receipt.mutation === "secrets-set" ? 1 : 2)
+        || receipt.functionDeployCount !== (receipt.mutation === "secrets-set" ? 0 : 1)
+      ) refuse("schema-4 unknown result differs");
+      return;
+    }
+    if (receipt.status !== "verified") refuse("schema-4 result status differs");
+    if (receipt.mutation === "secrets-set") {
+      exact([
+        "mutation", "status", "intentReceiptSha256", "afterMainInventorySha256",
+        "semanticAfterMainInventorySha256", "afterFinanceInventorySha256",
+        "beforeMainInventoryRows", "afterMainInventoryRows",
+        "afterFunctionInventorySha256", "beforeFunctionInventoryRows",
+        "afterFunctionInventoryRows", "afterTargetFunctionRow",
+        "functionVersionTransitionDisposition", "functionInventoryStableReadRounds",
+        "metadataOnlyDeltaNames", "metadataOnlyDeltaSha256", "mutationSecretNames",
+        "mutationSecretNameSetSha256", "mutationSecretDigestSetSha256",
+        "predecessorReceiptChainSha256", "observation", "state",
+        "causalAttribution", "hostedMutationCount", "functionDeployCount",
+        "reconcileRequired", "automaticRetryPerformed", "productionTouched",
+      ]);
+      validateSchema4TargetRow(receipt.afterTargetFunctionRow, "schema-4 secret result target");
+      const beforeFunctions = normalizeFunctionInventoryRows(
+        receipt.beforeFunctionInventoryRows,
+      );
+      const afterFunctions = normalizeFunctionInventoryRows(
+        receipt.afterFunctionInventoryRows,
+      );
+      const secretTransition = classifyAllExistingFunctionVersionTransition({
+        beforeRows: beforeFunctions.rows,
+        afterRows: afterFunctions.rows,
+      });
+      const beforeMain = normalizeReceiptSecretInventoryRows(
+        receipt.beforeMainInventoryRows,
+        "schema-4 secret result before Main inventory",
+      );
+      const afterMain = normalizeReceiptSecretInventoryRows(
+        receipt.afterMainInventoryRows,
+        "schema-4 secret result after Main inventory",
+      );
+      let metadataDelta;
+      try {
+        metadataDelta = metadataOnlyInventoryDelta(
+          inventoryWithoutNames(beforeMain.inventory, SUCCESSOR_SECRET_MUTATION_NAMES),
+          inventoryWithoutNames(afterMain.inventory, SUCCESSOR_SECRET_MUTATION_NAMES),
+        );
+      } catch {
+        refuse("schema-4 verified secret Main metadata delta differs");
+      }
+      const secretPlan = schema4PlanForReceipt(prior, receipt);
+      if (
+        !["unchanged", "exact-all-existing-plus-one"].includes(secretTransition)
+        || receipt.functionVersionTransitionDisposition !== secretTransition
+        || beforeFunctions.sha256 !== intent.beforeFunctionInventorySha256
+        || canonicalJson(beforeFunctions.rows)
+          !== canonicalJson(intent.beforeFunctionInventoryRows)
+        || afterFunctions.sha256 !== receipt.afterFunctionInventorySha256
+        || canonicalJson(afterFunctions.target)
+          !== canonicalJson(receipt.afterTargetFunctionRow)
+        || beforeMain.sha256 !== intent.beforeMainInventorySha256
+        || canonicalJson(beforeMain.rows) !== canonicalJson(intent.beforeMainInventoryRows)
+        || !inventoryMatchesSuccessorInstall(
+          beforeMain.inventory,
+          afterMain.inventory,
+          secretPlan.mutationSecretDigests,
+          SUCCESSOR_SECRET_MUTATION_NAMES,
+        )
+        || afterMain.sha256 !== receipt.afterMainInventorySha256
+        || afterMain.semanticSha256 !== receipt.semanticAfterMainInventorySha256
+        || receipt.semanticAfterMainInventorySha256
+          !== intent.expectedPostSecretSemanticMainInventorySha256
+        || receipt.afterFinanceInventorySha256
+          !== intent.beforeFinanceInventorySha256
+        || receipt.functionInventoryStableReadRounds !== 2
+        || canonicalJson(receipt.mutationSecretNames)
+          !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+        || receipt.mutationSecretNameSetSha256 !== intent.mutationSecretNameSetSha256
+        || receipt.mutationSecretDigestSetSha256 !== intent.expectedSecretDigestSetSha256
+        || receipt.predecessorReceiptChainSha256 !== intent.predecessorReceiptChainSha256
+        || receipt.observation !== "installed_observed"
+        || receipt.state !== "state_satisfied"
+        || receipt.causalAttribution !== false
+        || !Array.isArray(receipt.metadataOnlyDeltaNames)
+        || canonicalJson(receipt.metadataOnlyDeltaNames)
+          !== canonicalJson(metadataDelta.names)
+        || receipt.metadataOnlyDeltaSha256 !== metadataDelta.sha256
+        || canonicalJson([...receipt.metadataOnlyDeltaNames].sort())
+          !== canonicalJson(receipt.metadataOnlyDeltaNames)
+        || receipt.metadataOnlyDeltaNames.some(name =>
+          !SUCCESSOR_METADATA_ONLY_SECRET_NAMES.includes(name))
+        || !SHA256.test(receipt.metadataOnlyDeltaSha256 ?? "")
+        || receipt.hostedMutationCount !== 1
+        || receipt.functionDeployCount !== 0
+        || receipt.reconcileRequired !== false
+      ) refuse("schema-4 verified secret result differs");
+      return;
+    }
+    exact([
+      "mutation", "status", "intentReceiptSha256", "beforeTargetFunctionRow",
+      "afterTargetFunctionRow", "beforeFunctionInventoryRows",
+      "afterFunctionInventoryRows", "targetTransitionDisposition",
+      "hostedSourceClosureSha256", "hostedSourceMetadataSha256",
+      "hostedSourceClosureReadRounds",
+      "mainInventorySha256", "semanticMainInventorySha256",
+      "financeInventorySha256", "functionInventorySha256",
+      "d0", "hostedProof", "d1", "d0MainInventorySha256",
+      "d0FinanceInventorySha256", "d0FunctionInventorySha256",
+      "d1MainInventorySha256", "d1FinanceInventorySha256",
+      "d1FunctionInventorySha256", "hostedMutationCount", "functionDeployCount",
+      "reconcileRequired", "automaticRetryPerformed", "productionTouched",
+    ]);
+    const transition = classifyExactTargetReplacement({
+      beforeRows: receipt.beforeFunctionInventoryRows,
+      afterRows: receipt.afterFunctionInventoryRows,
+    });
+    validateSchema4SandwichEvidence(receipt, "schema-4 deploy result");
+    const deployPlan = schema4PlanForReceipt(prior, receipt);
+    if (
+      receipt.mutation !== "function-deploy"
+      || transition === null
+      || Date.parse(receipt.d0.databaseClock) <= Date.parse(intent.recordedAt)
+      || canonicalJson(schema4StableSnapshotVector(receipt.d0))
+        !== canonicalJson(schema4StableSnapshotVector(deployPlan.snapshot))
+      || receipt.targetTransitionDisposition !== SCHEMA4_TARGET_TRANSITION
+      || receipt.hostedSourceClosureSha256
+        !== deployPlan.expectedHostedSourceClosureSha256
+      || !SHA256.test(receipt.hostedSourceMetadataSha256 ?? "")
+      || receipt.hostedSourceClosureReadRounds !== 2
+      || canonicalJson(receipt.beforeTargetFunctionRow)
+        !== canonicalJson(intent.beforeTargetFunctionRow)
+      || canonicalJson(receipt.beforeFunctionInventoryRows)
+        !== canonicalJson(intent.beforeFunctionInventoryRows)
+      || transition.beforeFunctionInventorySha256
+        !== intent.beforeFunctionInventorySha256
+      || transition.afterFunctionInventorySha256 !== receipt.functionInventorySha256
+      || receipt.functionInventorySha256 !== receipt.d1FunctionInventorySha256
+      || receipt.mainInventorySha256 !== deployPlan.mainInventorySha256
+      || receipt.semanticMainInventorySha256
+        !== deployPlan.semanticMainInventorySha256
+      || receipt.financeInventorySha256 !== deployPlan.financeInventorySha256
+      || receipt.mainInventorySha256 !== receipt.d1MainInventorySha256
+      || receipt.financeInventorySha256 !== receipt.d1FinanceInventorySha256
+      || receipt.hostedMutationCount !== 2
+      || receipt.functionDeployCount !== 1
+      || receipt.reconcileRequired !== false
+    ) refuse("schema-4 verified deploy result differs");
+    return;
+  }
+  if (receipt.kind === "reconciliation") {
+    const unresolved = prior.at(-1);
+    const intent = unresolved?.kind === "mutation-intent"
+      ? unresolved
+      : prior.at(-2);
+    const base = [
+      "mutation", "outcome", "unresolvedReceiptSha256",
+      "mainInventorySha256", "semanticMainInventorySha256",
+      "financeInventorySha256", "functionInventorySha256",
+      "targetFunctionRow", "stableObservation", "inventoryReadRounds",
+      "divergenceReason",
+      "hostedMutationCount", "functionDeployCount", "automaticRetryPerformed",
+      "productionTouched",
+    ];
+    const appliedDeploy = receipt.mutation === "function-deploy"
+      && receipt.outcome === "applied";
+    exact(appliedDeploy ? [
+      ...base, "beforeTargetFunctionRow", "afterTargetFunctionRow",
+      "beforeFunctionInventoryRows", "afterFunctionInventoryRows",
+      "targetTransitionDisposition", "d0", "hostedProof", "d1",
+      "hostedSourceClosureSha256", "hostedSourceMetadataSha256",
+      "hostedSourceClosureReadRounds",
+      "d0MainInventorySha256", "d0FinanceInventorySha256",
+      "d0FunctionInventorySha256", "d1MainInventorySha256",
+      "d1FinanceInventorySha256", "d1FunctionInventorySha256",
+    ] : [...base,
+      ...(receipt.mutation === "secrets-set"
+        ? ["beforeMainInventoryRows", "afterMainInventoryRows"] : []),
+      "beforeFunctionInventoryRows", "afterFunctionInventoryRows",
+      "functionVersionTransitionDisposition",
+      "metadataOnlyDeltaNames", "metadataOnlyDeltaSha256"]);
+    if (
+      !unresolved
+      || unresolved.kind !== "mutation-result"
+      || unresolved.mutation !== receipt.mutation
+      || unresolved.status !== "unknown"
+      || unresolved.invocationAttempted !== true
+      || intent?.kind !== "mutation-intent"
+      || receipt.unresolvedReceiptSha256 !== unresolved.receiptSha256
+      || receipt.inventoryReadRounds !== 2
+      || receipt.hostedMutationCount !== (receipt.mutation === "secrets-set" ? 1 : 2)
+      || receipt.functionDeployCount !== (receipt.mutation === "secrets-set" ? 0 : 1)
+      || receipt.automaticRetryPerformed !== false
+      || !SHA256.test(receipt.mainInventorySha256 ?? "")
+      || !SHA256.test(receipt.semanticMainInventorySha256 ?? "")
+      || !SHA256.test(receipt.financeInventorySha256 ?? "")
+      || !SHA256.test(receipt.functionInventorySha256 ?? "")
+    ) refuse("schema-4 reconciliation envelope differs");
+    validateSchema4TargetRow(receipt.targetFunctionRow, "schema-4 reconciliation target");
+    if (receipt.mutation === "secrets-set") {
+      const beforeFunctions = normalizeFunctionInventoryRows(
+        receipt.beforeFunctionInventoryRows,
+      );
+      const afterFunctions = normalizeFunctionInventoryRows(
+        receipt.afterFunctionInventoryRows,
+      );
+      const secretTransition = classifyAllExistingFunctionVersionTransition({
+        beforeRows: beforeFunctions.rows,
+        afterRows: afterFunctions.rows,
+      });
+      const beforeMain = normalizeReceiptSecretInventoryRows(
+        receipt.beforeMainInventoryRows,
+        "schema-4 secret reconciliation before Main inventory",
+      );
+      const afterMain = normalizeReceiptSecretInventoryRows(
+        receipt.afterMainInventoryRows,
+        "schema-4 secret reconciliation after Main inventory",
+      );
+      let metadataDelta = null;
+      if (receipt.outcome === "state_satisfied") {
+        try {
+          metadataDelta = metadataOnlyInventoryDelta(
+            inventoryWithoutNames(beforeMain.inventory, SUCCESSOR_SECRET_MUTATION_NAMES),
+            inventoryWithoutNames(afterMain.inventory, SUCCESSOR_SECRET_MUTATION_NAMES),
+          );
+        } catch {
+          refuse("schema-4 reconciled secret Main metadata delta differs");
+        }
+      }
+      const secretPlan = schema4PlanForReceipt(prior, receipt);
+      if (
+        !["state_satisfied", "state_unsatisfied", "diverged"].includes(receipt.outcome)
+        || !["unchanged", "exact-all-existing-plus-one", "diverged"]
+          .includes(receipt.functionVersionTransitionDisposition)
+        || (receipt.outcome === "state_satisfied"
+          && !["unchanged", "exact-all-existing-plus-one"]
+            .includes(receipt.functionVersionTransitionDisposition))
+        || (receipt.outcome === "state_unsatisfied"
+          && receipt.functionVersionTransitionDisposition !== "unchanged")
+        || receipt.functionVersionTransitionDisposition !== secretTransition
+        || beforeFunctions.sha256 !== intent.beforeFunctionInventorySha256
+        || canonicalJson(beforeFunctions.rows)
+          !== canonicalJson(intent.beforeFunctionInventoryRows)
+        || afterFunctions.sha256 !== receipt.functionInventorySha256
+        || beforeMain.sha256 !== intent.beforeMainInventorySha256
+        || canonicalJson(beforeMain.rows) !== canonicalJson(intent.beforeMainInventoryRows)
+        || afterMain.sha256 !== receipt.mainInventorySha256
+        || afterMain.semanticSha256 !== receipt.semanticMainInventorySha256
+        || (receipt.outcome === "state_satisfied" && !inventoryMatchesSuccessorInstall(
+          beforeMain.inventory,
+          afterMain.inventory,
+          secretPlan.mutationSecretDigests,
+          SUCCESSOR_SECRET_MUTATION_NAMES,
+        ))
+        || (receipt.outcome === "state_unsatisfied"
+          && canonicalJson(beforeMain.rows) !== canonicalJson(afterMain.rows))
+        || canonicalJson(afterFunctions.target)
+          !== canonicalJson(receipt.targetFunctionRow)
+        || receipt.financeInventorySha256 !== intent.beforeFinanceInventorySha256
+        || (receipt.outcome === "state_satisfied"
+          && receipt.semanticMainInventorySha256
+            !== intent.expectedPostSecretSemanticMainInventorySha256)
+        || (receipt.outcome === "state_unsatisfied"
+          && receipt.semanticMainInventorySha256
+            !== intent.semanticBeforeMainInventorySha256)
+        || (receipt.outcome !== "diverged" && receipt.stableObservation !== true)
+        || (receipt.outcome === "diverged"
+          && ![
+            "unstable-hosted-observation",
+            "secret-inventory-drift",
+            "function-transition-drift",
+          ].includes(receipt.divergenceReason))
+        || (receipt.outcome !== "diverged" && receipt.divergenceReason !== null)
+        || (receipt.outcome === "state_satisfied" && (
+          !Array.isArray(receipt.metadataOnlyDeltaNames)
+          || canonicalJson([...receipt.metadataOnlyDeltaNames].sort())
+            !== canonicalJson(receipt.metadataOnlyDeltaNames)
+          || new Set(receipt.metadataOnlyDeltaNames).size
+            !== receipt.metadataOnlyDeltaNames.length
+          || receipt.metadataOnlyDeltaNames.some(name =>
+            !SUCCESSOR_METADATA_ONLY_SECRET_NAMES.includes(name))
+          || !SHA256.test(receipt.metadataOnlyDeltaSha256 ?? "")
+          || canonicalJson(receipt.metadataOnlyDeltaNames)
+            !== canonicalJson(metadataDelta?.names)
+          || receipt.metadataOnlyDeltaSha256 !== metadataDelta?.sha256
+        ))
+        || (receipt.outcome !== "state_satisfied"
+          && (receipt.metadataOnlyDeltaNames !== null
+            || receipt.metadataOnlyDeltaSha256 !== null))
+      ) refuse("schema-4 secret reconciliation differs");
+      return;
+    }
+    if (!["applied", "not_applied", "diverged"].includes(receipt.outcome)) {
+      refuse("schema-4 deploy reconciliation outcome differs");
+    }
+    const deployBefore = normalizeFunctionInventoryRows(
+      receipt.beforeFunctionInventoryRows,
+    );
+    const deployAfter = normalizeFunctionInventoryRows(
+      receipt.afterFunctionInventoryRows,
+    );
+    if (
+      deployBefore.sha256 !== intent.beforeFunctionInventorySha256
+      || canonicalJson(deployBefore.rows)
+        !== canonicalJson(intent.beforeFunctionInventoryRows)
+      || deployAfter.sha256 !== receipt.functionInventorySha256
+      || canonicalJson(deployAfter.target)
+        !== canonicalJson(receipt.targetFunctionRow)
+    ) refuse("schema-4 deploy reconciliation Function frame differs");
+    if (appliedDeploy) {
+      validateSchema4SandwichEvidence(receipt, "schema-4 deploy reconciliation");
+      const deployPlan = schema4PlanForReceipt(prior, receipt);
+      const transition = classifyExactTargetReplacement({
+        beforeRows: receipt.beforeFunctionInventoryRows,
+        afterRows: receipt.afterFunctionInventoryRows,
+      });
+      if (
+        transition === null
+        || Date.parse(receipt.d0.databaseClock) <= Date.parse(unresolved.recordedAt)
+        || canonicalJson(schema4StableSnapshotVector(receipt.d0))
+          !== canonicalJson(schema4StableSnapshotVector(deployPlan.snapshot))
+        || receipt.targetTransitionDisposition !== SCHEMA4_TARGET_TRANSITION
+        || receipt.hostedSourceClosureSha256
+          !== deployPlan.expectedHostedSourceClosureSha256
+        || !SHA256.test(receipt.hostedSourceMetadataSha256 ?? "")
+        || receipt.hostedSourceClosureReadRounds !== 2
+        || canonicalJson(receipt.beforeTargetFunctionRow)
+          !== canonicalJson(intent.beforeTargetFunctionRow)
+        || canonicalJson(receipt.beforeFunctionInventoryRows)
+          !== canonicalJson(intent.beforeFunctionInventoryRows)
+        || transition.beforeFunctionInventorySha256
+          !== intent.beforeFunctionInventorySha256
+        || transition.afterFunctionInventorySha256 !== receipt.functionInventorySha256
+        || canonicalJson(receipt.afterTargetFunctionRow)
+          !== canonicalJson(receipt.targetFunctionRow)
+        || receipt.mainInventorySha256 !== receipt.d1MainInventorySha256
+        || receipt.mainInventorySha256 !== deployPlan.mainInventorySha256
+        || receipt.semanticMainInventorySha256
+          !== deployPlan.semanticMainInventorySha256
+        || receipt.financeInventorySha256 !== receipt.d1FinanceInventorySha256
+        || receipt.financeInventorySha256 !== deployPlan.financeInventorySha256
+        || receipt.functionInventorySha256 !== receipt.d1FunctionInventorySha256
+      ) refuse("schema-4 applied deploy reconciliation differs");
+    } else {
+      const unchanged = canonicalJson(deployBefore.rows)
+        === canonicalJson(deployAfter.rows);
+      const replacement = classifyExactTargetReplacement({
+        beforeRows: deployBefore.rows,
+        afterRows: deployAfter.rows,
+      });
+      const actualDisposition = unchanged
+        ? "unchanged"
+        : (replacement === null ? "diverged" : SCHEMA4_TARGET_TRANSITION);
+      if (
+        receipt.functionVersionTransitionDisposition !== actualDisposition
+        || (receipt.outcome === "not_applied" && !unchanged)
+        || (receipt.outcome === "not_applied" && receipt.divergenceReason !== null)
+        || (receipt.outcome === "diverged" && ![
+          "unstable-hosted-observation",
+          "secret-inventory-drift",
+          "function-transition-drift",
+          "hosted-proof-or-source-failed",
+        ].includes(receipt.divergenceReason))
+        || receipt.metadataOnlyDeltaNames !== null
+        || receipt.metadataOnlyDeltaSha256 !== null
+      ) refuse("schema-4 terminal deploy reconciliation differs");
+    }
+    return;
+  }
+  if (receipt.kind === "release-complete") {
+    exact([
+      "status", "mainProjectRef", "financeProjectRef", "sourceCommitSha",
+      "sourceTreeSha", "sourceParentSha", "baseTreeSha", "changedPaths",
+      "changedPathSetSha256", "trackedFileCount", "workflowBlobSha",
+      "sourceCiRunId", "sourceCiRunApiSha256", "sourceCiJobsApiSha256",
+      "sourceCiBranchApiSha256", "sourceCiReceiptSha256",
+      "sourceCiReceiptFileSha256", "sourceProvenanceFileSha256",
+      "sourceProvenanceDescriptorSha256", "releaseManifestSha256",
+      "sourceDeploymentSha256", "sourceArchiveSha256", "supabaseArchiveSha256",
+      "bundleAttestationSha256", "operatorDescriptorFileSha256",
+      "operatorDescriptorSha256", "productionBoundarySha256",
+      "targetDescriptorSha256", "completionCauseReceiptSha256",
+      "initialPlanReceiptSha256", "deployPlanReceiptSha256",
+      "mainInventorySha256", "semanticMainInventorySha256",
+      "financeInventorySha256", "functionInventorySha256",
+      "beforeTargetFunctionRow", "afterTargetFunctionRow",
+      "beforeFunctionInventoryRows", "afterFunctionInventoryRows",
+      "targetTransitionDisposition", "hostedSourceClosureSha256",
+      "hostedSourceMetadataSha256", "hostedSourceClosureReadRounds",
+      "d0", "hostedProof", "d1",
+      "d0MainInventorySha256", "d0FinanceInventorySha256",
+      "d0FunctionInventorySha256", "d1MainInventorySha256",
+      "d1FinanceInventorySha256", "d1FunctionInventorySha256",
+      "hostedMutationCount", "functionDeployCount", "freshPlanCount",
+      "ownerApprovalCount", "automaticRetryPerformed", "productionTouched",
+    ]);
+    const plans = prior.filter(item => item.kind === "release-plan");
+    const cause = prior.at(-1);
+    const eligibleCause = (
+      cause?.kind === "mutation-result"
+      && cause.mutation === "function-deploy"
+      && cause.status === "verified"
+    ) || (
+      cause?.kind === "reconciliation"
+      && cause.mutation === "function-deploy"
+      && cause.outcome === "applied"
+    );
+    validateReceiptSourceEvidence(
+      receipt,
+      false,
+      PARTIAL_SECRET_PREDECESSOR_PINS.sourceCommitSha,
+      PARTIAL_SECRET_PREDECESSOR_PINS.sourceTreeSha,
+    );
+    validateSchema4SandwichEvidence(receipt, "schema-4 release completion");
+    const transition = classifyExactTargetReplacement({
+      beforeRows: receipt.beforeFunctionInventoryRows,
+      afterRows: receipt.afterFunctionInventoryRows,
+    });
+    if (
+      receipt.status !== "verified"
+      || !eligibleCause
+      || plans.length !== 2
+      || plans[0].mutationScope !== "secrets-set"
+      || plans[1].mutationScope !== "function-deploy"
+      || receipt.initialPlanReceiptSha256 !== plans[0].receiptSha256
+      || receipt.deployPlanReceiptSha256 !== plans[1].receiptSha256
+      || receipt.completionCauseReceiptSha256 !== cause.receiptSha256
+      || receipt.mainProjectRef !== MAIN_REF
+      || receipt.financeProjectRef !== FINANCE_REF
+      || transition === null
+      || receipt.targetTransitionDisposition !== SCHEMA4_TARGET_TRANSITION
+      || canonicalJson(receipt.beforeTargetFunctionRow)
+        !== canonicalJson(cause.beforeTargetFunctionRow)
+      || canonicalJson(receipt.afterTargetFunctionRow)
+        !== canonicalJson(cause.afterTargetFunctionRow)
+      || canonicalJson(receipt.beforeFunctionInventoryRows)
+        !== canonicalJson(cause.beforeFunctionInventoryRows)
+      || canonicalJson(receipt.afterFunctionInventoryRows)
+        !== canonicalJson(cause.afterFunctionInventoryRows)
+      || transition.beforeFunctionInventorySha256
+        !== normalizeFunctionInventoryRows(receipt.beforeFunctionInventoryRows).sha256
+      || transition.afterFunctionInventorySha256 !== receipt.functionInventorySha256
+      || receipt.mainInventorySha256 !== receipt.d1MainInventorySha256
+      || receipt.financeInventorySha256 !== receipt.d1FinanceInventorySha256
+      || receipt.functionInventorySha256 !== receipt.d1FunctionInventorySha256
+      || receipt.functionInventorySha256 !== cause.functionInventorySha256
+      || receipt.hostedSourceClosureSha256 !== cause.hostedSourceClosureSha256
+      || receipt.hostedSourceMetadataSha256 !== cause.hostedSourceMetadataSha256
+      || receipt.hostedSourceClosureReadRounds !== 2
+      || receipt.semanticMainInventorySha256
+        !== cause.semanticMainInventorySha256
+      || receipt.d0MainInventorySha256 !== cause.mainInventorySha256
+      || receipt.d0FinanceInventorySha256 !== cause.financeInventorySha256
+      || receipt.d0FunctionInventorySha256 !== cause.functionInventorySha256
+      || receipt.hostedProof.proofSha256 === cause.hostedProof.proofSha256
+      || receipt.d0.responseSha256 === cause.d0.responseSha256
+      || receipt.d1.responseSha256 === cause.d1.responseSha256
+      || Date.parse(receipt.d0.databaseClock) <= Date.parse(cause.d1.databaseClock)
+      || Date.parse(receipt.d0.databaseClock) <= Date.parse(cause.recordedAt)
+      || canonicalJson(schema4StableSnapshotVector(receipt.d0))
+        !== canonicalJson(schema4StableSnapshotVector(cause.d1))
+      || receipt.hostedMutationCount !== 2
+      || receipt.functionDeployCount !== 1
+      || receipt.freshPlanCount !== 2
+      || receipt.ownerApprovalCount !== 2
+      || receipt.automaticRetryPerformed !== false
+      || Date.parse(receipt.recordedAt) <= Date.parse(receipt.d1.databaseClock)
+    ) refuse("schema-4 release completion differs");
+    const initial = plans[0];
+    for (const key of [
+      "sourceCommitSha", "sourceTreeSha", "sourceParentSha", "baseTreeSha",
+      "changedPathSetSha256", "trackedFileCount", "workflowBlobSha",
+      "sourceCiRunId", "sourceCiRunApiSha256", "sourceCiJobsApiSha256",
+      "sourceCiBranchApiSha256", "sourceCiReceiptSha256",
+      "sourceCiReceiptFileSha256", "sourceProvenanceFileSha256",
+      "sourceProvenanceDescriptorSha256", "releaseManifestSha256",
+      "sourceDeploymentSha256", "sourceArchiveSha256", "supabaseArchiveSha256",
+      "bundleAttestationSha256", "operatorDescriptorFileSha256",
+      "operatorDescriptorSha256", "productionBoundarySha256",
+      "targetDescriptorSha256",
+    ]) {
+      if (canonicalJson(receipt[key]) !== canonicalJson(initial[key])) {
+        refuse(`schema-4 completion ${key} binding differs`);
+      }
+    }
+    if (canonicalJson(receipt.changedPaths) !== canonicalJson(initial.changedPaths)) {
+      refuse("schema-4 completion changed paths differ");
+    }
+    return;
+  }
+  refuse("unknown schema-4 receipt kind");
+}
+
 function validateReceiptSemantic(
   receipt,
   prior,
   { variant = "current" } = {},
 ) {
-  if (!["current", "pinned-predecessor", "terminal-diverged-predecessor"]
+  if (!["current", "pinned-predecessor", "terminal-diverged-predecessor",
+    "partial-secret-predecessor"]
     .includes(variant)) {
     refuse("receipt schema variant differs");
   }
@@ -5013,6 +6989,11 @@ function validateReceiptSemantic(
     "schemaVersion", "sequence", "previousReceiptSha256", "productionDenied",
     "kind", "environment", "recordedAt", "receiptSha256",
   ];
+  if (receipt.schemaVersion === 4 || prior.some(item => item.schemaVersion === 4)) {
+    if (variant !== "current") refuse("schema-4 receipt variant differs");
+    validateSchema4ReceiptSemantic(receipt, prior);
+    return;
+  }
   const exact = keys => exactKeys(receipt, [...common, ...keys], `${receipt.kind} receipt`);
   if (prior.some(item => item.kind === "release-complete")) {
     refuse("release-complete must remain the terminal receipt");
@@ -5132,9 +7113,9 @@ function validateReceiptSemantic(
       || receipt.resumeFromReceiptSha256 !== null
       || !SHA256.test(receipt.semanticMainInventorySha256 ?? "")
       || canonicalJson(receipt.mutationSecretNames)
-        !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+        !== canonicalJson(SCHEMA3_SECRET_MUTATION_NAMES)
       || receipt.mutationSecretNameSetSha256
-        !== sha256(canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES))
+        !== sha256(canonicalJson(SCHEMA3_SECRET_MUTATION_NAMES))
       || !SHA256.test(receipt.mutationSecretDigestSetSha256 ?? "")
       || canonicalJson(receipt.metadataOnlySecretNames)
         !== canonicalJson(SUCCESSOR_METADATA_ONLY_SECRET_NAMES)
@@ -5301,7 +7282,7 @@ function validateReceiptSemantic(
       if (secretsOnlyPlan && (
         receipt.schemaVersion !== 3
         || canonicalJson(receipt.secretNames)
-          !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+          !== canonicalJson(SCHEMA3_SECRET_MUTATION_NAMES)
         || receipt.expectedSecretDigestSetSha256
           !== plan.mutationSecretDigestSetSha256
         || !SHA256.test(receipt.semanticBeforeMainInventorySha256 ?? "")
@@ -5444,7 +7425,7 @@ function validateReceiptSemantic(
           !== canonicalJson(receipt.metadataOnlyDeltaNames)
         || !SHA256.test(receipt.metadataOnlyDeltaSha256 ?? "")
         || canonicalJson(receipt.mutationSecretNames)
-          !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+          !== canonicalJson(SCHEMA3_SECRET_MUTATION_NAMES)
         || receipt.mutationSecretNameSetSha256
           !== intent.mutationSecretNameSetSha256
         || receipt.mutationSecretDigestSetSha256
@@ -5590,7 +7571,7 @@ function validateReceiptSemantic(
           && SHA256.test(receipt.metadataOnlyDeltaSha256 ?? "")
         ))
       || canonicalJson(receipt.mutationSecretNames)
-        !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+        !== canonicalJson(SCHEMA3_SECRET_MUTATION_NAMES)
       || receipt.mutationSecretNameSetSha256
         !== unresolvedPlan.mutationSecretNameSetSha256
       || receipt.mutationSecretDigestSetSha256
@@ -5734,9 +7715,9 @@ function validateReceiptSemantic(
             !SUCCESSOR_METADATA_ONLY_SECRET_NAMES.includes(name))
           || !SHA256.test(receipt.metadataOnlyDeltaSha256 ?? "")
           || canonicalJson(receipt.mutationSecretNames)
-            !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+            !== canonicalJson(SCHEMA3_SECRET_MUTATION_NAMES)
           || receipt.mutationSecretNameSetSha256
-            !== sha256(canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES))
+            !== sha256(canonicalJson(SCHEMA3_SECRET_MUTATION_NAMES))
           || receipt.mutationSecretDigestSetSha256
             !== plan.mutationSecretDigestSetSha256
           || receipt.predecessorReceiptChainSha256
@@ -5789,6 +7770,232 @@ function validateReceiptSemantic(
   refuse("unknown receipt kind");
 }
 
+function validateSchema4SourceCiReceipt(value, source) {
+  exactKeys(value, [
+    "schemaVersion", "kind", "repository", "workflowPath", "workflowBlob",
+    "branch", "event", "runId", "runAttempt", "runUrl", "status",
+    "conclusion", "sourceCommit", "sourceTree", "remoteCommit", "remoteSynced",
+    "checkoutDetached", "checkoutFull", "sparseCheckout", "skipWorktreeCount",
+    "trackedFileCount", "verifyJobId", "verifyJobConclusion", "postgresImage",
+    "postgresMajor", "postgresStepName", "postgresStepNumber",
+    "postgresStepConclusion", "gitVersion", "gitSha256", "ghVersion",
+    "ghSha256", "hostedMutationsPerformed", "productionTouched", "verifiedAt",
+    "receiptSha256",
+  ], "schema-4 source-CI receipt");
+  const { receiptSha256, ...core } = value;
+  if (
+    typeof source !== "string"
+    || source !== `${canonicalJson(value)}\n`
+    || value.schemaVersion !== 1
+    || value.kind !== "main-finance-source-ci-receipt-v1"
+    || value.repository !== GITHUB_REPOSITORY
+    || value.workflowPath !== ".github/workflows/verify-finance-integration.yml"
+    || !GIT_OID.test(value.workflowBlob ?? "")
+    || value.branch !== "agent/main-finance-staging-runtime-recovery-v2"
+    || value.event !== "push"
+    || !Number.isSafeInteger(value.runId)
+    || value.runId <= 0
+    || value.runUrl
+      !== `https://github.com/${GITHUB_REPOSITORY}/actions/runs/${value.runId}`
+    || value.runAttempt !== 1
+    || value.status !== "completed"
+    || value.conclusion !== "success"
+    || !GIT_OID.test(value.sourceCommit ?? "")
+    || !GIT_OID.test(value.sourceTree ?? "")
+    || value.remoteCommit !== value.sourceCommit
+    || value.remoteSynced !== true
+    || value.checkoutDetached !== true
+    || value.checkoutFull !== true
+    || value.sparseCheckout !== false
+    || value.skipWorktreeCount !== 0
+    || value.trackedFileCount !== EXPECTED_TRACKED_FILE_COUNT
+    || !Number.isSafeInteger(value.verifyJobId)
+    || value.verifyJobId <= 0
+    || value.verifyJobConclusion !== "success"
+    || value.postgresMajor !== 17
+    || value.postgresImage !== SCHEMA4_SOURCE_CI_POSTGRES_IMAGE
+    || value.postgresStepName
+      !== "Execute main Finance foundation on disposable PostgreSQL 17"
+    || value.postgresStepConclusion !== "success"
+    || !Number.isSafeInteger(value.postgresStepNumber)
+    || value.postgresStepNumber <= 0
+    || typeof value.gitVersion !== "string"
+    || !/^git version [\x20-\x7e]{1,160}$/u.test(value.gitVersion)
+    || typeof value.ghVersion !== "string"
+    || !/^gh version [\x20-\x7e]{1,160}$/u.test(value.ghVersion)
+    || value.gitSha256 !== FROZEN_TOOL_PINS.git.sha256
+    || value.ghSha256 !== FROZEN_TOOL_PINS.gh.sha256
+    || value.hostedMutationsPerformed !== false
+    || value.productionTouched !== false
+    || !canonicalTimestamp(value.verifiedAt)
+    || !SHA256.test(receiptSha256 ?? "")
+    || receiptSha256 !== sha256(canonicalJson(core))
+  ) refuse("schema-4 source-CI authority differs");
+  return canonicalClone({ ...value, fileSha256: sha256(source) });
+}
+
+function validatePartialSecretPredecessorSourceCiReceipt(value, source) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    refuse("partial predecessor source-CI authority differs");
+  }
+  const pins = PARTIAL_SECRET_PREDECESSOR_PINS;
+  const { receiptSha256, ...core } = value;
+  if (
+    typeof source !== "string"
+    || sha256(source) !== pins.sourceCiReceiptFileSha256
+    || source !== `${JSON.stringify(value, null, 2)}\n`
+    || receiptSha256 !== pins.sourceCiReceiptSha256
+    || receiptSha256 !== sha256(`${JSON.stringify(core, null, 2)}\n`)
+    || value.runId !== pins.sourceCiRunId
+    || value.verifyJobId !== pins.sourceCiJobId
+    || value.workflowBlob !== pins.sourceCiWorkflowBlobSha
+    || value.sourceCommit !== pins.sourceCommitSha
+    || value.sourceTree !== pins.sourceTreeSha
+  ) refuse("partial predecessor source-CI authority differs");
+
+  const compactValue = Object.freeze({
+    ...core,
+    receiptSha256: sha256(canonicalJson(core)),
+  });
+  validateSchema4SourceCiReceipt(
+    compactValue,
+    `${canonicalJson(compactValue)}\n`,
+  );
+  return canonicalClone({ ...value, fileSha256: sha256(source) });
+}
+
+function readPartialSecretPredecessorSourceCiReceipt(file) {
+  const source = readPrivateFile(
+    file,
+    "partial predecessor source-CI receipt",
+    64 * 1024,
+  );
+  return validatePartialSecretPredecessorSourceCiReceipt(
+    readJsonSource(source, "partial predecessor source-CI receipt"),
+    source,
+  );
+}
+
+export function validateMainFinanceRuntimeRecoveryV4ReleaseAuthority({
+  receipts,
+  serializedReceipts,
+  sourceCiReceipt,
+  serializedSourceCiReceipt,
+  provenance,
+  serializedProvenance,
+}) {
+  if (
+    !Array.isArray(receipts)
+    || !Array.isArray(serializedReceipts)
+    || receipts.length !== serializedReceipts.length
+    || receipts.length < 7
+    || receipts.length > 9
+  ) refuse("schema-4 release authority receipt cardinality differs");
+  const validated = [];
+  for (let index = 0; index < receipts.length; index += 1) {
+    const receipt = receipts[index];
+    const source = serializedReceipts[index];
+    if (
+      typeof source !== "string"
+      || Buffer.byteLength(source, "utf8") > 256 * 1024
+      || source !== `${canonicalJson(receipt)}\n`
+    ) refuse("schema-4 serialized receipt bytes differ");
+    const { receiptSha256, ...core } = receipt;
+    if (
+      receipt.schemaVersion !== 4
+      || receipt.sequence !== index + 1
+      || receipt.previousReceiptSha256
+        !== (validated.at(-1)?.receiptSha256 ?? null)
+      || !canonicalTimestamp(receipt.recordedAt)
+      || (index > 0
+        && Date.parse(receipt.recordedAt) <= Date.parse(validated.at(-1).recordedAt))
+      || !SHA256.test(receiptSha256 ?? "")
+      || receiptSha256 !== sha256(canonicalJson(core))
+    ) refuse("schema-4 release authority hash chain differs");
+    validateSchema4ReceiptSemantic(receipt, validated);
+    validated.push(canonicalClone(receipt));
+  }
+  const terminal = validated.at(-1);
+  const plans = validated.filter(item => item.kind === "release-plan");
+  const intents = validated.filter(item => item.kind === "mutation-intent");
+  const completions = validated.filter(item => item.kind === "release-complete");
+  if (
+    terminal?.kind !== "release-complete"
+    || terminal.status !== "verified"
+    || completions.length !== 1
+    || plans.length !== 2
+    || intents.length !== 2
+    || intents[0].mutation !== "secrets-set"
+    || intents[1].mutation !== "function-deploy"
+    || validated.some(item => item.automaticRetryPerformed === true)
+    || validated.filter(item => item.kind === "mutation-intent"
+      && item.mutation === "secrets-set").length !== 1
+    || validated.filter(item => item.kind === "mutation-intent"
+      && item.mutation === "function-deploy").length !== 1
+    || validated.filter(item => item.kind === "reconciliation"
+      && item.mutation === "secrets-set").length > 1
+    || validated.filter(item => item.kind === "reconciliation"
+      && item.mutation === "function-deploy").length > 1
+  ) refuse("schema-4 release authority terminal topology differs");
+  const sourceCi = validateSchema4SourceCiReceipt(
+    sourceCiReceipt,
+    serializedSourceCiReceipt,
+  );
+  const validatedProvenance = validateMainFinanceRuntimeRecoveryV2ProvenanceSource(
+    serializedProvenance,
+  );
+  if (canonicalJson(provenance) !== canonicalJson(
+    Object.fromEntries(Object.entries(validatedProvenance)
+      .filter(([key]) => key !== "fileSha256")),
+  )) refuse("schema-4 parsed provenance differs from canonical bytes");
+  const initialPlan = plans[0];
+  if (
+    sourceCi.sourceCommit !== terminal.sourceCommitSha
+    || sourceCi.sourceTree !== terminal.sourceTreeSha
+    || sourceCi.workflowBlob !== terminal.workflowBlobSha
+    || String(sourceCi.runId) !== terminal.sourceCiRunId
+    || sourceCi.receiptSha256 !== terminal.sourceCiReceiptSha256
+    || sourceCi.fileSha256 !== terminal.sourceCiReceiptFileSha256
+    || Date.parse(sourceCi.verifiedAt) >= Date.parse(initialPlan.recordedAt)
+    || String(sourceCi.runId) !== validatedProvenance.githubRunId
+    || sourceCi.sourceCommit !== validatedProvenance.expectedCommitSha
+    || sourceCi.sourceTree !== validatedProvenance.expectedTreeSha
+    || sourceCi.remoteCommit !== validatedProvenance.remoteCommitSha
+    || terminal.sourceProvenanceFileSha256 !== validatedProvenance.fileSha256
+    || terminal.sourceProvenanceDescriptorSha256
+      !== validatedProvenance.descriptorSha256
+    || initialPlan.sourceCommitSha !== terminal.sourceCommitSha
+    || initialPlan.sourceTreeSha !== terminal.sourceTreeSha
+  ) refuse("schema-4 release authority source-CI or provenance binding differs");
+  const transition = classifyExactTargetReplacement({
+    beforeRows: terminal.beforeFunctionInventoryRows,
+    afterRows: terminal.afterFunctionInventoryRows,
+  });
+  if (
+    transition === null
+    || transition.disposition !== SCHEMA4_TARGET_TRANSITION
+    || terminal.functionInventorySha256 !== terminal.d1FunctionInventorySha256
+  ) refuse("schema-4 terminal target authority differs");
+  return canonicalClone({
+    schemaVersion: 4,
+    sourceCommitSha: terminal.sourceCommitSha,
+    sourceTreeSha: terminal.sourceTreeSha,
+    releaseManifestSha256: terminal.releaseManifestSha256,
+    sourceDeploymentSha256: terminal.sourceDeploymentSha256,
+    productionBoundarySha256: terminal.productionBoundarySha256,
+    targetDescriptorSha256: terminal.targetDescriptorSha256,
+    operatorDescriptorFileSha256: terminal.operatorDescriptorFileSha256,
+    operatorDescriptorSha256: terminal.operatorDescriptorSha256,
+    hostedSourceClosureSha256: terminal.hostedSourceClosureSha256,
+    hostedSourceMetadataSha256: terminal.hostedSourceMetadataSha256,
+    completionReceiptSha256: terminal.receiptSha256,
+    functionInventorySha256: terminal.functionInventorySha256,
+    beforeTargetFunctionRow: transition.beforeTargetFunctionRow,
+    afterTargetFunctionRow: transition.afterTargetFunctionRow,
+    targetTransitionDisposition: transition.disposition,
+  });
+}
+
 function safeSnapshotEvidence(snapshot) {
   return Object.freeze({
     databaseClock: snapshot.database_clock,
@@ -5829,7 +8036,7 @@ function assertCurrentReleaseSecretsOnlyPlan(plan) {
     || plan.resumeFromReceiptSha256 !== null
     || !isTerminalDivergedPredecessorAdoption(plan.predecessorAdoption)
     || canonicalJson(plan.mutationSecretNames)
-      !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+      !== canonicalJson(SCHEMA3_SECRET_MUTATION_NAMES)
     || canonicalJson(plan.metadataOnlySecretNames)
       !== canonicalJson(SUCCESSOR_METADATA_ONLY_SECRET_NAMES)
     || plan.plannedHostedMutationCount !== 1
@@ -5850,14 +8057,36 @@ function assertCurrentReleaseSecretsOnlyBundle(attestation, plan) {
     || attestation.runtimeFile !== RUNTIME_PROOF_FILE
     || attestation.runtimeMutationFile !== SECRET_MUTATION_ENV_FILE
     || canonicalJson(attestation.mutationSecretNames)
-      !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+      !== canonicalJson(SCHEMA3_SECRET_MUTATION_NAMES)
     || !validSuccessorMutationSecretDigestMap(
       attestation.mutationSecretDigests,
+      SCHEMA3_SECRET_MUTATION_NAMES,
     )
     || Object.hasOwn(attestation, "deployMutationInput")
     || Object.hasOwn(attestation, "deployWorkdir")
   ) refuse("current release accepts only the schema-3 secrets-only private bundle");
   return attestation;
+}
+
+function assertCurrentReleaseSchema4Plan(plan) {
+  if (
+    plan?.schemaVersion !== 4
+    || plan.kind !== "release-plan"
+    || !SCHEMA4_PLAN_SCOPES.includes(plan.mutationScope)
+    || !isPartialSecretPredecessorAdoption(plan.predecessorAdoption)
+    || canonicalJson(plan.mutationSecretNames)
+      !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+    || canonicalJson(plan.metadataOnlySecretNames)
+      !== canonicalJson(SUCCESSOR_METADATA_ONLY_SECRET_NAMES)
+    || plan.targetTransitionDisposition !== SCHEMA4_TARGET_TRANSITION
+    || plan.plannedHostedMutationCount !== 1
+    || plan.functionDeployCount !== 0
+    || plan.freshPlanOrdinal !== (plan.mutationScope === "secrets-set" ? 1 : 2)
+    || plan.ownerApprovalOrdinal !== plan.freshPlanOrdinal
+    || !Object.hasOwn(plan, "deployMutationInputSha256")
+    || !Object.hasOwn(plan, "deployCommandArgsSha256")
+  ) refuse("current release accepts only a schema-4 staged release plan");
+  return plan;
 }
 
 function assertCurrentReleasePlanBeforeLease(receiptDirectory) {
@@ -5880,7 +8109,14 @@ function assertCurrentReleasePlanBeforeLease(receiptDirectory) {
       || receiptSha256 !== sha256(canonicalJson(core))
       || source !== `${canonicalJson(receipt)}\n`
     ) refuse("pre-lease release plan self-hash differs");
-    return assertCurrentReleaseSecretsOnlyPlan(receipt);
+    if (receipt.schemaVersion !== 4) {
+      refuse("current release rejects legacy operational plan authority");
+    }
+    const chain = readReceiptChain(receiptDirectory, { readOnly: true });
+    if (chain.at(-1)?.sequence < receipt.sequence) {
+      refuse("pre-lease release plan is not the current chain authority");
+    }
+    return assertCurrentReleaseSchema4Plan(receipt);
   }
   refuse("a current release plan receipt is required before operation lease");
 }
@@ -6182,12 +8418,13 @@ function inventoryMatchesSuccessorInstall(
   expectedDigests,
   mutationNames,
 ) {
+  const validMutationSet = [
+    SCHEMA3_SECRET_MUTATION_NAMES,
+    SUCCESSOR_SECRET_MUTATION_NAMES,
+  ].some(names => canonicalJson([...mutationNames].sort())
+    === canonicalJson([...names].sort()));
   if (
-    canonicalJson([...mutationNames].sort()) !== canonicalJson([
-      "MAIN_FINANCE_ACCESS_V2_SOURCE_COMMIT_SHA",
-      "MAIN_FINANCE_ACCESS_V2_SOURCE_MANIFEST_SHA256",
-      "MAIN_FINANCE_ACCESS_V2_SOURCE_TREE_SHA",
-    ])
+    !validMutationSet
     || !inventoryHasExactNameSet(before, after)
   ) return false;
   for (const [name, previous] of before) {
@@ -6394,9 +8631,10 @@ async function postflightSecretsOnlySuccessorSandwich(
   bundle,
   exactFunctionRows,
 ) {
-  if (!isTerminalDivergedPredecessorAdoption(
-    bundle.attestation.predecessorAdoption,
-  )) refuse("secrets-only postflight bundle variant differs");
+  if (
+    !isTerminalDivergedPredecessorAdoption(bundle.attestation.predecessorAdoption)
+    && !isPartialSecretPredecessorAdoption(bundle.attestation.predecessorAdoption)
+  ) refuse("successor postflight bundle variant differs");
   const expectedFunctions = normalizeFunctionInventoryRows(exactFunctionRows);
   const functions0 = fetchFunctionInventory(dependencies);
   if (!functionInventoryMatchesPostSecretBaseline(
@@ -7315,11 +9553,11 @@ function authorizeDeclarativeEffectPayload({
                 input.secretEvidence.preinstallMain,
                 "successor effect preinstall Main",
               ),
-              SUCCESSOR_SECRET_MUTATION_NAMES,
+              SCHEMA3_SECRET_MUTATION_NAMES,
             ),
             inventoryWithoutNames(
               effectCurrentMain,
-              SUCCESSOR_SECRET_MUTATION_NAMES,
+              SCHEMA3_SECRET_MUTATION_NAMES,
             ),
           );
         } catch {
@@ -7391,7 +9629,7 @@ function authorizeDeclarativeEffectPayload({
                 !== canonicalJson(effectMetadataDelta.names)
               || receipt.metadataOnlyDeltaSha256 !== effectMetadataDelta.sha256
               || canonicalJson(receipt.mutationSecretNames)
-                !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+                !== canonicalJson(SCHEMA3_SECRET_MUTATION_NAMES)
               || receipt.mutationSecretNameSetSha256
                 !== input.bundle.mutationSecretNameSetSha256
               || receipt.mutationSecretDigestSetSha256
@@ -7469,7 +9707,7 @@ function authorizeDeclarativeEffectPayload({
                   !== (reconciliationOutcome === "diverged"
                     ? null : effectMetadataDelta?.sha256 ?? null)
                 || canonicalJson(receipt.mutationSecretNames)
-                  !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+                  !== canonicalJson(SCHEMA3_SECRET_MUTATION_NAMES)
                 || receipt.mutationSecretNameSetSha256
                   !== input.bundle.mutationSecretNameSetSha256
                 || receipt.mutationSecretDigestSetSha256
@@ -7505,7 +9743,7 @@ function authorizeDeclarativeEffectPayload({
                 !== canonicalJson(effectMetadataDelta.names)
               || receipt.metadataOnlyDeltaSha256 !== effectMetadataDelta.sha256
               || canonicalJson(receipt.mutationSecretNames)
-                !== canonicalJson(SUCCESSOR_SECRET_MUTATION_NAMES)
+                !== canonicalJson(SCHEMA3_SECRET_MUTATION_NAMES)
               || receipt.mutationSecretNameSetSha256
                 !== input.bundle.mutationSecretNameSetSha256
               || receipt.mutationSecretDigestSetSha256
@@ -9331,6 +11569,875 @@ function releasePlanReceiptFields({
   });
 }
 
+function assertSchema4PlanEnvelopeBeforePlaintext({
+  plan,
+  attestation,
+  preinstallInventories,
+  release,
+  context,
+}) {
+  assertCurrentReleaseSchema4Plan(plan);
+  assertSuccessorPredecessorBaselineBinding(attestation, preinstallInventories);
+  const preinstallFunctions = normalizeFunctionInventoryRows(
+    preinstallInventories.functions,
+  );
+  if (
+    attestation.schemaVersion !== 4
+    || attestation.kind !== SCHEMA4_BUNDLE_KIND
+    || !isPartialSecretPredecessorAdoption(attestation.predecessorAdoption)
+    || canonicalJson(plan.predecessorAdoption)
+      !== canonicalJson(attestation.predecessorAdoption)
+    || plan.bundleAttestationSha256 !== attestation.attestationSha256
+    || plan.sourceCommitSha !== context.source.commit
+    || plan.sourceTreeSha !== context.source.tree
+    || plan.sourceParentSha !== context.source.parent
+    || plan.baseTreeSha !== context.source.baseTree
+    || canonicalJson(plan.changedPaths) !== canonicalJson(context.source.changedPaths)
+    || plan.changedPathSetSha256 !== context.source.changedPathSetSha256
+    || plan.trackedFileCount !== context.source.trackedFileCount
+    || plan.workflowBlobSha !== context.source.workflowBlobSha
+    || plan.supabaseArchiveSha256 !== context.source.supabaseArchiveSha256
+    || plan.sourceCiReceiptSha256 !== context.sourceCiReceipt.receiptSha256
+    || plan.sourceCiReceiptFileSha256 !== context.sourceCiReceipt.fileSha256
+    || !sourceCiMatchesPlan(context.ci, plan)
+    || plan.sourceProvenanceFileSha256 !== context.provenance.fileSha256
+    || plan.sourceProvenanceDescriptorSha256
+      !== context.provenance.descriptorSha256
+    || plan.releaseManifestSha256 !== release.manifestSha256
+    || plan.sourceDeploymentSha256
+      !== release.manifest.deploymentClosureSetSha256
+    || plan.sourceArchiveSha256 !== attestation.sourceArchiveSha256
+    || plan.operatorDescriptorFileSha256
+      !== attestation.operatorDescriptorFileSha256
+    || plan.operatorDescriptorSha256 !== attestation.operatorDescriptorSha256
+    || plan.runtimeMutationInputSha256
+      !== sha256(canonicalJson(attestation.runtimeMutationInput))
+    || plan.deployMutationInputSha256
+      !== sha256(canonicalJson(attestation.deployMutationInput))
+    || plan.runtimeCommandArgsSha256 !== sha256(canonicalJson([
+      "secrets", "set", "--project-ref", MAIN_REF, "--env-file",
+      path.join(context.stateDirectory, SECRET_MUTATION_ENV_FILE), "--yes",
+    ]))
+    || plan.deployCommandArgsSha256 !== sha256(canonicalJson([
+      "functions", "deploy", FUNCTION_NAME, "--project-ref", MAIN_REF,
+      "--no-verify-jwt", "--use-api", "--workdir",
+      path.join(context.stateDirectory, DEPLOY_WORKDIR), "--yes",
+    ]))
+    || canonicalJson(plan.mutationSecretNames)
+      !== canonicalJson(attestation.mutationSecretNames)
+    || plan.mutationSecretNameSetSha256
+      !== sha256(canonicalJson(attestation.mutationSecretNames))
+    || plan.mutationSecretDigestSetSha256
+      !== sha256(canonicalJson(attestation.mutationSecretDigests))
+    || canonicalJson(plan.mutationSecretDigests)
+      !== canonicalJson(attestation.mutationSecretDigests)
+    || canonicalJson(plan.predecessorMainInventoryRows)
+      !== canonicalJson(inventoryCore(preinstallInventories.main))
+    || plan.expectedPostSecretSemanticMainInventorySha256
+      !== expectedInstalledSemanticMainInventorySha256(
+        preinstallInventories.main,
+        attestation.mutationSecretDigests,
+        attestation.mutationSecretNames,
+      )
+    || plan.predecessorReceiptChainSha256
+      !== attestation.predecessorAdoption.priorReceiptChainSha256
+    || plan.productionBoundarySha256 !== attestation.productionBoundarySha256
+    || plan.targetDescriptorSha256 !== attestation.targetDescriptorSha256
+    || attestation.productionBoundarySha256
+      !== context.accessBoundary.productionBoundarySha256
+    || attestation.targetDescriptorSha256
+      !== context.accessBoundary.targetDescriptorSha256
+    || plan.snapshot.catalogSha256 !== attestation.catalogSha256
+    || plan.snapshot.descriptorSha256 !== attestation.descriptorSha256
+    || plan.snapshot.stateSha256 !== attestation.stateSha256
+    || plan.snapshot.gateInventorySha256 !== attestation.gateInventorySha256
+    || plan.snapshot.privacyInventorySha256 !== attestation.privacyInventorySha256
+    || plan.snapshot.checkedCount !== attestation.checkedCount
+    || preinstallFunctions.sha256
+      !== PARTIAL_SECRET_PREDECESSOR_PINS.installedFunctionInventorySha256
+  ) refuse("schema-4 plan envelope differs before private runtime read");
+  return true;
+}
+
+function readSchema4Bundle(context, release, plan) {
+  return readBundle(
+    context.stateDirectory,
+    release,
+    context.source,
+    {
+      expectedAttestationSha256: plan.bundleAttestationSha256,
+      expectedPredecessorAdoption: plan.predecessorAdoption,
+      authorizeRuntimeRead: (attestation, preinstallInventories) =>
+        assertSchema4PlanEnvelopeBeforePlaintext({
+          plan,
+          attestation,
+          preinstallInventories,
+          release,
+          context,
+        }),
+    },
+  );
+}
+
+function schema4PlanReceiptFields({
+  context,
+  release,
+  bundle,
+  inventories,
+  functionInventory,
+  snapshot,
+  predecessorAdoption,
+  mutationScope,
+  resumeFromReceiptSha256,
+  recordedAt,
+  expiresAt,
+}) {
+  const ordinal = mutationScope === "secrets-set" ? 1 : 2;
+  expectedSchema4HostedSourceClosure(release);
+  return Object.freeze({
+    kind: "release-plan",
+    status: "pending",
+    environment: "staging",
+    recordedAt,
+    expiresAt,
+    mainProjectRef: MAIN_REF,
+    financeProjectRef: FINANCE_REF,
+    sourceCommitSha: context.source.commit,
+    sourceTreeSha: context.source.tree,
+    sourceParentSha: context.source.parent,
+    baseTreeSha: context.source.baseTree,
+    changedPaths: context.source.changedPaths,
+    changedPathSetSha256: context.source.changedPathSetSha256,
+    trackedFileCount: context.source.trackedFileCount,
+    workflowBlobSha: context.source.workflowBlobSha,
+    sourceCiRunId: context.ci.runId,
+    sourceCiRunApiSha256: context.ci.runApiSha256,
+    sourceCiJobsApiSha256: context.ci.jobsApiSha256,
+    sourceCiBranchApiSha256: context.ci.branchApiSha256,
+    sourceCiReceiptSha256: context.sourceCiReceipt.receiptSha256,
+    sourceCiReceiptFileSha256: context.sourceCiReceipt.fileSha256,
+    sourceProvenanceFileSha256: context.provenance.fileSha256,
+    sourceProvenanceDescriptorSha256: context.provenance.descriptorSha256,
+    releaseManifestSha256: release.manifestSha256,
+    sourceDeploymentSha256: release.manifest.deploymentClosureSetSha256,
+    bundleAttestationSha256: bundle.attestation.attestationSha256,
+    sourceArchiveSha256: bundle.attestation.sourceArchiveSha256,
+    supabaseArchiveSha256: context.source.supabaseArchiveSha256,
+    operatorDescriptorFileSha256: bundle.attestation.operatorDescriptorFileSha256,
+    operatorDescriptorSha256: bundle.attestation.operatorDescriptorSha256,
+    expectedHostedSourceClosureSha256:
+      SCHEMA4_HOSTED_SOURCE_CLOSURE_SHA256,
+    runtimeMutationInputSha256: sha256(canonicalJson(bundle.runtimeMutationInput)),
+    runtimeCommandArgsSha256: sha256(canonicalJson(secretArguments(bundle))),
+    deployMutationInputSha256: sha256(canonicalJson(bundle.deployMutationInput)),
+    deployCommandArgsSha256: sha256(canonicalJson(deploymentArguments(bundle))),
+    productionBoundarySha256: bundle.attestation.productionBoundarySha256,
+    targetDescriptorSha256: bundle.attestation.targetDescriptorSha256,
+    mainInventorySha256: inventories.mainInventorySha256,
+    semanticMainInventorySha256: semanticSecretInventorySha256(inventories.main),
+    mainInventoryRows: inventoryCore(inventories.main),
+    financeInventorySha256: inventories.financeInventorySha256,
+    functionInventorySha256: functionInventory.sha256,
+    functionInventoryRows: functionInventory.rows,
+    targetFunctionRow: functionInventory.target,
+    predecessorMainInventoryRows: inventoryCore(bundle.preinstallInventories.main),
+    mutationSecretDigests: bundle.attestation.mutationSecretDigests,
+    expectedPostSecretSemanticMainInventorySha256:
+      expectedInstalledSemanticMainInventorySha256(
+        bundle.preinstallInventories.main,
+        bundle.attestation.mutationSecretDigests,
+        bundle.attestation.mutationSecretNames,
+      ),
+    snapshot: safeSnapshotEvidence(snapshot),
+    mutationScope,
+    resumeFromReceiptSha256,
+    freshPlanOrdinal: ordinal,
+    ownerApprovalOrdinal: ordinal,
+    mutationSecretNames: bundle.attestation.mutationSecretNames,
+    mutationSecretNameSetSha256: sha256(canonicalJson(
+      bundle.attestation.mutationSecretNames,
+    )),
+    mutationSecretDigestSetSha256: sha256(canonicalJson(
+      bundle.attestation.mutationSecretDigests,
+    )),
+    metadataOnlySecretNames: SUCCESSOR_METADATA_ONLY_SECRET_NAMES,
+    metadataOnlySecretNameSetSha256: sha256(canonicalJson(
+      SUCCESSOR_METADATA_ONLY_SECRET_NAMES,
+    )),
+    predecessorReceiptChainSha256: predecessorAdoption.priorReceiptChainSha256,
+    predecessorAdoption,
+    targetTransitionDisposition: SCHEMA4_TARGET_TRANSITION,
+    plannedHostedMutationCount: 1,
+    hostedMutationCount: mutationScope === "secrets-set" ? 0 : 1,
+    functionDeployCount: 0,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  });
+}
+
+function schema4PlanExpiry(chain, snapshot, common, release) {
+  const recordedAt = nextReceiptTimestamp(chain, common.now);
+  if (
+    Date.parse(snapshot.database_clock) > Date.parse(recordedAt)
+      + release.manifest.plan.futureClockSkewSeconds * 1_000
+  ) refuse("schema-4 snapshot clock exceeds allowed future skew");
+  const expiry = Math.min(
+    Date.parse(recordedAt) + release.manifest.plan.ttlSeconds * 1_000,
+    Date.parse(snapshot.database_clock)
+      + release.manifest.plan.maximumSnapshotAgeSeconds * 1_000,
+  );
+  if (expiry <= Date.parse(recordedAt)) refuse("schema-4 plan snapshot has expired");
+  return Object.freeze({ recordedAt, expiresAt: new Date(expiry).toISOString() });
+}
+
+function readStableSchema4HostedState(context) {
+  const first = Object.freeze({
+    inventories: fetchSecretInventories(context.dependencies, "recovery"),
+    functions: fetchFunctionInventory(context.dependencies),
+  });
+  const second = Object.freeze({
+    inventories: fetchSecretInventories(context.dependencies, "recovery"),
+    functions: fetchFunctionInventory(context.dependencies),
+  });
+  const stable = inventoryIsUnchanged(
+    first.inventories.main,
+    second.inventories.main,
+  ) && inventoryIsUnchanged(
+    first.inventories.finance,
+    second.inventories.finance,
+  ) && canonicalJson(first.functions.rows) === canonicalJson(second.functions.rows);
+  return Object.freeze({ first, second, stable });
+}
+
+function classifySchema4SecretState({ bundle, beforeFunctionRows, observed }) {
+  const transition = classifyAllExistingFunctionVersionTransition({
+    beforeRows: beforeFunctionRows,
+    afterRows: observed.functions.rows,
+  });
+  const installed = inventoryMatchesSuccessorInstall(
+    bundle.preinstallInventories.main,
+    observed.inventories.main,
+    bundle.attestation.mutationSecretDigests,
+    bundle.attestation.mutationSecretNames,
+  ) && inventoryIsUnchanged(
+    bundle.preinstallInventories.finance,
+    observed.inventories.finance,
+  );
+  const unchanged = inventoryIsUnchanged(
+    bundle.preinstallInventories.main,
+    observed.inventories.main,
+  ) && inventoryIsUnchanged(
+    bundle.preinstallInventories.finance,
+    observed.inventories.finance,
+  );
+  const outcome = installed && ["unchanged", "exact-all-existing-plus-one"]
+    .includes(transition)
+    ? "state_satisfied"
+    : (unchanged && transition === "unchanged" ? "state_unsatisfied" : "diverged");
+  let metadataDelta = null;
+  if (outcome === "state_satisfied") {
+    metadataDelta = metadataOnlyInventoryDelta(
+      inventoryWithoutNames(
+        bundle.preinstallInventories.main,
+        bundle.attestation.mutationSecretNames,
+      ),
+      inventoryWithoutNames(
+        observed.inventories.main,
+        bundle.attestation.mutationSecretNames,
+      ),
+    );
+  }
+  return Object.freeze({
+    outcome,
+    transition,
+    divergenceReason: outcome === "diverged"
+      ? (transition === "diverged"
+        ? "function-transition-drift" : "secret-inventory-drift")
+      : null,
+    metadataDelta,
+  });
+}
+
+function schema4ActualFunctionDisposition(beforeRows, afterRows) {
+  if (canonicalJson(beforeRows) === canonicalJson(afterRows)) return "unchanged";
+  return classifyExactTargetReplacement({ beforeRows, afterRows }) === null
+    ? "diverged" : SCHEMA4_TARGET_TRANSITION;
+}
+
+function schema4SandwichFields(sandwich) {
+  return Object.freeze({
+    d0: safeSnapshotEvidence(sandwich.d0),
+    hostedProof: Object.freeze({
+      responseSha256: sandwich.proof.responseSha256,
+      proofSha256: sandwich.proof.proofSha256,
+      attestedAt: sandwich.proof.attestedAt,
+      checkedCount: sandwich.proof.checkedCount,
+      mismatchCount: sandwich.proof.mismatchCount,
+      stateSha256: sandwich.proof.stateSha256,
+    }),
+    d1: safeSnapshotEvidence(sandwich.d1),
+    d0MainInventorySha256: sandwich.d0MainInventorySha256,
+    d0FinanceInventorySha256: sandwich.d0FinanceInventorySha256,
+    d0FunctionInventorySha256: sandwich.d0FunctionInventorySha256,
+    d1MainInventorySha256: sandwich.d1MainInventorySha256,
+    d1FinanceInventorySha256: sandwich.d1FinanceInventorySha256,
+    d1FunctionInventorySha256: sandwich.d1FunctionInventorySha256,
+  });
+}
+
+async function postflightSchema4TargetReplacement(
+  context,
+  release,
+  bundle,
+  beforeFunctionRows,
+) {
+  const observed = fetchFunctionInventory(context.dependencies);
+  const transition = classifyExactTargetReplacement({
+    beforeRows: beforeFunctionRows,
+    afterRows: observed.rows,
+  });
+  if (transition === null) return null;
+  const hostedSource = await attestSchema4HostedSourceClosure(
+    context,
+    release,
+    transition.afterTargetFunctionRow,
+  );
+  const sandwich = await postflightSecretsOnlySuccessorSandwich(
+    context.dependencies,
+    release,
+    context.source,
+    bundle,
+    observed.rows,
+  );
+  if (sandwich === null) return null;
+  if (canonicalJson(sandwich.functionInventory.rows) !== canonicalJson(observed.rows)) {
+    return null;
+  }
+  return Object.freeze({ ...sandwich, transition, ...hostedSource });
+}
+
+function appendSchema4Receipt(context, expectedChain, fields) {
+  const binding = readReceiptBinding(
+    context.stateDirectory,
+    context.receiptDirectory,
+  );
+  const fresh = readReceiptChain(context.receiptDirectory, { readOnly: true });
+  if (
+    binding.bindingSha256 !== context.receiptBinding.bindingSha256
+    || canonicalJson(fresh) !== canonicalJson(expectedChain)
+  ) {
+    refuse("schema-4 receipt chain changed before append");
+  }
+  return appendReceipt(context.receiptDirectory, expectedChain, fields);
+}
+
+function assertSchema4CurrentAuthorityFresh(context, input, common, release, plan) {
+  const sourceCiSource = readPrivateFile(
+    input.sourceCiReceipt,
+    "current source-CI receipt recheck",
+    64 * 1024,
+  );
+  const sourceCi = validateSchema4SourceCiReceipt(
+    readJsonSource(sourceCiSource, "current source-CI receipt recheck"),
+    sourceCiSource,
+  );
+  const provenance = readProvenance(input.releaseProvenance);
+  const accessBoundary = readReviewedAccessBoundary(input);
+  const ci = inspectReadyOperationSourceCi(context, input, common, release);
+  if (
+    canonicalJson(sourceCi) !== canonicalJson(context.sourceCiReceipt)
+    || sourceCi.receiptSha256 !== plan.sourceCiReceiptSha256
+    || sourceCi.fileSha256 !== plan.sourceCiReceiptFileSha256
+    || canonicalJson(provenance) !== canonicalJson(context.provenance)
+    || canonicalJson(accessBoundary) !== canonicalJson(context.accessBoundary)
+    || !sourceCiMatchesPlan(ci, plan)
+  ) refuse("schema-4 current raw source authority changed");
+  return ci;
+}
+
+function assertSchema4LocalAuthorityFresh(
+  context,
+  input,
+  common,
+  release,
+  plan,
+  bundle,
+) {
+  const source = inspectReadyOperationSource(context, input, common, release);
+  const sourceCiSource = readPrivateFile(
+    input.sourceCiReceipt,
+    "current source-CI receipt local recheck",
+    64 * 1024,
+  );
+  const sourceCi = validateSchema4SourceCiReceipt(
+    readJsonSource(sourceCiSource, "current source-CI receipt local recheck"),
+    sourceCiSource,
+  );
+  const provenance = readProvenance(input.releaseProvenance);
+  const accessBoundary = readReviewedAccessBoundary(input);
+  const binding = readReceiptBinding(context.stateDirectory, context.receiptDirectory);
+  const chain = readReceiptChain(context.receiptDirectory, { readOnly: true });
+  const freshBundle = readSchema4Bundle(context, release, plan);
+  if (
+    canonicalJson(source) !== canonicalJson(context.source)
+    || canonicalJson(sourceCi) !== canonicalJson(context.sourceCiReceipt)
+    || canonicalJson(provenance) !== canonicalJson(context.provenance)
+    || canonicalJson(accessBoundary) !== canonicalJson(context.accessBoundary)
+    || binding.bindingSha256 !== context.receiptBinding.bindingSha256
+    || canonicalJson(chain) !== canonicalJson(context.chain)
+    || freshBundle.attestation.attestationSha256
+      !== bundle.attestation.attestationSha256
+    || canonicalJson(freshBundle.runtimeMutationInput)
+      !== canonicalJson(bundle.runtimeMutationInput)
+    || canonicalJson(freshBundle.deployMutationInput)
+      !== canonicalJson(bundle.deployMutationInput)
+    || !mutationInputIsUnchanged(freshBundle, release, "secrets-set")
+    || !mutationInputIsUnchanged(freshBundle, release, "function-deploy")
+  ) refuse("schema-4 local authority changed after final hosted fence");
+  return true;
+}
+
+function schema4MutationIntentFields(plan, observed, recordedAt) {
+  const mutation = plan.mutationScope;
+  const base = {
+    kind: "mutation-intent",
+    mutation,
+    status: "pending",
+    environment: "staging",
+    recordedAt,
+    planReceiptSha256: plan.receiptSha256,
+    beforeMainInventorySha256: observed.inventories.mainInventorySha256,
+    beforeMainInventoryRows: inventoryCore(observed.inventories.main),
+    semanticBeforeMainInventorySha256:
+      semanticSecretInventorySha256(observed.inventories.main),
+    beforeFinanceInventorySha256: observed.inventories.financeInventorySha256,
+    beforeFunctionInventorySha256: observed.functions.sha256,
+    beforeTargetFunctionRow: observed.functions.target,
+    expectedPostSecretSemanticMainInventorySha256:
+      plan.expectedPostSecretSemanticMainInventorySha256,
+    expectedHostedSourceClosureSha256:
+      plan.expectedHostedSourceClosureSha256,
+    sourceDeploymentSha256: plan.sourceDeploymentSha256,
+    mutationInputSha256: mutation === "secrets-set"
+      ? plan.runtimeMutationInputSha256 : plan.deployMutationInputSha256,
+    commandArgsSha256: mutation === "secrets-set"
+      ? plan.runtimeCommandArgsSha256 : plan.deployCommandArgsSha256,
+    hostedMutationCount: mutation === "secrets-set" ? 0 : 1,
+    functionDeployCount: 0,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  };
+  return Object.freeze(mutation === "secrets-set" ? {
+    ...base,
+    beforeFunctionInventoryRows: observed.functions.rows,
+    expectedSecretDigestSetSha256: plan.mutationSecretDigestSetSha256,
+    secretNames: plan.mutationSecretNames,
+    mutationSecretNameSetSha256: plan.mutationSecretNameSetSha256,
+    metadataOnlySecretNameSetSha256: plan.metadataOnlySecretNameSetSha256,
+    predecessorReceiptChainSha256: plan.predecessorReceiptChainSha256,
+    allowedPostSecretFunctionDispositions: Object.freeze([
+      "unchanged", "exact-all-existing-plus-one",
+    ]),
+  } : {
+    ...base,
+    beforeFunctionInventoryRows: observed.functions.rows,
+    targetTransitionDisposition: SCHEMA4_TARGET_TRANSITION,
+  });
+}
+
+function schema4UnknownResultFields(intent, recordedAt) {
+  return Object.freeze({
+    kind: "mutation-result",
+    mutation: intent.mutation,
+    status: "unknown",
+    environment: "staging",
+    recordedAt,
+    intentReceiptSha256: intent.receiptSha256,
+    responseStatus: null,
+    invocationAttempted: true,
+    reconcileRequired: true,
+    hostedMutationCount: intent.mutation === "secrets-set" ? 1 : 2,
+    functionDeployCount: intent.mutation === "secrets-set" ? 0 : 1,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  });
+}
+
+function schema4NotInvokedResultFields(intent, recordedAt) {
+  return Object.freeze({
+    kind: "mutation-result",
+    mutation: intent.mutation,
+    status: "not_invoked",
+    environment: "staging",
+    recordedAt,
+    intentReceiptSha256: intent.receiptSha256,
+    reasonCode: "pre-invocation-authority-refused",
+    invocationAttempted: false,
+    reconcileRequired: false,
+    hostedMutationCount: intent.mutation === "secrets-set" ? 0 : 1,
+    functionDeployCount: 0,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  });
+}
+
+function schema4InvocationUnprovenFields(intent, recordedAt) {
+  return Object.freeze({
+    kind: "mutation-result",
+    mutation: intent.mutation,
+    status: "invocation_unproven",
+    environment: "staging",
+    recordedAt,
+    intentReceiptSha256: intent.receiptSha256,
+    reasonCode: "pending-intent-crash-boundary",
+    invocationAttempted: "unproven",
+    reconcileRequired: false,
+    hostedMutationCount: intent.mutation === "secrets-set" ? 0 : 1,
+    functionDeployCount: 0,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  });
+}
+
+function schema4SecretResultFields({ intent, bundle, observed, state, recordedAt }) {
+  return Object.freeze({
+    kind: "mutation-result",
+    mutation: "secrets-set",
+    status: "verified",
+    environment: "staging",
+    recordedAt,
+    intentReceiptSha256: intent.receiptSha256,
+    afterMainInventorySha256: observed.inventories.mainInventorySha256,
+    beforeMainInventoryRows: intent.beforeMainInventoryRows,
+    afterMainInventoryRows: inventoryCore(observed.inventories.main),
+    semanticAfterMainInventorySha256:
+      semanticSecretInventorySha256(observed.inventories.main),
+    afterFinanceInventorySha256: observed.inventories.financeInventorySha256,
+    afterFunctionInventorySha256: observed.functions.sha256,
+    beforeFunctionInventoryRows: intent.beforeFunctionInventoryRows,
+    afterFunctionInventoryRows: observed.functions.rows,
+    afterTargetFunctionRow: observed.functions.target,
+    functionVersionTransitionDisposition: state.transition,
+    functionInventoryStableReadRounds: 2,
+    metadataOnlyDeltaNames: state.metadataDelta.names,
+    metadataOnlyDeltaSha256: state.metadataDelta.sha256,
+    mutationSecretNames: bundle.attestation.mutationSecretNames,
+    mutationSecretNameSetSha256: sha256(canonicalJson(
+      bundle.attestation.mutationSecretNames,
+    )),
+    mutationSecretDigestSetSha256: sha256(canonicalJson(
+      bundle.attestation.mutationSecretDigests,
+    )),
+    predecessorReceiptChainSha256:
+      bundle.attestation.predecessorAdoption.priorReceiptChainSha256,
+    observation: "installed_observed",
+    state: "state_satisfied",
+    causalAttribution: false,
+    hostedMutationCount: 1,
+    functionDeployCount: 0,
+    reconcileRequired: false,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  });
+}
+
+function schema4DeployResultFields({ intent, sandwich, recordedAt }) {
+  return Object.freeze({
+    kind: "mutation-result",
+    mutation: "function-deploy",
+    status: "verified",
+    environment: "staging",
+    recordedAt,
+    intentReceiptSha256: intent.receiptSha256,
+    beforeTargetFunctionRow: sandwich.transition.beforeTargetFunctionRow,
+    afterTargetFunctionRow: sandwich.transition.afterTargetFunctionRow,
+    beforeFunctionInventoryRows: intent.beforeFunctionInventoryRows,
+    afterFunctionInventoryRows: sandwich.functionInventory.rows,
+    targetTransitionDisposition: SCHEMA4_TARGET_TRANSITION,
+    hostedSourceClosureSha256: sandwich.hostedSourceClosureSha256,
+    hostedSourceMetadataSha256: sandwich.hostedSourceMetadataSha256,
+    hostedSourceClosureReadRounds: sandwich.hostedSourceClosureReadRounds,
+    mainInventorySha256: sandwich.d1MainInventorySha256,
+    semanticMainInventorySha256:
+      semanticSecretInventorySha256(sandwich.inventories.main),
+    financeInventorySha256: sandwich.d1FinanceInventorySha256,
+    functionInventorySha256: sandwich.d1FunctionInventorySha256,
+    ...schema4SandwichFields(sandwich),
+    hostedMutationCount: 2,
+    functionDeployCount: 1,
+    reconcileRequired: false,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  });
+}
+
+function schema4CompletionFields({
+  context,
+  release,
+  bundle,
+  chain,
+  cause,
+  sandwich,
+  now,
+}) {
+  const plans = chain.filter(item => item.kind === "release-plan");
+  if (
+    plans.length !== 2
+    || cause.hostedProof.proofSha256 === sandwich.proof.proofSha256
+    || cause.d0.responseSha256 === sandwich.d0.response_sha256
+    || cause.d1.responseSha256 === sandwich.d1.response_sha256
+    || Date.parse(sandwich.d0.database_clock) <= Date.parse(cause.d1.databaseClock)
+  ) refuse("schema-4 completion requires a distinct fresh D0/proof/D1");
+  const recordedAt = nextReceiptTimestamp(
+    chain,
+    now,
+    Date.parse(sandwich.d1.database_clock) + 1,
+  );
+  return Object.freeze({
+    kind: "release-complete",
+    status: "verified",
+    environment: "staging",
+    recordedAt,
+    mainProjectRef: MAIN_REF,
+    financeProjectRef: FINANCE_REF,
+    sourceCommitSha: context.source.commit,
+    sourceTreeSha: context.source.tree,
+    sourceParentSha: context.source.parent,
+    baseTreeSha: context.source.baseTree,
+    changedPaths: context.source.changedPaths,
+    changedPathSetSha256: context.source.changedPathSetSha256,
+    trackedFileCount: context.source.trackedFileCount,
+    workflowBlobSha: context.source.workflowBlobSha,
+    sourceCiRunId: context.ci.runId,
+    sourceCiRunApiSha256: context.ci.runApiSha256,
+    sourceCiJobsApiSha256: context.ci.jobsApiSha256,
+    sourceCiBranchApiSha256: context.ci.branchApiSha256,
+    sourceCiReceiptSha256: context.sourceCiReceipt.receiptSha256,
+    sourceCiReceiptFileSha256: context.sourceCiReceipt.fileSha256,
+    sourceProvenanceFileSha256: context.provenance.fileSha256,
+    sourceProvenanceDescriptorSha256: context.provenance.descriptorSha256,
+    releaseManifestSha256: release.manifestSha256,
+    sourceDeploymentSha256: release.manifest.deploymentClosureSetSha256,
+    sourceArchiveSha256: bundle.attestation.sourceArchiveSha256,
+    supabaseArchiveSha256: context.source.supabaseArchiveSha256,
+    bundleAttestationSha256: bundle.attestation.attestationSha256,
+    operatorDescriptorFileSha256: bundle.attestation.operatorDescriptorFileSha256,
+    operatorDescriptorSha256: bundle.attestation.operatorDescriptorSha256,
+    productionBoundarySha256: bundle.attestation.productionBoundarySha256,
+    targetDescriptorSha256: bundle.attestation.targetDescriptorSha256,
+    completionCauseReceiptSha256: cause.receiptSha256,
+    initialPlanReceiptSha256: plans[0].receiptSha256,
+    deployPlanReceiptSha256: plans[1].receiptSha256,
+    mainInventorySha256: sandwich.d1MainInventorySha256,
+    semanticMainInventorySha256:
+      semanticSecretInventorySha256(sandwich.inventories.main),
+    financeInventorySha256: sandwich.d1FinanceInventorySha256,
+    functionInventorySha256: sandwich.d1FunctionInventorySha256,
+    beforeTargetFunctionRow: cause.beforeTargetFunctionRow,
+    afterTargetFunctionRow: cause.afterTargetFunctionRow,
+    beforeFunctionInventoryRows: cause.beforeFunctionInventoryRows,
+    afterFunctionInventoryRows: cause.afterFunctionInventoryRows,
+    targetTransitionDisposition: SCHEMA4_TARGET_TRANSITION,
+    hostedSourceClosureSha256: sandwich.hostedSourceClosureSha256,
+    hostedSourceMetadataSha256: sandwich.hostedSourceMetadataSha256,
+    hostedSourceClosureReadRounds: sandwich.hostedSourceClosureReadRounds,
+    ...schema4SandwichFields(sandwich),
+    hostedMutationCount: 2,
+    functionDeployCount: 1,
+    freshPlanCount: 2,
+    ownerApprovalCount: 2,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  });
+}
+
+async function trySchema4Completion({
+  context,
+  input,
+  common,
+  release,
+  bundle,
+  cause,
+}) {
+  const currentPlan = latestPlan(context.chain);
+  const freshBundle = readSchema4Bundle(context, release, currentPlan);
+  if (
+    freshBundle.attestation.attestationSha256
+      !== bundle.attestation.attestationSha256
+    || canonicalJson(freshBundle.runtimeMutationInput)
+      !== canonicalJson(bundle.runtimeMutationInput)
+    || canonicalJson(freshBundle.deployMutationInput)
+      !== canonicalJson(bundle.deployMutationInput)
+    || !mutationInputIsUnchanged(freshBundle, release, "secrets-set")
+    || !mutationInputIsUnchanged(freshBundle, release, "function-deploy")
+  ) refuse("schema-4 bundle changed before release completion");
+  const firstCi = assertSchema4CurrentAuthorityFresh(
+    context,
+    input,
+    common,
+    release,
+    currentPlan,
+  );
+  const firstHostedSource = await attestSchema4HostedSourceClosure(
+    context,
+    release,
+    cause.afterTargetFunctionRow,
+  ).catch(() => null);
+  if (firstHostedSource === null) return null;
+  const firstBaseSandwich = await postflightSecretsOnlySuccessorSandwich(
+    context.dependencies,
+    release,
+    context.source,
+    bundle,
+    cause.afterFunctionInventoryRows,
+  ).catch(() => null);
+  if (firstBaseSandwich === null) return null;
+  const secondCi = assertSchema4CurrentAuthorityFresh(
+    context,
+    input,
+    common,
+    release,
+    currentPlan,
+  );
+  if (canonicalJson(secondCi) !== canonicalJson(firstCi)) return null;
+  const hostedSource = await attestSchema4HostedSourceClosure(
+    context,
+    release,
+    cause.afterTargetFunctionRow,
+  ).catch(() => null);
+  if (hostedSource === null) return null;
+  const baseSandwich = await postflightSecretsOnlySuccessorSandwich(
+    context.dependencies,
+    release,
+    context.source,
+    bundle,
+    cause.afterFunctionInventoryRows,
+  ).catch(() => null);
+  if (
+    baseSandwich === null
+    || !schema4HostedBookendsMatch(
+      firstHostedSource,
+      firstBaseSandwich,
+      hostedSource,
+      baseSandwich,
+    )
+  ) return null;
+  const sandwich = Object.freeze({ ...baseSandwich, ...hostedSource });
+  assertSchema4LocalAuthorityFresh(
+    context,
+    input,
+    common,
+    release,
+    currentPlan,
+    bundle,
+  );
+  const fields = schema4CompletionFields({
+    context,
+    release,
+    bundle,
+    chain: context.chain,
+    cause,
+    sandwich,
+    now: common.now,
+  });
+  return appendSchema4Receipt(context, context.chain, fields);
+}
+
+function schema4SecretReconciliationFields({
+  unresolved,
+  intent,
+  observed,
+  state,
+  stable,
+  recordedAt,
+}) {
+  return Object.freeze({
+    kind: "reconciliation",
+    mutation: "secrets-set",
+    outcome: state.outcome,
+    environment: "staging",
+    recordedAt,
+    unresolvedReceiptSha256: unresolved.receiptSha256,
+    mainInventorySha256: observed.inventories.mainInventorySha256,
+    semanticMainInventorySha256:
+      semanticSecretInventorySha256(observed.inventories.main),
+    financeInventorySha256: observed.inventories.financeInventorySha256,
+    functionInventorySha256: observed.functions.sha256,
+    targetFunctionRow: observed.functions.target,
+    stableObservation: stable,
+    inventoryReadRounds: 2,
+    divergenceReason: state.divergenceReason,
+    hostedMutationCount: 1,
+    functionDeployCount: 0,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+    beforeMainInventoryRows: intent.beforeMainInventoryRows,
+    afterMainInventoryRows: inventoryCore(observed.inventories.main),
+    beforeFunctionInventoryRows: intent.beforeFunctionInventoryRows,
+    afterFunctionInventoryRows: observed.functions.rows,
+    functionVersionTransitionDisposition: state.transition,
+    metadataOnlyDeltaNames: state.metadataDelta?.names ?? null,
+    metadataOnlyDeltaSha256: state.metadataDelta?.sha256 ?? null,
+  });
+}
+
+function schema4DeployReconciliationFields({
+  unresolved,
+  intent,
+  observed,
+  outcome,
+  divergenceReason,
+  sandwich,
+  recordedAt,
+}) {
+  const base = {
+    kind: "reconciliation",
+    mutation: "function-deploy",
+    outcome,
+    environment: "staging",
+    recordedAt,
+    unresolvedReceiptSha256: unresolved.receiptSha256,
+    mainInventorySha256: observed.inventories.mainInventorySha256,
+    semanticMainInventorySha256:
+      semanticSecretInventorySha256(observed.inventories.main),
+    financeInventorySha256: observed.inventories.financeInventorySha256,
+    functionInventorySha256: observed.functions.sha256,
+    targetFunctionRow: observed.functions.target,
+    stableObservation: true,
+    inventoryReadRounds: 2,
+    divergenceReason,
+    hostedMutationCount: 2,
+    functionDeployCount: 1,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  };
+  if (outcome === "applied") {
+    return Object.freeze({
+      ...base,
+      beforeTargetFunctionRow: intent.beforeTargetFunctionRow,
+      afterTargetFunctionRow: observed.functions.target,
+      beforeFunctionInventoryRows: intent.beforeFunctionInventoryRows,
+      afterFunctionInventoryRows: observed.functions.rows,
+      targetTransitionDisposition: SCHEMA4_TARGET_TRANSITION,
+      hostedSourceClosureSha256: sandwich.hostedSourceClosureSha256,
+      hostedSourceMetadataSha256: sandwich.hostedSourceMetadataSha256,
+      hostedSourceClosureReadRounds: sandwich.hostedSourceClosureReadRounds,
+      ...schema4SandwichFields(sandwich),
+    });
+  }
+  return Object.freeze({
+    ...base,
+    beforeFunctionInventoryRows: intent.beforeFunctionInventoryRows,
+    afterFunctionInventoryRows: observed.functions.rows,
+    functionVersionTransitionDisposition: schema4ActualFunctionDisposition(
+      intent.beforeFunctionInventoryRows,
+      observed.functions.rows,
+    ),
+    metadataOnlyDeltaNames: null,
+    metadataOnlyDeltaSha256: null,
+  });
+}
+
 async function operateMeasure(input, common) {
   const release = readMeasurementRelease();
   assertDisjointOperationDirectories(input.stateDir, input.receiptDir);
@@ -9464,6 +12571,15 @@ function initializeReadyOperation(input, common, release, createState) {
   );
   const supabaseEnvironment = scrubEnvironment(common.environment, null, supabaseHome);
   const provenance = readProvenance(input.releaseProvenance);
+  const sourceCiReceiptSource = readPrivateFile(
+    input.sourceCiReceipt,
+    "current source-CI receipt",
+    64 * 1024,
+  );
+  const sourceCiReceipt = validateSchema4SourceCiReceipt(
+    readJsonSource(sourceCiReceiptSource, "current source-CI receipt"),
+    sourceCiReceiptSource,
+  );
   const accessBoundary = readReviewedAccessBoundary(input);
   const inspectCurrentSource = () => inspectSource({
     provenance,
@@ -9486,6 +12602,14 @@ function initializeReadyOperation(input, common, release, createState) {
     release,
     ghLocalState,
   });
+  if (
+    sourceCiReceipt.sourceCommit !== source.commit
+    || sourceCiReceipt.sourceTree !== source.tree
+    || sourceCiReceipt.workflowBlob !== source.workflowBlobSha
+    || String(sourceCiReceipt.runId) !== provenance.githubRunId
+    || String(sourceCiReceipt.runId) !== ci.runId
+    || String(sourceCiReceipt.verifyJobId) !== ci.jobId
+  ) refuse("current source-CI receipt differs from live source authority");
   const sourceAfterCi = inspectCurrentSource();
   if (canonicalJson(sourceAfterCi) !== canonicalJson(source)) {
     refuse("Main source changed during live CI attestation");
@@ -9512,6 +12636,7 @@ function initializeReadyOperation(input, common, release, createState) {
     receiptBinding,
     chain,
     provenance,
+    sourceCiReceipt,
     accessBoundary,
     source,
     ci,
@@ -9570,7 +12695,223 @@ function inspectReadyOperationSourceCi(context, input, common, release) {
   return ci;
 }
 
+async function operateSchema4Plan(input, common, release) {
+  assertAbsolute(input.stateDir, "state directory");
+  if (!outsideRepository(input.stateDir)) {
+    refuse("state directory must remain outside the repository");
+  }
+  if (existsSync(input.stateDir)) {
+    return operateSchema4ResumePlan(input, common, release);
+  }
+  if (input.priorStateDir === null) {
+    refuse("schema-4 initial plan requires all five predecessor authority flags");
+  }
+  const preflightIdentity = receiptDirectoryIdentity(input.receiptDir);
+  const preflightChain = readReceiptChain(input.receiptDir, { readOnly: true });
+  if (preflightChain.length !== 0) {
+    refuse("schema-4 successor requires a fresh empty receipt chain");
+  }
+  const context = initializeReadyOperation(input, common, release, true);
+  assertFreshReceiptAuthorityUnchanged({
+    expectedIdentity: preflightIdentity,
+    expectedChain: preflightChain,
+    currentIdentity: receiptBindingIdentity(context.receiptBinding),
+    currentChain: context.chain,
+    phase: "during schema-4 initialization",
+  });
+  const live = readStableSchema4HostedState(context);
+  if (!live.stable) refuse("schema-4 initial hosted baseline is not stable");
+  const predecessor = readPartialSecretPredecessorAdoption(input, release, live);
+  const snapshot = await buildCurrentSnapshot(
+    context.dependencies,
+    release,
+    context.source,
+    live.second.inventories,
+    "recovery",
+  );
+  const bundle = createBundle({
+    stateDirectory: context.stateDirectory,
+    release,
+    source: context.source,
+    supabaseMutationInput: context.dependencies.supabaseMutationInput,
+    snapshot,
+    inventories: live.second.inventories,
+    functionInventory: live.second.functions,
+    accessBoundary: context.accessBoundary,
+    randomBytesImpl: common.randomBytesImpl,
+    generatedSecretValues: predecessor.generatedSecretValues,
+    predecessorAdoption: predecessor.summary,
+    now: common.now,
+  });
+  const liveAfterCopy = readStableSchema4HostedState(context);
+  if (
+    !liveAfterCopy.stable
+    || canonicalJson(inventoryCore(liveAfterCopy.second.inventories.main))
+      !== canonicalJson(inventoryCore(live.second.inventories.main))
+    || canonicalJson(inventoryCore(liveAfterCopy.second.inventories.finance))
+      !== canonicalJson(inventoryCore(live.second.inventories.finance))
+    || canonicalJson(liveAfterCopy.second.functions.rows)
+      !== canonicalJson(live.second.functions.rows)
+  ) refuse("schema-4 hosted baseline changed during generated-secret adoption");
+  const predecessorAfterCopy = readPartialSecretPredecessorAdoption(
+    input,
+    release,
+    liveAfterCopy,
+  );
+  if (
+    canonicalJson(predecessorAfterCopy.summary) !== canonicalJson(predecessor.summary)
+    || canonicalJson(predecessorAfterCopy.identity) !== canonicalJson(predecessor.identity)
+    || canonicalJson(predecessorAfterCopy.generatedSecretDigests)
+      !== canonicalJson(predecessor.generatedSecretDigests)
+    || canonicalJson(predecessorAfterCopy.generatedSecretValues)
+      !== canonicalJson(predecessor.generatedSecretValues)
+  ) refuse("schema-4 predecessor changed during generated-secret adoption");
+  const clock = schema4PlanExpiry(context.chain, snapshot, common, release);
+  const fields = schema4PlanReceiptFields({
+    context,
+    release,
+    bundle,
+    inventories: live.second.inventories,
+    functionInventory: live.second.functions,
+    snapshot,
+    predecessorAdoption: predecessor.summary,
+    mutationScope: "secrets-set",
+    resumeFromReceiptSha256: null,
+    recordedAt: clock.recordedAt,
+    expiresAt: clock.expiresAt,
+  });
+  assertSchema4CurrentAuthorityFresh(context, input, common, release, fields);
+  if (
+    !mutationInputIsUnchanged(bundle, release, "secrets-set")
+    || !mutationInputIsUnchanged(bundle, release, "function-deploy")
+  ) refuse("schema-4 bundle mutation inputs changed before initial plan append");
+  const written = appendSchema4Receipt(context, context.chain, fields);
+  return Object.freeze({
+    ok: true,
+    mode: "plan",
+    stage: "secrets-set",
+    deployReady: true,
+    expiresAt: written.receipt.expiresAt,
+    planReceiptFile: written.file,
+    planReceiptSha256: written.receipt.receiptSha256,
+    approval: expectedApproval(written.receipt),
+    ownerPrivateDescriptorFile: bundle.operatorDescriptorFile,
+    ownerPrivateDescriptorFileSha256:
+      bundle.attestation.operatorDescriptorFileSha256,
+    hostedMutationCount: 0,
+    functionDeployCount: 0,
+    productionTouched: false,
+  });
+}
+
+async function operateSchema4ResumePlan(input, common, release) {
+  if (input.priorStateDir === null) {
+    refuse("schema-4 deploy resume plan requires all predecessor authority flags");
+  }
+  const context = initializeReadyOperation(input, common, release, false);
+  const plans = context.chain.filter(item => item.kind === "release-plan");
+  const cause = context.chain.at(-1);
+  const eligibleCause = (
+    cause?.kind === "mutation-result"
+    && cause.mutation === "secrets-set"
+    && cause.status === "verified"
+  ) || (
+    cause?.kind === "reconciliation"
+    && cause.mutation === "secrets-set"
+    && cause.outcome === "state_satisfied"
+  );
+  if (
+    plans.length !== 1
+    || plans[0].mutationScope !== "secrets-set"
+    || !eligibleCause
+    || context.chain.some(item => item.kind === "release-complete")
+  ) refuse("schema-4 deploy resume cause differs");
+  const initialPlan = assertCurrentReleaseSchema4Plan(plans[0]);
+  const live = readStableSchema4HostedState(context);
+  if (!live.stable) refuse("schema-4 deploy resume hosted state is not stable");
+  const predecessor = readPartialSecretPredecessorAdoption(input, release, live);
+  if (
+    canonicalJson(predecessor.summary)
+      !== canonicalJson(initialPlan.predecessorAdoption)
+  ) refuse("schema-4 deploy resume predecessor authority differs");
+  const liveAfterPredecessor = readStableSchema4HostedState(context);
+  if (
+    !liveAfterPredecessor.stable
+    || canonicalJson(inventoryCore(liveAfterPredecessor.second.inventories.main))
+      !== canonicalJson(inventoryCore(live.second.inventories.main))
+    || canonicalJson(inventoryCore(liveAfterPredecessor.second.inventories.finance))
+      !== canonicalJson(inventoryCore(live.second.inventories.finance))
+    || canonicalJson(liveAfterPredecessor.second.functions.rows)
+      !== canonicalJson(live.second.functions.rows)
+  ) refuse("schema-4 hosted state changed during deploy resume adoption recheck");
+  const bundle = readSchema4Bundle(context, release, initialPlan);
+  const secretState = classifySchema4SecretState({
+    bundle,
+    beforeFunctionRows: initialPlan.functionInventoryRows,
+    observed: liveAfterPredecessor.second,
+  });
+  if (
+    secretState.outcome !== "state_satisfied"
+    || liveAfterPredecessor.second.inventories.mainInventorySha256
+      !== (cause.afterMainInventorySha256 ?? cause.mainInventorySha256)
+    || liveAfterPredecessor.second.inventories.financeInventorySha256
+      !== (cause.afterFinanceInventorySha256 ?? cause.financeInventorySha256)
+    || liveAfterPredecessor.second.functions.sha256
+      !== (cause.afterFunctionInventorySha256 ?? cause.functionInventorySha256)
+    || canonicalJson(liveAfterPredecessor.second.functions.rows)
+      !== canonicalJson(cause.afterFunctionInventoryRows)
+  ) refuse("schema-4 deploy resume cause no longer matches hosted state");
+  assertSchema4CurrentAuthorityFresh(
+    context,
+    input,
+    common,
+    release,
+    initialPlan,
+  );
+  const snapshot = await buildCurrentSnapshot(
+    context.dependencies,
+    release,
+    context.source,
+    liveAfterPredecessor.second.inventories,
+    "recovery",
+  );
+  const clock = schema4PlanExpiry(context.chain, snapshot, common, release);
+  const fields = schema4PlanReceiptFields({
+    context,
+    release,
+    bundle,
+    inventories: liveAfterPredecessor.second.inventories,
+    functionInventory: liveAfterPredecessor.second.functions,
+    snapshot,
+    predecessorAdoption: initialPlan.predecessorAdoption,
+    mutationScope: "function-deploy",
+    resumeFromReceiptSha256: cause.receiptSha256,
+    recordedAt: clock.recordedAt,
+    expiresAt: clock.expiresAt,
+  });
+  const written = appendSchema4Receipt(context, context.chain, fields);
+  return Object.freeze({
+    ok: true,
+    mode: "plan",
+    stage: "function-deploy",
+    deployReady: true,
+    expiresAt: written.receipt.expiresAt,
+    planReceiptFile: written.file,
+    planReceiptSha256: written.receipt.receiptSha256,
+    approval: expectedApproval(written.receipt),
+    ownerPrivateDescriptorFile: bundle.operatorDescriptorFile,
+    ownerPrivateDescriptorFileSha256:
+      bundle.attestation.operatorDescriptorFileSha256,
+    hostedMutationCount: 1,
+    functionDeployCount: 0,
+    productionTouched: false,
+  });
+}
+
 async function operatePlan(input, common, release) {
+  if (release.manifest.schemaVersion === 4) {
+    return operateSchema4Plan(input, common, release);
+  }
   assertAbsolute(input.stateDir, "state directory");
   if (!outsideRepository(input.stateDir)) {
     refuse("state directory must remain outside the repository");
@@ -10092,7 +13433,335 @@ function unknownOutcomeAuthority({
   });
 }
 
+function assertSchema4ObservedMatchesPlan(observed, plan, label) {
+  if (
+    observed.inventories.mainInventorySha256 !== plan.mainInventorySha256
+    || semanticSecretInventorySha256(observed.inventories.main)
+      !== plan.semanticMainInventorySha256
+    || observed.inventories.financeInventorySha256 !== plan.financeInventorySha256
+    || observed.functions.sha256 !== plan.functionInventorySha256
+    || canonicalJson(observed.functions.rows)
+      !== canonicalJson(plan.functionInventoryRows)
+    || canonicalJson(observed.functions.target)
+      !== canonicalJson(plan.targetFunctionRow)
+  ) refuse(`${label} differs from the approved schema-4 plan`);
+}
+
+function assertSchema4PlanApproval(plan, input, common) {
+  const now = exactNow(common.now);
+  if (
+    plan.status !== "pending"
+    || Date.parse(plan.expiresAt) <= now.getTime()
+    || Date.parse(plan.expiresAt) - now.getTime() > 240_000
+    || input.approval !== expectedApproval(plan)
+  ) refuse("schema-4 owner approval is absent, stale or bound to other evidence");
+  return now;
+}
+
+async function operateSchema4Apply(input, common, release) {
+  const context = initializeReadyOperation(input, common, release, false);
+  const plan = assertCurrentReleaseSchema4Plan(latestPlan(context.chain));
+  if (context.chain.at(-1)?.receiptSha256 !== plan.receiptSha256) {
+    refuse("schema-4 apply requires the fresh plan at the chain tail");
+  }
+  assertSchema4PlanApproval(plan, input, common);
+  assertSchema4CurrentAuthorityFresh(
+    context,
+    input,
+    common,
+    release,
+    plan,
+  );
+  const bundle = readSchema4Bundle(context, release, plan);
+  const before = readStableSchema4HostedState(context);
+  if (!before.stable) refuse("schema-4 pre-mutation hosted state is not stable");
+  assertSchema4ObservedMatchesPlan(before.second, plan, "pre-mutation hosted state");
+  if (!mutationInputIsUnchanged(bundle, release, plan.mutationScope)) {
+    refuse("schema-4 mutation input changed before intent");
+  }
+  const intentFields = schema4MutationIntentFields(
+    plan,
+    before.second,
+    nextReceiptTimestamp(context.chain, common.now),
+  );
+  const intent = appendSchema4Receipt(
+    context,
+    context.chain,
+    intentFields,
+  ).receipt;
+  let preinvokeReady = true;
+  try {
+    assertSchema4CurrentAuthorityFresh(context, input, common, release, plan);
+    if (!mutationInputIsUnchanged(bundle, release, plan.mutationScope)) {
+      preinvokeReady = false;
+    }
+    const immediate = readStableSchema4HostedState(context);
+    if (!immediate.stable) preinvokeReady = false;
+    if (preinvokeReady) {
+      assertSchema4ObservedMatchesPlan(
+        immediate.second,
+        plan,
+        "immediate pre-invocation hosted state",
+      );
+      assertSchema4LocalAuthorityFresh(
+        context,
+        input,
+        common,
+        release,
+        plan,
+        bundle,
+      );
+      const immediateBinding = readReceiptBinding(
+        context.stateDirectory,
+        context.receiptDirectory,
+      );
+      const immediateChain = readReceiptChain(
+        context.receiptDirectory,
+        { readOnly: true },
+      );
+      if (
+        immediateBinding.bindingSha256 !== context.receiptBinding.bindingSha256
+        || canonicalJson(immediateChain) !== canonicalJson(context.chain)
+        || immediateChain.at(-1)?.receiptSha256 !== intent.receiptSha256
+      ) refuse("schema-4 receipt authority changed immediately before CLI invocation");
+      assertSchema4PlanApproval(plan, input, common);
+    }
+  } catch {
+    preinvokeReady = false;
+  }
+  if (!preinvokeReady) {
+    const terminal = appendSchema4Receipt(
+      context,
+      context.chain,
+      schema4NotInvokedResultFields(
+        intent,
+        nextReceiptTimestamp(context.chain, common.now),
+      ),
+    );
+    return Object.freeze({
+      ok: false,
+      mode: "apply",
+      mutation: plan.mutationScope,
+      outcome: "not_invoked",
+      resultReceiptFile: terminal.file,
+      resultReceiptSha256: terminal.receipt.receiptSha256,
+      hostedMutationCount: plan.mutationScope === "function-deploy" ? 1 : 0,
+      functionDeployCount: 0,
+      automaticRetryPerformed: false,
+      productionTouched: false,
+    });
+  }
+  const result = invokeCli(
+    context.dependencies,
+    plan.mutationScope === "secrets-set"
+      ? secretArguments(bundle) : deploymentArguments(bundle),
+    { mutation: true },
+  );
+  if (result?.cliInvoked === false) {
+    const terminal = appendSchema4Receipt(
+      context,
+      context.chain,
+      schema4NotInvokedResultFields(
+        intent,
+        nextReceiptTimestamp(context.chain, common.now),
+      ),
+    );
+    return Object.freeze({
+      ok: false,
+      mode: "apply",
+      mutation: plan.mutationScope,
+      outcome: "not_invoked",
+      resultReceiptFile: terminal.file,
+      resultReceiptSha256: terminal.receipt.receiptSha256,
+      hostedMutationCount: plan.mutationScope === "function-deploy" ? 1 : 0,
+      functionDeployCount: 0,
+      automaticRetryPerformed: false,
+      productionTouched: false,
+    });
+  }
+  const appendUnknown = () => appendSchema4Receipt(
+    context,
+    context.chain,
+    schema4UnknownResultFields(
+      intent,
+      nextReceiptTimestamp(context.chain, common.now),
+    ),
+  );
+  if (!successful(result)) {
+    const unknown = appendUnknown();
+    return Object.freeze({
+      ok: false,
+      mode: "apply",
+      mutation: plan.mutationScope,
+      outcome: "unknown",
+      resultReceiptFile: unknown.file,
+      resultReceiptSha256: unknown.receipt.receiptSha256,
+      reconcileRequired: true,
+      hostedMutationCount: plan.mutationScope === "function-deploy" ? 2 : 1,
+      functionDeployCount: plan.mutationScope === "function-deploy" ? 1 : 0,
+      automaticRetryPerformed: false,
+      productionTouched: false,
+    });
+  }
+  if (plan.mutationScope === "secrets-set") {
+    let after = null;
+    let state = null;
+    try {
+      assertSchema4CurrentAuthorityFresh(context, input, common, release, plan);
+      after = readStableSchema4HostedState(context);
+      state = after.stable ? classifySchema4SecretState({
+        bundle,
+        beforeFunctionRows: intent.beforeFunctionInventoryRows,
+        observed: after.second,
+      }) : null;
+      assertSchema4LocalAuthorityFresh(
+        context,
+        input,
+        common,
+        release,
+        plan,
+        bundle,
+      );
+    } catch {
+      after = null;
+      state = null;
+    }
+    if (after === null || state?.outcome !== "state_satisfied") {
+      const unknown = appendUnknown();
+      return Object.freeze({
+        ok: false,
+        mode: "apply",
+        mutation: "secrets-set",
+        outcome: "unknown",
+        resultReceiptFile: unknown.file,
+        resultReceiptSha256: unknown.receipt.receiptSha256,
+        reconcileRequired: true,
+        hostedMutationCount: 1,
+        functionDeployCount: 0,
+        automaticRetryPerformed: false,
+        productionTouched: false,
+      });
+    }
+    const fields = schema4SecretResultFields({
+      intent,
+      bundle,
+      observed: after.second,
+      state,
+      recordedAt: nextReceiptTimestamp(context.chain, common.now),
+    });
+    const verified = appendSchema4Receipt(context, context.chain, fields);
+    return Object.freeze({
+      ok: true,
+      mode: "apply",
+      mutation: "secrets-set",
+      outcome: "state_satisfied",
+      resultReceiptFile: verified.file,
+      resultReceiptSha256: verified.receipt.receiptSha256,
+      nextPlanRequired: "function-deploy",
+      hostedMutationCount: 1,
+      functionDeployCount: 0,
+      automaticRetryPerformed: false,
+      productionTouched: false,
+    });
+  }
+  let sandwich = null;
+  try {
+    assertSchema4CurrentAuthorityFresh(context, input, common, release, plan);
+    sandwich = await postflightSchema4TargetReplacement(
+      context,
+      release,
+      bundle,
+      intent.beforeFunctionInventoryRows,
+    );
+  } catch {
+    sandwich = null;
+  }
+  if (sandwich === null) {
+    const unknown = appendUnknown();
+    return Object.freeze({
+      ok: false,
+      mode: "apply",
+      mutation: "function-deploy",
+      outcome: "unknown",
+      resultReceiptFile: unknown.file,
+      resultReceiptSha256: unknown.receipt.receiptSha256,
+      reconcileRequired: true,
+      hostedMutationCount: 2,
+      functionDeployCount: 1,
+      automaticRetryPerformed: false,
+      productionTouched: false,
+    });
+  }
+  let verified;
+  try {
+    assertSchema4LocalAuthorityFresh(
+      context,
+      input,
+      common,
+      release,
+      plan,
+      bundle,
+    );
+    const resultFields = schema4DeployResultFields({
+      intent,
+      sandwich,
+      recordedAt: nextReceiptTimestamp(
+        context.chain,
+        common.now,
+        Date.parse(sandwich.d1.database_clock) + 1,
+      ),
+    });
+    verified = appendSchema4Receipt(context, context.chain, resultFields);
+  } catch {
+    const unknown = appendUnknown();
+    return Object.freeze({
+      ok: false,
+      mode: "apply",
+      mutation: "function-deploy",
+      outcome: "unknown",
+      resultReceiptFile: unknown.file,
+      resultReceiptSha256: unknown.receipt.receiptSha256,
+      reconcileRequired: true,
+      hostedMutationCount: 2,
+      functionDeployCount: 1,
+      automaticRetryPerformed: false,
+      productionTouched: false,
+    });
+  }
+  let completed = null;
+  try {
+    completed = await trySchema4Completion({
+      context,
+      input,
+      common,
+      release,
+      bundle,
+      cause: verified.receipt,
+    });
+  } catch {
+    completed = null;
+  }
+  return Object.freeze({
+    ok: completed !== null,
+    mode: "apply",
+    mutation: "function-deploy",
+    outcome: "applied",
+    resultReceiptFile: verified.file,
+    resultReceiptSha256: verified.receipt.receiptSha256,
+    releaseReceiptFile: completed?.file ?? null,
+    releaseReceiptSha256: completed?.receipt.receiptSha256 ?? null,
+    finalizationRequired: completed === null,
+    hostedMutationCount: 2,
+    functionDeployCount: 1,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  });
+}
+
 async function operateApply(input, common, release) {
+  if (release.manifest.schemaVersion === 4) {
+    return operateSchema4Apply(input, common, release);
+  }
   const context = initializeReadyOperation(input, common, release, false);
   let currentCi = context.ci;
   const complete = [...context.chain].reverse().find(receipt => receipt.kind === "release-complete");
@@ -11331,7 +15000,238 @@ async function operateSecretsOnlySuccessorReconcile({
   });
 }
 
+function initializeSchema4LocalReceiptContext(input) {
+  assertDisjointOperationDirectories(input.stateDir, input.receiptDir);
+  return Object.freeze({
+    stateDirectory: assertPrivateDirectory(input.stateDir, "state directory"),
+    receiptDirectory: assertPrivateDirectory(input.receiptDir, "receipt directory"),
+    receiptBinding: readReceiptBinding(input.stateDir, input.receiptDir),
+    chain: readReceiptChain(input.receiptDir, { readOnly: true }),
+  });
+}
+
+async function operateSchema4Reconcile(input, common, release) {
+  const localContext = initializeSchema4LocalReceiptContext(input);
+  if (localContext.chain.some(item => item.kind === "release-complete")) {
+    refuse("completed schema-4 release has no reconciliation work");
+  }
+  assertCurrentReleaseSchema4Plan(latestPlan(localContext.chain));
+  const tail = localContext.chain.at(-1);
+  if (tail?.kind === "mutation-intent" && tail.status === "pending") {
+    const terminal = appendSchema4Receipt(
+      localContext,
+      localContext.chain,
+      schema4InvocationUnprovenFields(
+        tail,
+        nextReceiptTimestamp(localContext.chain, common.now),
+      ),
+    );
+    return Object.freeze({
+      ok: false,
+      mode: "reconcile",
+      mutation: tail.mutation,
+      outcome: "invocation_unproven",
+      reconciliationReceiptFile: null,
+      reconciliationReceiptSha256: null,
+      terminalReceiptFile: terminal.file,
+      terminalReceiptSha256: terminal.receipt.receiptSha256,
+      hostedMutationCount: tail.mutation === "secrets-set" ? 0 : 1,
+      functionDeployCount: 0,
+      automaticRetryPerformed: false,
+      productionTouched: false,
+    });
+  }
+  const context = initializeReadyOperation(input, common, release, false);
+  if (
+    context.receiptBinding.bindingSha256
+      !== localContext.receiptBinding.bindingSha256
+    || canonicalJson(context.chain) !== canonicalJson(localContext.chain)
+  ) refuse("schema-4 receipt authority changed during reconciliation initialization");
+  const plan = assertCurrentReleaseSchema4Plan(latestPlan(context.chain));
+  assertSchema4CurrentAuthorityFresh(
+    context,
+    input,
+    common,
+    release,
+    plan,
+  );
+  const completionCause = (
+    tail?.kind === "mutation-result"
+    && tail.mutation === "function-deploy"
+    && tail.status === "verified"
+  ) || (
+    tail?.kind === "reconciliation"
+    && tail.mutation === "function-deploy"
+    && tail.outcome === "applied"
+  ) ? tail : null;
+  const bundle = readSchema4Bundle(context, release, plan);
+  if (completionCause !== null) {
+    const completed = await trySchema4Completion({
+      context,
+      input,
+      common,
+      release,
+      bundle,
+      cause: completionCause,
+    });
+    if (completed === null) {
+      refuse("fresh schema-4 completion D0/proof/D1 failed");
+    }
+    return Object.freeze({
+      ok: true,
+      mode: "reconcile",
+      mutation: "function-deploy",
+      outcome: "applied",
+      reconciliationReceiptFile: null,
+      reconciliationReceiptSha256: null,
+      releaseReceiptFile: completed.file,
+      releaseReceiptSha256: completed.receipt.receiptSha256,
+      hostedMutationCount: 2,
+      functionDeployCount: 1,
+      automaticRetryPerformed: false,
+      productionTouched: false,
+    });
+  }
+  if (
+    tail?.kind !== "mutation-result"
+    || tail.status !== "unknown"
+    || tail.invocationAttempted !== true
+  ) refuse("schema-4 chain has no post-invocation unknown to reconcile");
+  if (context.chain.some(item => item.kind === "reconciliation"
+    && item.mutation === tail.mutation)) {
+    refuse("schema-4 mutation already consumed its single reconciliation");
+  }
+  const intent = context.chain.at(-2);
+  if (
+    intent?.kind !== "mutation-intent"
+    || intent.mutation !== tail.mutation
+  ) refuse("schema-4 unknown result intent differs");
+  const reads = readStableSchema4HostedState(context);
+  let fields;
+  let outcome;
+  if (tail.mutation === "secrets-set") {
+    let state = classifySchema4SecretState({
+      bundle,
+      beforeFunctionRows: intent.beforeFunctionInventoryRows,
+      observed: reads.second,
+    });
+    if (!reads.stable) {
+      state = Object.freeze({
+        ...state,
+        outcome: "diverged",
+        divergenceReason: "unstable-hosted-observation",
+        metadataDelta: null,
+      });
+    }
+    outcome = state.outcome;
+    fields = schema4SecretReconciliationFields({
+      unresolved: tail,
+      intent,
+      observed: reads.second,
+      state,
+      stable: reads.stable,
+      recordedAt: nextReceiptTimestamp(context.chain, common.now),
+    });
+  } else {
+    let sandwich = null;
+    const transition = reads.stable ? classifyExactTargetReplacement({
+      beforeRows: intent.beforeFunctionInventoryRows,
+      afterRows: reads.second.functions.rows,
+    }) : null;
+    const secretsInstalled = inventoryMatchesSuccessorInstall(
+      bundle.preinstallInventories.main,
+      reads.second.inventories.main,
+      bundle.attestation.mutationSecretDigests,
+      bundle.attestation.mutationSecretNames,
+    ) && inventoryIsUnchanged(
+      bundle.preinstallInventories.finance,
+      reads.second.inventories.finance,
+    );
+    if (reads.stable && secretsInstalled && transition !== null) {
+      sandwich = await postflightSchema4TargetReplacement(
+        context,
+        release,
+        bundle,
+        intent.beforeFunctionInventoryRows,
+      ).catch(() => null);
+      if (
+        sandwich !== null
+        && canonicalJson(sandwich.functionInventory.rows)
+          !== canonicalJson(reads.second.functions.rows)
+      ) sandwich = null;
+    }
+    const unchanged = reads.stable
+      && canonicalJson(reads.second.functions.rows)
+        === canonicalJson(intent.beforeFunctionInventoryRows);
+    outcome = sandwich !== null
+      ? "applied" : (secretsInstalled && unchanged ? "not_applied" : "diverged");
+    const divergenceReason = outcome !== "diverged"
+      ? null
+      : (!reads.stable
+        ? "unstable-hosted-observation"
+        : (!secretsInstalled
+          ? "secret-inventory-drift"
+          : (transition !== null ? "hosted-proof-or-source-failed" : "function-transition-drift")));
+    const observed = sandwich === null ? reads.second : Object.freeze({
+      inventories: sandwich.inventories,
+      functions: sandwich.functionInventory,
+    });
+    fields = schema4DeployReconciliationFields({
+      unresolved: tail,
+      intent,
+      observed,
+      outcome,
+      divergenceReason,
+      sandwich,
+      recordedAt: nextReceiptTimestamp(
+        context.chain,
+        common.now,
+        sandwich === null ? null : Date.parse(sandwich.d1.database_clock) + 1,
+      ),
+    });
+  }
+  assertSchema4LocalAuthorityFresh(
+    context,
+    input,
+    common,
+    release,
+    plan,
+    bundle,
+  );
+  const reconciled = appendSchema4Receipt(context, context.chain, fields);
+  let completed = null;
+  if (tail.mutation === "function-deploy" && outcome === "applied") {
+    completed = await trySchema4Completion({
+      context,
+      input,
+      common,
+      release,
+      bundle,
+      cause: reconciled.receipt,
+    }).catch(() => null);
+  }
+  return Object.freeze({
+    ok: outcome === "state_satisfied" || (outcome === "applied" && completed !== null),
+    mode: "reconcile",
+    mutation: tail.mutation,
+    outcome,
+    reconciliationReceiptFile: reconciled.file,
+    reconciliationReceiptSha256: reconciled.receipt.receiptSha256,
+    releaseReceiptFile: completed?.file ?? null,
+    releaseReceiptSha256: completed?.receipt.receiptSha256 ?? null,
+    nextPlanRequired: outcome === "state_satisfied" ? "function-deploy" : null,
+    finalizationRequired: outcome === "applied" && completed === null,
+    hostedMutationCount: tail.mutation === "secrets-set" ? 1 : 2,
+    functionDeployCount: tail.mutation === "secrets-set" ? 0 : 1,
+    automaticRetryPerformed: false,
+    productionTouched: false,
+  });
+}
+
 async function operateReconcile(input, common, release) {
+  if (release.manifest.schemaVersion === 4) {
+    return operateSchema4Reconcile(input, common, release);
+  }
   const context = initializeReadyOperation(input, common, release, false);
   if (context.chain.some(receipt => receipt.kind === "release-complete")) {
     refuse("completed release has no reconciliation work");
@@ -11702,7 +15602,217 @@ async function operateReconcile(input, common, release) {
   });
 }
 
+function readSchema4RawReleaseAuthority(context, input) {
+  const binding = readReceiptBinding(
+    context.stateDirectory,
+    context.receiptDirectory,
+  );
+  const receipts = readReceiptChain(context.receiptDirectory, { readOnly: true });
+  if (
+    binding.bindingSha256 !== context.receiptBinding.bindingSha256
+    || canonicalJson(receipts) !== canonicalJson(context.chain)
+  ) refuse("schema-4 raw receipt authority changed");
+  const serializedReceipts = receipts.map((receipt, index) => readPrivateFile(
+    path.join(
+      context.receiptDirectory,
+      `${String(index + 1).padStart(6, "0")}.json`,
+    ),
+    `schema-4 receipt ${index + 1}`,
+    256 * 1024,
+  ));
+  const sourceCiSource = readPrivateFile(
+    input.sourceCiReceipt,
+    "schema-4 source-CI receipt",
+    64 * 1024,
+  );
+  const provenanceSource = readPrivateFile(
+    input.releaseProvenance,
+    "schema-4 release provenance",
+    64 * 1024,
+  );
+  return validateMainFinanceRuntimeRecoveryV4ReleaseAuthority({
+    receipts,
+    serializedReceipts,
+    sourceCiReceipt: readJsonSource(sourceCiSource, "schema-4 source-CI receipt"),
+    serializedSourceCiReceipt: sourceCiSource,
+    provenance: readJsonSource(provenanceSource, "schema-4 release provenance"),
+    serializedProvenance: provenanceSource,
+  });
+}
+
+async function operateSchema4Verify(input, common, release) {
+  const context = initializeReadyOperation(input, common, release, false);
+  const complete = context.chain.at(-1);
+  if (
+    complete?.schemaVersion !== 4
+    || complete.kind !== "release-complete"
+    || complete.status !== "verified"
+  ) refuse("schema-4 authoritative verification requires release-complete");
+  const authority = readSchema4RawReleaseAuthority(context, input);
+  const plan = assertCurrentReleaseSchema4Plan(latestPlan(context.chain));
+  const bundle = readSchema4Bundle(context, release, plan);
+  if (
+    authority.completionReceiptSha256 !== complete.receiptSha256
+    || authority.sourceCommitSha !== context.source.commit
+    || authority.sourceTreeSha !== context.source.tree
+    || authority.releaseManifestSha256 !== release.manifestSha256
+    || authority.sourceDeploymentSha256
+      !== release.manifest.deploymentClosureSetSha256
+    || authority.productionBoundarySha256
+      !== context.accessBoundary.productionBoundarySha256
+    || authority.targetDescriptorSha256
+      !== context.accessBoundary.targetDescriptorSha256
+    || authority.operatorDescriptorFileSha256
+      !== bundle.attestation.operatorDescriptorFileSha256
+    || authority.operatorDescriptorSha256
+      !== bundle.attestation.operatorDescriptorSha256
+  ) refuse("schema-4 raw release authority differs from current source or bundle");
+  const reads = readStableSchema4HostedState(context);
+  if (
+    !reads.stable
+    || !inventoryMatchesSuccessorInstall(
+      bundle.preinstallInventories.main,
+      reads.second.inventories.main,
+      bundle.attestation.mutationSecretDigests,
+      bundle.attestation.mutationSecretNames,
+    )
+    || !inventoryIsUnchanged(
+      bundle.preinstallInventories.finance,
+      reads.second.inventories.finance,
+    )
+    || reads.second.inventories.mainInventorySha256 !== complete.mainInventorySha256
+    || semanticSecretInventorySha256(reads.second.inventories.main)
+      !== complete.semanticMainInventorySha256
+    || reads.second.inventories.financeInventorySha256
+      !== complete.financeInventorySha256
+    || reads.second.functions.sha256 !== complete.functionInventorySha256
+    || canonicalJson(reads.second.functions.rows)
+      !== canonicalJson(complete.afterFunctionInventoryRows)
+    || canonicalJson(reads.second.functions.target)
+      !== canonicalJson(complete.afterTargetFunctionRow)
+  ) refuse("schema-4 terminal hosted inventory has drifted");
+  const firstCi = assertSchema4CurrentAuthorityFresh(
+    context,
+    input,
+    common,
+    release,
+    plan,
+  );
+  const freshBundle = readSchema4Bundle(context, release, plan);
+  if (
+    freshBundle.attestation.attestationSha256
+      !== bundle.attestation.attestationSha256
+    || canonicalJson(freshBundle.runtimeMutationInput)
+      !== canonicalJson(bundle.runtimeMutationInput)
+    || canonicalJson(freshBundle.deployMutationInput)
+      !== canonicalJson(bundle.deployMutationInput)
+    || !mutationInputIsUnchanged(freshBundle, release, "secrets-set")
+    || !mutationInputIsUnchanged(freshBundle, release, "function-deploy")
+  ) refuse("schema-4 bundle changed during verification");
+  const preHostedAuthority = readSchema4RawReleaseAuthority(context, input);
+  if (canonicalJson(preHostedAuthority) !== canonicalJson(authority)) {
+    refuse("schema-4 raw authority changed before final hosted fence");
+  }
+  const firstHostedSource = await attestSchema4HostedSourceClosure(
+    context,
+    release,
+    complete.afterTargetFunctionRow,
+  ).catch(() => null);
+  if (firstHostedSource === null) {
+    refuse("fresh schema-4 hosted source verification failed");
+  }
+  const firstBaseSandwich = await postflightSecretsOnlySuccessorSandwich(
+    context.dependencies,
+    release,
+    context.source,
+    bundle,
+    complete.afterFunctionInventoryRows,
+  ).catch(() => null);
+  if (firstBaseSandwich === null) {
+    refuse("fresh schema-4 authoritative D0/proof/D1 verification failed");
+  }
+  const secondCi = assertSchema4CurrentAuthorityFresh(
+    context,
+    input,
+    common,
+    release,
+    plan,
+  );
+  if (canonicalJson(secondCi) !== canonicalJson(firstCi)) {
+    refuse("schema-4 source authority changed across the hosted bookend");
+  }
+  const hostedSource = await attestSchema4HostedSourceClosure(
+    context,
+    release,
+    complete.afterTargetFunctionRow,
+  ).catch(() => null);
+  if (hostedSource === null) {
+    refuse("final schema-4 hosted source verification failed");
+  }
+  const baseSandwich = await postflightSecretsOnlySuccessorSandwich(
+    context.dependencies,
+    release,
+    context.source,
+    bundle,
+    complete.afterFunctionInventoryRows,
+  ).catch(() => null);
+  if (
+    baseSandwich === null
+    || !schema4HostedBookendsMatch(
+      firstHostedSource,
+      firstBaseSandwich,
+      hostedSource,
+      baseSandwich,
+    )
+  ) {
+    refuse("schema-4 hosted evidence changed across the source authority bookend");
+  }
+  assertSchema4LocalAuthorityFresh(
+    context,
+    input,
+    common,
+    release,
+    plan,
+    bundle,
+  );
+  const finalAuthority = readSchema4RawReleaseAuthority(context, input);
+  if (
+    canonicalJson(finalAuthority) !== canonicalJson(authority)
+    || baseSandwich.d1MainInventorySha256 !== complete.mainInventorySha256
+    || baseSandwich.d1FinanceInventorySha256 !== complete.financeInventorySha256
+    || baseSandwich.d1FunctionInventorySha256 !== complete.functionInventorySha256
+    || canonicalJson(schema4StableSnapshotVector(baseSandwich.d1))
+      !== canonicalJson(schema4StableSnapshotVector(complete.d1))
+    || Date.parse(baseSandwich.d0.database_clock) <= Date.parse(complete.recordedAt)
+    || Date.parse(baseSandwich.d0.database_clock) <= Date.parse(complete.d1.databaseClock)
+    || baseSandwich.d0.response_sha256 === complete.d0.responseSha256
+    || baseSandwich.proof.responseSha256 === complete.hostedProof.responseSha256
+    || baseSandwich.proof.proofSha256 === complete.hostedProof.proofSha256
+    || baseSandwich.d1.response_sha256 === complete.d1.responseSha256
+    || hostedSource.hostedSourceClosureSha256
+      !== complete.hostedSourceClosureSha256
+    || hostedSource.hostedSourceMetadataSha256
+      !== complete.hostedSourceMetadataSha256
+  ) refuse("schema-4 authoritative evidence changed during verification");
+  return Object.freeze({
+    ok: true,
+    mode: "verify",
+    status: "authoritative-live-verified",
+    authoritativeReceiptSha256: complete.receiptSha256,
+    freshHostedProofSha256: baseSandwich.proof.proofSha256,
+    sourceCommitSha: context.source.commit,
+    sourceTreeSha: context.source.tree,
+    sourceCiRunId: context.ci.runId,
+    hostedMutationCount: 2,
+    functionDeployCount: 1,
+    productionTouched: false,
+  });
+}
+
 async function operateVerify(input, common, release) {
+  if (release.manifest.schemaVersion === 4) {
+    return operateSchema4Verify(input, common, release);
+  }
   const context = initializeReadyOperation(input, common, release, false);
   const complete = context.chain.at(-1);
   if (complete?.kind !== "release-complete") {
@@ -11969,6 +16079,7 @@ async function operateMainFinanceRuntimeRecoveryV2() {
 async function main() {
   const result = await operateMainFinanceRuntimeRecoveryV2();
   process.stdout.write(`${canonicalJson(result)}\n`);
+  if (result?.ok !== true) process.exitCode = 1;
 }
 
 if (import.meta.main === true) {

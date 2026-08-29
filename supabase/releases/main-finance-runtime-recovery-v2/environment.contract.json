@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 3,
-  "kind": "main-finance-runtime-recovery-v3-secrets-only-environment-contract",
+  "schemaVersion": 4,
+  "kind": "main-finance-runtime-recovery-v4-target-redeploy-environment-contract",
   "environment": "staging",
   "mainProjectRef": "bljeoovhydhjhdzwplxh",
   "financeProjectRef": "makgsbjduobcphuqzaoq",
@@ -13,13 +13,13 @@
       "name": "MAIN_FINANCE_ACCESS_OPERATOR_SECRET_V2",
       "bytes": 48,
       "encoding": "base64url",
-      "purpose": "inherited operator request authentication; proof-only and never re-set"
+      "purpose": "adopted from the immutable partial-secret predecessor; proof-only and never re-set"
     },
     {
       "name": "MAIN_FINANCE_SYNC_TRIGGER_SECRET",
       "bytes": 48,
       "encoding": "base64url",
-      "purpose": "inherited internal worker trigger; proof-only and never re-set"
+      "purpose": "adopted from the immutable partial-secret predecessor; proof-only and never re-set"
     }
   ],
   "stableRuntimeConfig": [
@@ -64,6 +64,7 @@
   ],
   "secretMutation": {
     "mutationNames": [
+      "MAIN_FINANCE_ACCESS_V2_SOURCE_DEPLOYMENT_SHA256",
       "MAIN_FINANCE_ACCESS_V2_SOURCE_COMMIT_SHA",
       "MAIN_FINANCE_ACCESS_V2_SOURCE_TREE_SHA",
       "MAIN_FINANCE_ACCESS_V2_SOURCE_MANIFEST_SHA256"
@@ -86,9 +87,14 @@
     "stableInventoryReadRounds": 2,
     "allowedFunctionVersionTransitions": [
       "unchanged",
-      "exact-all-existing-plus-one"
+      "exact-all-existing-plus-one",
+      "exact-target-replacement-plus-one"
     ],
-    "functionDeployAllowed": false,
+    "functionDeployAllowed": true,
+    "functionDeployTarget": "finance-manage-access-v2",
+    "functionDeployTransition": "exact-target-replacement-plus-one",
+    "freshPlanCount": 2,
+    "ownerApprovalCount": 2,
     "causalAttributionClaimed": false
   },
   "currentAuthorityRoot": {
@@ -132,6 +138,14 @@
         "symlinksAllowed": false
       },
       {
+        "argument": "--source-ci-receipt",
+        "mode": "0600",
+        "ownerRequired": true,
+        "regularFileRequired": true,
+        "singleLinkRequired": true,
+        "symlinksAllowed": false
+      },
+      {
         "argument": "--production-boundary",
         "mode": "0600",
         "ownerRequired": true,
@@ -160,30 +174,39 @@
       "identityBinding": "realpath plus device inode mode and owner",
       "storePathInReceipt": false
     },
-    "sourceCommitSha": "a30dedf20e977d9794a8ac9e54abc48b076c9d45",
-    "sourceTreeSha": "92d7aa5df37a09049d4fdaeaa523d2cc02e85cbf",
-    "planReceiptSha256": "62407763c353d6963561c39dc2d04b572632e400b5cc758958d8b81eaad9b701",
-    "secretIntentReceiptSha256": "838a88db296495c60bfaea378f8c71fb86468cf8b6aefe099ed6e05071d51c79",
-    "secretResultReceiptSha256": "522ced178f2839948f30316d2ae73d9e257385ec1699d0b842218fa49451c677",
-    "functionIntentReceiptSha256": "ddf741ca072b0bbe45bfa5a0098522facdf8e6b10ec407248195ac7b2faf899b",
-    "functionUnknownReceiptSha256": "5dbfe3ad4cd84533888c3b73a77ada3864395fadc4ecd58d361bed7d5d8ea64c",
-    "terminalReceiptSha256": "098731b6054f305cb4d211f5658122696400486947dfe31091e5abc937fada0e",
-    "receiptChainSha256": "f4196cffb0ad9b6c8dc0d619085e2bf1f44790efb479bc429ed91d1e74e15834",
-    "bundleAttestationSha256": "5f5af08774ad620dc5556fa2083371617db8042fa49055dfebf0844fbe2baddf",
-    "runtimeFileSha256": "932d3fde5f7b98fce9606aebea1b335d41f85cec72afc47a873bf12f1c6e2217",
-    "provenanceFileSha256": "34089b8041c72f3abcff3f954067ba7c093f66ba1045a51113ec4d81ccff8063",
-    "provenanceDescriptorSha256": "7ceb2face8c325056b47fb595b801ee4860d27cc0d84816436c55380042972bf",
-    "expectedSecretDigestSetSha256": "d7347afdada1acce8e0d44951be7d83fd0da7d984fcb56ae565f0e4deb2a331e",
+    "sourceCommitSha": "42c647aaeb3a6cededb49f073ac001678dcb3582",
+    "sourceTreeSha": "dd05940dbc3f06e8577a6406c6e64e470049c818",
+    "sourceDeploymentSha256": "3026624ad0888173170a87565f856b75a6afb19697a573f6cfee2a85234f5689",
+    "releaseManifestSha256": "746294fa1fe9fa3969bbbfff129bf9715b9d99ca2f2e52981d2e3bcef87c761e",
+    "planReceiptSha256": "8807cf1582e2fe2c2fc4995c829af0b4021b05354ab06ba35b4aebe3c48aff30",
+    "planReceiptFileSha256": "6207dbf97358c5e185ad78cb74f02abc68d698e8a441b43fafe3102898ef3dfb",
+    "secretIntentReceiptSha256": "ce085b04a7144b30653ad9240007cfe711b717f76dad0565d900940285093788",
+    "secretIntentReceiptFileSha256": "0b3c513c0081c90a38771ea2a7912175f4e9d5470345ad091e1b338e1938a8d0",
+    "effectReceiptSha256": "1953ea7f1cb30b7a4de01f0cd8722e3798471f2ab864267c6853fa42298f6703",
+    "effectReceiptFileSha256": "29f049fd4496993b69c13539b1064aee772306dbffd47e536d816af271738d46",
+    "receiptChainSha256": "ae7bfa301eb6ae13f10d59b5c010c3950fc7da72d8531b3a1be5b2d4d6b3204c",
+    "sourceCiReceiptSha256": "908e67fdb896c0d266735204c528af2736d326ba894ef9d84dc564db09ec99c5",
+    "sourceCiReceiptFileSha256": "17fe6a4e3dd6f90a0b2a39add14ba8ddf1c899f52ad0c0faf2c65af25dcbdc6f",
+    "sourceCiRunId": 33212271479,
+    "sourceCiJobId": 98988013415,
+    "provenanceFileSha256": "c6b3c07d31ab7417fcccb227dd1771c8aa40fcfa398901f732106c528c51b4d2",
+    "provenanceDescriptorSha256": "8e38b0628a21a111eac77bfa095a9f01fa2e442b27c2316d82a74d94915498a9",
+    "bundleAttestationSha256": "8c16e24f4f789a8390a4bca81289dcdda5dab80d4562f764cb7594f808c08d37",
+    "bundleAttestationFileSha256": "e0bb3658c6274b2b1d53e9a0d8489d91dad9c65999ef3239ccf14de0e99c9d52",
+    "bundleCommitSha256": "2d77219c6ca50ea2ef0ff02b8e8284ff5546d8083e95c4d4f78161c6a336cd9a",
+    "bundleCommitFileSha256": "375e3159053a7389dde89cce99f38ec9283e67dd81f0963e9d902b48774e448f",
+    "runtimeFileSha256": "1e060af0f76c2078a83ac754cd9317cb4d67188b7c18d7d4ab68341cb8b9b8ca",
+    "sourceArchiveSha256": "5203d2ba5c0846ecd1765eaddc1d1fc3b34c249a16bd62c8a1709c2ef487f717",
+    "mutationSecretNameSetSha256": "68d37a7abfb3e4ba6217865c21baf175e1597415f9fc42b275cbd3c742220f93",
+    "mutationSecretDigestSetSha256": "1ff26377a99d7d7d765ea6e7ff92c128ce367e26e0efe95dbb4ea87c324ad922",
     "generatedSecretDigestSetSha256": "b3014c4eb96cf14c75017f10d3e071285c671f9d1387dcbf48310ca63dd5d211",
-    "preinstallMainInventorySha256": "66a2630aa9c4c17d9e1a894a9a43f201e40913dab20d0f08c161c48ebb0a7c60",
-    "postSecretMainInventorySha256": "133ab45e43e8b5e0a5fa70be4ed4f978d40b27d955140becb9bc54a32d960ce2",
-    "terminalMainInventorySha256": "b98949ec772990f98b26471ed4e6ff4356d289709b51fd707419ffdbb1570139",
+    "preinstallMainInventorySha256": "b98949ec772990f98b26471ed4e6ff4356d289709b51fd707419ffdbb1570139",
+    "installedMainInventorySha256": "3cb8a92d36e5ef9ced75e21200339d9538d54ecce4de50703cf99ddb0cadfa37",
+    "installedSemanticMainInventorySha256": "6ca2371545e0ec957e05ae64adf6cadf1dfda3f4618833b755bd783371d8352d",
     "stableFinanceInventorySha256": "89e6947c4e347081737ec51c198fabfea43a39e9d30a6a851e23ad7435a77c9e",
-    "preinstallFunctionInventorySha256": "e1edfa70f070fc3cf7b207891c33518107ab516378673dcc3cb07e63e5a09faf",
-    "postSecretFunctionInventorySha256": "73c0f50b78516b1fc46dc7f155bf0f737b6967a2913561a6ddb4693d20fdf80b",
-    "terminalFunctionInventorySha256": "ad7075e78470642d731f628e722efb2f498c31760148b362a6e51ce7225b17e1",
-    "preinstallFunctionCount": 12,
-    "terminalFunctionCount": 13,
+    "preinstallFunctionInventorySha256": "ad7075e78470642d731f628e722efb2f498c31760148b362a6e51ce7225b17e1",
+    "installedFunctionInventorySha256": "0efefe20bb441b2f5ce1eafd9fe401e47f4cea793c9e6fa834cc6fbc87afd936",
+    "functionCount": 13,
     "adoptGeneratedSecretNames": [
       "MAIN_FINANCE_ACCESS_OPERATOR_SECRET_V2",
       "MAIN_FINANCE_SYNC_TRIGGER_SECRET"
@@ -194,14 +217,17 @@
       "--prior-state-dir",
       "--prior-receipt-dir",
       "--prior-release-provenance",
-      "--prior-terminal-receipt-sha256"
+      "--prior-source-ci-receipt",
+      "--prior-effect-receipt-sha256"
     ],
     "validationBeforePlaintextRead": [
       "exact immutable predecessor root and device/inode identity",
-      "canonical six-receipt chain with exact self-hashes, links and terminal divergence",
-      "exact provenance, bundle attestation, runtime hash and predecessor inventory frames",
-      "exact terminal Main b989, stable Finance 89e and 13-row Function ad707 baseline",
-      "two generated values are read only after the complete predecessor authority passes"
+      "canonical exact three-receipt plan, intent and effect chain with exact raw hashes, self-hashes, links and ae7bfa chain hash",
+      "exact successful source-CI receipt raw/self hashes, run/job authority, provenance and bundle attestation/commit raw/self pins",
+      "exact source archive, deployment, release manifest, runtime, mutation-name and mutation-digest pins",
+      "exact predecessor preinstall and installed raw/semantic Main, stable Finance and 13-row Function inventory frames",
+      "the predecessor has no release-complete receipt and is never completed or mutated by this successor",
+      "two generated values are read only after the complete immutable predecessor authority passes"
     ],
     "finalPredecessorSandwichRequired": true
   },

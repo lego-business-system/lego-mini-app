@@ -31,6 +31,9 @@ import {
   validateMainFinanceRuntimeRecoverySnapshotSandwich,
   verifyMainFinanceRuntimeRecoveryAttestResponse,
 } from "./main-finance-runtime-recovery-v2-snapshot.mjs";
+import {
+  validateMainFinanceRuntimeRecoveryV4ReleaseAuthority,
+} from "./prepare-main-finance-runtime-recovery-v2.mjs";
 
 const SCRIPT_FILE = fileURLToPath(import.meta.url);
 const REPOSITORY_ROOT = path.resolve(path.dirname(SCRIPT_FILE), "..");
@@ -46,6 +49,8 @@ const PRODUCTION_DENY_REFS = Object.freeze([
 const SHA256 = /^[0-9a-f]{64}$/u;
 const UUID_V4 =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
+const FUNCTION_UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 const DECIMAL = /^(?:0|[1-9][0-9]{0,18})$/u;
 const SECRET = /^[^\s\u0000-\u001f\u007f]{32,4096}$/u;
 const CANONICAL_TIMESTAMP =
@@ -59,7 +64,9 @@ const GIT_OID = /^[0-9a-f]{40}$/u;
 const SECRET_NAME = /^[A-Z][A-Z0-9_]{1,255}$/u;
 const ACCESS_TOKEN = /^[A-Za-z0-9._-]{20,4096}$/u;
 const PREPARE_PLAN_NAME = /^main-finance-access-v2-([1-9][0-9]{12})-([0-9a-f]{64})-plan\.json$/u;
+const RUNTIME_RECOVERY_RECEIPT_NAME = /^([0-9]{6})\.json$/u;
 const RECEIPT_DIRECTORY_LEASE_NAME = ".main-finance-access-v2-receipt-directory.lease";
+const TARGET_FUNCTION_SLUG = "finance-manage-access-v2";
 const SUPABASE_CLI_PIN = Object.freeze({
   realPath: "/Users/Maks/Library/pnpm/store/v11/links/@supabase/cli-darwin-arm64/2.109.1/e5fdd9fb276a62ab37eb6abe0330d50b2a81bb692d391bd8bc054b330e5d8133/node_modules/@supabase/cli-darwin-arm64/bin/supabase",
   sha256: "b7be23f4e211b75c00a3df5fcd1f96f3905983c74ff3189bfc69ad5b0f7132c4",
@@ -226,6 +233,188 @@ function parsePrivateJson(file, label) {
   }
   if (`${canonicalJson(value)}\n` !== source) fail(`${label} is not canonical JSON`);
   return Object.freeze({ value, source, sha256: sha256(source) });
+}
+
+function readCurrentRuntimeRecoveryReleaseAuthority(input) {
+  const receiptDirectory = assertOwnerPrivateDirectory(
+    input.runtimeRecoveryReceiptDirectory,
+    "runtime recovery receipt directory",
+  );
+  const epochRoot = path.dirname(receiptDirectory);
+  assertOwnerPrivateDirectory(epochRoot, "runtime recovery epoch root");
+  const receiptDirectoryIdentityBefore = ownerPrivateDirectoryIdentity(
+    receiptDirectory,
+    "runtime recovery receipt directory",
+  );
+  const epochRootIdentityBefore = ownerPrivateDirectoryIdentity(
+    epochRoot,
+    "runtime recovery epoch root",
+  );
+  const stateDirectory = path.join(epochRoot, "main-runtime-recovery-state");
+  if (
+    path.basename(receiptDirectory) !== "main-runtime-recovery-receipts" ||
+    path.basename(input.runtimeRecoverySourceCiReceipt) !== "main-source-ci.json" ||
+    path.basename(input.runtimeRecoveryReleaseProvenance) !==
+      "main-runtime-recovery-provenance.json" ||
+    path.dirname(input.runtimeRecoverySourceCiReceipt) !== epochRoot ||
+    path.dirname(input.runtimeRecoveryReleaseProvenance) !== epochRoot ||
+    input.runtimeRecoverySourceCiReceipt === input.runtimeRecoveryReleaseProvenance ||
+    path.dirname(input.descriptorFile) !== stateDirectory ||
+    path.basename(input.descriptorFile) !==
+      "main-finance-access-v2-owner-descriptor.json"
+  ) fail("runtime recovery authority artifacts must share one exact epoch root");
+  assertOwnerPrivateDirectory(stateDirectory, "runtime recovery state directory");
+  const names = readdirSync(receiptDirectory).sort();
+  if (
+    names.length === 0 || names.length > 10_000 ||
+    names.some((name) => !RUNTIME_RECOVERY_RECEIPT_NAME.test(name))
+  ) fail("runtime recovery receipt directory is not a finalized canonical chain");
+  const receipts = [];
+  const serializedReceipts = [];
+  for (let index = 0; index < names.length; index += 1) {
+    const expected = `${String(index + 1).padStart(6, "0")}.json`;
+    if (names[index] !== expected) fail("runtime recovery receipt sequence has a gap");
+    const parsed = parsePrivateJson(
+      path.join(receiptDirectory, names[index]),
+      "runtime recovery receipt",
+    );
+    receipts.push(parsed.value);
+    serializedReceipts.push(parsed.source);
+  }
+  const sourceCi = parsePrivateJson(
+    input.runtimeRecoverySourceCiReceipt,
+    "runtime recovery source-CI receipt",
+  );
+  const provenance = parsePrivateJson(
+    input.runtimeRecoveryReleaseProvenance,
+    "runtime recovery release provenance",
+  );
+  let authority;
+  try {
+    authority = validateMainFinanceRuntimeRecoveryV4ReleaseAuthority({
+      receipts: Object.freeze(receipts),
+      serializedReceipts: Object.freeze(serializedReceipts),
+      sourceCiReceipt: sourceCi.value,
+      serializedSourceCiReceipt: sourceCi.source,
+      provenance: provenance.value,
+      serializedProvenance: provenance.source,
+    });
+  } catch {
+    fail("raw schema-4 runtime recovery release authority differs");
+  }
+  if (
+    canonicalJson(readdirSync(receiptDirectory).sort()) !== canonicalJson(names) ||
+    canonicalJson(ownerPrivateDirectoryIdentity(
+      receiptDirectory,
+      "runtime recovery receipt directory",
+    )) !== canonicalJson(receiptDirectoryIdentityBefore) ||
+    canonicalJson(ownerPrivateDirectoryIdentity(
+      epochRoot,
+      "runtime recovery epoch root",
+    )) !== canonicalJson(epochRootIdentityBefore)
+  ) fail("runtime recovery authority directory identity changed while reading");
+  return authority;
+}
+
+function assertRuntimeRecoveryTargetTransition(authority) {
+  const before = authority.beforeTargetFunctionRow;
+  const after = authority.afterTargetFunctionRow;
+  if (
+    before === null || typeof before !== "object" || Array.isArray(before) ||
+    after === null || typeof after !== "object" || Array.isArray(after) ||
+    canonicalJson(Object.keys(before).sort()) !== canonicalJson(Object.keys(after).sort()) ||
+    before.slug !== TARGET_FUNCTION_SLUG || after.slug !== TARGET_FUNCTION_SLUG ||
+    before.name !== TARGET_FUNCTION_SLUG || after.name !== TARGET_FUNCTION_SLUG ||
+    !FUNCTION_UUID.test(before.id ?? "") || after.id !== before.id ||
+    !Number.isSafeInteger(before.created_at) || before.created_at <= 0 ||
+    after.created_at !== before.created_at ||
+    before.verify_jwt !== false || after.verify_jwt !== false ||
+    !["ACTIVE", "active"].includes(before.status) || after.status !== before.status ||
+    !Number.isSafeInteger(before.version) || before.version <= 0 ||
+    after.version !== before.version + 1 ||
+    !Number.isSafeInteger(before.updated_at) || before.updated_at <= 0 ||
+    !Number.isSafeInteger(after.updated_at) || after.updated_at <= before.updated_at ||
+    typeof before.ezbr_sha256 !== "string" || !SHA256.test(before.ezbr_sha256) ||
+    typeof after.ezbr_sha256 !== "string" || !SHA256.test(after.ezbr_sha256) ||
+    after.ezbr_sha256 === before.ezbr_sha256
+  ) fail("runtime recovery target function transition differs");
+  const allowedChanges = new Set([
+    "version", "updated_at", "ezbr_sha256", "entrypoint_path", "import_map_path",
+  ]);
+  for (const key of Object.keys(before)) {
+    if (!allowedChanges.has(key) && canonicalJson(before[key]) !== canonicalJson(after[key])) {
+      fail("runtime recovery target identity/created/status/verify transition differs");
+    }
+  }
+  const expectedPath = (row, leaf) =>
+    `file:///tmp/user_fn_${MAIN_PROJECT_REF}_${row.id}_${row.version}` +
+    `/source/supabase/functions/${TARGET_FUNCTION_SLUG}/${leaf}`;
+  if (
+    before.entrypoint_path !== expectedPath(before, "index.ts") ||
+    after.entrypoint_path !== expectedPath(after, "index.ts") ||
+    (Object.hasOwn(before, "import_map_path") &&
+      (before.import_map_path !== expectedPath(before, "deno.json") ||
+        after.import_map_path !== expectedPath(after, "deno.json")))
+  ) fail("runtime recovery target function deployment paths differ");
+}
+
+function assertCurrentRuntimeRecoveryReleaseAuthority({
+  authority,
+  sourceCommitSha,
+  sourceTreeSha,
+  sourceDeploymentSha256,
+  releaseManifestSha256,
+  productionBoundarySha256,
+  targetDescriptorSha256,
+  operatorDescriptorFileSha256,
+  operatorDescriptorSha256,
+  functionInventories,
+}) {
+  exactKeys(authority, [
+    "schemaVersion", "sourceCommitSha", "sourceTreeSha", "releaseManifestSha256",
+    "sourceDeploymentSha256", "productionBoundarySha256", "targetDescriptorSha256",
+    "operatorDescriptorFileSha256", "operatorDescriptorSha256",
+    "hostedSourceClosureSha256", "hostedSourceMetadataSha256",
+    "completionReceiptSha256", "functionInventorySha256",
+    "beforeTargetFunctionRow", "afterTargetFunctionRow", "targetTransitionDisposition",
+  ], "runtime recovery release authority");
+  if (
+    !Object.isFrozen(authority) ||
+    !Object.isFrozen(authority.beforeTargetFunctionRow) ||
+    !Object.isFrozen(authority.afterTargetFunctionRow) ||
+    authority.schemaVersion !== 4 ||
+    authority.targetTransitionDisposition !== "exact-target-replacement-plus-one" ||
+    authority.sourceCommitSha !== sourceCommitSha ||
+    authority.sourceTreeSha !== sourceTreeSha ||
+    authority.sourceDeploymentSha256 !== sourceDeploymentSha256 ||
+    authority.releaseManifestSha256 !== releaseManifestSha256 ||
+    authority.productionBoundarySha256 !== productionBoundarySha256 ||
+    authority.targetDescriptorSha256 !== targetDescriptorSha256 ||
+    authority.operatorDescriptorFileSha256 !== operatorDescriptorFileSha256 ||
+    authority.operatorDescriptorSha256 !== operatorDescriptorSha256 ||
+    !SHA256.test(authority.operatorDescriptorFileSha256 ?? "") ||
+    !SHA256.test(authority.operatorDescriptorSha256 ?? "") ||
+    !SHA256.test(authority.hostedSourceClosureSha256 ?? "") ||
+    !SHA256.test(authority.hostedSourceMetadataSha256 ?? "") ||
+    !SHA256.test(authority.completionReceiptSha256 ?? "") ||
+    !SHA256.test(authority.functionInventorySha256 ?? "") ||
+    !Array.isArray(functionInventories) || functionInventories.length === 0
+  ) fail("runtime recovery release authority boundary differs");
+  assertRuntimeRecoveryTargetTransition(authority);
+  for (const inventory of functionInventories) {
+    const target = inventory?.rows?.filter((row) => row.slug === TARGET_FUNCTION_SLUG) ?? [];
+    if (
+      inventory?.sha256 !== authority.functionInventorySha256 ||
+      sha256(canonicalJson(inventory?.rows)) !== authority.functionInventorySha256 ||
+      target.length !== 1 ||
+      canonicalJson(target[0]) !== canonicalJson(authority.afterTargetFunctionRow)
+    ) fail("live function inventory differs from terminal runtime recovery authority");
+  }
+  return Object.freeze({
+    completionReceiptSha256: authority.completionReceiptSha256,
+    functionInventorySha256: authority.functionInventorySha256,
+    targetVersion: authority.afterTargetFunctionRow.version,
+  });
 }
 
 function readDescriptor(file, input) {
@@ -1105,14 +1294,14 @@ function normalizeFunctionInventory(source) {
     if (!Number.isSafeInteger(row.version) || row.version <= 0) {
       fail("function inventory deployment version differs");
     }
-    return JSON.parse(canonicalJson(row));
+    return Object.freeze(JSON.parse(canonicalJson(row)));
   });
   normalized.sort((left, right) => String(left.slug ?? left.name)
     .localeCompare(String(right.slug ?? right.name)));
   const targets = normalized.filter((row) => row.slug === "finance-manage-access-v2");
   if (
     targets.length !== 1 || targets[0].verify_jwt !== false ||
-    !["ACTIVE", "active"].includes(targets[0].status) || targets[0].version !== 1
+    !["ACTIVE", "active"].includes(targets[0].status)
   ) fail("exact active finance-manage-access-v2 inventory differs");
   return Object.freeze({ rows: Object.freeze(normalized), sha256: sha256(canonicalJson(normalized)) });
 }
@@ -1246,6 +1435,8 @@ function expectedApprovalToken(plan) {
     plan.source_deployment_sha256,
     plan.production_boundary_sha256,
     plan.target_descriptor_sha256,
+    plan.runtime_release_completion_receipt_sha256,
+    plan.runtime_release_function_inventory_sha256,
     plan.main_user_id,
     plan.event_id,
     plan.expected_version,
@@ -1411,7 +1602,9 @@ function readPreparePlan(file) {
     "schema_version", "kind", "environment", "production_denied", "action",
     "prepared_at", "expires_at", "source_commit_sha", "source_tree_sha",
     "source_deployment_sha256", "production_boundary_sha256",
-    "target_descriptor_sha256", "receipt_directory_device", "receipt_directory_inode",
+    "target_descriptor_sha256", "runtime_release_completion_receipt_sha256",
+    "runtime_release_function_inventory_sha256",
+    "receipt_directory_device", "receipt_directory_inode",
     "request_body_sha256", "request_file_sha256",
     "action_authority_sha256", "main_user_id", "event_id", "expected_version",
     "changed_by",
@@ -1439,7 +1632,9 @@ function readPreparePlan(file) {
     !decimalString(parsed.value.receipt_directory_inode) ||
     ![
       "source_deployment_sha256", "production_boundary_sha256",
-      "target_descriptor_sha256", "request_body_sha256", "request_file_sha256",
+      "target_descriptor_sha256", "runtime_release_completion_receipt_sha256",
+      "runtime_release_function_inventory_sha256",
+      "request_body_sha256", "request_file_sha256",
       "action_authority_sha256", "d1_descriptor_sha256", "f0_sha256", "f1_sha256",
       "s0_main_sha256", "s0_finance_sha256", "s1_main_sha256", "s1_finance_sha256",
     ].every((key) => SHA256.test(parsed.value[key] ?? "")) ||
@@ -1910,6 +2105,10 @@ function preparePlanCore({ input, descriptor, request, requestFileSha256, now, e
     source_deployment_sha256: input.sourceDeploymentSha256,
     production_boundary_sha256: descriptor.productionBoundarySha256,
     target_descriptor_sha256: descriptor.targetDescriptorSha256,
+    runtime_release_completion_receipt_sha256:
+      evidence.runtimeReleaseCompletionReceiptSha256,
+    runtime_release_function_inventory_sha256:
+      evidence.runtimeReleaseFunctionInventorySha256,
     receipt_directory_device: receiptDirectoryIdentity.device,
     receipt_directory_inode: receiptDirectoryIdentity.inode,
     request_body_sha256: sha256(canonicalJson(request)),
@@ -1971,6 +2170,9 @@ function parseArguments(argv) {
     changedBy: null,
     originalRequestFile: null,
     unknownReceiptFile: null,
+    runtimeRecoveryReceiptDirectory: null,
+    runtimeRecoverySourceCiReceipt: null,
+    runtimeRecoveryReleaseProvenance: null,
   };
   const seen = new Set();
   for (let index = 0; index < argv.length; index += 1) {
@@ -2003,6 +2205,9 @@ function parseArguments(argv) {
       "--changed-by": "changedBy",
       "--original-request-file": "originalRequestFile",
       "--unknown-receipt-file": "unknownReceiptFile",
+      "--runtime-recovery-receipt-dir": "runtimeRecoveryReceiptDirectory",
+      "--runtime-recovery-source-ci-receipt": "runtimeRecoverySourceCiReceipt",
+      "--runtime-recovery-release-provenance": "runtimeRecoveryReleaseProvenance",
     };
     const key = mapping[argument];
     if (!key || seen.has(argument)) fail(`unknown or duplicate argument ${argument}`);
@@ -2026,7 +2231,9 @@ function parseArguments(argv) {
       !["status", "grant", "revoke", "reconcile"].includes(input.action) ||
       !input.descriptorFile || !input.receiptDirectory || !input.sourceCommitSha ||
       !input.sourceTreeSha || !input.accessTokenFile || !input.supabaseCli ||
-      !input.supabaseHome || !input.outputDirectory || input.requestFile ||
+      !input.supabaseHome || !input.outputDirectory ||
+      !input.runtimeRecoveryReceiptDirectory || !input.runtimeRecoverySourceCiReceipt ||
+      !input.runtimeRecoveryReleaseProvenance || input.requestFile ||
       input.planReceiptFile || input.ownerApprovalToken || input.statusOut
     ) fail("prepare mode arguments differ");
     if (input.action === "reconcile") {
@@ -2041,19 +2248,32 @@ function parseArguments(argv) {
     ) fail("status/mutation prepare identity arguments differ");
   } else if (
     !input.descriptorFile || !input.requestFile || !input.planReceiptFile ||
-    !input.receiptDirectory || input.action || input.sourceCommitSha || input.sourceTreeSha ||
-    input.accessTokenFile || input.supabaseCli || input.supabaseHome || input.outputDirectory ||
+    !input.receiptDirectory || !input.accessTokenFile || !input.supabaseCli ||
+    !input.supabaseHome || !input.runtimeRecoveryReceiptDirectory ||
+    !input.runtimeRecoverySourceCiReceipt || !input.runtimeRecoveryReleaseProvenance ||
+    input.action || input.sourceCommitSha || input.sourceTreeSha || input.outputDirectory ||
     input.mainUserId || input.eventId || input.changedBy || input.originalRequestFile ||
     input.unknownReceiptFile
   ) {
-    fail("execute mode requires only descriptor, request, latest plan and receipt directory");
+    fail("execute mode arguments differ from the exact plan, raw authority and fresh-list set");
   }
   return Object.freeze(input);
 }
 
+function isCompiledRuntimeFunctionPath(value) {
+  return typeof value === "string" && new RegExp(
+    `^file:///tmp/user_fn_${MAIN_PROJECT_REF}_[A-Za-z0-9-]+_[1-9][0-9]*/` +
+      `source/supabase/functions/${TARGET_FUNCTION_SLUG}/(?:index\\.ts|deno\\.json)$`,
+    "u",
+  ).test(value);
+}
+
 function assertImmutablePlainFixture(value, label = "simulator fixture", seen = new Set()) {
   if (value === null || ["string", "number", "boolean"].includes(typeof value)) {
-    if (typeof value === "string" && (/^(?:\/|[A-Za-z]:[\\/])/u.test(value) || value.includes("://"))) {
+    if (
+      typeof value === "string" && !isCompiledRuntimeFunctionPath(value) &&
+      (/^(?:\/|[A-Za-z]:[\\/])/u.test(value) || value.includes("://"))
+    ) {
       fail(`${label} cannot contain paths or network locations`);
     }
     return;
@@ -2067,10 +2287,13 @@ function assertImmutablePlainFixture(value, label = "simulator fixture", seen = 
     fail(`${label} must be deeply frozen plain data`);
   }
   for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(value))) {
+    const exactRuntimeFunctionPath = ["entrypoint_path", "import_map_path"].includes(key) &&
+      isCompiledRuntimeFunctionPath(descriptor.value);
     if (
       descriptor.get || descriptor.set || !Object.hasOwn(descriptor, "value") ||
-      /(?:^|_)(?:path|url|origin|argv|environment|callback|fetch|runner|impl|network)(?:_|$)/iu
-        .test(key)
+      (!exactRuntimeFunctionPath &&
+        /(?:^|_)(?:path|url|origin|argv|environment|callback|fetch|runner|impl|network)(?:_|$)/iu
+          .test(key))
     ) fail(`${label} contains an effect capability`);
     assertImmutablePlainFixture(descriptor.value, `${label}.${key}`, seen);
   }
@@ -2080,6 +2303,8 @@ function assertSimulatorPlan(plan) {
   exactKeys(plan, [
     "action", "prepared_at", "expires_at", "source_commit_sha", "source_tree_sha",
     "source_deployment_sha256", "production_boundary_sha256", "target_descriptor_sha256",
+    "runtime_release_completion_receipt_sha256",
+    "runtime_release_function_inventory_sha256",
     "request_body_sha256", "request_file_sha256", "action_authority_sha256",
     "main_user_id", "event_id", "expected_version", "changed_by",
     "d0_descriptor_sha256", "d1_descriptor_sha256", "proof_sha256",
@@ -2095,6 +2320,8 @@ function assertSimulatorPlan(plan) {
     (plan.action === "status" ? plan.changed_by !== null : !ACTOR.test(plan.changed_by ?? "")) ||
     ![
       "source_deployment_sha256", "production_boundary_sha256", "target_descriptor_sha256",
+      "runtime_release_completion_receipt_sha256",
+      "runtime_release_function_inventory_sha256",
       "request_body_sha256", "request_file_sha256", "action_authority_sha256",
       "d1_descriptor_sha256", "plan_receipt_sha256",
     ].every((key) => SHA256.test(plan[key] ?? "")) ||
@@ -2164,6 +2391,30 @@ export function simulateMainFinanceAccessV2Contract(fixture) {
     exactKeys(fixture.input, ["disposition"], "reconcile disposition simulator input");
     return evaluateReconcileDisposition(fixture.input.disposition);
   }
+  if (fixture.scenario === "runtime-release-authority") {
+    exactKeys(fixture.input, [
+      "authority", "source_commit_sha", "source_tree_sha", "source_deployment_sha256",
+      "release_manifest_sha256", "production_boundary_sha256",
+      "target_descriptor_sha256", "operator_descriptor_file_sha256",
+      "operator_descriptor_sha256", "f0_rows", "f1_rows",
+    ], "runtime release authority simulator input");
+    if (!Array.isArray(fixture.input.f0_rows) || !Array.isArray(fixture.input.f1_rows)) {
+      fail("runtime release authority simulator inventories differ");
+    }
+    return assertCurrentRuntimeRecoveryReleaseAuthority({
+      authority: fixture.input.authority,
+      sourceCommitSha: fixture.input.source_commit_sha,
+      sourceTreeSha: fixture.input.source_tree_sha,
+      sourceDeploymentSha256: fixture.input.source_deployment_sha256,
+      releaseManifestSha256: fixture.input.release_manifest_sha256,
+      productionBoundarySha256: fixture.input.production_boundary_sha256,
+      targetDescriptorSha256: fixture.input.target_descriptor_sha256,
+      operatorDescriptorFileSha256: fixture.input.operator_descriptor_file_sha256,
+      operatorDescriptorSha256: fixture.input.operator_descriptor_sha256,
+      functionInventories: [fixture.input.f0_rows, fixture.input.f1_rows].map((rows) =>
+        Object.freeze({ rows, sha256: sha256(canonicalJson(rows)) })),
+    });
+  }
   fail("simulator scenario differs");
 }
 
@@ -2190,7 +2441,10 @@ async function manageFinanceAccessV2() {
     });
   }
 
-  // Boundary has already failed closed from argv before the first file read.
+  // Boundary has already failed closed from argv. Validate the exact raw
+  // release chain and its same-epoch descriptor path before reading the
+  // descriptor's operator secret bytes.
+  const runtimeAuthorityAtEntry = readCurrentRuntimeRecoveryReleaseAuthority(input);
   const descriptor = readDescriptor(input.descriptorFile, input);
   if (input.mode === "prepare") {
     if (!GIT_OID.test(input.sourceCommitSha) || !GIT_OID.test(input.sourceTreeSha)) {
@@ -2200,11 +2454,30 @@ async function manageFinanceAccessV2() {
     if (contract.sourceDeploymentSha256 !== input.sourceDeploymentSha256) {
       fail("frozen snapshot contract source deployment differs");
     }
+    const runtimeAuthority0 = runtimeAuthorityAtEntry;
+    const bindRuntimeAuthority = (authority, functionInventories) =>
+      assertCurrentRuntimeRecoveryReleaseAuthority({
+        authority,
+        sourceCommitSha: input.sourceCommitSha,
+        sourceTreeSha: input.sourceTreeSha,
+        sourceDeploymentSha256: input.sourceDeploymentSha256,
+        releaseManifestSha256: contract.releaseManifestSha256,
+        productionBoundarySha256: descriptor.productionBoundarySha256,
+        targetDescriptorSha256: descriptor.targetDescriptorSha256,
+        operatorDescriptorFileSha256: descriptor.fileSha256,
+        operatorDescriptorSha256: descriptor.descriptorSha256,
+        functionInventories,
+      });
     assertOwnerPrivateDirectory(input.receiptDirectory, "receipt directory");
     assertDisjointPrivateDirectories([
       input.receiptDirectory,
       input.supabaseHome,
       input.outputDirectory,
+      input.runtimeRecoveryReceiptDirectory,
+      path.join(
+        path.dirname(input.runtimeRecoveryReceiptDirectory),
+        "main-runtime-recovery-state",
+      ),
     ]);
     let reconcileInput = null;
     if (input.action === "reconcile") {
@@ -2313,6 +2586,7 @@ async function manageFinanceAccessV2() {
       assertSupabaseCliBytes: assertPinnedSupabaseCliBytes,
     };
     const f0 = fetchFunctionInventory(cliDependencies);
+    const runtimeBinding0 = bindRuntimeAuthority(runtimeAuthority0, [f0]);
     const s0 = fetchSecretInventories(cliDependencies);
 
     if (input.action === "reconcile") {
@@ -2331,6 +2605,10 @@ async function manageFinanceAccessV2() {
         d1.privacy_secret_inventory_sha256 !==
           derived.originalPlan.privacy_secret_inventory_sha256 ||
         d1.source_manifest_sha256 !== derived.originalPlan.source_manifest_sha256 ||
+        runtimeBinding0.completionReceiptSha256 !==
+          originalPreparePlan.runtime_release_completion_receipt_sha256 ||
+        runtimeBinding0.functionInventorySha256 !==
+          originalPreparePlan.runtime_release_function_inventory_sha256 ||
         f0.sha256 !== originalPreparePlan.f0_sha256 ||
         f0.sha256 !== originalPreparePlan.f1_sha256 ||
         s0.mainSha256 !== originalPreparePlan.s0_main_sha256 ||
@@ -2340,7 +2618,12 @@ async function manageFinanceAccessV2() {
       ) fail("reconcile evidence differs from the unknown request's prepare plan");
       const s1 = fetchSecretInventories(cliDependencies);
       const f1 = fetchFunctionInventory(cliDependencies);
+      const runtimeAuthority1 = readCurrentRuntimeRecoveryReleaseAuthority(input);
+      const runtimeBinding1 = bindRuntimeAuthority(runtimeAuthority1, [f0, f1]);
       if (
+        canonicalJson(runtimeAuthority1) !== canonicalJson(runtimeAuthority0) ||
+        runtimeBinding1.completionReceiptSha256 !==
+          runtimeBinding0.completionReceiptSha256 ||
         !sameCanonical(f0.rows, f1.rows) || f0.sha256 !== f1.sha256 ||
         !sameCanonical(s0.main, s1.main) || !sameCanonical(s0.finance, s1.finance)
       ) fail("reconcile F0/S0/D1/S1/F1 readiness evidence drifted");
@@ -2414,6 +2697,10 @@ async function manageFinanceAccessV2() {
           proofSha256: null, f0Sha256: f0.sha256, f1Sha256: f1.sha256,
           s0MainSha256: s0.mainSha256, s0FinanceSha256: s0.financeSha256,
           s1MainSha256: s1.mainSha256, s1FinanceSha256: s1.financeSha256,
+          runtimeReleaseCompletionReceiptSha256:
+            runtimeBinding1.completionReceiptSha256,
+          runtimeReleaseFunctionInventorySha256:
+            runtimeBinding1.functionInventorySha256,
         },
       });
       writeCanonicalPrivateFile(requestFile, built.request, "Edge request");
@@ -2448,6 +2735,12 @@ async function manageFinanceAccessV2() {
       fetchImpl,
     });
     const f1 = fetchFunctionInventory(cliDependencies);
+    const runtimeAuthority1 = readCurrentRuntimeRecoveryReleaseAuthority(input);
+    const runtimeBinding1 = bindRuntimeAuthority(runtimeAuthority1, [f0, f1]);
+    if (
+      canonicalJson(runtimeAuthority1) !== canonicalJson(runtimeAuthority0) ||
+      runtimeBinding1.completionReceiptSha256 !== runtimeBinding0.completionReceiptSha256
+    ) fail("runtime recovery release authority changed during prepare");
     validateReadinessSandwich({ f0, f1, s0, s1, d0, d1, proof: attested.proof });
     const preparedAt = exactNowMilliseconds(nowImpl);
     let built;
@@ -2480,6 +2773,10 @@ async function manageFinanceAccessV2() {
         proofSha256: attested.proof.proofSha256, f0Sha256: f0.sha256, f1Sha256: f1.sha256,
         s0MainSha256: s0.mainSha256, s0FinanceSha256: s0.financeSha256,
         s1MainSha256: s1.mainSha256, s1FinanceSha256: s1.financeSha256,
+        runtimeReleaseCompletionReceiptSha256:
+          runtimeBinding1.completionReceiptSha256,
+        runtimeReleaseFunctionInventorySha256:
+          runtimeBinding1.functionInventorySha256,
       },
     });
     writeCanonicalPrivateFile(requestFile, built.request, "Edge request");
@@ -2500,6 +2797,21 @@ async function manageFinanceAccessV2() {
     });
   }
 
+  const executeContract = readMainFinanceRuntimeRecoveryV2SnapshotContract();
+  if (executeContract.sourceDeploymentSha256 !== input.sourceDeploymentSha256) {
+    fail("frozen snapshot contract source deployment differs");
+  }
+  assertOwnerPrivateDirectory(input.receiptDirectory, "receipt directory");
+  assertDisjointPrivateDirectories([
+    input.receiptDirectory,
+    input.supabaseHome,
+    input.runtimeRecoveryReceiptDirectory,
+    path.join(
+      path.dirname(input.runtimeRecoveryReceiptDirectory),
+      "main-runtime-recovery-state",
+    ),
+  ]);
+
   return await withReceiptDirectoryLease(input.receiptDirectory, async (lease) => {
   const planReceipt = readPreparePlan(input.planReceiptFile);
   assertPreparePlanReceiptDirectoryBinding(planReceipt.plan, input.receiptDirectory);
@@ -2517,11 +2829,70 @@ async function manageFinanceAccessV2() {
   if (input.statusOut && request.action !== "status") {
     fail("status output is valid only for an exact status request");
   }
-  if (input.statusOut) assertStatusOutputPath(input.statusOut);
+  if (input.statusOut) {
+    const runtimeStateDirectory = path.join(
+      path.dirname(input.runtimeRecoveryReceiptDirectory),
+      "main-runtime-recovery-state",
+    );
+    if (
+      pathsOverlap(input.runtimeRecoveryReceiptDirectory, input.statusOut) ||
+      pathsOverlap(runtimeStateDirectory, input.statusOut)
+    ) fail("status output must not alter raw runtime recovery authority");
+    assertStatusOutputPath(input.statusOut);
+  }
   const binding = requestPlanBinding(request);
   const mutatingOrReplayAction = ["grant", "revoke", "reconcile"].includes(request.action);
   assertRequestPlanBinding(plan, binding);
   const approvalTokenSha256 = assertOwnerApprovalToken(plan, input.ownerApprovalToken);
+
+  createOwnerPrivateDirectory(input.supabaseHome, "Supabase CLI home");
+  const executeAccessToken = readAccessToken(input.accessTokenFile);
+  const executeCliEnvironment = scrubCliEnvironment(
+    undefined,
+    executeAccessToken,
+    input.supabaseHome,
+  );
+  validatePinnedSupabaseCli(input.supabaseCli, runCli, executeCliEnvironment);
+  const executeCliDependencies = {
+    executable: input.supabaseCli,
+    environment: executeCliEnvironment,
+    supabaseHome: input.supabaseHome,
+    runCli,
+    assertSupabaseCliBytes: assertPinnedSupabaseCliBytes,
+  };
+
+  // A prepare-plan summary is never runtime authority. Re-read the exact raw,
+  // canonical schema-4 chain around one fresh hosted function inventory and
+  // bind the terminal completion back to this exact plan immediately before
+  // the durable intent/hosted-request boundary.
+  const runtimeAuthority0 = readCurrentRuntimeRecoveryReleaseAuthority(input);
+  const executeFunctionInventory = fetchFunctionInventory(executeCliDependencies);
+  const runtimeAuthority1 = readCurrentRuntimeRecoveryReleaseAuthority(input);
+  const bindExecuteAuthority = (authority) =>
+    assertCurrentRuntimeRecoveryReleaseAuthority({
+      authority,
+      sourceCommitSha: plan.source_commit_sha,
+      sourceTreeSha: plan.source_tree_sha,
+      sourceDeploymentSha256: input.sourceDeploymentSha256,
+      releaseManifestSha256: executeContract.releaseManifestSha256,
+      productionBoundarySha256: descriptor.productionBoundarySha256,
+      targetDescriptorSha256: descriptor.targetDescriptorSha256,
+      operatorDescriptorFileSha256: descriptor.fileSha256,
+      operatorDescriptorSha256: descriptor.descriptorSha256,
+      functionInventories: [executeFunctionInventory],
+    });
+  const executeRuntimeBinding0 = bindExecuteAuthority(runtimeAuthority0);
+  const executeRuntimeBinding1 = bindExecuteAuthority(runtimeAuthority1);
+  if (
+    canonicalJson(runtimeAuthority0) !== canonicalJson(runtimeAuthority1) ||
+    canonicalJson(runtimeAuthorityAtEntry) !== canonicalJson(runtimeAuthority0) ||
+    executeRuntimeBinding0.completionReceiptSha256 !==
+      plan.runtime_release_completion_receipt_sha256 ||
+    executeRuntimeBinding1.completionReceiptSha256 !==
+      plan.runtime_release_completion_receipt_sha256 ||
+    executeRuntimeBinding1.functionInventorySha256 !==
+      plan.runtime_release_function_inventory_sha256
+  ) fail("runtime recovery authority changed or differs from the prepare plan");
 
   // Recheck the live clock after every private artifact and authorization
   // comparison, immediately before the durable intent/no-retry boundary.

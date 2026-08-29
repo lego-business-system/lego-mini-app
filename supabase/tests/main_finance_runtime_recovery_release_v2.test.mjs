@@ -3,6 +3,7 @@ import { createHash, createHmac } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
+  copyFileSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -36,6 +37,7 @@ const {
   classifyMainFinanceRuntimeRecoveryV2FunctionState,
   sha256,
   validateMainFinanceRuntimeRecoveryV2ProvenanceSource,
+  validateMainFinanceRuntimeRecoveryV4ReleaseAuthority,
 } = recoveryModule;
 
 const ROOT = realpathSync(path.resolve(import.meta.dirname, "../.."));
@@ -54,14 +56,22 @@ const FINANCE_REF = "makgsbjduobcphuqzaoq";
 const PRODUCTION_REFS = ["soxtekhspohkddpdidvp", "koibxwgtihwajocxfetb"];
 const SOURCE_COMMIT = "c".repeat(40);
 const SOURCE_TREE = "d".repeat(40);
-const WORKFLOW_BLOB = "220ee4c940cfd03e178dbee1fb6f25dc5de0845e";
+const WORKFLOW_BLOB = "9b28cfde71d0ee6f21cc85d70a46042e3662a6a2";
 const BRANCH = "agent/main-finance-staging-runtime-recovery-v2";
 const RUN_ID = "321";
+const POSTGRES_IMAGE =
+  "postgres:17.10-bookworm@sha256:17b6c778de50f4bb9a878c36e736110fbcd9b7020377d6fdfdf20f7c0347e40a";
 const NODE = "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node";
 const SUPABASE = "/Users/Maks/Library/pnpm/store/v11/links/@supabase/cli-darwin-arm64/2.109.1/e5fdd9fb276a62ab37eb6abe0330d50b2a81bb692d391bd8bc054b330e5d8133/node_modules/@supabase/cli-darwin-arm64/bin/supabase";
 const GH = "/Users/Maks/Library/Caches/finance-release-tools-v1/gh_2.97.0_macOS_arm64/bin/gh";
 const ARCHIVE = "/private/tmp/supabase_darwin_arm64-v2.109.1.tar.gz";
 const SUCCESSOR_MUTATION_NAMES = Object.freeze([
+  "MAIN_FINANCE_ACCESS_V2_SOURCE_DEPLOYMENT_SHA256",
+  "MAIN_FINANCE_ACCESS_V2_SOURCE_COMMIT_SHA",
+  "MAIN_FINANCE_ACCESS_V2_SOURCE_TREE_SHA",
+  "MAIN_FINANCE_ACCESS_V2_SOURCE_MANIFEST_SHA256",
+]);
+const SCHEMA3_MUTATION_NAMES = Object.freeze([
   "MAIN_FINANCE_ACCESS_V2_SOURCE_COMMIT_SHA",
   "MAIN_FINANCE_ACCESS_V2_SOURCE_TREE_SHA",
   "MAIN_FINANCE_ACCESS_V2_SOURCE_MANIFEST_SHA256",
@@ -77,13 +87,18 @@ const SUCCESSOR_METADATA_ONLY_NAMES = Object.freeze([
 ]);
 const EXPECTED_CHANGED_PATHS = [
   ["M", ".github/workflows/verify-finance-integration.yml"],
+  ["M", "scripts/main-finance-runtime-recovery-v2-snapshot.mjs"],
+  ["M", "scripts/manage-finance-access-v2.mjs"],
   ["M", "scripts/prepare-main-finance-runtime-recovery-v2.mjs"],
+  ["M", "supabase/functions/finance-manage-access-v2/index.ts"],
   ["M", "supabase/releases/main-finance-runtime-recovery-v2/environment.contract.json"],
   ["M", "supabase/releases/main-finance-runtime-recovery-v2/postflight.contract.json"],
   ["M", "supabase/releases/main-finance-runtime-recovery-v2/README.md"],
   ["M", "supabase/releases/main-finance-runtime-recovery-v2/staging.manifest.json"],
   ["M", "supabase/tests/finance_integration_ci.test.mjs"],
   ["M", "supabase/tests/main_finance_runtime_recovery_release_v2.test.mjs"],
+  ["M", "supabase/tests/main_finance_runtime_secret_recovery_v2.test.mjs"],
+  ["M", "supabase/tests/manage_finance_access_v2.test.mjs"],
 ].map(([status, changedPath]) => ({ status, path: changedPath }));
 const BASE_MS = Date.parse("2026-08-14T05:00:00.000Z");
 const OPERATOR_SECRET = Buffer.alloc(48, 1).toString("base64url");
@@ -348,6 +363,34 @@ async function importInternalInventoryFetchers(t) {
   ).href);
 }
 
+async function importInternalReadOnlyGitHubApi(t) {
+  const parent = mkdtempSync(path.join(
+    realpathSync(tmpdir()),
+    "main-finance-v2-read-only-github-api-test-",
+  ));
+  t.after(() => rmSync(parent, { recursive: true, force: true }));
+  const scriptsDirectory = path.join(parent, "scripts");
+  mkdirSync(scriptsDirectory, { mode: 0o700 });
+  const operatorSource = readFileSync(OPERATOR_FILE, "utf8");
+  const marker = "function invokeReadOnlyGitHubApi({";
+  assert.equal(operatorSource.split(marker).length, 2);
+  writeFileSync(
+    path.join(scriptsDirectory, path.basename(OPERATOR_FILE)),
+    operatorSource.replace(marker, `export ${marker}`),
+    { mode: 0o600 },
+  );
+  writeFileSync(
+    path.join(scriptsDirectory, "main-finance-runtime-recovery-v2-snapshot.mjs"),
+    readFileSync(
+      path.join(ROOT, "scripts/main-finance-runtime-recovery-v2-snapshot.mjs"),
+    ),
+    { mode: 0o600 },
+  );
+  return import(pathToFileURL(
+    path.join(scriptsDirectory, path.basename(OPERATOR_FILE)),
+  ).href);
+}
+
 async function importInternalReceiptClock(t) {
   const parent = mkdtempSync(path.join(
     realpathSync(tmpdir()),
@@ -401,7 +444,7 @@ async function importInternalGeneratedRuntimeSecrets(t) {
     "function receiptDirectoryIdentity(directory) {",
     "function assertFreshReceiptAuthorityUnchanged({",
     "function assertSuccessorPredecessorBaselineBinding(",
-    "function validSuccessorMutationSecretDigestMap(value) {",
+    "function validSuccessorMutationSecretDigestMap(",
     "function assertCurrentReleaseSecretsOnlyBundle(attestation, plan) {",
     "async function collectCompletionAuthority({",
   ];
@@ -1362,10 +1405,10 @@ const SUCCESSOR_BASE_TREE =
 const SUCCESSOR_CHANGED_PATH_SET = sha256(EXPECTED_CHANGED_PATHS
   .map(item => `${item.status}\0${item.path}\n`).join(""));
 const SUCCESSOR_MUTATION_DIGESTS = Object.freeze(Object.fromEntries(
-  SUCCESSOR_MUTATION_NAMES.map(name => [name, rawHash(`successor:${name}`)]),
+  SCHEMA3_MUTATION_NAMES.map(name => [name, rawHash(`successor:${name}`)]),
 ));
 const SUCCESSOR_BASELINE_MAIN = Object.freeze([
-  ...SUCCESSOR_MUTATION_NAMES.map(name => Object.freeze({
+  ...SCHEMA3_MUTATION_NAMES.map(name => Object.freeze({
     name,
     value: rawHash(`terminal:${name}`),
     updatedAt: at(-5_000),
@@ -1406,7 +1449,7 @@ const SUCCESSOR_BASELINE_FINANCE = Object.freeze([
 const SUCCESSOR_INSTALLED_MAIN = Object.freeze(SUCCESSOR_BASELINE_MAIN.map(row =>
   Object.freeze({
     ...row,
-    ...(SUCCESSOR_MUTATION_NAMES.includes(row.name)
+    ...(SCHEMA3_MUTATION_NAMES.includes(row.name)
       ? { value: SUCCESSOR_MUTATION_DIGESTS[row.name], updatedAt: at(2_500) }
       : {}),
     ...(SUCCESSOR_METADATA_ONLY_NAMES.includes(row.name)
@@ -1416,7 +1459,7 @@ const SUCCESSOR_INSTALLED_MAIN = Object.freeze(SUCCESSOR_BASELINE_MAIN.map(row =
 const SUCCESSOR_DIVERGED_MAIN = Object.freeze(SUCCESSOR_INSTALLED_MAIN.map(row =>
   Object.freeze({
     ...row,
-    ...(row.name === SUCCESSOR_MUTATION_NAMES[0]
+    ...(row.name === SCHEMA3_MUTATION_NAMES[0]
       ? { value: rawHash("successor-diverged-secret-digest") }
       : {}),
   })));
@@ -1474,7 +1517,7 @@ function semanticInventorySha(rows) {
 function successorMetadataDelta(before, after) {
   const current = new Map(after.map(row => [row.name, row]));
   const rows = before
-    .filter(row => !SUCCESSOR_MUTATION_NAMES.includes(row.name))
+    .filter(row => !SCHEMA3_MUTATION_NAMES.includes(row.name))
     .filter(row => current.get(row.name)?.updatedAt !== row.updatedAt)
     .map(row => ({
       name: row.name,
@@ -1574,7 +1617,7 @@ const SUCCESSOR_BUNDLE_BINDING = Object.freeze({
   preinstallFinanceInventorySha256: TERMINAL_FINANCE_INVENTORY_SHA,
   preinstallFunctionInventorySha256: TERMINAL_FUNCTION_INVENTORY_SHA,
   runtimeMutationInputSha256: RUNTIME_INPUT_SHA,
-  mutationSecretNameSetSha256: sha256(canonicalJson(SUCCESSOR_MUTATION_NAMES)),
+  mutationSecretNameSetSha256: sha256(canonicalJson(SCHEMA3_MUTATION_NAMES)),
   mutationSecretDigestSetSha256: sha256(canonicalJson(
     SUCCESSOR_MUTATION_DIGESTS,
   )),
@@ -1714,7 +1757,7 @@ function successorPlanFields(recordedAt = at(1_000)) {
     productionTouched: false,
     semanticMainInventorySha256:
       semanticInventorySha(SUCCESSOR_BASELINE_MAIN),
-    mutationSecretNames: SUCCESSOR_MUTATION_NAMES,
+    mutationSecretNames: SCHEMA3_MUTATION_NAMES,
     mutationSecretNameSetSha256:
       SUCCESSOR_BUNDLE_BINDING.mutationSecretNameSetSha256,
     mutationSecretDigestSetSha256:
@@ -1748,7 +1791,7 @@ function successorIntentFields(plan, recordedAt = at(2_000)) {
       SUCCESSOR_BUNDLE_BINDING.predecessorAdoptionSha256,
     expectedSecretDigestSetSha256:
       SUCCESSOR_BUNDLE_BINDING.mutationSecretDigestSetSha256,
-    secretNames: SUCCESSOR_MUTATION_NAMES,
+    secretNames: SCHEMA3_MUTATION_NAMES,
     semanticBeforeMainInventorySha256:
       semanticInventorySha(SUCCESSOR_BASELINE_MAIN),
     mutationSecretNameSetSha256:
@@ -1803,7 +1846,7 @@ function successorVerifiedResultFields(
       semanticInventorySha(SUCCESSOR_INSTALLED_MAIN),
     metadataOnlyDeltaNames: SUCCESSOR_METADATA_DELTA.names,
     metadataOnlyDeltaSha256: SUCCESSOR_METADATA_DELTA.sha256,
-    mutationSecretNames: SUCCESSOR_MUTATION_NAMES,
+    mutationSecretNames: SCHEMA3_MUTATION_NAMES,
     mutationSecretNameSetSha256:
       SUCCESSOR_BUNDLE_BINDING.mutationSecretNameSetSha256,
     mutationSecretDigestSetSha256:
@@ -1870,7 +1913,7 @@ function successorReconciliationFields(
     semanticMainInventorySha256: semanticInventorySha(main),
     metadataOnlyDeltaNames: delta?.names ?? null,
     metadataOnlyDeltaSha256: delta?.sha256 ?? null,
-    mutationSecretNames: SUCCESSOR_MUTATION_NAMES,
+    mutationSecretNames: SCHEMA3_MUTATION_NAMES,
     mutationSecretNameSetSha256:
       SUCCESSOR_BUNDLE_BINDING.mutationSecretNameSetSha256,
     mutationSecretDigestSetSha256:
@@ -1966,7 +2009,7 @@ function successorCompletionFields(
       semanticInventorySha(SUCCESSOR_INSTALLED_MAIN),
     metadataOnlyDeltaNames: SUCCESSOR_METADATA_DELTA.names,
     metadataOnlyDeltaSha256: SUCCESSOR_METADATA_DELTA.sha256,
-    mutationSecretNames: SUCCESSOR_MUTATION_NAMES,
+    mutationSecretNames: SCHEMA3_MUTATION_NAMES,
     mutationSecretNameSetSha256:
       SUCCESSOR_BUNDLE_BINDING.mutationSecretNameSetSha256,
     mutationSecretDigestSetSha256:
@@ -2036,7 +2079,7 @@ function successorTransition(chain, {
         currentMain: main,
         currentFinance: SUCCESSOR_BASELINE_FINANCE,
         expectedDigests: SUCCESSOR_MUTATION_DIGESTS,
-        secretNames: SUCCESSOR_MUTATION_NAMES,
+        secretNames: SCHEMA3_MUTATION_NAMES,
         metadataOnlyNames: SUCCESSOR_METADATA_ONLY_NAMES,
       },
       functionEvidence: {
@@ -2064,7 +2107,7 @@ test("schema-3 reducer completes and verifies both exact allowed Function outcom
   assert.equal(successorFunctionSha(SUCCESSOR_BASELINE_FUNCTIONS),
     TERMINAL_FUNCTION_INVENTORY_SHA);
   assert.deepEqual(SUCCESSOR_SOURCE_BINDING.changedPaths, EXPECTED_CHANGED_PATHS);
-  assert.equal(SUCCESSOR_SOURCE_BINDING.changedPaths.length, 8);
+  assert.equal(SUCCESSOR_SOURCE_BINDING.changedPaths.length, 13);
   const downgradedPlanPayload = successorPlanFields();
   const downgradedPlanCore = {
     ...downgradedPlanPayload,
@@ -2129,7 +2172,7 @@ test("schema-3 reducer completes and verifies both exact allowed Function outcom
     assertTransition(intentAuthority, "record-mutation-intent",
       "append-mutation-intent", "secrets-set", "secrets-set");
     const intent = appendSuccessorFixture(chain, intentPayload, intentAuthority);
-    assert.deepEqual(intent.secretNames, SUCCESSOR_MUTATION_NAMES);
+    assert.deepEqual(intent.secretNames, SCHEMA3_MUTATION_NAMES);
     assert.equal(intent.secretNames.length, 3);
     assert.equal(intent.hostedMutationCount, 0);
     assert.equal(intent.functionDeployCount, 0);
@@ -2509,12 +2552,2304 @@ test("schema-3 reducer reconciles unknown once and makes unsatisfied or diverged
   }), /amended secret reconciliation observation evidence differs/u);
 });
 
+const V4_INITIAL_MAIN_SHA =
+  "3cb8a92d36e5ef9ced75e21200339d9538d54ecce4de50703cf99ddb0cadfa37";
+const V4_INITIAL_SEMANTIC_MAIN_SHA =
+  "6ca2371545e0ec957e05ae64adf6cadf1dfda3f4618833b755bd783371d8352d";
+const V4_FINANCE_SHA =
+  "89e6947c4e347081737ec51c198fabfea43a39e9d30a6a851e23ad7435a77c9e";
+const V4_INITIAL_FUNCTION_SHA =
+  "0efefe20bb441b2f5ce1eafd9fe401e47f4cea793c9e6fa834cc6fbc87afd936";
+const V4_HOSTED_SOURCE_CLOSURE_SHA =
+  "b3b4177ac01f44a2bb27e8ed81f98fcf00dcddbc0e6a3e4f897eab5d903c11c9";
+const V4_SOURCE_PARENT = "42c647aaeb3a6cededb49f073ac001678dcb3582";
+const V4_BASE_TREE = "dd05940dbc3f06e8577a6406c6e64e470049c818";
+const V4_TARGET_ID = "22222222-2222-4222-8222-222222222222";
+const V4_OPERATOR_SECRET = Buffer.alloc(48, 4).toString("base64url");
+const V4_TRIGGER_SECRET = Buffer.alloc(48, 5).toString("base64url");
+const V4_MANIFEST_SOURCE = readFileSync(MANIFEST_FILE, "utf8");
+const V4_MANIFEST = Object.freeze(JSON.parse(V4_MANIFEST_SOURCE));
+const V4_MANIFEST_SHA = sha256(V4_MANIFEST_SOURCE);
+const V4_SOURCE_DEPLOYMENT_SHA = V4_MANIFEST.deploymentClosureSetSha256;
+const V4_SEALED_SUPABASE_FIXTURE_BYTES = Buffer.from(
+  "main-finance-schema4-test-sealed-supabase-cli\n",
+  "utf8",
+);
+const V4_RELEASE_FIXTURE = Object.freeze({
+  manifest: V4_MANIFEST,
+  manifestSha256: V4_MANIFEST_SHA,
+});
+
+const V4_MAIN_BEFORE_ROWS = Object.freeze([
+  ...SUCCESSOR_MUTATION_NAMES.map(name => Object.freeze({
+    name,
+    value: rawHash(`v4-before:${name}`),
+    updatedAt: at(-20_000),
+  })),
+  ...SUCCESSOR_METADATA_ONLY_NAMES.map(name => Object.freeze({
+    name,
+    value: rawHash(`v4-stable:${name}`),
+    updatedAt: at(-20_000),
+  })),
+  Object.freeze({
+    name: "MAIN_FINANCE_ACCESS_OPERATOR_SECRET_V2",
+    value: rawHash("v4-generated:operator"),
+    updatedAt: at(-20_000),
+  }),
+  Object.freeze({
+    name: "MAIN_FINANCE_SYNC_TRIGGER_SECRET",
+    value: rawHash("v4-generated:trigger"),
+    updatedAt: at(-20_000),
+  }),
+].sort((left, right) => left.name.localeCompare(right.name)));
+
+const V4_MUTATION_DIGESTS = Object.freeze({
+  MAIN_FINANCE_ACCESS_V2_SOURCE_DEPLOYMENT_SHA256:
+    sha256(V4_SOURCE_DEPLOYMENT_SHA),
+  MAIN_FINANCE_ACCESS_V2_SOURCE_COMMIT_SHA: sha256(SOURCE_COMMIT),
+  MAIN_FINANCE_ACCESS_V2_SOURCE_TREE_SHA: sha256(SOURCE_TREE),
+  MAIN_FINANCE_ACCESS_V2_SOURCE_MANIFEST_SHA256: sha256(V4_MANIFEST_SHA),
+});
+
+const V4_MAIN_AFTER_ROWS = Object.freeze(V4_MAIN_BEFORE_ROWS.map(row => Object.freeze({
+  ...row,
+  ...(SUCCESSOR_MUTATION_NAMES.includes(row.name) ? {
+    value: V4_MUTATION_DIGESTS[row.name],
+    updatedAt: at(30_000),
+  } : {}),
+  ...(SUCCESSOR_METADATA_ONLY_NAMES.includes(row.name) ? {
+    updatedAt: at(30_100),
+  } : {}),
+})));
+
+const V4_FINANCE_ROWS = Object.freeze([Object.freeze({
+  name: "FINANCE_ENTITLEMENT_SYNC_MODE",
+  value: rawHash("v4-finance-stable"),
+  updatedAt: at(-20_000),
+})]);
+
+const V4_TARGET_BEFORE = functionInventoryRow({
+  id: V4_TARGET_ID,
+  slug: "finance-manage-access-v2",
+  verify_jwt: false,
+  version: 2,
+  import_map_path: "file:///tmp/predecessor/deno.json",
+});
+const V4_FUNCTIONS_BEFORE = Object.freeze([
+  V4_TARGET_BEFORE,
+  ...Array.from({ length: 12 }, (_, index) => functionInventoryRow({
+    id: `${String(index + 30).padStart(8, "0")}-4444-4444-8444-${String(index + 30).padStart(12, "0")}`,
+    slug: `schema4-stable-${String(index + 1).padStart(2, "0")}`,
+    verify_jwt: index % 2 === 0,
+    version: index + 2,
+  })),
+].sort((left, right) => left.slug.localeCompare(right.slug)));
+const V4_TARGET_AFTER = Object.freeze({
+  ...V4_TARGET_BEFORE,
+  version: V4_TARGET_BEFORE.version + 1,
+  updated_at: V4_TARGET_BEFORE.updated_at + 1_000,
+  ezbr_sha256: rawHash("v4-target-after-ezbr"),
+  entrypoint_path:
+    `file:///tmp/user_fn_${MAIN_REF}_${V4_TARGET_ID}_3/source/supabase/functions/finance-manage-access-v2/index.ts`,
+  import_map_path:
+    `file:///tmp/user_fn_${MAIN_REF}_${V4_TARGET_ID}_3/source/supabase/functions/finance-manage-access-v2/deno.json`,
+});
+const V4_FUNCTIONS_AFTER = Object.freeze(V4_FUNCTIONS_BEFORE.map(row =>
+  row.id === V4_TARGET_ID ? V4_TARGET_AFTER : row));
+
+function v4SecretCanonical(rows) {
+  return canonicalJson([...rows].sort((left, right) =>
+    left.name.localeCompare(right.name)));
+}
+
+function v4SemanticCanonical(rows) {
+  return canonicalJson([...rows]
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map(row => ({ name: row.name, value: row.value })));
+}
+
+function v4FunctionCanonical(rows) {
+  return canonicalJson([...rows].sort((left, right) =>
+    left.slug.localeCompare(right.slug)));
+}
+
+async function importSchema4AuthorityFixtureModule() {
+  const parent = mkdtempSync(path.join(
+    realpathSync(tmpdir()),
+    "main-finance-v4-authority-fixture-",
+  ));
+  const scriptsDirectory = path.join(parent, "scripts");
+  mkdirSync(scriptsDirectory, { recursive: true, mode: 0o700 });
+  const generatedSecretDigests = Object.freeze({
+    MAIN_FINANCE_ACCESS_OPERATOR_SECRET_V2: rawHash("v4-generated:operator"),
+    MAIN_FINANCE_SYNC_TRIGGER_SECRET: rawHash("v4-generated:trigger"),
+  });
+  const overrides = [
+    [v4SecretCanonical(V4_MAIN_BEFORE_ROWS), V4_INITIAL_MAIN_SHA],
+    [v4SemanticCanonical(V4_MAIN_BEFORE_ROWS), V4_INITIAL_SEMANTIC_MAIN_SHA],
+    [v4SecretCanonical(V4_FINANCE_ROWS), V4_FINANCE_SHA],
+    [v4FunctionCanonical(V4_FUNCTIONS_BEFORE), V4_INITIAL_FUNCTION_SHA],
+    [V4_OPERATOR_SECRET, generatedSecretDigests.MAIN_FINANCE_ACCESS_OPERATOR_SECRET_V2],
+    [V4_TRIGGER_SECRET, generatedSecretDigests.MAIN_FINANCE_SYNC_TRIGGER_SECRET],
+    [
+      canonicalJson(generatedSecretDigests),
+      JSON.parse(readFileSync(ENVIRONMENT_FILE, "utf8"))
+        .predecessorAdoption.generatedSecretDigestSetSha256,
+    ],
+  ];
+  const byteOverrides = [[
+    V4_SEALED_SUPABASE_FIXTURE_BYTES.toString("base64"),
+    V4_MANIFEST.toolPins.supabaseCli.sha256,
+  ]];
+  const shaMarker = `export function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
+}`;
+  let source = readFileSync(OPERATOR_FILE, "utf8");
+  assert.equal(source.split(shaMarker).length, 2);
+  source = source.replace(shaMarker, `const TEST_SCHEMA4_SHA256_OVERRIDES = new Map(${JSON.stringify(overrides)});
+const TEST_SCHEMA4_SHA256_BYTE_OVERRIDES = new Map(${JSON.stringify(byteOverrides)});
+
+export function sha256(value) {
+  return (Buffer.isBuffer(value)
+    ? TEST_SCHEMA4_SHA256_BYTE_OVERRIDES.get(value.toString("base64"))
+    : TEST_SCHEMA4_SHA256_OVERRIDES.get(value))
+    ?? createHash("sha256").update(value).digest("hex");
+}`);
+  for (const marker of [
+    "function captureSealedSupabaseCliMutationInput(file) {",
+    "function createBundle({",
+    "function readBundle(",
+    "function schema4PlanReceiptFields({",
+    "function validateSchema4ReceiptSemantic(",
+    "function classifySchema4SecretState({",
+    "function classifyExactTargetReplacement({",
+    "function validatePartialSecretPredecessorSourceCiReceipt(",
+    "function schema4MutationIntentFields(",
+    "function schema4UnknownResultFields(",
+    "function schema4NotInvokedResultFields(",
+    "function schema4InvocationUnprovenFields(",
+    "function schema4SecretResultFields(",
+    "function schema4DeployResultFields(",
+    "function schema4CompletionFields({",
+    "function schema4SecretReconciliationFields({",
+    "function schema4DeployReconciliationFields({",
+    "async function readSchema4HostedSourceClosure(",
+    "async function attestSchema4HostedSourceClosure(",
+    "function expectedApproval(",
+    "async function operateSchema4Apply(",
+    "async function operateSchema4ResumePlan(",
+    "async function operateSchema4Reconcile(",
+    "async function operateSchema4Verify(",
+  ]) {
+    assert.equal(source.split(marker).length, 2, marker);
+    source = source.replace(marker, `export ${marker}`);
+  }
+  const harness = "globalThis.__MAIN_FINANCE_SCHEMA4_TEST_HARNESS__";
+  const inject = (marker, statement) => {
+    assert.equal(source.split(marker).length, 2, marker);
+    source = source.replace(marker, `${marker}\n  ${statement}`);
+  };
+  inject(
+    "function initializeReadyOperation(input, common, release, createState) {",
+    `if (${harness}) return ${harness}.initialize(input, common, release, createState);`,
+  );
+  inject(
+    "function initializeSchema4LocalReceiptContext(input) {",
+    `if (${harness}) return ${harness}.initializeLocal(input);`,
+  );
+  inject(
+    "function readSchema4Bundle(context, release, plan) {",
+    `if (${harness}) return ${harness}.readBundle(context, release, plan);`,
+  );
+  inject(
+    "function readStableSchema4HostedState(context) {",
+    `if (${harness}) return ${harness}.readStable(context);`,
+  );
+  inject(
+    "function mutationInputIsUnchanged(bundle, release, mutation) {",
+    `if (${harness}) return ${harness}.mutationInputIsUnchanged(bundle, release, mutation);`,
+  );
+  inject(
+    "function appendSchema4Receipt(context, expectedChain, fields) {",
+    `if (${harness}) return ${harness}.append(context, expectedChain, fields);`,
+  );
+  inject(
+    "function assertSchema4CurrentAuthorityFresh(context, input, common, release, plan) {",
+    `if (${harness}) return ${harness}.assertCurrent(context, input, common, release, plan);`,
+  );
+  inject(
+    "function assertSchema4LocalAuthorityFresh(\n  context,\n  input,\n  common,\n  release,\n  plan,\n  bundle,\n) {",
+    `if (${harness}) return ${harness}.assertLocal(context, input, common, release, plan, bundle);`,
+  );
+  inject(
+    "function readReceiptBinding(stateDirectory, receiptDirectory) {",
+    `if (${harness}) return ${harness}.readReceiptBinding(stateDirectory, receiptDirectory);`,
+  );
+  inject(
+    "function readReceiptChain(\n  directory,\n  { readOnly = false, variant = \"current\" } = {},\n) {",
+    `if (${harness}) return ${harness}.readReceiptChain(directory, { readOnly, variant });`,
+  );
+  inject(
+    "function invokeCli(dependencies, args, { mutation = false } = {}) {",
+    `if (${harness}) return ${harness}.invokeCli(dependencies, args, mutation);`,
+  );
+  inject(
+    "async function postflightSchema4TargetReplacement(\n  context,\n  release,\n  bundle,\n  beforeFunctionRows,\n) {",
+    `if (${harness}) return ${harness}.postflightTarget(context, release, bundle, beforeFunctionRows);`,
+  );
+  inject(
+    "function readPartialSecretPredecessorAdoption(input, release, liveObservation) {",
+    `if (${harness}) return ${harness}.readPredecessor(input, release, liveObservation);`,
+  );
+  inject(
+    "async function buildCurrentSnapshot(dependencies, release, source, inventories, phase) {",
+    `if (${harness}) return ${harness}.buildSnapshot(dependencies, release, source, inventories, phase);`,
+  );
+  inject(
+    "function readSchema4RawReleaseAuthority(context, input) {",
+    `if (${harness}) return ${harness}.readRawAuthority(context, input);`,
+  );
+  inject(
+    "export async function attestSchema4HostedSourceClosure(context, release, targetRow) {",
+    `if (${harness}) return ${harness}.attestSource(context, release, targetRow);`,
+  );
+  inject(
+    "async function postflightSecretsOnlySuccessorSandwich(\n  dependencies,\n  release,\n  source,\n  bundle,\n  exactFunctionRows,\n) {",
+    `if (${harness}) return ${harness}.postflightVerify(dependencies, release, source, bundle, exactFunctionRows);`,
+  );
+  writeFileSync(
+    path.join(scriptsDirectory, path.basename(OPERATOR_FILE)),
+    source,
+    { mode: 0o600 },
+  );
+  writeFileSync(
+    path.join(scriptsDirectory, "main-finance-runtime-recovery-v2-snapshot.mjs"),
+    readFileSync(
+      path.join(ROOT, "scripts/main-finance-runtime-recovery-v2-snapshot.mjs"),
+    ),
+    { mode: 0o600 },
+  );
+  for (const relative of V4_MANIFEST.deploymentClosureFiles.map(item => item.path)) {
+    const destination = path.join(parent, relative);
+    mkdirSync(path.dirname(destination), { recursive: true, mode: 0o700 });
+    copyFileSync(path.join(ROOT, relative), destination);
+    chmodSync(destination, 0o644);
+  }
+  const module = await import(pathToFileURL(
+    path.join(scriptsDirectory, path.basename(OPERATOR_FILE)),
+  ).href);
+  return { module, parent };
+}
+
+const schema4AuthorityFixture = await importSchema4AuthorityFixtureModule();
+process.once("exit", () => rmSync(schema4AuthorityFixture.parent, {
+  recursive: true,
+  force: true,
+}));
+
+function v4AdoptionFixture() {
+  const predecessor = JSON.parse(readFileSync(ENVIRONMENT_FILE, "utf8"))
+    .predecessorAdoption;
+  return Object.freeze({
+    kind: "main-finance-runtime-recovery-v4-partial-secret-predecessor-adoption",
+    priorRootIdentitySha256: rawHash("v4-prior-root-identity"),
+    priorSourceCommitSha: predecessor.sourceCommitSha,
+    priorSourceTreeSha: predecessor.sourceTreeSha,
+    priorSourceDeploymentSha256: predecessor.sourceDeploymentSha256,
+    priorReleaseManifestSha256: predecessor.releaseManifestSha256,
+    priorSourceCiReceiptSha256: predecessor.sourceCiReceiptSha256,
+    priorSourceCiReceiptFileSha256: predecessor.sourceCiReceiptFileSha256,
+    priorSourceCiRunId: String(predecessor.sourceCiRunId),
+    priorSourceCiJobId: String(predecessor.sourceCiJobId),
+    priorReleaseProvenanceFileSha256: predecessor.provenanceFileSha256,
+    priorReleaseProvenanceDescriptorSha256: predecessor.provenanceDescriptorSha256,
+    priorPlanReceiptSha256: predecessor.planReceiptSha256,
+    priorPlanReceiptFileSha256: predecessor.planReceiptFileSha256,
+    priorSecretIntentReceiptSha256: predecessor.secretIntentReceiptSha256,
+    priorSecretIntentReceiptFileSha256: predecessor.secretIntentReceiptFileSha256,
+    priorEffectReceiptSha256: predecessor.effectReceiptSha256,
+    priorEffectReceiptFileSha256: predecessor.effectReceiptFileSha256,
+    priorReceiptChainSha256: predecessor.receiptChainSha256,
+    priorBundleAttestationSha256: predecessor.bundleAttestationSha256,
+    priorBundleAttestationFileSha256: predecessor.bundleAttestationFileSha256,
+    priorBundleCommitSha256: predecessor.bundleCommitSha256,
+    priorBundleCommitFileSha256: predecessor.bundleCommitFileSha256,
+    priorRuntimeFileSha256: predecessor.runtimeFileSha256,
+    priorSourceArchiveSha256: predecessor.sourceArchiveSha256,
+    priorMutationSecretNameSetSha256: predecessor.mutationSecretNameSetSha256,
+    priorMutationSecretDigestSetSha256: predecessor.mutationSecretDigestSetSha256,
+    generatedSecretNames: predecessor.adoptGeneratedSecretNames,
+    generatedSecretDigestSetSha256: predecessor.generatedSecretDigestSetSha256,
+    preinstallMainInventorySha256: predecessor.preinstallMainInventorySha256,
+    installedMainInventorySha256: predecessor.installedMainInventorySha256,
+    installedSemanticMainInventorySha256:
+      predecessor.installedSemanticMainInventorySha256,
+    stableFinanceInventorySha256: predecessor.stableFinanceInventorySha256,
+    preinstallFunctionInventorySha256:
+      predecessor.preinstallFunctionInventorySha256,
+    installedFunctionInventorySha256: predecessor.installedFunctionInventorySha256,
+    installedFunctionCount: predecessor.functionCount,
+    functionVersionTransitionDisposition: "exact-all-existing-plus-one",
+    metadataOnlySecretNames: SUCCESSOR_METADATA_ONLY_NAMES,
+    stableReadRounds: 2,
+    secretState: "state_satisfied",
+    hostedMutationCount: 1,
+    functionDeployCount: 0,
+    releaseCompleteObserved: false,
+    causalAttribution: false,
+  });
+}
+
+function v4InventoryMap(rows) {
+  return new Map(rows.map(row => [row.name, Object.freeze({ ...row })]));
+}
+
+function v4FunctionFrame(module, rows, pinnedSha = null) {
+  const normalized = Object.freeze([...rows]
+    .map(row => Object.freeze(JSON.parse(canonicalJson(row))))
+    .sort((left, right) => left.slug.localeCompare(right.slug)));
+  return Object.freeze({
+    rows: normalized,
+    sha256: pinnedSha ?? module.sha256(canonicalJson(normalized)),
+    target: normalized.find(row => row.slug === "finance-manage-access-v2") ?? null,
+  });
+}
+
+function v4SourceCiFixture(module) {
+  const core = {
+    schemaVersion: 1,
+    kind: "main-finance-source-ci-receipt-v1",
+    repository: "lego-business-system/lego-mini-app",
+    workflowPath: ".github/workflows/verify-finance-integration.yml",
+    workflowBlob: WORKFLOW_BLOB,
+    branch: BRANCH,
+    event: "push",
+    runId: Number(RUN_ID),
+    runAttempt: 1,
+    runUrl: `https://github.com/lego-business-system/lego-mini-app/actions/runs/${RUN_ID}`,
+    status: "completed",
+    conclusion: "success",
+    sourceCommit: SOURCE_COMMIT,
+    sourceTree: SOURCE_TREE,
+    remoteCommit: SOURCE_COMMIT,
+    remoteSynced: true,
+    checkoutDetached: true,
+    checkoutFull: true,
+    sparseCheckout: false,
+    skipWorktreeCount: 0,
+    trackedFileCount: 935,
+    verifyJobId: 987654321,
+    verifyJobConclusion: "success",
+    postgresImage: POSTGRES_IMAGE,
+    postgresMajor: 17,
+    postgresStepName: "Execute main Finance foundation on disposable PostgreSQL 17",
+    postgresStepNumber: 9,
+    postgresStepConclusion: "success",
+    gitVersion: "git version 2.50.1 (Apple Git-155)",
+    gitSha256: "179301dcb41ea78accc3fa0048a7e6f6710d891945a751a34addd622020c1818",
+    ghVersion: "gh version 2.97.0 (2026-07-31)",
+    ghSha256: "0d17dddf96bcc1dc50f3420a064d593d64016b0be16286a6c26121f2a5cb8316",
+    hostedMutationsPerformed: false,
+    productionTouched: false,
+    verifiedAt: at(-30_000),
+  };
+  const receipt = Object.freeze({
+    ...core,
+    receiptSha256: module.sha256(canonicalJson(core)),
+  });
+  const source = `${canonicalJson(receipt)}\n`;
+  return Object.freeze({
+    receipt,
+    source,
+    fileSha256: module.sha256(source),
+  });
+}
+
+function partialSecretPredecessorSourceCiFixture(module) {
+  const unorderedCore = {
+    branch: BRANCH,
+    checkoutDetached: true,
+    checkoutFull: true,
+    conclusion: "success",
+    event: "push",
+    ghSha256: "0d17dddf96bcc1dc50f3420a064d593d64016b0be16286a6c26121f2a5cb8316",
+    ghVersion: "gh version 2.97.0 (2026-07-31)",
+    gitSha256: "179301dcb41ea78accc3fa0048a7e6f6710d891945a751a34addd622020c1818",
+    gitVersion: "git version 2.50.1 (Apple Git-155)",
+    hostedMutationsPerformed: false,
+    kind: "main-finance-source-ci-receipt-v1",
+    postgresImage: POSTGRES_IMAGE,
+    postgresMajor: 17,
+    postgresStepConclusion: "success",
+    postgresStepName: "Execute main Finance foundation on disposable PostgreSQL 17",
+    postgresStepNumber: 11,
+    productionTouched: false,
+    remoteCommit: "42c647aaeb3a6cededb49f073ac001678dcb3582",
+    remoteSynced: true,
+    repository: "lego-business-system/lego-mini-app",
+    runAttempt: 1,
+    runId: 33212271479,
+    runUrl:
+      "https://github.com/lego-business-system/lego-mini-app/actions/runs/33212271479",
+    schemaVersion: 1,
+    skipWorktreeCount: 0,
+    sourceCommit: "42c647aaeb3a6cededb49f073ac001678dcb3582",
+    sourceTree: "dd05940dbc3f06e8577a6406c6e64e470049c818",
+    sparseCheckout: false,
+    status: "completed",
+    trackedFileCount: 935,
+    verifiedAt: "2026-08-28T21:48:12.301Z",
+    verifyJobConclusion: "success",
+    verifyJobId: 98988013415,
+    workflowBlob: "220ee4c940cfd03e178dbee1fb6f25dc5de0845e",
+    workflowPath: ".github/workflows/verify-finance-integration.yml",
+  };
+  const core = Object.freeze(Object.fromEntries(
+    Object.keys(unorderedCore).sort().map(key => [key, unorderedCore[key]]),
+  ));
+  const receiptSha256 = module.sha256(`${JSON.stringify(core, null, 2)}\n`);
+  const unorderedValue = { ...core, receiptSha256 };
+  const value = Object.freeze(Object.fromEntries(
+    Object.keys(unorderedValue).sort().map(key => [key, unorderedValue[key]]),
+  ));
+  const source = `${JSON.stringify(value, null, 2)}\n`;
+  assert.equal(
+    receiptSha256,
+    "908e67fdb896c0d266735204c528af2736d326ba894ef9d84dc564db09ec99c5",
+  );
+  assert.equal(
+    module.sha256(source),
+    "17fe6a4e3dd6f90a0b2a39add14ba8ddf1c899f52ad0c0faf2c65af25dcbdc6f",
+  );
+  return Object.freeze({ core, value, source });
+}
+
+function v4RuntimeSnapshot(clock, suffix, vector) {
+  return Object.freeze({
+    database_clock: clock,
+    response_sha256: rawHash(`v4-snapshot-response:${suffix}`),
+    descriptor_sha256: vector.descriptorSha256,
+    state_sha256: vector.stateSha256,
+    catalog_sha256: vector.catalogSha256,
+    gate_inventory_sha256: vector.gateInventorySha256,
+    privacy_secret_inventory_sha256: vector.privacyInventorySha256,
+    checked_count: vector.checkedCount,
+  });
+}
+
+function v4SandwichFixture({
+  module,
+  d0Clock,
+  proofClock,
+  d1Clock,
+  suffix,
+  vector,
+  mainRows,
+  financeRows,
+  beforeFunctionRows,
+  functionRows,
+}) {
+  const main = v4InventoryMap(mainRows);
+  const finance = v4InventoryMap(financeRows);
+  const functionInventory = v4FunctionFrame(module, functionRows);
+  const mainSha = module.sha256(v4SecretCanonical(mainRows));
+  const financeSha = module.sha256(v4SecretCanonical(financeRows));
+  return Object.freeze({
+    d0: v4RuntimeSnapshot(d0Clock, `${suffix}:d0`, vector),
+    proof: Object.freeze({
+      responseSha256: rawHash(`v4-proof-response:${suffix}`),
+      proofSha256: rawHash(`v4-proof:${suffix}`),
+      attestedAt: proofClock,
+      checkedCount: vector.checkedCount,
+      mismatchCount: 0,
+      stateSha256: vector.stateSha256,
+    }),
+    d1: v4RuntimeSnapshot(d1Clock, `${suffix}:d1`, vector),
+    d0MainInventorySha256: mainSha,
+    d0FinanceInventorySha256: financeSha,
+    d0FunctionInventorySha256: functionInventory.sha256,
+    d1MainInventorySha256: mainSha,
+    d1FinanceInventorySha256: financeSha,
+    d1FunctionInventorySha256: functionInventory.sha256,
+    inventories: Object.freeze({
+      main,
+      finance,
+      mainInventorySha256: mainSha,
+      financeInventorySha256: financeSha,
+    }),
+    functionInventory,
+    transition: module.classifyExactTargetReplacement({
+      beforeRows: beforeFunctionRows,
+      afterRows: functionRows,
+    }),
+    hostedSourceClosureSha256: V4_HOSTED_SOURCE_CLOSURE_SHA,
+    hostedSourceMetadataSha256: rawHash("v4-hosted-source-metadata"),
+    hostedSourceClosureReadRounds: 2,
+  });
+}
+
+function appendV4Fixture(module, chain, fields) {
+  const core = {
+    ...fields,
+    schemaVersion: 4,
+    sequence: chain.length + 1,
+    previousReceiptSha256: chain.at(-1)?.receiptSha256 ?? null,
+    productionDenied: true,
+  };
+  const receipt = Object.freeze({
+    ...core,
+    receiptSha256: module.sha256(canonicalJson(core)),
+  });
+  chain.push(receipt);
+  return receipt;
+}
+
+function buildSchema4AuthorityFixture({
+  secretUnknown = false,
+  deployUnknown = false,
+  secretFunctionPlusOne = false,
+} = {}) {
+  const module = schema4AuthorityFixture.module;
+  const sourceCi = v4SourceCiFixture(module);
+  const serializedProvenance = provenanceSource(SOURCE_COMMIT, SOURCE_TREE, RUN_ID);
+  const provenance = Object.freeze(JSON.parse(serializedProvenance));
+  const changedPaths = Object.freeze(EXPECTED_CHANGED_PATHS.map(row =>
+    Object.freeze({ ...row })));
+  const context = Object.freeze({
+    source: Object.freeze({
+      commit: SOURCE_COMMIT,
+      tree: SOURCE_TREE,
+      parent: V4_SOURCE_PARENT,
+      baseTree: V4_BASE_TREE,
+      changedPaths,
+      changedPathSetSha256: module.sha256(changedPaths
+        .map(item => `${item.status}\0${item.path}\n`).join("")),
+      trackedFileCount: 935,
+      workflowBlobSha: WORKFLOW_BLOB,
+      supabaseArchiveSha256: SUPABASE_ARCHIVE_SHA,
+    }),
+    ci: Object.freeze({
+      runId: RUN_ID,
+      runApiSha256: rawHash("v4-ci-run"),
+      jobsApiSha256: rawHash("v4-ci-jobs"),
+      branchApiSha256: rawHash("v4-ci-branch"),
+    }),
+    sourceCiReceipt: Object.freeze({
+      ...sourceCi.receipt,
+      fileSha256: sourceCi.fileSha256,
+    }),
+    provenance: Object.freeze({
+      ...provenance,
+      fileSha256: module.sha256(serializedProvenance),
+    }),
+  });
+  const release = Object.freeze({
+    manifest: V4_MANIFEST,
+    manifestSha256: V4_MANIFEST_SHA,
+  });
+  const adoption = v4AdoptionFixture();
+  const beforeMain = v4InventoryMap(V4_MAIN_BEFORE_ROWS);
+  const afterMain = v4InventoryMap(V4_MAIN_AFTER_ROWS);
+  const finance = v4InventoryMap(V4_FINANCE_ROWS);
+  const beforeFunctions = v4FunctionFrame(
+    module,
+    V4_FUNCTIONS_BEFORE,
+    V4_INITIAL_FUNCTION_SHA,
+  );
+  const secretFunctionRows = Object.freeze(V4_FUNCTIONS_BEFORE.map(row =>
+    Object.freeze({
+      ...row,
+      version: row.version + (secretFunctionPlusOne ? 1 : 0),
+    })));
+  const targetBeforeDeploy = secretFunctionRows.find(row =>
+    row.slug === "finance-manage-access-v2");
+  const targetAfterDeploy = Object.freeze({
+    ...targetBeforeDeploy,
+    version: targetBeforeDeploy.version + 1,
+    updated_at: targetBeforeDeploy.updated_at + 1_000,
+    ezbr_sha256: rawHash(
+      `v4-target-after-ezbr:${targetBeforeDeploy.version + 1}`,
+    ),
+    entrypoint_path:
+      `file:///tmp/user_fn_${MAIN_REF}_${V4_TARGET_ID}_${targetBeforeDeploy.version + 1}/source/supabase/functions/finance-manage-access-v2/index.ts`,
+    import_map_path:
+      `file:///tmp/user_fn_${MAIN_REF}_${V4_TARGET_ID}_${targetBeforeDeploy.version + 1}/source/supabase/functions/finance-manage-access-v2/deno.json`,
+  });
+  const deployFunctionRows = Object.freeze(secretFunctionRows.map(row =>
+    row.id === V4_TARGET_ID ? targetAfterDeploy : row));
+  const secretFunctions = v4FunctionFrame(module, secretFunctionRows);
+  const afterFunctions = v4FunctionFrame(module, deployFunctionRows);
+  const bundle = Object.freeze({
+    attestation: Object.freeze({
+      attestationSha256: rawHash("v4-bundle-attestation"),
+      sourceArchiveSha256: rawHash("v4-source-archive"),
+      operatorDescriptorFileSha256: rawHash("v4-operator-descriptor-file"),
+      operatorDescriptorSha256: rawHash("v4-operator-descriptor"),
+      productionBoundarySha256: rawHash("v4-production-boundary"),
+      targetDescriptorSha256: rawHash("v4-target-descriptor"),
+      mutationSecretNames: SUCCESSOR_MUTATION_NAMES,
+      mutationSecretDigests: V4_MUTATION_DIGESTS,
+      predecessorAdoption: adoption,
+    }),
+    preinstallInventories: Object.freeze({
+      main: beforeMain,
+      finance,
+      functions: V4_FUNCTIONS_BEFORE,
+    }),
+    runtimeMutationInput: Object.freeze([
+      Object.freeze({ path: "/private/tmp/v4-runtime.env", sha256: rawHash("v4-runtime-input") }),
+    ]),
+    deployMutationInput: Object.freeze([
+      Object.freeze({
+        path: "supabase/functions/finance-manage-access-v2/index.ts",
+        sha256: targetAfterDeploy.ezbr_sha256,
+      }),
+    ]),
+    secretMutationFile: "/private/tmp/v4-runtime.env",
+    runtimeFile: "/private/tmp/v4-proof.env",
+    workdir: "/private/tmp/v4-deploy-workdir",
+  });
+  const beforeObserved = Object.freeze({
+    inventories: Object.freeze({
+      main: beforeMain,
+      finance,
+      mainInventorySha256: V4_INITIAL_MAIN_SHA,
+      financeInventorySha256: V4_FINANCE_SHA,
+    }),
+    functions: beforeFunctions,
+  });
+  const afterObserved = Object.freeze({
+    inventories: Object.freeze({
+      main: afterMain,
+      finance,
+      mainInventorySha256: module.sha256(v4SecretCanonical(V4_MAIN_AFTER_ROWS)),
+      financeInventorySha256: V4_FINANCE_SHA,
+    }),
+    functions: secretFunctions,
+  });
+  const afterDeployObserved = Object.freeze({
+    inventories: afterObserved.inventories,
+    functions: afterFunctions,
+  });
+  const chain = [];
+  let cursor = 10_000;
+  const take = () => {
+    const value = at(cursor);
+    cursor += 10_000;
+    return value;
+  };
+  const vector1 = Object.freeze({
+    descriptorSha256: rawHash("v4-plan1-descriptor"),
+    stateSha256: rawHash("v4-plan1-state"),
+    catalogSha256: rawHash("v4-plan1-catalog"),
+    gateInventorySha256: rawHash("v4-plan1-gate"),
+    privacyInventorySha256: rawHash("v4-plan1-privacy"),
+    checkedCount: 75,
+  });
+  const plan1RecordedAt = take();
+  const plan1 = appendV4Fixture(module, chain, module.schema4PlanReceiptFields({
+    context,
+    release,
+    bundle,
+    inventories: beforeObserved.inventories,
+    functionInventory: beforeFunctions,
+    snapshot: v4RuntimeSnapshot(at(9_000), "plan1", vector1),
+    predecessorAdoption: adoption,
+    mutationScope: "secrets-set",
+    resumeFromReceiptSha256: null,
+    recordedAt: plan1RecordedAt,
+    expiresAt: new Date(Date.parse(plan1RecordedAt) + 200_000).toISOString(),
+  }));
+  const intent1 = appendV4Fixture(
+    module,
+    chain,
+    module.schema4MutationIntentFields(plan1, beforeObserved, take()),
+  );
+  let secretCause;
+  if (secretUnknown) {
+    const unknown = appendV4Fixture(
+      module,
+      chain,
+      module.schema4UnknownResultFields(intent1, take()),
+    );
+    const state = module.classifySchema4SecretState({
+      bundle,
+      beforeFunctionRows: intent1.beforeFunctionInventoryRows,
+      observed: afterObserved,
+    });
+    secretCause = appendV4Fixture(
+      module,
+      chain,
+      module.schema4SecretReconciliationFields({
+        unresolved: unknown,
+        intent: intent1,
+        observed: afterObserved,
+        state,
+        stable: true,
+        recordedAt: take(),
+      }),
+    );
+  } else {
+    const state = module.classifySchema4SecretState({
+      bundle,
+      beforeFunctionRows: intent1.beforeFunctionInventoryRows,
+      observed: afterObserved,
+    });
+    secretCause = appendV4Fixture(
+      module,
+      chain,
+      module.schema4SecretResultFields({
+        intent: intent1,
+        bundle,
+        observed: afterObserved,
+        state,
+        recordedAt: take(),
+      }),
+    );
+  }
+  const vector2 = Object.freeze({
+    descriptorSha256: rawHash("v4-plan2-descriptor"),
+    stateSha256: rawHash("v4-plan2-state"),
+    catalogSha256: rawHash("v4-plan2-catalog"),
+    gateInventorySha256: rawHash("v4-plan2-gate"),
+    privacyInventorySha256: rawHash("v4-plan2-privacy"),
+    checkedCount: 75,
+  });
+  const plan2RecordedAt = take();
+  const plan2 = appendV4Fixture(module, chain, module.schema4PlanReceiptFields({
+    context,
+    release,
+    bundle,
+    inventories: afterObserved.inventories,
+    functionInventory: secretFunctions,
+    snapshot: v4RuntimeSnapshot(
+      new Date(Date.parse(plan2RecordedAt) - 1_000).toISOString(),
+      "plan2",
+      vector2,
+    ),
+    predecessorAdoption: adoption,
+    mutationScope: "function-deploy",
+    resumeFromReceiptSha256: secretCause.receiptSha256,
+    recordedAt: plan2RecordedAt,
+    expiresAt: new Date(Date.parse(plan2RecordedAt) + 200_000).toISOString(),
+  }));
+  const intent2 = appendV4Fixture(
+    module,
+    chain,
+    module.schema4MutationIntentFields(plan2, afterObserved, take()),
+  );
+  const buildDeploySandwich = () => v4SandwichFixture({
+      module,
+      d0Clock: take(),
+      proofClock: take(),
+      d1Clock: take(),
+      suffix: "deploy",
+      vector: vector2,
+      mainRows: V4_MAIN_AFTER_ROWS,
+      financeRows: V4_FINANCE_ROWS,
+      beforeFunctionRows: secretFunctionRows,
+      functionRows: deployFunctionRows,
+    });
+  let deployCause;
+  if (deployUnknown) {
+    const unknown = appendV4Fixture(
+      module,
+      chain,
+      module.schema4UnknownResultFields(intent2, take()),
+    );
+    const deploySandwich = buildDeploySandwich();
+    deployCause = appendV4Fixture(
+      module,
+      chain,
+      module.schema4DeployReconciliationFields({
+        unresolved: unknown,
+        intent: intent2,
+        observed: Object.freeze({
+          inventories: deploySandwich.inventories,
+          functions: deploySandwich.functionInventory,
+        }),
+        outcome: "applied",
+        divergenceReason: null,
+        sandwich: deploySandwich,
+        recordedAt: take(),
+      }),
+    );
+  } else {
+    const deploySandwich = buildDeploySandwich();
+    deployCause = appendV4Fixture(
+      module,
+      chain,
+      module.schema4DeployResultFields({
+        intent: intent2,
+        sandwich: deploySandwich,
+        recordedAt: take(),
+      }),
+    );
+  }
+  const completionVector = Object.freeze({
+    descriptorSha256: deployCause.d1.descriptorSha256,
+    stateSha256: deployCause.d1.stateSha256,
+    catalogSha256: deployCause.d1.catalogSha256,
+    gateInventorySha256: deployCause.d1.gateInventorySha256,
+    privacyInventorySha256: deployCause.d1.privacyInventorySha256,
+    checkedCount: deployCause.d1.checkedCount,
+  });
+  const completionSandwich = v4SandwichFixture({
+    module,
+    d0Clock: take(),
+    proofClock: take(),
+    d1Clock: take(),
+    suffix: "completion",
+    vector: completionVector,
+    mainRows: V4_MAIN_AFTER_ROWS,
+    financeRows: V4_FINANCE_ROWS,
+    beforeFunctionRows: secretFunctionRows,
+    functionRows: deployFunctionRows,
+  });
+  const terminal = appendV4Fixture(
+    module,
+    chain,
+    module.schema4CompletionFields({
+      context,
+      release,
+      bundle,
+      chain,
+      cause: deployCause,
+      sandwich: completionSandwich,
+      now: () => new Date(take()),
+    }),
+  );
+  const serializedReceipts = Object.freeze(chain.map(receipt =>
+    `${canonicalJson(receipt)}\n`));
+  return Object.freeze({
+    module,
+    chain: Object.freeze(chain),
+    serializedReceipts,
+    sourceCi,
+    provenance,
+    serializedProvenance,
+    plan1,
+    intent1,
+    secretCause,
+    plan2,
+    intent2,
+    deployCause,
+    terminal,
+    bundle,
+    context,
+    release,
+    beforeObserved,
+    afterObserved,
+    afterDeployObserved,
+    vector2,
+  });
+}
+
+function validateSchema4Fixture(fixture) {
+  return fixture.module.validateMainFinanceRuntimeRecoveryV4ReleaseAuthority({
+    receipts: fixture.chain,
+    serializedReceipts: fixture.serializedReceipts,
+    sourceCiReceipt: fixture.sourceCi.receipt,
+    serializedSourceCiReceipt: fixture.sourceCi.source,
+    provenance: fixture.provenance,
+    serializedProvenance: fixture.serializedProvenance,
+  });
+}
+
+function rehashSchema4Fixture(fixture, mutate) {
+  const chain = fixture.chain.map(receipt => structuredClone(receipt));
+  mutate(chain);
+  const rebuilt = [];
+  for (const item of chain) {
+    const receipt = { ...item };
+    delete receipt.receiptSha256;
+    receipt.schemaVersion = 4;
+    receipt.sequence = rebuilt.length + 1;
+    receipt.previousReceiptSha256 = rebuilt.at(-1)?.receiptSha256 ?? null;
+    receipt.productionDenied = true;
+    if (receipt.kind === "release-plan" && receipt.mutationScope === "function-deploy") {
+      receipt.resumeFromReceiptSha256 = rebuilt.at(-1)?.receiptSha256 ?? null;
+    }
+    if (receipt.kind === "mutation-intent") {
+      const plan = [...rebuilt].reverse().find(candidate =>
+        candidate.kind === "release-plan"
+        && candidate.mutationScope === receipt.mutation);
+      if (plan) receipt.planReceiptSha256 = plan.receiptSha256;
+    }
+    if (receipt.kind === "mutation-result") {
+      const intent = [...rebuilt].reverse().find(candidate =>
+        candidate.kind === "mutation-intent"
+        && candidate.mutation === receipt.mutation);
+      if (intent) receipt.intentReceiptSha256 = intent.receiptSha256;
+    }
+    if (receipt.kind === "reconciliation") {
+      const unresolved = [...rebuilt].reverse().find(candidate =>
+        candidate.kind === "mutation-result"
+        && candidate.mutation === receipt.mutation
+        && candidate.status === "unknown");
+      if (unresolved) receipt.unresolvedReceiptSha256 = unresolved.receiptSha256;
+    }
+    if (receipt.kind === "release-complete") {
+      const plans = rebuilt.filter(candidate => candidate.kind === "release-plan");
+      receipt.completionCauseReceiptSha256 = rebuilt.at(-1)?.receiptSha256 ?? null;
+      receipt.initialPlanReceiptSha256 = plans[0]?.receiptSha256 ?? null;
+      receipt.deployPlanReceiptSha256 = plans[1]?.receiptSha256 ?? null;
+    }
+    const core = receipt;
+    const rebuiltReceipt = Object.freeze({
+      ...core,
+      receiptSha256: fixture.module.sha256(canonicalJson(core)),
+    });
+    rebuilt.push(rebuiltReceipt);
+  }
+  return Object.freeze({
+    ...fixture,
+    chain: Object.freeze(rebuilt),
+    serializedReceipts: Object.freeze(rebuilt.map(receipt =>
+      `${canonicalJson(receipt)}\n`)),
+    terminal: rebuilt.at(-1),
+  });
+}
+
+function schema4FixtureWithSourceCiMutation(fixture, mutate) {
+  const core = structuredClone(fixture.sourceCi.receipt);
+  delete core.receiptSha256;
+  mutate(core);
+  const receipt = Object.freeze({
+    ...core,
+    receiptSha256: fixture.module.sha256(canonicalJson(core)),
+  });
+  const source = `${canonicalJson(receipt)}\n`;
+  return Object.freeze({
+    ...fixture,
+    sourceCi: Object.freeze({
+      receipt,
+      source,
+      fileSha256: fixture.module.sha256(source),
+    }),
+  });
+}
+
+function schema4FixtureWithProvenanceMutation(fixture, mutate) {
+  const core = structuredClone(fixture.provenance);
+  delete core.descriptorSha256;
+  mutate(core);
+  const provenance = Object.freeze({
+    ...core,
+    descriptorSha256: fixture.module.sha256(canonicalJson(core)),
+  });
+  return Object.freeze({
+    ...fixture,
+    provenance,
+    serializedProvenance: `${canonicalJson(provenance)}\n`,
+  });
+}
+
+test("fresh schema-4 bundle normalizes inventories without changing durable bytes", t => {
+  const module = schema4AuthorityFixture.module;
+  const fixture = buildSchema4AuthorityFixture();
+  const stateDirectory = mkdtempSync(path.join(
+    realpathSync(tmpdir()),
+    "main-finance-v4-fresh-bundle-",
+  ));
+  chmodSync(stateDirectory, 0o700);
+  const sealedDirectory = path.join(stateDirectory, "sealed-supabase-cli");
+  t.after(() => {
+    if (existsSync(sealedDirectory)) chmodSync(sealedDirectory, 0o700);
+    rmSync(stateDirectory, { recursive: true, force: true });
+  });
+
+  const sealedFile = path.join(sealedDirectory, "supabase");
+  mkdirSync(sealedDirectory, { mode: 0o700 });
+  writeFileSync(sealedFile, V4_SEALED_SUPABASE_FIXTURE_BYTES, { mode: 0o500 });
+  chmodSync(sealedFile, 0o500);
+  chmodSync(sealedDirectory, 0o500);
+  assert.notEqual(
+    sha256(V4_SEALED_SUPABASE_FIXTURE_BYTES),
+    V4_MANIFEST.toolPins.supabaseCli.sha256,
+  );
+  assert.equal(
+    module.sha256(V4_SEALED_SUPABASE_FIXTURE_BYTES),
+    V4_MANIFEST.toolPins.supabaseCli.sha256,
+  );
+  assert.notEqual(
+    module.sha256(Buffer.concat([
+      V4_SEALED_SUPABASE_FIXTURE_BYTES,
+      Buffer.from("tampered", "utf8"),
+    ])),
+    V4_MANIFEST.toolPins.supabaseCli.sha256,
+  );
+  const supabaseMutationInput =
+    module.captureSealedSupabaseCliMutationInput(sealedFile);
+
+  const release = Object.freeze({
+    manifest: V4_MANIFEST,
+    manifestSha256: V4_MANIFEST_SHA,
+    preflightSqlSha256: V4_MANIFEST.preflightSql.sha256,
+    environment: Object.freeze(JSON.parse(readFileSync(ENVIRONMENT_FILE, "utf8"))),
+  });
+  const main = v4InventoryMap(V4_MAIN_BEFORE_ROWS);
+  const finance = v4InventoryMap(V4_FINANCE_ROWS);
+  const inventories = Object.freeze({
+    main,
+    finance,
+    mainInventorySha256: V4_INITIAL_MAIN_SHA,
+    financeInventorySha256: V4_FINANCE_SHA,
+  });
+  const functionInventory = v4FunctionFrame(
+    module,
+    V4_FUNCTIONS_BEFORE,
+    V4_INITIAL_FUNCTION_SHA,
+  );
+  const predecessorAdoption = v4AdoptionFixture();
+  const snapshot = v4RuntimeSnapshot(at(1_000), "fresh-bundle", Object.freeze({
+    descriptorSha256: rawHash("v4-fresh-bundle-descriptor"),
+    stateSha256: rawHash("v4-fresh-bundle-state"),
+    catalogSha256: rawHash("v4-fresh-bundle-catalog"),
+    gateInventorySha256: rawHash("v4-fresh-bundle-gates"),
+    privacyInventorySha256: rawHash("v4-fresh-bundle-privacy"),
+    checkedCount: 75,
+  }));
+  const bundle = module.createBundle({
+    stateDirectory,
+    release,
+    source: fixture.context.source,
+    supabaseMutationInput,
+    snapshot,
+    inventories,
+    functionInventory,
+    accessBoundary: Object.freeze({
+      productionBoundarySha256: rawHash("v4-fresh-bundle-production-boundary"),
+      targetDescriptorSha256: rawHash("v4-fresh-bundle-target-descriptor"),
+    }),
+    randomBytesImpl: () => {
+      throw new Error("fresh schema-4 bundle must adopt predecessor secret values");
+    },
+    generatedSecretValues: Object.freeze({
+      MAIN_FINANCE_ACCESS_OPERATOR_SECRET_V2: V4_OPERATOR_SECRET,
+      MAIN_FINANCE_SYNC_TRIGGER_SECRET: V4_TRIGGER_SECRET,
+    }),
+    predecessorAdoption,
+    now: () => new Date(at(2_000)),
+  });
+
+  assert.equal(bundle.preinstallInventories.main instanceof Map, true);
+  assert.equal(bundle.preinstallInventories.finance instanceof Map, true);
+  assert.equal(Array.isArray(bundle.preinstallInventories.functions), true);
+  const expectedPreinstallSource = `${canonicalJson({
+    main: V4_MAIN_BEFORE_ROWS,
+    finance: V4_FINANCE_ROWS,
+    functions: functionInventory.rows,
+  })}\n`;
+  const preinstallSourceBeforeRead = readFileSync(
+    bundle.preinstallInventoryFile,
+    "utf8",
+  );
+  const attestationSourceBeforeRead = readFileSync(
+    path.join(stateDirectory, "bundle.attestation.json"),
+    "utf8",
+  );
+  assert.equal(preinstallSourceBeforeRead, expectedPreinstallSource);
+  assert.equal(
+    module.sha256(preinstallSourceBeforeRead),
+    bundle.attestation.preinstallInventoryFileSha256,
+  );
+
+  const plan = module.schema4PlanReceiptFields({
+    context: fixture.context,
+    release,
+    bundle,
+    inventories,
+    functionInventory,
+    snapshot,
+    predecessorAdoption,
+    mutationScope: "secrets-set",
+    resumeFromReceiptSha256: null,
+    recordedAt: at(3_000),
+    expiresAt: at(203_000),
+  });
+  const expectedSemanticRows = V4_MAIN_BEFORE_ROWS.map(row => Object.freeze({
+    ...row,
+    value: SUCCESSOR_MUTATION_NAMES.includes(row.name)
+      ? bundle.attestation.mutationSecretDigests[row.name]
+      : row.value,
+  }));
+  assert.equal(
+    plan.expectedPostSecretSemanticMainInventorySha256,
+    module.sha256(v4SemanticCanonical(expectedSemanticRows)),
+  );
+  assert.deepEqual(plan.predecessorMainInventoryRows, V4_MAIN_BEFORE_ROWS);
+
+  const reloaded = module.readBundle(
+    stateDirectory,
+    release,
+    fixture.context.source,
+    {
+      expectedAttestationSha256: bundle.attestation.attestationSha256,
+      expectedPredecessorAdoption: predecessorAdoption,
+      authorizeRuntimeRead: () => undefined,
+    },
+  );
+  assert.equal(reloaded.preinstallInventories.main instanceof Map, true);
+  assert.equal(reloaded.preinstallInventories.finance instanceof Map, true);
+  assert.equal(Array.isArray(reloaded.preinstallInventories.functions), true);
+  assert.deepEqual(
+    [...reloaded.preinstallInventories.main],
+    [...bundle.preinstallInventories.main],
+  );
+  assert.deepEqual(
+    [...reloaded.preinstallInventories.finance],
+    [...bundle.preinstallInventories.finance],
+  );
+  assert.deepEqual(
+    reloaded.preinstallInventories.functions,
+    bundle.preinstallInventories.functions,
+  );
+  const reloadedPlan = module.schema4PlanReceiptFields({
+    context: fixture.context,
+    release,
+    bundle: reloaded,
+    inventories,
+    functionInventory,
+    snapshot,
+    predecessorAdoption,
+    mutationScope: "secrets-set",
+    resumeFromReceiptSha256: null,
+    recordedAt: at(3_000),
+    expiresAt: at(203_000),
+  });
+  assert.equal(
+    reloadedPlan.expectedPostSecretSemanticMainInventorySha256,
+    plan.expectedPostSecretSemanticMainInventorySha256,
+  );
+  assert.equal(
+    readFileSync(bundle.preinstallInventoryFile, "utf8"),
+    preinstallSourceBeforeRead,
+  );
+  assert.equal(
+    readFileSync(
+      path.join(stateDirectory, "bundle.attestation.json"),
+      "utf8",
+    ),
+    attestationSourceBeforeRead,
+  );
+});
+
+test("partial predecessor source-CI accepts only the pinned legacy pretty receipt", () => {
+  const module = schema4AuthorityFixture.module;
+  const legacy = partialSecretPredecessorSourceCiFixture(module);
+  const validated = module.validatePartialSecretPredecessorSourceCiReceipt(
+    legacy.value,
+    legacy.source,
+  );
+  assert.equal(validated.receiptSha256, legacy.value.receiptSha256);
+  assert.equal(validated.fileSha256, module.sha256(legacy.source));
+  assert.equal(validated.runId, 33212271479);
+  assert.equal(validated.verifyJobId, 98988013415);
+  assert.equal(
+    validated.workflowBlob,
+    "220ee4c940cfd03e178dbee1fb6f25dc5de0845e",
+  );
+  assert.equal(
+    validated.sourceCommit,
+    "42c647aaeb3a6cededb49f073ac001678dcb3582",
+  );
+  assert.equal(
+    validated.sourceTree,
+    "dd05940dbc3f06e8577a6406c6e64e470049c818",
+  );
+
+  const current = v4SourceCiFixture(module);
+  const currentPrettySource = `${JSON.stringify(current.receipt, null, 2)}\n`;
+  assert.throws(
+    () => module.validatePartialSecretPredecessorSourceCiReceipt(
+      current.receipt,
+      currentPrettySource,
+    ),
+    /partial predecessor source-CI authority differs/u,
+  );
+
+  const compactReceipt = Object.freeze({
+    ...legacy.core,
+    receiptSha256: module.sha256(canonicalJson(legacy.core)),
+  });
+  const compactSource = `${canonicalJson(compactReceipt)}\n`;
+  assert.throws(
+    () => module.validatePartialSecretPredecessorSourceCiReceipt(
+      compactReceipt,
+      compactSource,
+    ),
+    /partial predecessor source-CI authority differs/u,
+  );
+
+  const mutatedCoreUnordered = {
+    ...legacy.core,
+    verifiedAt: "2026-08-28T21:48:12.302Z",
+  };
+  const mutatedCore = Object.freeze(Object.fromEntries(
+    Object.keys(mutatedCoreUnordered).sort()
+      .map(key => [key, mutatedCoreUnordered[key]]),
+  ));
+  const mutatedUnordered = {
+    ...mutatedCore,
+    receiptSha256: module.sha256(`${JSON.stringify(mutatedCore, null, 2)}\n`),
+  };
+  const mutated = Object.freeze(Object.fromEntries(
+    Object.keys(mutatedUnordered).sort().map(key => [key, mutatedUnordered[key]]),
+  ));
+  const mutatedSource = `${JSON.stringify(mutated, null, 2)}\n`;
+  assert.notEqual(module.sha256(mutatedSource), module.sha256(legacy.source));
+  assert.throws(
+    () => module.validatePartialSecretPredecessorSourceCiReceipt(
+      mutated,
+      mutatedSource,
+    ),
+    /partial predecessor source-CI authority differs/u,
+  );
+});
+
+test("schema-4 raw release authority validates genuine 7, 8 and 9 receipt topologies", () => {
+  const normal = buildSchema4AuthorityFixture();
+  assert.equal(normal.chain.length, 7);
+  const normalAuthority = validateSchema4Fixture(normal);
+  assert.equal(normalAuthority.schemaVersion, 4);
+  assert.equal(normalAuthority.completionReceiptSha256, normal.terminal.receiptSha256);
+  assert.equal(normalAuthority.hostedSourceClosureSha256, V4_HOSTED_SOURCE_CLOSURE_SHA);
+  assert.equal(normalAuthority.functionInventorySha256, normal.terminal.functionInventorySha256);
+
+  const secretPlusOne = buildSchema4AuthorityFixture({
+    secretFunctionPlusOne: true,
+  });
+  assert.equal(
+    secretPlusOne.secretCause.functionVersionTransitionDisposition,
+    "exact-all-existing-plus-one",
+  );
+  assert.equal(
+    validateSchema4Fixture(secretPlusOne).completionReceiptSha256,
+    secretPlusOne.terminal.receiptSha256,
+  );
+
+  for (const options of [
+    { secretUnknown: true },
+    { deployUnknown: true },
+  ]) {
+    const fixture = buildSchema4AuthorityFixture(options);
+    assert.equal(fixture.chain.length, 8);
+    assert.equal(
+      validateSchema4Fixture(fixture).completionReceiptSha256,
+      fixture.terminal.receiptSha256,
+    );
+  }
+
+  const bothUnknown = buildSchema4AuthorityFixture({
+    secretUnknown: true,
+    deployUnknown: true,
+  });
+  assert.equal(bothUnknown.chain.length, 9);
+  assert.equal(
+    validateSchema4Fixture(bothUnknown).completionReceiptSha256,
+    bothUnknown.terminal.receiptSha256,
+  );
+});
+
+test("schema-4 raw authority rejects coherent source, transition, closure and chronology drift", () => {
+  const normal = buildSchema4AuthorityFixture();
+  const reject = (fixture, pattern) => assert.throws(
+    () => validateSchema4Fixture(fixture),
+    pattern,
+  );
+
+  assert.match(
+    readFileSync(WORKFLOW_FILE, "utf8"),
+    new RegExp(`image: ${POSTGRES_IMAGE.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}`, "u"),
+  );
+  reject(schema4FixtureWithSourceCiMutation(normal, sourceCi => {
+    sourceCi.postgresImage =
+      "postgres:17.10-bookworm@sha256:27b6c778de50f4bb9a878c36e736110fbcd9b7020377d6fdfdf20f7c0347e40a";
+  }), /schema-4 source-CI authority differs/u);
+
+  reject(schema4FixtureWithSourceCiMutation(normal, sourceCi => {
+    sourceCi.verifiedAt = at(-29_000);
+  }), /source-CI or provenance binding differs/u);
+  reject(schema4FixtureWithProvenanceMutation(normal, provenance => {
+    provenance.remoteRef = "refs/remotes/origin/hostile";
+  }), /release provenance contract differs/u);
+
+  reject(rehashSchema4Fixture(normal, chain => {
+    for (const receipt of chain) {
+      if (receipt.kind === "release-plan") {
+        receipt.mutationSecretDigests.MAIN_FINANCE_ACCESS_V2_SOURCE_TREE_SHA =
+          rawHash("hostile-v4-tree-digest");
+        receipt.mutationSecretDigestSetSha256 = normal.module.sha256(
+          canonicalJson(receipt.mutationSecretDigests),
+        );
+      }
+      if (receipt.kind === "mutation-intent" && receipt.mutation === "secrets-set") {
+        receipt.expectedSecretDigestSetSha256 = chain[0].mutationSecretDigestSetSha256;
+      }
+      if (receipt.kind === "mutation-result" && receipt.mutation === "secrets-set") {
+        receipt.mutationSecretDigestSetSha256 = chain[0].mutationSecretDigestSetSha256;
+      }
+    }
+  }), /schema-4 release plan evidence differs/u);
+
+  reject(rehashSchema4Fixture(normal, chain => {
+    const plan2 = chain.find(receipt =>
+      receipt.kind === "release-plan" && receipt.mutationScope === "function-deploy");
+    plan2.sourceArchiveSha256 = rawHash("hostile-v4-plan2-source-archive");
+  }), /schema-4 resume plan sourceArchiveSha256 binding differs/u);
+
+  reject(rehashSchema4Fixture(normal, chain => {
+    const secretResult = chain.find(receipt =>
+      receipt.kind === "mutation-result" && receipt.mutation === "secrets-set");
+    const row = secretResult.afterFunctionInventoryRows.find(candidate =>
+      candidate.slug !== "finance-manage-access-v2");
+    row.future_cli_field = "hostile-secret-stage-drift";
+    secretResult.afterFunctionInventorySha256 = normal.module.sha256(
+      v4FunctionCanonical(secretResult.afterFunctionInventoryRows),
+    );
+    secretResult.functionVersionTransitionDisposition = "diverged";
+  }), /schema-4 verified secret result differs/u);
+
+  reject(rehashSchema4Fixture(normal, chain => {
+    const deploy = chain.find(receipt =>
+      receipt.kind === "mutation-result" && receipt.mutation === "function-deploy");
+    const target = deploy.afterFunctionInventoryRows.find(row =>
+      row.slug === "finance-manage-access-v2");
+    target.version += 1;
+    target.entrypoint_path = target.entrypoint_path.replace("_3/", "_4/");
+    target.import_map_path = target.import_map_path.replace("_3/", "_4/");
+    deploy.afterTargetFunctionRow = structuredClone(target);
+    deploy.functionInventorySha256 = normal.module.sha256(
+      v4FunctionCanonical(deploy.afterFunctionInventoryRows),
+    );
+    deploy.d0FunctionInventorySha256 = deploy.functionInventorySha256;
+    deploy.d1FunctionInventorySha256 = deploy.functionInventorySha256;
+  }), /schema-4 verified deploy result differs/u);
+
+  reject(rehashSchema4Fixture(normal, chain => {
+    const deploy = chain.find(receipt =>
+      receipt.kind === "mutation-result" && receipt.mutation === "function-deploy");
+    const unrelated = deploy.afterFunctionInventoryRows.find(row =>
+      row.slug !== "finance-manage-access-v2");
+    unrelated.status = "INACTIVE";
+    deploy.functionInventorySha256 = normal.module.sha256(
+      v4FunctionCanonical(deploy.afterFunctionInventoryRows),
+    );
+    deploy.d0FunctionInventorySha256 = deploy.functionInventorySha256;
+    deploy.d1FunctionInventorySha256 = deploy.functionInventorySha256;
+  }), /schema-4 verified deploy result differs/u);
+
+  reject(rehashSchema4Fixture(normal, chain => {
+    const deploy = chain.find(receipt =>
+      receipt.kind === "mutation-result" && receipt.mutation === "function-deploy");
+    const terminal = chain.at(-1);
+    terminal.d0 = structuredClone(deploy.d0);
+    terminal.hostedProof = structuredClone(deploy.hostedProof);
+    terminal.d1 = structuredClone(deploy.d1);
+  }), /schema-4 release completion/u);
+
+  reject(rehashSchema4Fixture(normal, chain => {
+    const plan1 = chain[0];
+    const intent1 = chain[1];
+    plan1.expiresAt = intent1.recordedAt;
+  }), /schema-4 mutation intent evidence differs/u);
+
+  reject(rehashSchema4Fixture(normal, chain => {
+    const plan2 = chain.find(receipt =>
+      receipt.kind === "release-plan" && receipt.mutationScope === "function-deploy");
+    const deploy = chain.find(receipt =>
+      receipt.kind === "mutation-result" && receipt.mutation === "function-deploy");
+    deploy.d0.stateSha256 = rawHash("hostile-v4-snapshot-state");
+    deploy.hostedProof.stateSha256 = deploy.d0.stateSha256;
+    deploy.d1.stateSha256 = deploy.d0.stateSha256;
+    assert.notEqual(deploy.d0.stateSha256, plan2.snapshot.stateSha256);
+  }), /schema-4 verified deploy result differs/u);
+
+  reject(rehashSchema4Fixture(normal, chain => {
+    for (const receipt of chain) {
+      if (receipt.kind === "release-plan") {
+        receipt.expectedHostedSourceClosureSha256 = rawHash("hostile-v4-closure");
+      }
+      if (receipt.kind === "mutation-intent") {
+        receipt.expectedHostedSourceClosureSha256 = rawHash("hostile-v4-closure");
+      }
+      if (
+        (receipt.kind === "mutation-result" && receipt.mutation === "function-deploy")
+        || receipt.kind === "release-complete"
+      ) receipt.hostedSourceClosureSha256 = rawHash("hostile-v4-closure");
+    }
+  }), /schema-4 release plan evidence differs/u);
+
+  reject(rehashSchema4Fixture(normal, chain => {
+    chain.at(-1).hostedSourceMetadataSha256 = "not-a-sha";
+  }), /schema-4 release completion/u);
+
+  for (const options of [
+    { secretUnknown: true },
+    { deployUnknown: true },
+  ]) {
+    const unknownFixture = buildSchema4AuthorityFixture(options);
+    reject(rehashSchema4Fixture(unknownFixture, chain => {
+      const unknown = chain.find(receipt =>
+        receipt.kind === "mutation-result" && receipt.status === "unknown");
+      unknown.invocationAttempted = false;
+    }), /schema-4 unknown result differs/u);
+    reject(rehashSchema4Fixture(unknownFixture, chain => {
+      const unknown = chain.find(receipt =>
+        receipt.kind === "mutation-result" && receipt.status === "unknown");
+      unknown.automaticRetryPerformed = true;
+    }), /schema-4 mutation result cause differs/u);
+  }
+
+  const noncanonical = Object.freeze({
+    ...normal,
+    serializedReceipts: Object.freeze([
+      ` ${normal.serializedReceipts[0]}`,
+      ...normal.serializedReceipts.slice(1),
+    ]),
+  });
+  reject(noncanonical, /serialized receipt bytes differ/u);
+
+  const extra = rehashSchema4Fixture(normal, chain => {
+    chain.push(
+      structuredClone(chain.at(-1)),
+      structuredClone(chain.at(-1)),
+      structuredClone(chain.at(-1)),
+    );
+  });
+  reject(extra, /receipt cardinality differs/u);
+});
+
+test("schema-4 pending intent terminates only as not-invoked or invocation-unproven", () => {
+  const normal = buildSchema4AuthorityFixture();
+  for (const fields of [
+    normal.module.schema4NotInvokedResultFields(normal.intent1, at(30_000)),
+    normal.module.schema4InvocationUnprovenFields(normal.intent1, at(30_000)),
+  ]) {
+    const terminal = rehashSchema4Fixture(normal, chain => {
+      chain[2] = structuredClone(fields);
+    });
+    assert.throws(
+      () => validateSchema4Fixture(terminal),
+      /schema-4 resume deploy plan binding differs/u,
+    );
+  }
+
+  const pendingIntent = Object.freeze({
+    ...normal,
+    chain: Object.freeze(normal.chain.slice(0, 2)),
+    serializedReceipts: Object.freeze(normal.serializedReceipts.slice(0, 2)),
+  });
+  assert.throws(
+    () => validateSchema4Fixture(pendingIntent),
+    /receipt cardinality differs/u,
+  );
+
+  const pendingReconcile = buildSchema4AuthorityFixture({ secretUnknown: true });
+  const withoutUnknown = rehashSchema4Fixture(pendingReconcile, chain => {
+    chain.splice(2, 1);
+    chain[2].unresolvedReceiptSha256 = chain[1].receiptSha256;
+  });
+  assert.throws(
+    () => validateSchema4Fixture(withoutUnknown),
+    /schema-4 reconciliation envelope differs/u,
+  );
+});
+
+const V4_HOSTED_MULTIPART_FILES = Object.freeze([
+  "functions/_shared/main-edge-runtime.ts",
+  "functions/_shared/main-finance-protocol.mjs",
+  "functions/finance-manage-access-v2/deno.json",
+  "functions/finance-manage-access-v2/index.ts",
+].map(name => Object.freeze({
+  name,
+  bytes: readFileSync(path.join(ROOT, "supabase", name)),
+})));
+
+function v4HostedMetadata(overrides = {}) {
+  return {
+    compressed_size: 1_013_392,
+    deno2_entrypoint_path: "functions/finance-manage-access-v2/index.ts",
+    deployment_id: `${MAIN_REF}_${V4_TARGET_ID}_${V4_TARGET_AFTER.version}`,
+    module_count: 4,
+    original_size: 7_652_908,
+    ...overrides,
+  };
+}
+
+async function v4HostedMultipartResponse({
+  files = V4_HOSTED_MULTIPART_FILES,
+  metadata = v4HostedMetadata(),
+  metadataSources = null,
+  status = 200,
+  contentType = null,
+  contentLength = null,
+  fileType = "application/x-schema4-transport-observation",
+} = {}) {
+  const form = new FormData();
+  for (const file of files) {
+    form.append("file", new File([file.bytes], file.name, { type: fileType }), file.name);
+  }
+  for (const source of metadataSources ?? [JSON.stringify(metadata)]) {
+    form.append("metadata", source);
+  }
+  const encoded = new Response(form);
+  const body = await encoded.arrayBuffer();
+  const headers = new Headers({
+    "content-type": contentType ?? encoded.headers.get("content-type"),
+  });
+  if (contentLength !== null) headers.set("content-length", String(contentLength));
+  return new Response(body, { status, headers });
+}
+
+function v4HostedSourceContext(responses) {
+  const queue = [...responses];
+  return Object.freeze({
+    dependencies: Object.freeze({
+      accessToken: "owner-token-is-not-inspected",
+      fetchImpl: async () => {
+        assert.ok(queue.length > 0, "hosted source response queue exhausted");
+        return queue.shift();
+      },
+    }),
+  });
+}
+
+test("schema-4 hosted multipart parser binds exact source and tolerates transport-only MIME and sizes", async () => {
+  const module = schema4AuthorityFixture.module;
+  const release = V4_RELEASE_FIXTURE;
+  const response = await v4HostedMultipartResponse({
+    fileType: "application/vnd.untrusted-transport-label",
+    metadata: v4HostedMetadata({
+      compressed_size: 900_001,
+      original_size: 8_000_001,
+    }),
+  });
+  assert.equal(response.headers.get("content-length"), null);
+  const observed = await module.readSchema4HostedSourceClosure(
+    v4HostedSourceContext([response]),
+    release,
+    V4_TARGET_AFTER,
+  );
+  assert.equal(observed.hostedSourceClosureSha256, V4_HOSTED_SOURCE_CLOSURE_SHA);
+  assert.equal(observed.hostedSourceMetadataSha256, module.sha256(canonicalJson(
+    v4HostedMetadata({ compressed_size: 900_001, original_size: 8_000_001 }),
+  )));
+
+  const attested = await module.attestSchema4HostedSourceClosure(
+    v4HostedSourceContext([
+      await v4HostedMultipartResponse(),
+      await v4HostedMultipartResponse(),
+    ]),
+    release,
+    V4_TARGET_AFTER,
+  );
+  assert.equal(attested.hostedSourceClosureSha256, V4_HOSTED_SOURCE_CLOSURE_SHA);
+  assert.equal(attested.hostedSourceClosureReadRounds, 2);
+});
+
+test("schema-4 hosted multipart parser rejects envelope, part, metadata and stability drift", async () => {
+  const module = schema4AuthorityFixture.module;
+  const release = V4_RELEASE_FIXTURE;
+  const reject = async (response, pattern) => assert.rejects(
+    module.readSchema4HostedSourceClosure(
+      v4HostedSourceContext([response]),
+      release,
+      V4_TARGET_AFTER,
+    ),
+    pattern,
+  );
+
+  await reject(await v4HostedMultipartResponse({ status: 500 }), /response envelope/u);
+  await reject(await v4HostedMultipartResponse({
+    contentType: "multipart/form-data",
+  }), /response envelope/u);
+  await reject(await v4HostedMultipartResponse({
+    contentType: "application/json",
+  }), /response envelope/u);
+  await reject(await v4HostedMultipartResponse({
+    contentLength: 4 * 1024 * 1024 + 1,
+  }), /response envelope/u);
+
+  await reject(await v4HostedMultipartResponse({
+    files: V4_HOSTED_MULTIPART_FILES.slice(1),
+  }), /closure or deployment metadata differs/u);
+  await reject(await v4HostedMultipartResponse({
+    files: [...V4_HOSTED_MULTIPART_FILES, {
+      name: "functions/extra.ts",
+      bytes: Buffer.from("extra", "utf8"),
+    }],
+  }), /closure or deployment metadata differs/u);
+  await reject(await v4HostedMultipartResponse({
+    files: [...V4_HOSTED_MULTIPART_FILES, V4_HOSTED_MULTIPART_FILES[0]],
+  }), /closure or deployment metadata differs/u);
+  await reject(await v4HostedMultipartResponse({
+    files: V4_HOSTED_MULTIPART_FILES.map((file, index) => index === 0
+      ? { ...file, name: "functions/_shared/wrong.ts" } : file),
+  }), /closure or deployment metadata differs/u);
+  await reject(await v4HostedMultipartResponse({
+    files: V4_HOSTED_MULTIPART_FILES.map((file, index) => index === 0
+      ? { ...file, bytes: Buffer.concat([file.bytes, Buffer.from("drift")]) } : file),
+  }), /closure or deployment metadata differs/u);
+  await reject(await v4HostedMultipartResponse({
+    metadataSources: [JSON.stringify(v4HostedMetadata()), JSON.stringify(v4HostedMetadata())],
+  }), /multipart part differs/u);
+
+  for (const metadata of [
+    (() => {
+      const value = v4HostedMetadata();
+      delete value.module_count;
+      return value;
+    })(),
+    { ...v4HostedMetadata(), extra: true },
+    v4HostedMetadata({ deployment_id: `${MAIN_REF}_${V4_TARGET_ID}_99` }),
+    v4HostedMetadata({ deno2_entrypoint_path: "functions/wrong/index.ts" }),
+    v4HostedMetadata({ module_count: 5 }),
+    v4HostedMetadata({ compressed_size: 0 }),
+    v4HostedMetadata({ original_size: 64 * 1024 * 1024 + 1 }),
+  ]) await reject(
+    await v4HostedMultipartResponse({ metadata }),
+    /metadata|closure/u,
+  );
+  await reject(await v4HostedMultipartResponse({
+    metadataSources: [
+      `{"compressed_size":1,"compressed_size":2,"deno2_entrypoint_path":"functions/finance-manage-access-v2/index.ts","deployment_id":"${MAIN_REF}_${V4_TARGET_ID}_${V4_TARGET_AFTER.version}","module_count":4,"original_size":10}`,
+    ],
+  }), /metadata JSON differs/u);
+
+  const oversizedBody = new Response(Buffer.alloc(4 * 1024 * 1024 + 1), {
+    status: 200,
+    headers: { "content-type": "multipart/form-data; boundary=schema4" },
+  });
+  await reject(oversizedBody, /exceeded the byte limit/u);
+  await reject(await v4HostedMultipartResponse({
+    files: V4_HOSTED_MULTIPART_FILES.map((file, index) => index === 0
+      ? { ...file, bytes: Buffer.alloc(1024 * 1024 + 1) } : file),
+  }), /multipart part differs/u);
+
+  await assert.rejects(
+    module.attestSchema4HostedSourceClosure(
+      v4HostedSourceContext([
+        await v4HostedMultipartResponse(),
+        await v4HostedMultipartResponse({
+          metadata: v4HostedMetadata({ compressed_size: 1_013_393 }),
+        }),
+      ]),
+      release,
+      V4_TARGET_AFTER,
+    ),
+    /not stable across two rounds/u,
+  );
+});
+
+const schema4EffectFixture = buildSchema4AuthorityFixture();
+
+function createSchema4EffectHarness({
+  invokeStatuses = [0, 0],
+  expireDuringFinalLocalFence = false,
+  forbidFullInitialize = false,
+} = {}) {
+  const fixture = schema4EffectFixture;
+  const module = fixture.module;
+  const chain = [fixture.plan1];
+  let hostedState = fixture.beforeObserved;
+  let clock = Date.parse(at(40_000));
+  let invokeIndex = 0;
+  let hostedPostflightIndex = 0;
+  let hostedSourceIndex = 0;
+  let ciFlipAfterHostedSourceIndex = null;
+  let hostedFlipAfterPostflightIndex = null;
+  const events = [];
+  const tick = (step = 1_000) => {
+    clock += step;
+    return new Date(clock).toISOString();
+  };
+  const context = {
+    stateDirectory: "/private/tmp/schema4-effect-state",
+    receiptDirectory: "/private/tmp/schema4-effect-receipts",
+    receiptBinding: Object.freeze({ bindingSha256: rawHash("schema4-binding") }),
+    chain,
+    provenance: fixture.context.provenance,
+    sourceCiReceipt: fixture.context.sourceCiReceipt,
+    accessBoundary: Object.freeze({
+      productionBoundarySha256:
+        fixture.bundle.attestation.productionBoundarySha256,
+      targetDescriptorSha256: fixture.bundle.attestation.targetDescriptorSha256,
+    }),
+    source: fixture.context.source,
+    ci: fixture.context.ci,
+    ghLocalState: Object.freeze({}),
+    dependencies: Object.freeze({}),
+  };
+  const append = (_context, expectedChain, fields) => {
+    assert.equal(expectedChain, chain);
+    const core = {
+      ...fields,
+      schemaVersion: 4,
+      sequence: chain.length + 1,
+      previousReceiptSha256: chain.at(-1)?.receiptSha256 ?? null,
+      productionDenied: true,
+    };
+    const receipt = Object.freeze({
+      ...core,
+      receiptSha256: module.sha256(canonicalJson(core)),
+    });
+    module.validateSchema4ReceiptSemantic(receipt, chain);
+    chain.push(receipt);
+    events.push(`append:${receipt.kind}:${receipt.mutation ?? receipt.status}`);
+    return Object.freeze({
+      receipt,
+      file: `/private/tmp/schema4-effect-receipts/${String(receipt.sequence)
+        .padStart(6, "0")}.json`,
+    });
+  };
+  const snapshotVector = value => Object.freeze({
+    descriptorSha256: value.descriptorSha256,
+    stateSha256: value.stateSha256,
+    catalogSha256: value.catalogSha256,
+    gateInventorySha256: value.gateInventorySha256,
+    privacyInventorySha256: value.privacyInventorySha256,
+    checkedCount: value.checkedCount,
+  });
+  const deploySandwich = beforeFunctionRows => {
+    const plan = [...chain].reverse().find(receipt =>
+      receipt.kind === "release-plan" && receipt.mutationScope === "function-deploy");
+    const d0Clock = tick(2_000);
+    const proofClock = tick(2_000);
+    const d1Clock = tick(2_000);
+    return v4SandwichFixture({
+      module,
+      d0Clock,
+      proofClock,
+      d1Clock,
+      suffix: `effect-deploy:${invokeIndex}`,
+      vector: snapshotVector(plan.snapshot),
+      mainRows: V4_MAIN_AFTER_ROWS,
+      financeRows: V4_FINANCE_ROWS,
+      beforeFunctionRows,
+      functionRows: fixture.afterDeployObserved.functions.rows,
+    });
+  };
+  const harness = {
+    initialize: () => {
+      events.push("full-initialize");
+      if (forbidFullInitialize) throw new Error("full initialize is forbidden");
+      return context;
+    },
+    initializeLocal: () => {
+      events.push("local-receipt-initialize");
+      return context;
+    },
+    readBundle: () => fixture.bundle,
+    readStable: () => {
+      events.push("hosted-read");
+      return Object.freeze({
+        first: hostedState,
+        second: hostedState,
+        stable: true,
+      });
+    },
+    mutationInputIsUnchanged: () => true,
+    append,
+    assertCurrent: () => {
+      events.push("current-authority");
+      if (
+        ciFlipAfterHostedSourceIndex !== null
+        && hostedSourceIndex > ciFlipAfterHostedSourceIndex
+      ) {
+        ciFlipAfterHostedSourceIndex = null;
+        return Object.freeze({
+          ...context.ci,
+          runApiSha256: rawHash("schema4-hostile-second-ci-bookend"),
+        });
+      }
+      return context.ci;
+    },
+    assertLocal: (_context, _input, _common, _release, plan) => {
+      events.push("local-authority");
+      if (expireDuringFinalLocalFence && invokeIndex === 0) {
+        clock = Date.parse(plan.expiresAt);
+      }
+      return true;
+    },
+    readReceiptBinding: () => context.receiptBinding,
+    readReceiptChain: () => chain,
+    invokeCli: (_dependencies, args) => {
+      events.push(`invoke:${args[0]}:${args[1]}`);
+      const status = invokeStatuses[invokeIndex] ?? 0;
+      invokeIndex += 1;
+      if (status === 0) {
+        hostedState = args[0] === "secrets"
+          ? fixture.afterObserved : fixture.afterDeployObserved;
+      }
+      return Object.freeze({
+        status,
+        signal: null,
+        error: null,
+        stdout: status === 0 ? "ok\n" : "",
+        cliInvoked: true,
+      });
+    },
+    postflightTarget: (_context, _release, _bundle, beforeFunctionRows) => {
+      events.push("target-postflight");
+      return deploySandwich(beforeFunctionRows);
+    },
+    complete: ({ context: completionContext, release, bundle, cause }) => {
+      events.push("completion-postflight");
+      const vector = snapshotVector(cause.d1);
+      const sandwich = v4SandwichFixture({
+        module,
+        d0Clock: tick(2_000),
+        proofClock: tick(2_000),
+        d1Clock: tick(2_000),
+        suffix: `effect-completion:${invokeIndex}`,
+        vector,
+        mainRows: V4_MAIN_AFTER_ROWS,
+        financeRows: V4_FINANCE_ROWS,
+        beforeFunctionRows: cause.beforeFunctionInventoryRows,
+        functionRows: cause.afterFunctionInventoryRows,
+      });
+      const fields = module.schema4CompletionFields({
+        context: completionContext,
+        release,
+        bundle,
+        chain,
+        cause,
+        sandwich,
+        now: () => new Date(clock + 1_000),
+      });
+      clock = Math.max(clock, Date.parse(fields.recordedAt));
+      return append(completionContext, chain, fields);
+    },
+    readPredecessor: () => Object.freeze({
+      summary: fixture.plan1.predecessorAdoption,
+    }),
+    buildSnapshot: () => v4RuntimeSnapshot(
+      new Date(clock - 1_000).toISOString(),
+      "effect-plan2",
+      fixture.vector2,
+    ),
+    readRawAuthority: () => module.validateMainFinanceRuntimeRecoveryV4ReleaseAuthority({
+      receipts: chain,
+      serializedReceipts: chain.map(receipt => `${canonicalJson(receipt)}\n`),
+      sourceCiReceipt: fixture.sourceCi.receipt,
+      serializedSourceCiReceipt: fixture.sourceCi.source,
+      provenance: fixture.provenance,
+      serializedProvenance: fixture.serializedProvenance,
+    }),
+    attestSource: () => {
+      hostedSourceIndex += 1;
+      events.push("hosted-source");
+      return Object.freeze({
+        hostedSourceClosureSha256: chain.at(-1).hostedSourceClosureSha256,
+        hostedSourceMetadataSha256: chain.at(-1).hostedSourceMetadataSha256,
+        hostedSourceClosureReadRounds: 2,
+      });
+    },
+    postflightVerify: () => {
+      const complete = chain.at(-1);
+      hostedPostflightIndex += 1;
+      const sandwich = v4SandwichFixture({
+        module,
+        d0Clock: tick(2_000),
+        proofClock: tick(2_000),
+        d1Clock: tick(2_000),
+        suffix: `effect-hosted-bookend:${hostedPostflightIndex}`,
+        vector: snapshotVector(complete.d1),
+        mainRows: V4_MAIN_AFTER_ROWS,
+        financeRows: V4_FINANCE_ROWS,
+        beforeFunctionRows: complete.beforeFunctionInventoryRows,
+        functionRows: complete.afterFunctionInventoryRows,
+      });
+      events.push("verify-postflight");
+      if (
+        hostedFlipAfterPostflightIndex !== null
+        && hostedPostflightIndex >= hostedFlipAfterPostflightIndex + 2
+      ) {
+        hostedFlipAfterPostflightIndex = null;
+        return Object.freeze({
+          ...sandwich,
+          d1MainInventorySha256: rawHash("schema4-hostile-second-hosted-bookend"),
+        });
+      }
+      return sandwich;
+    },
+  };
+  const common = Object.freeze({
+    now: () => new Date(tick()),
+  });
+  const input = {
+    approval: module.expectedApproval(fixture.plan1),
+    priorStateDir: "/private/tmp/schema4-prior-state",
+    stateDir: context.stateDirectory,
+    receiptDir: context.receiptDirectory,
+  };
+  return Object.freeze({
+    fixture,
+    module,
+    context,
+    harness,
+    common,
+    input,
+    events,
+    setApproval(value) {
+      input.approval = value;
+    },
+    setHostedState(value) {
+      hostedState = value;
+    },
+    armCiBookendFlip() {
+      ciFlipAfterHostedSourceIndex = hostedSourceIndex;
+    },
+    armHostedBookendFlip() {
+      hostedFlipAfterPostflightIndex = hostedPostflightIndex;
+    },
+  });
+}
+
+test("schema-4 effectful lifecycle reaches two approved mutations, completion and fresh verify", async () => {
+  const execution = createSchema4EffectHarness();
+  globalThis.__MAIN_FINANCE_SCHEMA4_TEST_HARNESS__ = execution.harness;
+  try {
+    const secret = await execution.module.operateSchema4Apply(
+      execution.input,
+      execution.common,
+      execution.fixture.release,
+    );
+    assert.deepEqual({
+      ok: secret.ok,
+      mutation: secret.mutation,
+      outcome: secret.outcome,
+      hostedMutationCount: secret.hostedMutationCount,
+      functionDeployCount: secret.functionDeployCount,
+    }, {
+      ok: true,
+      mutation: "secrets-set",
+      outcome: "state_satisfied",
+      hostedMutationCount: 1,
+      functionDeployCount: 0,
+    });
+    const plan2 = await execution.module.operateSchema4ResumePlan(
+      execution.input,
+      execution.common,
+      execution.fixture.release,
+    );
+    execution.setApproval(plan2.approval);
+    const deploy = await execution.module.operateSchema4Apply(
+      execution.input,
+      execution.common,
+      execution.fixture.release,
+    );
+    assert.deepEqual({
+      ok: deploy.ok,
+      mutation: deploy.mutation,
+      outcome: deploy.outcome,
+      hostedMutationCount: deploy.hostedMutationCount,
+      functionDeployCount: deploy.functionDeployCount,
+    }, {
+      ok: true,
+      mutation: "function-deploy",
+      outcome: "applied",
+      hostedMutationCount: 2,
+      functionDeployCount: 1,
+    });
+    assert.equal(execution.context.chain.length, 7);
+    assert.equal(execution.events.filter(event => event.startsWith("invoke:")).length, 2);
+    assert.equal(execution.context.chain.at(-1).kind, "release-complete");
+    assert.equal(
+      execution.module.validateMainFinanceRuntimeRecoveryV4ReleaseAuthority({
+        receipts: execution.context.chain,
+        serializedReceipts: execution.context.chain.map(receipt =>
+          `${canonicalJson(receipt)}\n`),
+        sourceCiReceipt: execution.fixture.sourceCi.receipt,
+        serializedSourceCiReceipt: execution.fixture.sourceCi.source,
+        provenance: execution.fixture.provenance,
+        serializedProvenance: execution.fixture.serializedProvenance,
+      }).completionReceiptSha256,
+      execution.context.chain.at(-1).receiptSha256,
+    );
+    const verified = await execution.module.operateSchema4Verify(
+      execution.input,
+      execution.common,
+      execution.fixture.release,
+    );
+    assert.equal(verified.status, "authoritative-live-verified");
+    assert.equal(verified.hostedMutationCount, 2);
+    assert.equal(verified.functionDeployCount, 1);
+    const lastInvoke = execution.events.findLastIndex(event =>
+      event.startsWith("invoke:"));
+    const lastLocalBeforeInvoke = execution.events.lastIndexOf(
+      "local-authority",
+      lastInvoke,
+    );
+    const lastHostedBeforeInvoke = execution.events.lastIndexOf(
+      "hosted-read",
+      lastInvoke,
+    );
+    assert.ok(lastLocalBeforeInvoke >= 0 && lastLocalBeforeInvoke < lastInvoke);
+    assert.ok(lastHostedBeforeInvoke >= 0 && lastHostedBeforeInvoke < lastInvoke);
+    assert.equal(execution.events.filter(event => event === "hosted-source").length, 4);
+    assert.equal(execution.events.filter(event => event === "verify-postflight").length, 4);
+    assert.equal(execution.context.chain.some(receipt =>
+      receipt.automaticRetryPerformed === true), false);
+  } finally {
+    delete globalThis.__MAIN_FINANCE_SCHEMA4_TEST_HARNESS__;
+  }
+});
+
+async function advanceSchema4EffectHarnessToDeployPlan(execution) {
+  const secret = await execution.module.operateSchema4Apply(
+    execution.input,
+    execution.common,
+    execution.fixture.release,
+  );
+  assert.equal(secret.outcome, "state_satisfied");
+  const plan2 = await execution.module.operateSchema4ResumePlan(
+    execution.input,
+    execution.common,
+    execution.fixture.release,
+  );
+  execution.setApproval(plan2.approval);
+}
+
+test("schema-4 completion and verify require alternating source and hosted bookends", async () => {
+  for (const arm of ["armCiBookendFlip", "armHostedBookendFlip"]) {
+    const execution = createSchema4EffectHarness();
+    globalThis.__MAIN_FINANCE_SCHEMA4_TEST_HARNESS__ = execution.harness;
+    try {
+      await advanceSchema4EffectHarnessToDeployPlan(execution);
+      execution[arm]();
+      const deploy = await execution.module.operateSchema4Apply(
+        execution.input,
+        execution.common,
+        execution.fixture.release,
+      );
+      assert.equal(deploy.outcome, "applied");
+      assert.equal(deploy.ok, false);
+      assert.equal(deploy.finalizationRequired, true);
+      assert.equal(execution.context.chain.at(-1).kind, "mutation-result");
+      assert.equal(execution.context.chain.at(-1).status, "verified");
+    } finally {
+      delete globalThis.__MAIN_FINANCE_SCHEMA4_TEST_HARNESS__;
+    }
+  }
+
+  for (const [arm, pattern] of [
+    ["armCiBookendFlip", /source authority changed across the hosted bookend/u],
+    ["armHostedBookendFlip", /hosted evidence changed across the source authority bookend/u],
+  ]) {
+    const execution = createSchema4EffectHarness();
+    globalThis.__MAIN_FINANCE_SCHEMA4_TEST_HARNESS__ = execution.harness;
+    try {
+      await advanceSchema4EffectHarnessToDeployPlan(execution);
+      const deploy = await execution.module.operateSchema4Apply(
+        execution.input,
+        execution.common,
+        execution.fixture.release,
+      );
+      assert.equal(deploy.ok, true);
+      execution[arm]();
+      await assert.rejects(
+        execution.module.operateSchema4Verify(
+          execution.input,
+          execution.common,
+          execution.fixture.release,
+        ),
+        pattern,
+      );
+      assert.equal(execution.context.chain.at(-1).kind, "release-complete");
+    } finally {
+      delete globalThis.__MAIN_FINANCE_SCHEMA4_TEST_HARNESS__;
+    }
+  }
+});
+
+test("schema-4 effectful unknown outcomes reconcile once without retry across 8 and 9 receipts", async () => {
+  for (const statuses of [
+    [1, 0],
+    [0, 1],
+    [1, 1],
+  ]) {
+    const execution = createSchema4EffectHarness({ invokeStatuses: statuses });
+    globalThis.__MAIN_FINANCE_SCHEMA4_TEST_HARNESS__ = execution.harness;
+    try {
+      let secret = await execution.module.operateSchema4Apply(
+        execution.input,
+        execution.common,
+        execution.fixture.release,
+      );
+      if (statuses[0] !== 0) {
+        assert.equal(secret.outcome, "unknown");
+        execution.setHostedState(execution.fixture.afterObserved);
+        const beforeReconcileEvents = execution.events.length;
+        secret = await execution.module.operateSchema4Reconcile(
+          execution.input,
+          execution.common,
+          execution.fixture.release,
+        );
+        assert.equal(secret.outcome, "state_satisfied");
+        const reconcileEvents = execution.events.slice(beforeReconcileEvents);
+        for (const required of [
+          "local-receipt-initialize", "full-initialize", "current-authority",
+          "hosted-read", "local-authority",
+        ]) assert.ok(reconcileEvents.includes(required), required);
+        assert.equal(reconcileEvents.some(event => event.startsWith("invoke:")), false);
+      }
+      const plan2 = await execution.module.operateSchema4ResumePlan(
+        execution.input,
+        execution.common,
+        execution.fixture.release,
+      );
+      execution.setApproval(plan2.approval);
+      let deploy = await execution.module.operateSchema4Apply(
+        execution.input,
+        execution.common,
+        execution.fixture.release,
+      );
+      if (statuses[1] !== 0) {
+        assert.equal(deploy.outcome, "unknown");
+        execution.setHostedState(execution.fixture.afterDeployObserved);
+        const beforeReconcileEvents = execution.events.length;
+        deploy = await execution.module.operateSchema4Reconcile(
+          execution.input,
+          execution.common,
+          execution.fixture.release,
+        );
+        assert.equal(deploy.outcome, "applied");
+        assert.equal(deploy.releaseReceiptSha256, execution.context.chain.at(-1).receiptSha256);
+        const reconcileEvents = execution.events.slice(beforeReconcileEvents);
+        for (const required of [
+          "local-receipt-initialize", "full-initialize", "current-authority",
+          "hosted-read", "local-authority",
+        ]) assert.ok(reconcileEvents.includes(required), required);
+        assert.equal(reconcileEvents.some(event => event.startsWith("invoke:")), false);
+      }
+      assert.equal(execution.context.chain.at(-1).kind, "release-complete");
+      assert.equal(execution.context.chain.length, 7 + statuses.filter(status => status !== 0).length);
+      assert.equal(execution.events.filter(event => event.startsWith("invoke:")).length, 2);
+      assert.equal(execution.context.chain.filter(receipt =>
+        receipt.kind === "reconciliation").length, statuses.filter(status => status !== 0).length);
+      assert.equal(execution.context.chain.some(receipt =>
+        receipt.automaticRetryPerformed === true), false);
+      assert.equal(
+        execution.module.validateMainFinanceRuntimeRecoveryV4ReleaseAuthority({
+          receipts: execution.context.chain,
+          serializedReceipts: execution.context.chain.map(receipt =>
+            `${canonicalJson(receipt)}\n`),
+          sourceCiReceipt: execution.fixture.sourceCi.receipt,
+          serializedSourceCiReceipt: execution.fixture.sourceCi.source,
+          provenance: execution.fixture.provenance,
+          serializedProvenance: execution.fixture.serializedProvenance,
+        }).completionReceiptSha256,
+        execution.context.chain.at(-1).receiptSha256,
+      );
+    } finally {
+      delete globalThis.__MAIN_FINANCE_SCHEMA4_TEST_HARNESS__;
+    }
+  }
+});
+
+test("schema-4 final approval expiry terminalizes before the CLI boundary", async () => {
+  const execution = createSchema4EffectHarness({
+    expireDuringFinalLocalFence: true,
+  });
+  globalThis.__MAIN_FINANCE_SCHEMA4_TEST_HARNESS__ = execution.harness;
+  try {
+    const result = await execution.module.operateSchema4Apply(
+      execution.input,
+      execution.common,
+      execution.fixture.release,
+    );
+    assert.equal(result.ok, false);
+    assert.equal(result.outcome, "not_invoked");
+    assert.equal(execution.events.some(event => event.startsWith("invoke:")), false);
+    assert.equal(execution.context.chain.at(-1).status, "not_invoked");
+    assert.equal(execution.context.chain.at(-1).invocationAttempted, false);
+    assert.equal(execution.context.chain.at(-1).automaticRetryPerformed, false);
+  } finally {
+    delete globalThis.__MAIN_FINANCE_SCHEMA4_TEST_HARNESS__;
+  }
+});
+
+test("schema-4 pending intent terminalizes locally without token, GitHub or hosted reads", async () => {
+  const execution = createSchema4EffectHarness({ forbidFullInitialize: true });
+  execution.harness.append(
+    execution.context,
+    execution.context.chain,
+    execution.module.schema4MutationIntentFields(
+      execution.fixture.plan1,
+      execution.fixture.beforeObserved,
+      at(50_000),
+    ),
+  );
+  globalThis.__MAIN_FINANCE_SCHEMA4_TEST_HARNESS__ = execution.harness;
+  try {
+    const result = await execution.module.operateSchema4Reconcile(
+      execution.input,
+      execution.common,
+      execution.fixture.release,
+    );
+    assert.equal(result.ok, false);
+    assert.equal(result.outcome, "invocation_unproven");
+    assert.equal(execution.context.chain.at(-1).status, "invocation_unproven");
+    assert.equal(execution.context.chain.at(-1).invocationAttempted, "unproven");
+    assert.equal(execution.events.filter(event =>
+      event === "local-receipt-initialize").length, 1);
+    for (const forbidden of [
+      "full-initialize",
+      "current-authority",
+      "hosted-read",
+      "hosted-source",
+      "verify-postflight",
+    ]) assert.equal(execution.events.includes(forbidden), false, forbidden);
+    assert.equal(execution.events.some(event => event.startsWith("invoke:")), false);
+  } finally {
+    delete globalThis.__MAIN_FINANCE_SCHEMA4_TEST_HARNESS__;
+  }
+});
+
+test("schema-4 returned NO-GO is a nonzero direct CLI result", t => {
+  const parent = mkdtempSync(path.join(
+    realpathSync(tmpdir()),
+    "schema4-nogo-exit-fixture-",
+  ));
+  t.after(() => rmSync(parent, { recursive: true, force: true }));
+  const scripts = path.join(parent, "scripts");
+  mkdirSync(scripts, { recursive: true, mode: 0o700 });
+  const marker = "const result = await operateMainFinanceRuntimeRecoveryV2();";
+  const source = readFileSync(OPERATOR_FILE, "utf8");
+  assert.equal(source.split(marker).length, 2);
+  writeFileSync(
+    path.join(scripts, path.basename(OPERATOR_FILE)),
+    source.replace(marker, "const result = Object.freeze({ ok: false, mode: \"schema4-nogo\" });"),
+    { mode: 0o600 },
+  );
+  copyFileSync(
+    path.join(ROOT, "scripts/main-finance-runtime-recovery-v2-snapshot.mjs"),
+    path.join(scripts, "main-finance-runtime-recovery-v2-snapshot.mjs"),
+  );
+  const result = spawnSync(process.execPath, [
+    path.join(scripts, path.basename(OPERATOR_FILE)),
+  ], {
+    cwd: parent,
+    encoding: "utf8",
+    env: { LANG: "C", LC_ALL: "C", NO_COLOR: "1" },
+  });
+  assert.equal(result.status, 1);
+  assert.equal(result.stderr, "");
+  assert.deepEqual(JSON.parse(result.stdout), {
+    mode: "schema4-nogo",
+    ok: false,
+  });
+});
+
 test("checked-in READY manifest pins every release byte and measured catalog", () => {
   const checked = JSON.parse(readFileSync(MANIFEST_FILE, "utf8"));
-  assert.equal(checked.schemaVersion, 3);
+  assert.equal(checked.schemaVersion, 4);
   assert.equal(
     checked.kind,
-    "main-finance-runtime-recovery-v3-secrets-only-staging-release",
+    "main-finance-runtime-recovery-v4-target-redeploy-staging-release",
   );
   assert.equal(
     checked.releaseStatus,
@@ -2560,10 +4895,10 @@ test("checked-in READY manifest pins every release byte and measured catalog", (
   }
   const environment = JSON.parse(readFileSync(ENVIRONMENT_FILE, "utf8"));
   const postflight = JSON.parse(readFileSync(POSTFLIGHT_FILE, "utf8"));
-  assert.equal(environment.schemaVersion, 3);
+  assert.equal(environment.schemaVersion, 4);
   assert.equal(
     environment.kind,
-    "main-finance-runtime-recovery-v3-secrets-only-environment-contract",
+    "main-finance-runtime-recovery-v4-target-redeploy-environment-contract",
   );
   assert.deepEqual(environment.secretMutation.mutationNames, SUCCESSOR_MUTATION_NAMES);
   assert.deepEqual(
@@ -2582,33 +4917,42 @@ test("checked-in READY manifest pins every release byte and measured catalog", (
   assert.deepEqual(environment.secretMutation.allowedFunctionVersionTransitions, [
     "unchanged",
     "exact-all-existing-plus-one",
+    "exact-target-replacement-plus-one",
   ]);
-  assert.equal(environment.secretMutation.functionDeployAllowed, false);
+  assert.equal(environment.secretMutation.functionDeployAllowed, true);
+  assert.equal(
+    environment.secretMutation.functionDeployTarget,
+    "finance-manage-access-v2",
+  );
+  assert.equal(
+    environment.secretMutation.functionDeployTransition,
+    "exact-target-replacement-plus-one",
+  );
   assert.equal(environment.secretMutation.causalAttributionClaimed, false);
   assert.deepEqual(checked.mutations.exactSecretSetNames, SUCCESSOR_MUTATION_NAMES);
   assert.deepEqual(
     checked.mutations.metadataOnlyUpdatedAtAllowlist,
     SUCCESSOR_METADATA_ONLY_NAMES,
   );
-  assert.equal(checked.mutations.exactHostedMutationCount, 1);
-  assert.equal(checked.mutations.exactFunctionDeployCount, 0);
-  assert.equal(checked.edgeFunction.deployAuthorized, false);
+  assert.equal(checked.mutations.exactHostedMutationCount, 2);
+  assert.equal(checked.mutations.exactFunctionDeployCount, 1);
+  assert.equal(checked.edgeFunction.deployAuthorized, true);
   assert.equal(Object.hasOwn(checked.edgeFunction, "deployArgs"), false);
-  assert.equal(postflight.schemaVersion, 3);
+  assert.equal(postflight.schemaVersion, 4);
   assert.equal(
     postflight.kind,
-    "main-finance-runtime-recovery-v3-secrets-only-postflight-contract",
+    "main-finance-runtime-recovery-v4-target-redeploy-postflight-contract",
   );
   assert.deepEqual(
     postflight.snapshotSandwich.functionInventoryPhases.allowedDispositions,
-    ["unchanged", "exact-all-existing-plus-one"],
+    ["exact-target-replacement-plus-one"],
   );
   assert.equal(
     postflight.snapshotSandwich.functionInventoryPhases.functionDeployAuthorized,
-    false,
+    true,
   );
-  assert.equal(postflight.authority.hostedMutationCount, 1);
-  assert.equal(postflight.authority.functionDeployCount, 0);
+  assert.equal(postflight.authority.hostedMutationCount, 2);
+  assert.equal(postflight.authority.functionDeployCount, 1);
   assert.equal(postflight.authority.automaticRetryAllowed, false);
   assert.deepEqual(environment.currentAuthorityRoot, {
     requiredActions: ["plan", "apply", "reconcile", "verify"],
@@ -2632,6 +4976,11 @@ test("checked-in READY manifest pins every release byte and measured catalog", (
     directChildFiles: [
       {
         argument: "--release-provenance", mode: "0600", ownerRequired: true,
+        regularFileRequired: true, singleLinkRequired: true,
+        symlinksAllowed: false,
+      },
+      {
+        argument: "--source-ci-receipt", mode: "0600", ownerRequired: true,
         regularFileRequired: true, singleLinkRequired: true,
         symlinksAllowed: false,
       },
@@ -2771,7 +5120,7 @@ test("persisted schema-3 mutation digest map is order-independent and exact", as
     assertCurrentReleaseSecretsOnlyBundle,
     validSuccessorMutationSecretDigestMap,
   } = await importInternalGeneratedRuntimeSecrets(t);
-  const digestMap = Object.fromEntries(SUCCESSOR_MUTATION_NAMES.map(name => [
+  const digestMap = Object.fromEntries(SCHEMA3_MUTATION_NAMES.map(name => [
     name,
     rawHash(`successor-mutation:${name}`),
   ]));
@@ -2781,7 +5130,7 @@ test("persisted schema-3 mutation digest map is order-independent and exact", as
     predecessorAdoption: SUCCESSOR_ADOPTION,
     runtimeFile: "runtime-proof.env",
     runtimeMutationFile: "runtime-install.env",
-    mutationSecretNames: SUCCESSOR_MUTATION_NAMES,
+    mutationSecretNames: SCHEMA3_MUTATION_NAMES,
     mutationSecretDigests: digestMap,
   };
   const parent = mkdtempSync(path.join(
@@ -2794,10 +5143,11 @@ test("persisted schema-3 mutation digest map is order-independent and exact", as
   const persisted = JSON.parse(readFileSync(attestationFile, "utf8"));
   assert.deepEqual(
     Object.keys(persisted.mutationSecretDigests),
-    [...SUCCESSOR_MUTATION_NAMES].sort(),
+    [...SCHEMA3_MUTATION_NAMES].sort(),
   );
   assert.equal(validSuccessorMutationSecretDigestMap(
     persisted.mutationSecretDigests,
+    SCHEMA3_MUTATION_NAMES,
   ), true);
   assert.equal(
     assertCurrentReleaseSecretsOnlyBundle(persisted, {
@@ -2815,10 +5165,13 @@ test("persisted schema-3 mutation digest map is order-independent and exact", as
       ...Object.fromEntries(Object.entries(persisted.mutationSecretDigests).slice(1)),
       WRONG_SECRET: rawHash("wrong"),
     },
-    { ...persisted.mutationSecretDigests, [SUCCESSOR_MUTATION_NAMES[0]]: "not-a-sha" },
+    { ...persisted.mutationSecretDigests, [SCHEMA3_MUTATION_NAMES[0]]: "not-a-sha" },
   ];
   for (const mutationSecretDigests of hostileMaps) {
-    assert.equal(validSuccessorMutationSecretDigestMap(mutationSecretDigests), false);
+    assert.equal(validSuccessorMutationSecretDigestMap(
+      mutationSecretDigests,
+      SCHEMA3_MUTATION_NAMES,
+    ), false);
     assert.throws(() => assertCurrentReleaseSecretsOnlyBundle({
       ...persisted,
       mutationSecretDigests,
@@ -2833,7 +5186,7 @@ test("persisted schema-3 mutation digest map is order-independent and exact", as
   assert.equal(
     (readFileSync(OPERATOR_FILE, "utf8")
       .match(/!validSuccessorMutationSecretDigestMap\(/gu) ?? []).length,
-    2,
+    4,
   );
 });
 
@@ -3324,7 +5677,7 @@ test("secrets-only mutation evidence binds the exact mutation file and detects i
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   const mutationFile = path.join(directory, "runtime-install.env");
   const proofFile = path.join(directory, "runtime-proof.env");
-  const mutationSource = SUCCESSOR_MUTATION_NAMES
+  const mutationSource = SCHEMA3_MUTATION_NAMES
     .map(name => `${name}=${rawHash(name)}`)
     .join("\n") + "\n";
   writeFileSync(mutationFile, mutationSource, { mode: 0o600 });
@@ -3354,7 +5707,7 @@ test("secrets-only mutation evidence binds the exact mutation file and detects i
 
   writeFileSync(
     mutationFile,
-    mutationSource.replace(rawHash(SUCCESSOR_MUTATION_NAMES[0]), rawHash("drift")),
+    mutationSource.replace(rawHash(SCHEMA3_MUTATION_NAMES[0]), rawHash("drift")),
     { mode: 0o600 },
   );
   chmodSync(mutationFile, 0o600);
@@ -4441,6 +6794,7 @@ test("imported recovery module exposes only production-used pure authority", () 
     "evaluateMainFinanceRuntimeRecoveryV2State",
     "sha256",
     "validateMainFinanceRuntimeRecoveryV2ProvenanceSource",
+    "validateMainFinanceRuntimeRecoveryV4ReleaseAuthority",
   ]);
   const source = readFileSync(
     path.join(ROOT, "scripts/prepare-main-finance-runtime-recovery-v2.mjs"),
@@ -4455,7 +6809,7 @@ test("imported recovery module exposes only production-used pure authority", () 
   assert.doesNotMatch(source, /readManifestSource/u);
   assert.match(source, /if \(import\.meta\.main === true\) \{\s*main\(\)\.catch/u);
   assert.match(source, /import\.meta\.main !== true/u);
-  assert.equal((source.match(/\{ mutation: true \}/gu) ?? []).length, 1);
+  assert.equal((source.match(/\{ mutation: true \}/gu) ?? []).length, 2);
   assert.equal((source.match(/invokeAuthorizedMutation\(/gu) ?? []).length, 3);
   assert.equal((source.match(/"authorize-cli-invocation"/gu) ?? []).length, 1);
   assert.equal((source.match(/"record-mutation-intent"/gu) ?? []).length, 1);
@@ -4619,6 +6973,10 @@ test("initial and resume plans preserve callable clock and bundle inventories", 
   assert.notEqual(createBundleStart, -1);
   assert.notEqual(createBundleEnd, -1);
   assert.match(
+    source.slice(createBundleStart, createBundleEnd),
+    /preinstallInventories,\n/u,
+  );
+  assert.doesNotMatch(
     source.slice(createBundleStart, createBundleEnd),
     /preinstallInventories: preinstallInventory,/u,
   );
@@ -5458,6 +7816,44 @@ test("direct CLI denies production before files and keeps help local", () => {
   });
 });
 
+test("direct CLI maps public predecessor effect pins through readRelease", t => {
+  const root = mkdtempSync(path.join(
+    realpathSync(tmpdir()),
+    "main-finance-v4-effect-pin-read-release-",
+  ));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  chmodSync(root, 0o700);
+  const receiptDirectory = path.join(root, "receipts");
+  mkdirSync(receiptDirectory, { mode: 0o700 });
+  const result = spawnSync(process.execPath, [
+    OPERATOR_FILE,
+    "apply",
+    "--project-ref", MAIN_REF,
+    "--state-dir", path.join(root, "missing-state"),
+    "--receipt-dir", receiptDirectory,
+    "--access-token-file", path.join(root, "token"),
+    "--supabase-cli", path.join(root, "supabase"),
+    "--git-cli", path.join(root, "git"),
+    "--gh-cli", path.join(root, "gh"),
+    "--release-provenance", path.join(root, "provenance"),
+    "--source-ci-receipt", path.join(root, "source-ci"),
+    "--production-boundary", path.join(root, "production"),
+    "--target-config", path.join(root, "target"),
+    "--approval", "inert",
+  ], {
+    cwd: ROOT,
+    encoding: "utf8",
+    env: { LANG: "C", LC_ALL: "C", NO_COLOR: "1" },
+  });
+  assert.equal(result.status, 1);
+  assert.equal(result.stdout, "");
+  assert.doesNotMatch(
+    result.stderr,
+    /predecessor adoption environment contract differs/u,
+  );
+  assert.match(result.stderr, /state directory must exist before.*lease/u);
+});
+
 test("direct current CLI rejects a persisted legacy plan before runtime, lease or mutation", t => {
   const root = mkdtempSync(path.join(
     realpathSync(tmpdir()),
@@ -5499,7 +7895,7 @@ test("direct current CLI rejects a persisted legacy plan before runtime, lease o
   );
   chmodSync(fakeTool, 0o700);
   const privateFiles = {};
-  for (const name of ["token", "provenance", "production", "target"]) {
+  for (const name of ["token", "provenance", "sourceCi", "production", "target"]) {
     const file = path.join(root, name);
     writeFileSync(file, `${name}\n`, { mode: 0o600 });
     privateFiles[name] = file;
@@ -5518,6 +7914,7 @@ test("direct current CLI rejects a persisted legacy plan before runtime, lease o
     "--git-cli", fakeTool,
     "--gh-cli", fakeTool,
     "--release-provenance", privateFiles.provenance,
+    "--source-ci-receipt", privateFiles.sourceCi,
     "--production-boundary", privateFiles.production,
     "--target-config", privateFiles.target,
     "--approval", "hostile-legacy-approval",
@@ -5528,7 +7925,10 @@ test("direct current CLI rejects a persisted legacy plan before runtime, lease o
   });
   assert.equal(result.status, 1);
   assert.equal(result.stdout, "");
-  assert.match(result.stderr, /schema-3 secrets-only successor plan/u);
+  assert.match(
+    result.stderr,
+    /current release rejects legacy operational plan authority/u,
+  );
   assert.equal(existsSync(leaseFile), false);
   assert.equal(existsSync(marker), false);
   assert.deepEqual(readdirSync(stateDirectory), stateEntries);
@@ -5543,7 +7943,7 @@ test("predecessor adoption CLI flags are plan-only, all-or-none and mandatory fo
     "main-finance-v2-predecessor-cli-",
   ));
   t.after(() => rmSync(parent, { recursive: true, force: true }));
-  for (const name of ["provenance", "production", "target"]) {
+  for (const name of ["provenance", "source-ci", "production", "target"]) {
     writeFileSync(path.join(parent, name), `${name}\n`, { mode: 0o600 });
   }
   const common = action => [
@@ -5557,6 +7957,7 @@ test("predecessor adoption CLI flags are plan-only, all-or-none and mandatory fo
     "--git-cli", path.join(parent, "git"),
     "--gh-cli", path.join(parent, "gh"),
     "--release-provenance", path.join(parent, "provenance"),
+    "--source-ci-receipt", path.join(parent, "source-ci"),
     "--production-boundary", path.join(parent, "production"),
     "--target-config", path.join(parent, "target"),
   ];
@@ -5573,7 +7974,8 @@ test("predecessor adoption CLI flags are plan-only, all-or-none and mandatory fo
     "--prior-state-dir", path.join(parent, "prior-state"),
     "--prior-receipt-dir", path.join(parent, "prior-receipts"),
     "--prior-release-provenance", path.join(parent, "prior-provenance"),
-    "--prior-terminal-receipt-sha256", "a".repeat(64),
+    "--prior-source-ci-receipt", path.join(parent, "prior-source-ci"),
+    "--prior-effect-receipt-sha256", "a".repeat(64),
   ];
   const environment = { LANG: "C", LC_ALL: "C", NO_COLOR: "1" };
   mkdirSync(path.join(parent, "plan-receipts"), { mode: 0o700 });
@@ -5655,7 +8057,7 @@ test("predecessor adoption CLI flags are plan-only, all-or-none and mandatory fo
   mkdirSync(oldReceipts, { mode: 0o700 });
   mkdirSync(newRoot, { mode: 0o700 });
   mkdirSync(path.join(newRoot, "receipts"), { mode: 0o700 });
-  for (const name of ["provenance", "production", "target"]) {
+  for (const name of ["provenance", "source-ci", "production", "target"]) {
     writeFileSync(path.join(newRoot, name), `${name}\n`, { mode: 0o600 });
   }
   const nonPrivateRoot = spawnSync(process.execPath, [
@@ -5669,12 +8071,14 @@ test("predecessor adoption CLI flags are plan-only, all-or-none and mandatory fo
     "--git-cli", path.join(parent, "git"),
     "--gh-cli", path.join(parent, "gh"),
     "--release-provenance", path.join(newRoot, "provenance"),
+    "--source-ci-receipt", path.join(newRoot, "source-ci"),
     "--production-boundary", path.join(newRoot, "production"),
     "--target-config", path.join(newRoot, "target"),
     "--prior-state-dir", oldState,
     "--prior-receipt-dir", oldReceipts,
     "--prior-release-provenance", path.join(oldRoot, "provenance"),
-    "--prior-terminal-receipt-sha256", "a".repeat(64),
+    "--prior-source-ci-receipt", path.join(oldRoot, "source-ci"),
+    "--prior-effect-receipt-sha256", "a".repeat(64),
   ], { cwd: ROOT, encoding: "utf8", env: environment });
   assert.equal(nonPrivateRoot.status, 1);
   assert.equal(nonPrivateRoot.stdout, "");
@@ -5691,7 +8095,9 @@ test("predecessor adoption CLI flags are plan-only, all-or-none and mandatory fo
   mkdirSync(nestedCurrentRoot, { mode: 0o700 });
   for (const file of [
     path.join(privateOldRoot, "provenance"),
+    path.join(privateOldRoot, "source-ci"),
     path.join(nestedCurrentRoot, "provenance"),
+    path.join(nestedCurrentRoot, "source-ci"),
     path.join(nestedCurrentRoot, "production"),
     path.join(nestedCurrentRoot, "target"),
   ]) writeFileSync(file, "fixture\n", { mode: 0o600 });
@@ -5709,12 +8115,14 @@ test("predecessor adoption CLI flags are plan-only, all-or-none and mandatory fo
     "--git-cli", path.join(parent, "git"),
     "--gh-cli", path.join(parent, "gh"),
     "--release-provenance", path.join(nestedCurrentRoot, "provenance"),
+    "--source-ci-receipt", path.join(nestedCurrentRoot, "source-ci"),
     "--production-boundary", path.join(nestedCurrentRoot, "production"),
     "--target-config", path.join(nestedCurrentRoot, "target"),
     "--prior-state-dir", path.join(privateOldRoot, "state"),
     "--prior-receipt-dir", path.join(privateOldRoot, "receipts"),
     "--prior-release-provenance", path.join(privateOldRoot, "provenance"),
-    "--prior-terminal-receipt-sha256", "a".repeat(64),
+    "--prior-source-ci-receipt", path.join(privateOldRoot, "source-ci"),
+    "--prior-effect-receipt-sha256", "a".repeat(64),
   ], { cwd: ROOT, encoding: "utf8", env: environment });
   assert.equal(nestedBoundary.status, 1);
   assert.equal(nestedBoundary.stdout, "");
@@ -5732,7 +8140,7 @@ test("predecessor adoption CLI flags are plan-only, all-or-none and mandatory fo
   const splitReceiptRoot = path.join(parent, "split-receipt-root");
   mkdirSync(splitRoot, { mode: 0o700 });
   mkdirSync(splitReceiptRoot, { mode: 0o700 });
-  for (const name of ["provenance", "production", "target"]) {
+  for (const name of ["provenance", "source-ci", "production", "target"]) {
     writeFileSync(path.join(splitRoot, name), "fixture\n", { mode: 0o600 });
   }
   const splitState = path.join(splitRoot, "state");
@@ -5741,6 +8149,7 @@ test("predecessor adoption CLI flags are plan-only, all-or-none and mandatory fo
       "--state-dir": splitState,
       "--receipt-dir": path.join(splitReceiptRoot, "receipts"),
       "--release-provenance": path.join(splitRoot, "provenance"),
+      "--source-ci-receipt": path.join(splitRoot, "source-ci"),
       "--production-boundary": path.join(splitRoot, "production"),
       "--target-config": path.join(splitRoot, "target"),
     }),
@@ -5754,6 +8163,7 @@ test("predecessor adoption CLI flags are plan-only, all-or-none and mandatory fo
 
   for (const [flag, foreignFile] of [
     ["--release-provenance", path.join(privateOldRoot, "provenance")],
+    ["--source-ci-receipt", path.join(privateOldRoot, "source-ci")],
     ["--production-boundary", path.join(privateOldRoot, "provenance")],
     ["--target-config", path.join(privateOldRoot, "provenance")],
   ]) {
@@ -5768,7 +8178,7 @@ test("predecessor adoption CLI flags are plan-only, all-or-none and mandatory fo
   const realCurrentRoot = path.join(parent, "real-current-root");
   const linkedCurrentRoot = path.join(parent, "linked-current-root");
   mkdirSync(realCurrentRoot, { mode: 0o700 });
-  for (const name of ["provenance", "production", "target"]) {
+  for (const name of ["provenance", "source-ci", "production", "target"]) {
     writeFileSync(path.join(realCurrentRoot, name), "fixture\n", { mode: 0o600 });
   }
   symlinkSync(realCurrentRoot, linkedCurrentRoot);
@@ -5778,6 +8188,7 @@ test("predecessor adoption CLI flags are plan-only, all-or-none and mandatory fo
       "--state-dir": linkedState,
       "--receipt-dir": path.join(linkedCurrentRoot, "receipts"),
       "--release-provenance": path.join(linkedCurrentRoot, "provenance"),
+      "--source-ci-receipt": path.join(linkedCurrentRoot, "source-ci"),
       "--production-boundary": path.join(linkedCurrentRoot, "production"),
       "--target-config": path.join(linkedCurrentRoot, "target"),
     }),
@@ -5797,6 +8208,9 @@ test("predecessor adoption CLI flags are plan-only, all-or-none and mandatory fo
   writeFileSync(path.join(realPriorRoot, "provenance"), "fixture\n", {
     mode: 0o600,
   });
+  writeFileSync(path.join(realPriorRoot, "source-ci"), "fixture\n", {
+    mode: 0o600,
+  });
   symlinkSync(realPriorRoot, linkedPriorRoot);
   const priorSymlinkState = path.join(splitRoot, "prior-symlink-state");
   mkdirSync(path.join(splitRoot, "prior-symlink-receipts"), { mode: 0o700 });
@@ -5805,13 +8219,15 @@ test("predecessor adoption CLI flags are plan-only, all-or-none and mandatory fo
       "--state-dir": priorSymlinkState,
       "--receipt-dir": path.join(splitRoot, "prior-symlink-receipts"),
       "--release-provenance": path.join(splitRoot, "provenance"),
+      "--source-ci-receipt": path.join(splitRoot, "source-ci"),
       "--production-boundary": path.join(splitRoot, "production"),
       "--target-config": path.join(splitRoot, "target"),
     }),
     "--prior-state-dir", path.join(linkedPriorRoot, "state"),
     "--prior-receipt-dir", path.join(linkedPriorRoot, "receipts"),
     "--prior-release-provenance", path.join(linkedPriorRoot, "provenance"),
-    "--prior-terminal-receipt-sha256", "a".repeat(64),
+    "--prior-source-ci-receipt", path.join(linkedPriorRoot, "source-ci"),
+    "--prior-effect-receipt-sha256", "a".repeat(64),
   ], { cwd: ROOT, encoding: "utf8", env: environment });
   assert.equal(linkedPredecessor.status, 1);
   assert.match(
@@ -5828,6 +8244,7 @@ test("predecessor adoption CLI flags are plan-only, all-or-none and mandatory fo
       "--state-dir": applyState,
       "--receipt-dir": path.join(splitRoot, "apply-receipts"),
       "--release-provenance": path.join(privateOldRoot, "provenance"),
+      "--source-ci-receipt": path.join(splitRoot, "source-ci"),
       "--production-boundary": path.join(splitRoot, "production"),
       "--target-config": path.join(splitRoot, "target"),
     }),
@@ -5848,7 +8265,7 @@ test("predecessor adoption CLI flags are plan-only, all-or-none and mandatory fo
   assert.equal(freshWithoutPrior.stdout, "");
   assert.match(
     freshWithoutPrior.stderr,
-    /fresh successor plan requires the exact predecessor adoption flags/u,
+    /schema-4 initial plan requires all five predecessor authority flags/u,
   );
   assert.equal(existsSync(path.join(parent, "plan-state")), false);
   assert.equal(existsSync(path.join(parent, "plan-receipts")), true);
@@ -5863,7 +8280,7 @@ test("two direct CLI contenders preserve and refuse an existing dead-owner opera
   const stateDirectory = path.join(parent, "state");
   const receiptDirectory = path.join(parent, "receipts");
   mkdirSync(receiptDirectory, { mode: 0o700 });
-  for (const name of ["provenance", "production", "target"]) {
+  for (const name of ["provenance", "source-ci", "production", "target"]) {
     writeFileSync(path.join(parent, name), `${name}\n`, { mode: 0o600 });
   }
   const leaseFile = `${stateDirectory}.main-finance-runtime-recovery-v2-operation.lock`;
@@ -5886,6 +8303,7 @@ test("two direct CLI contenders preserve and refuse an existing dead-owner opera
     "--git-cli", path.join(parent, "git"),
     "--gh-cli", path.join(parent, "gh"),
     "--release-provenance", path.join(parent, "provenance"),
+    "--source-ci-receipt", path.join(parent, "source-ci"),
     "--production-boundary", path.join(parent, "production"),
     "--target-config", path.join(parent, "target"),
   ];
@@ -5901,7 +8319,8 @@ test("two direct CLI contenders preserve and refuse an existing dead-owner opera
     assert.match(result.stderr, /operation_lease_present/u, contender);
     assert.equal(readFileSync(leaseFile, "utf8"), leaseSource, contender);
     assert.deepEqual(readdirSync(parent).sort(), [
-      path.basename(leaseFile), "production", "provenance", "receipts", "target",
+      path.basename(leaseFile), "production", "provenance", "receipts", "source-ci",
+      "target",
     ].sort(), contender);
     assert.equal(existsSync(stateDirectory), false, contender);
     assert.equal(existsSync(receiptDirectory), true, contender);
@@ -5958,6 +8377,7 @@ test("measure forbids post-commit provenance while operational modes require it"
   const planWithoutGh = spawnSync(process.execPath, [
     ...common("plan"),
     "--release-provenance", path.join(parent, "provenance"),
+    "--source-ci-receipt", path.join(parent, "source-ci"),
     "--production-boundary", path.join(parent, "production"),
     "--target-config", path.join(parent, "target"),
   ], { cwd: ROOT, encoding: "utf8", env: environment });
@@ -5968,6 +8388,7 @@ test("measure forbids post-commit provenance while operational modes require it"
   const plan = spawnSync(process.execPath, [
     ...common("plan"),
     "--gh-cli", path.join(parent, "gh"),
+    "--source-ci-receipt", path.join(parent, "source-ci"),
     "--production-boundary", path.join(parent, "production"),
     "--target-config", path.join(parent, "target"),
   ], { cwd: ROOT, encoding: "utf8", env: environment });
@@ -6033,6 +8454,186 @@ test("measurement source binds manifest branch and the complete dirty successor"
     measureOperator,
     /canonicalJson\(sourceAfterMeasurement\) !== canonicalJson\(source\)/u,
   );
+});
+
+test("read-only GitHub GET retries only bounded invoked transport failures", async t => {
+  const { invokeReadOnlyGitHubApi } = await importInternalReadOnlyGitHubApi(t);
+  const createBoundary = () => {
+    const parent = mkdtempSync(path.join(
+      realpathSync(tmpdir()),
+      "main-finance-v2-read-only-github-xdg-",
+    ));
+    const boundary = Object.fromEntries(["state", "cache", "data"].map(name => {
+      const directory = path.join(parent, name);
+      mkdirSync(directory, { mode: 0o700 });
+      chmodSync(directory, 0o500);
+      return [name, directory];
+    }));
+    t.after(() => {
+      for (const directory of Object.values(boundary)) {
+        if (existsSync(directory)) chmodSync(directory, 0o700);
+      }
+      rmSync(parent, { recursive: true, force: true });
+    });
+    return Object.freeze(boundary);
+  };
+  const ghLocalState = createBoundary();
+  const ghEnvironment = Object.freeze({
+    GH_HOST: "github.com",
+    GH_PROMPT_DISABLED: "1",
+    XDG_STATE_HOME: ghLocalState.state,
+    XDG_CACHE_HOME: ghLocalState.cache,
+    XDG_DATA_HOME: ghLocalState.data,
+  });
+  const base = Object.freeze({
+    gh: "/private/tmp/inert-gh",
+    endpoint: "repos/example/project/actions/runs/321",
+    label: "source CI run",
+    ghEnvironment,
+    ghLocalState,
+  });
+  const invokedFailure = () => Object.freeze({
+    status: 1,
+    signal: null,
+    error: null,
+    stdout: "withheld",
+    cliInvoked: true,
+  });
+  const invokedSuccess = stdout => Object.freeze({
+    status: 0,
+    signal: null,
+    error: null,
+    stdout,
+    cliInvoked: true,
+  });
+
+  const calls = [];
+  const expectedValue = Object.freeze({ id: 321, status: "completed" });
+  const result = invokeReadOnlyGitHubApi({
+    ...base,
+    runGh: (executable, args, environment) => {
+      calls.push({ executable, args, environment });
+      if (calls.length === 1) return invokedFailure();
+      if (calls.length === 2) throw new Error("transient TLS runner exception");
+      return invokedSuccess(`${JSON.stringify(expectedValue)}\n`);
+    },
+  });
+  assert.deepEqual(result.value, expectedValue);
+  assert.equal(result.sha256, sha256(canonicalJson(expectedValue)));
+  assert.equal(calls.length, 3);
+  assert.deepEqual(calls[0].args, [
+    "api",
+    "--method", "GET",
+    "-H", "Accept: application/vnd.github+json",
+    "-H", "X-GitHub-Api-Version: 2022-11-28",
+    base.endpoint,
+  ]);
+  assert.equal(Object.isFrozen(calls[0].args), true);
+  assert.equal(calls.every(call => call.executable === base.gh), true);
+  assert.equal(calls.every(call => call.args === calls[0].args), true);
+  assert.equal(calls.every(call => call.environment === ghEnvironment), true);
+
+  let exhaustedCalls = 0;
+  assert.throws(() => invokeReadOnlyGitHubApi({
+    ...base,
+    runGh: () => {
+      exhaustedCalls += 1;
+      return invokedFailure();
+    },
+  }), /source CI run live GitHub query failed; output withheld/u);
+  assert.equal(exhaustedCalls, 3);
+
+  let exhaustedExceptionCalls = 0;
+  assert.throws(() => invokeReadOnlyGitHubApi({
+    ...base,
+    runGh: () => {
+      exhaustedExceptionCalls += 1;
+      throw new Error("persistent TLS runner exception");
+    },
+  }), /source CI run live GitHub query failed; output withheld/u);
+  assert.equal(exhaustedExceptionCalls, 3);
+
+  let preSpawnCalls = 0;
+  assert.throws(() => invokeReadOnlyGitHubApi({
+    ...base,
+    runGh: () => {
+      preSpawnCalls += 1;
+      return Object.freeze({
+        status: null,
+        signal: null,
+        error: null,
+        stdout: "",
+        cliInvoked: false,
+        outcome: "pre_spawn_refused",
+      });
+    },
+  }), /source CI run live GitHub query failed; output withheld/u);
+  assert.equal(preSpawnCalls, 1);
+
+  const authorityError = new Error(
+    "Main Finance runtime recovery v2 refused: injected local authority differs",
+  );
+  let authorityCalls = 0;
+  assert.throws(() => invokeReadOnlyGitHubApi({
+    ...base,
+    runGh: () => {
+      authorityCalls += 1;
+      throw authorityError;
+    },
+  }), error => error === authorityError);
+  assert.equal(authorityCalls, 1);
+
+  let oversizedCalls = 0;
+  assert.throws(() => invokeReadOnlyGitHubApi({
+    ...base,
+    runGh: () => {
+      oversizedCalls += 1;
+      return invokedSuccess("x".repeat(2 * 1024 * 1024 + 1));
+    },
+  }), /source CI run live GitHub query failed; output withheld/u);
+  assert.equal(oversizedCalls, 1);
+
+  let malformedCalls = 0;
+  assert.throws(() => invokeReadOnlyGitHubApi({
+    ...base,
+    runGh: () => {
+      malformedCalls += 1;
+      return invokedSuccess("{not-json");
+    },
+  }), /source CI run live GitHub JSON differs/u);
+  assert.equal(malformedCalls, 1);
+
+  let directSuccessCalls = 0;
+  const directSuccess = invokeReadOnlyGitHubApi({
+    ...base,
+    runGh: () => {
+      directSuccessCalls += 1;
+      return invokedSuccess('{"direct":true}\n');
+    },
+  });
+  assert.deepEqual(directSuccess.value, { direct: true });
+  assert.equal(directSuccessCalls, 1);
+  for (const directory of Object.values(ghLocalState)) {
+    assert.equal(lstatSync(directory).mode & 0o777, 0o500);
+    assert.deepEqual(readdirSync(directory), []);
+  }
+
+  const driftedLocalState = createBoundary();
+  let driftCalls = 0;
+  assert.throws(() => invokeReadOnlyGitHubApi({
+    ...base,
+    ghLocalState: driftedLocalState,
+    runGh: () => {
+      driftCalls += 1;
+      chmodSync(driftedLocalState.state, 0o700);
+      writeFileSync(path.join(driftedLocalState.state, "unexpected"), "drift", {
+        mode: 0o600,
+      });
+      chmodSync(driftedLocalState.state, 0o500);
+      return invokedFailure();
+    },
+  }), /GitHub CLI XDG state home must remain one empty owner-private/u);
+  assert.equal(driftCalls, 1);
 });
 
 if (process.platform === "darwin") {
@@ -6144,6 +8745,10 @@ test("release sources keep privacy/production exclusions and deny successor func
   assert.match(source, /SUPABASE_TELEMETRY_DISABLED/u);
   assert.match(source, /GH_CONFIG_DIR/u);
   assert.match(source, /const SEALED_LOCAL_STATE_MODE = 0o500;/u);
+  assert.match(
+    source,
+    /const MAX_READ_ONLY_GITHUB_API_ATTEMPTS = 3;/u,
+  );
   assert.match(source, /GH_TELEMETRY: "0"/u);
   assert.match(source, /GH_NO_UPDATE_NOTIFIER: "1"/u);
   assert.match(source, /XDG_STATE_HOME: ghLocalState\.state/u);
@@ -6158,12 +8763,55 @@ test("release sources keep privacy/production exclusions and deny successor func
   assert.match(source, /state: `\$\{GH_XDG_STATE_DIRECTORY\}\$\{suffix\}`/u);
   assert.match(source, /cache: `\$\{GH_XDG_CACHE_DIRECTORY\}\$\{suffix\}`/u);
   assert.match(source, /data: `\$\{GH_XDG_DATA_DIRECTORY\}\$\{suffix\}`/u);
+  const githubApiStart = source.indexOf("function invokeReadOnlyGitHubApi({");
   const ciStart = source.indexOf("function inspectSourceCi({");
+  assert.notEqual(githubApiStart, -1);
   const ciEnd = source.indexOf("\nfunction readAccessToken(", ciStart);
   assert.notEqual(ciStart, -1);
   assert.notEqual(ciEnd, -1);
+  const githubApi = source.slice(githubApiStart, ciStart);
   const ciInspector = source.slice(ciStart, ciEnd);
-  assert.equal((ciInspector.match(/\brunGh\(/gu) ?? []).length, 1);
+  assert.match(
+    githubApi,
+    /for \(let attempt = 1; attempt <= MAX_READ_ONLY_GITHUB_API_ATTEMPTS; attempt \+= 1\)/u,
+  );
+  assert.equal((githubApi.match(/\brunGh\(/gu) ?? []).length, 1);
+  assert.equal(
+    (githubApi.match(/assertGhLocalStateUnchanged\(ghLocalState\)/gu) ?? []).length,
+    2,
+  );
+  assert.match(githubApi, /error\.message\.startsWith\(REFUSAL_PREFIX\)/u);
+  assert.match(githubApi, /result\?\.cliInvoked !== true/u);
+  assert.match(
+    githubApi,
+    /Buffer\.byteLength\(result\.stdout, "utf8"\) > 2 \* 1024 \* 1024/u,
+  );
+  assert.match(githubApi, /value = JSON\.parse\(result\.stdout\)/u);
+  assert.doesNotMatch(
+    githubApi,
+    /append|writeFile|fetch|runCli|invokeCli|mutation/iu,
+  );
+  assert.equal((ciInspector.match(/invokeReadOnlyGitHubApi\(/gu) ?? []).length, 1);
+  const branchQuery = ciInspector.indexOf("const branch = invokeApi(");
+  const branchSemantic = ciInspector.indexOf(
+    "live release branch no longer points to the reviewed source commit",
+  );
+  const runQuery = ciInspector.indexOf("const run = invokeApi(");
+  const runSemantic = ciInspector.indexOf(
+    "live source CI run is not the exact successful same-SHA workflow",
+  );
+  const jobsQuery = ciInspector.indexOf("const jobs = invokeApi(");
+  const jobsSemantic = ciInspector.indexOf(
+    "live source CI job cardinality differs",
+  );
+  assert.equal(
+    branchQuery < branchSemantic
+      && branchSemantic < runQuery
+      && runQuery < runSemantic
+      && runSemantic < jobsQuery
+      && jobsQuery < jobsSemantic,
+    true,
+  );
   assert.match(source, /Supabase CLI home contains preserved unreviewed state/u);
   assert.match(
     source,

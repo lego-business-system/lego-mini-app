@@ -276,9 +276,14 @@ function attestRpc({
   };
 }
 
-async function successfulAttestation({ snapshot = snapshotFixture(), rpc, calls = [] } = {}) {
+async function successfulAttestation({
+  snapshot = snapshotFixture(),
+  rpc,
+  calls = [],
+  url = EDGE_URL,
+} = {}) {
   const response = await handleFinanceManageAccessV2Request(
-    requestFor(bodyFixture({ snapshot })),
+    requestFor(bodyFixture({ snapshot }), { url }),
     dependencies({ rpc: rpc ?? attestRpc({ calls }) }),
   );
   assert.equal(response.status, 200);
@@ -486,6 +491,40 @@ test("private route rejects browser, query and fragment context without RPC", as
       }),
     );
     assert.equal(response.status, 400);
+    assert.equal(rpcCalls, 0);
+  }
+});
+
+test("private route accepts only the public and Supabase runtime canonical paths", async () => {
+  for (const url of [
+    EDGE_URL,
+    `${MAIN_ORIGIN}/finance-manage-access-v2`,
+  ]) {
+    const calls = [];
+    const { value } = await successfulAttestation({ url, calls });
+    assert.equal(value.ok, true);
+    assert.ok(calls.length > 0);
+  }
+
+  for (const url of [
+    `${MAIN_ORIGIN}/finance-manage-access-v2/`,
+    `${MAIN_ORIGIN}/finance-manage-access-v2/extra`,
+    `${MAIN_ORIGIN}/functions/v1/wrong`,
+    `${MAIN_ORIGIN}/functions/v1/finance-manage-access-v2%2fextra`,
+    `${MAIN_ORIGIN}/`,
+  ]) {
+    let rpcCalls = 0;
+    const response = await handleFinanceManageAccessV2Request(
+      requestFor(bodyFixture(), { url, method: "GET" }),
+      dependencies({
+        rpc: async () => {
+          rpcCalls += 1;
+          throw new Error("RPC must not run");
+        },
+      }),
+    );
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { ok: false, error: "invalid_request" });
     assert.equal(rpcCalls, 0);
   }
 });

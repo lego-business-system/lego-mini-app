@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 3,
-  "kind": "main-finance-runtime-recovery-v3-secrets-only-staging-release",
+  "schemaVersion": 4,
+  "kind": "main-finance-runtime-recovery-v4-target-redeploy-staging-release",
   "releaseStatus": "READY_FOR_SOURCE_ATTESTATION",
   "environment": "staging",
   "mainProjectRef": "bljeoovhydhjhdzwplxh",
@@ -13,25 +13,30 @@
   "supabaseCliVersion": "2.109.1",
   "nodeVersion": "24.14.0",
   "sourceLineage": {
-    "baseCommitSha": "a30dedf20e977d9794a8ac9e54abc48b076c9d45",
-    "baseTreeSha": "92d7aa5df37a09049d4fdaeaa523d2cc02e85cbf",
-    "requiredSoleParentSha": "a30dedf20e977d9794a8ac9e54abc48b076c9d45",
+    "baseCommitSha": "42c647aaeb3a6cededb49f073ac001678dcb3582",
+    "baseTreeSha": "dd05940dbc3f06e8577a6406c6e64e470049c818",
+    "requiredSoleParentSha": "42c647aaeb3a6cededb49f073ac001678dcb3582",
     "expectedTrackedFileCount": 935,
     "changedPaths": [
       { "status": "M", "path": ".github/workflows/verify-finance-integration.yml" },
+      { "status": "M", "path": "scripts/main-finance-runtime-recovery-v2-snapshot.mjs" },
+      { "status": "M", "path": "scripts/manage-finance-access-v2.mjs" },
       { "status": "M", "path": "scripts/prepare-main-finance-runtime-recovery-v2.mjs" },
+      { "status": "M", "path": "supabase/functions/finance-manage-access-v2/index.ts" },
       { "status": "M", "path": "supabase/releases/main-finance-runtime-recovery-v2/environment.contract.json" },
       { "status": "M", "path": "supabase/releases/main-finance-runtime-recovery-v2/postflight.contract.json" },
       { "status": "M", "path": "supabase/releases/main-finance-runtime-recovery-v2/README.md" },
       { "status": "M", "path": "supabase/releases/main-finance-runtime-recovery-v2/staging.manifest.json" },
       { "status": "M", "path": "supabase/tests/finance_integration_ci.test.mjs" },
-      { "status": "M", "path": "supabase/tests/main_finance_runtime_recovery_release_v2.test.mjs" }
+      { "status": "M", "path": "supabase/tests/main_finance_runtime_recovery_release_v2.test.mjs" },
+      { "status": "M", "path": "supabase/tests/main_finance_runtime_secret_recovery_v2.test.mjs" },
+      { "status": "M", "path": "supabase/tests/manage_finance_access_v2.test.mjs" }
     ]
   },
   "sourceCi": {
     "repository": "lego-business-system/lego-mini-app",
     "workflowPath": ".github/workflows/verify-finance-integration.yml",
-    "workflowBlobSha": "220ee4c940cfd03e178dbee1fb6f25dc5de0845e",
+    "workflowBlobSha": "9b28cfde71d0ee6f21cc85d70a46042e3662a6a2",
     "jobName": "verify",
     "requiredSuccessfulSteps": [
       "Check out repository",
@@ -75,11 +80,11 @@
     "name": "finance-manage-access-v2",
     "verifyJwt": false,
     "alreadyPresentInImportedBaseline": true,
-    "deployAuthorized": false
+    "deployAuthorized": true
   },
   "environmentContract": {
     "path": "supabase/releases/main-finance-runtime-recovery-v2/environment.contract.json",
-    "sha256": "2b45fb46a823534b952c63f3d3222c78f5bbd689712853312efe9d076e859ad0"
+    "sha256": "ade5da17802572068a14571293d0ccf56484fd48c335b5f8783a739070835428"
   },
   "preflightSql": {
     "path": "supabase/releases/main-finance-runtime-recovery-v2/preflight.sql",
@@ -88,9 +93,9 @@
   "expectedDatabaseCatalogSha256": "a971eb0b475390073157d21ab2030896af9e97b052f290d41cf6678c24ecee50",
   "postflightContract": {
     "path": "supabase/releases/main-finance-runtime-recovery-v2/postflight.contract.json",
-    "sha256": "032654669bcd86e47601692af92017f36ef5bce0b70cfa39234d15f542f717d5"
+    "sha256": "d08903b76d20f5e1a6347a826111cbe6c18fcde588a823a285ca8caf04dc8b99"
   },
-  "deploymentClosureSetSha256": "3026624ad0888173170a87565f856b75a6afb19697a573f6cfee2a85234f5689",
+  "deploymentClosureSetSha256": "ddc3d63ee47776f4c7468e6894302ff4f843e77d47bef2931262670a6dd20c94",
   "deploymentClosureFiles": [
     {
       "path": "supabase/config.toml",
@@ -120,7 +125,7 @@
     {
       "path": "supabase/functions/finance-manage-access-v2/index.ts",
       "mode": "100644",
-      "sha256": "556bdf155eec87690c805d2f2d9c781ddd8443bf5ee384168d5bbd4884244b5f"
+      "sha256": "630af2595cacff892a64b28927734d5b96a0f305e833665ee46ef33e978c8740"
     }
   ],
   "archiveFormat": "main-finance-source-archive-v2-nul-framed",
@@ -139,6 +144,7 @@
   "mutations": {
     "secretSetNamesSource": "environment.contract.json secretMutation.mutationNames",
     "exactSecretSetNames": [
+      "MAIN_FINANCE_ACCESS_V2_SOURCE_DEPLOYMENT_SHA256",
       "MAIN_FINANCE_ACCESS_V2_SOURCE_COMMIT_SHA",
       "MAIN_FINANCE_ACCESS_V2_SOURCE_TREE_SHA",
       "MAIN_FINANCE_ACCESS_V2_SOURCE_MANIFEST_SHA256"
@@ -172,10 +178,16 @@
       "unchanged",
       "exact-all-existing-plus-one"
     ],
+    "targetDeployTransition": "exact-target-replacement-plus-one",
+    "targetDeployFunction": "finance-manage-access-v2",
     "causalAttributionClaimed": false,
     "forbidPrivacyOverwrite": true,
-    "exactHostedMutationCount": 1,
-    "exactFunctionDeployCount": 0,
+    "exactHostedMutationCount": 2,
+    "exactFunctionDeployCount": 1,
+    "freshPlanCount": 2,
+    "ownerApprovalCount": 2,
+    "deployResultSandwichRequired": true,
+    "completionSandwichDistinct": true,
     "automaticRetryAllowed": false,
     "databaseWrites": false,
     "productionWrites": false

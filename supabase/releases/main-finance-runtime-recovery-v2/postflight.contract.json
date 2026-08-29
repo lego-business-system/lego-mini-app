@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 3,
-  "kind": "main-finance-runtime-recovery-v3-secrets-only-postflight-contract",
+  "schemaVersion": 4,
+  "kind": "main-finance-runtime-recovery-v4-target-redeploy-postflight-contract",
   "environment": "staging",
   "endpoint": "https://bljeoovhydhjhdzwplxh.supabase.co/functions/v1/finance-manage-access-v2",
   "method": "POST",
@@ -27,26 +27,29 @@
   },
   "minimumCheckedCount": 1,
   "snapshotSandwich": {
-    "clockOrder": "D0 database_clock < verified attested_at < D1 database_clock",
+    "clockOrder": "deploy-result D0 database_clock < deploy-result verified attested_at < deploy-result D1 database_clock; then distinct completion D0 database_clock < completion verified attested_at < completion D1 database_clock",
     "stableBindings": [
       "source commit and tree",
-      "release manifest and unchanged deployment closure",
+      "release manifest and exact successor deployment closure",
       "catalog, descriptor and state hashes",
       "gate phase inventory and privacy inventory hashes",
       "complete sorted desired rows and checked_count",
-      "privately branded exact D0 and D1 builder results"
+      "privately branded exact D0 and D1 builder results",
+      "two stable Management API multipart reads contain exactly the four manifest-pinned authored files plus exact deployment metadata bound to target id and version",
+      "hostedSourceClosureSha256 is source identity while bounded size values, multipart MIME labels and optional Content-Length are transport observations only",
+      "deploy-result and completion sandwiches are fresh and distinct"
     ],
     "fullHostedInventory": [
-      "the exact three source-bound Main values equal the successor private bundle",
+      "the exact four ordered source-bound Main values equal the successor private bundle",
       "the two inherited generated values remain proof-only and are never re-set",
       "all Main secret names and value digests outside the exact mutation set remain unchanged",
       "only updated_at may differ for the exact seven named SUPABASE rows",
       "every Finance secret row remains exactly unchanged",
-      "complete Main, Finance and Function inventory SHA-256 values are identical across D0 and D1",
-      "the complete 13-row Function inventory is either unchanged or every row has version exactly plus one with every other field unchanged"
+      "complete Main and Finance inventory SHA-256 values are identical across each D0 and D1 sandwich",
+      "the complete 13-row Function inventory changes only by the exact finance-manage-access-v2 target replacement with target version exactly plus one"
     ],
     "functionInventoryPhases": {
-      "importedBaseline": "the exact terminal 13-row ad707 inventory, including the already-present exact target",
+      "importedBaseline": "the exact immutable predecessor installed 13-row 0efefe inventory, including the already-present broken target deployment",
       "requiredCanonicalRowKeys": [
         "id",
         "name",
@@ -61,21 +64,23 @@
       ],
       "rowIdentityRules": "id is a canonical UUID, name equals slug, ezbr_sha256 is lowercase SHA-256, entrypoint_path is an absolute file URL ending in .ts, timestamps are positive ordered safe integers, and every additional CLI field is preserved exactly",
       "allowedDispositions": [
-        "unchanged",
-        "exact-all-existing-plus-one"
+        "exact-target-replacement-plus-one"
       ],
-      "stability": "two complete read rounds select one exact disposition",
-      "divergence": "partial, mixed, plus two, missing, extra, or any non-version field drift is terminal",
-      "functionDeployAuthorized": false
+      "stability": "each fresh plan and each D0/proof/D1 boundary uses complete stable read rounds bound to its own stage",
+      "replacement": "only finance-manage-access-v2 may change; its version is predecessor-relative plus one and its replacement source fields are bound to the exact successor deployment closure, while every non-target row remains byte-exact",
+      "divergence": "unchanged target after a claimed deploy, any non-target change, target plus two, missing or extra row, wrong closure, or mixed inventory is terminal",
+      "functionDeployAuthorized": true,
+      "functionDeployTarget": "finance-manage-access-v2"
     }
   },
   "authority": {
-    "releaseCompleteReceiptAlone": false,
-    "requiredOperatorMode": "verify",
-    "verification": "re-read the owner-private bundle, frozen local source and live GitHub authority, then perform a fresh authenticated D0/proof/D1 and full inventory comparison",
-    "completionCause": "verified secrets-set result or state_satisfied read-only reconciliation",
-    "hostedMutationCount": 1,
-    "functionDeployCount": 0,
+    "completionCause": "verified exact four-name secrets-set stage followed by verified exact target-only function-deploy stage; unknown secrets may resolve only by read-only state_satisfied reconciliation and unknown deploy may resolve only by read-only applied reconciliation; neither retries",
+    "hostedMutationCount": 2,
+    "functionDeployCount": 1,
+    "freshPlanCount": 2,
+    "ownerApprovalCount": 2,
+    "deployResultSandwichRequired": true,
+    "completionSandwichDistinct": true,
     "automaticRetryAllowed": false
   },
   "requiredBindings": [

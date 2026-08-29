@@ -1068,8 +1068,9 @@ export async function handleFinanceManageAccessV2Request(
   dependencies: FinanceManageAccessV2Dependencies = {},
 ): Promise<Response> {
   try {
-    if (!matchesSupabaseFunctionRoute(request.url, "finance-manage-access-v2") ||
-      new URL(request.url).pathname !== INCOMING_PATH) throw new RequestRejected("path differs");
+    if (!matchesSupabaseFunctionRoute(request.url, "finance-manage-access-v2")) {
+      throw new RequestRejected("path differs");
+    }
     if (request.method !== "POST") {
       return jsonResponse(405, { ok: false, error: "method_not_allowed" }, null);
     }
